@@ -1,8 +1,12 @@
-.PHONY: dev types build build-frontend build-backend lint test check
+.PHONY: dev dev-fake types build build-frontend build-backend lint test check
 
 # 개발 서버 (백엔드 127.0.0.1:8090 + Vite 0.0.0.0:5173)
 dev:
 	./scripts/dev.sh
+
+# 가짜 OMV(127.0.0.1:8091, 가짜 계정)에 연결한 개발 서버. 계정은 CLAUDE.md "테스트 전략" 참고
+dev-fake:
+	./scripts/dev.sh --fake
 
 # Go 구조체(backend/internal/api)에서 frontend/src/api/types.gen.ts 생성
 types:

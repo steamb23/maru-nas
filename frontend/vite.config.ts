@@ -33,9 +33,11 @@ export default defineConfig(({ mode }) => {
       fs: { allow: [fromHere('.'), fromHere('../vendor/icons')] },
       proxy: {
         // 백엔드는 /api/* 에 마운트되어 있으므로 /desk 접두사를 떼고 넘긴다.
+        // xfwd: 브라우저 IP를 X-Forwarded-For로 넘긴다(로그인 제한·OMV 인증 로그용).
         '/desk/api': {
           target: `http://${backend}`,
           rewrite: (path) => path.replace(/^\/desk/, ''),
+          xfwd: true,
         },
       },
     },
