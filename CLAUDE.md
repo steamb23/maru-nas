@@ -63,8 +63,9 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
   - `src/shell/`: 데스크톱 셸 컴포넌트(바탕화면, 창 프레임, 작업표시줄)
   - `src/shell/nativeGuard.ts`: 텍스트 선택·드래그·브라우저 컨텍스트 메뉴는 기본 금지(선택은 `index.css`의 `user-select`, 나머지는 문서 전체 리스너). `selectable` 클래스는 텍스트 선택이 꼭 필요한 영역에만 붙인다(시스템 정보 같은 현황 수치는 선택 불가). 텍스트 입력 요소(input, textarea, contenteditable)는 자동 허용
   - `src/shell/taskbarDrag.ts`: 작업표시줄 버튼 드래그 정렬의 배치 계산(DOM 없음). 드래그 중에는 transform으로만 움직이고 놓은 뒤 순서를 반영한다. 전환 효과는 부모가 아닌 각 `li` 클래스에 둔다
+  - `src/shell/taskbarAnim.ts`: 작업표시줄 버튼 등장·퇴장 애니메이션 설정값과 그릴 순서 계산(`withLeaving`, DOM 없음). 등장은 `li`의 ref(`enterTask`)로, 퇴장은 `Taskbar`가 너비·투명도를 애니메이션한다. 닫힌 창의 버튼은 창과 같은 `useClosingWindows` 훅으로 마지막 상태를 받아 두고 `.leaving` 버튼으로 남긴다(드래그 정렬은 이 버튼을 빼고 잰다)
   - `src/shell/windowAnim.ts`: 창 열기·닫기·최대화·타일링·최소화 애니메이션 설정값과 FLIP 위치 계산(DOM 없음). 재생은 `useWindowAnimation.ts`(Web Animations API, transform·opacity만). 켜기/끄기는 `WINDOW_ANIMATIONS` 상수이며 설정 기능이 생기면 그쪽으로 옮긴다
-    - 닫기: 저장소(`close`)에서는 창이 바로 지워져 작업표시줄·포커스는 즉시 바뀐다. `Desktop`이 저장소를 구독해 지워진 창의 마지막 상태와 타일 비율(`ClosingWindow`)을 받아 두고, 닫기 애니메이션이 끝나 `onClosed`가 불릴 때까지 그 상태로 그린다(`stableOrder`의 `keep`). 닫히는 창은 클릭을 받지 않고 창 내용의 주기 요청도 바로 멈춘다
+    - 닫기: 저장소(`close`)에서는 창이 바로 지워져 작업표시줄·포커스는 즉시 바뀐다. `Desktop`이 `useClosingWindows`(저장소 구독)로 지워진 창의 마지막 상태와 타일 비율(`ClosingWindow`)을 받아 두고, 닫기 애니메이션이 끝나 `onClosed`가 불릴 때까지 그 상태로 그린다(`stableOrder`의 `keep`). 닫히는 창은 클릭을 받지 않고 창 내용의 주기 요청도 바로 멈춘다
   - `src/shell/Taskbar.tsx` 오른쪽 트레이: `[시계][프로필]` 순서이며 프로필 버튼이 오른쪽 끝에 고정된다. 시계는 `Clock.tsx`(서식·갱신 시점 계산은 `clock.ts`). 프로필 메뉴는 `ProfileMenu.tsx`이고 항목은 `profileMenu.ts`의 `PROFILE_MENU_ITEMS`에 데이터로 둔다(`requires: 'admin'`으로 권한별로 거름). 항목을 추가하면 `ProfileMenu.tsx`의 `actions`에 동작도 넣는다. 아바타 그리기는 `ProfileAvatar` 한 곳에 모은다
   - `src/auth/`: 로그인 상태 저장소(`store.ts`, `createAuthStore`로 API 주입), 로그인·연결 끊김 화면(`LoginScreen.tsx`), 오류 문구(`messages.ts`), 세션 유지·만료 판단(`sessionKeeper.ts`의 순수 함수 `decide`, 실행은 `useSessionKeeper.ts`). API 클라이언트는 401을 받으면 `setUnauthorizedHandler`로 등록한 `expire()`를 부른다(로그인 관련 요청 제외)
   - `src/sysinfo/`: 시스템 정보 창. 주기 요청은 `poller.ts`(응답 후 다음 요청 예약, 중첩 없음)

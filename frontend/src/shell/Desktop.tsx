@@ -1,14 +1,17 @@
 // 데스크톱 셸: 바탕화면 아이콘, 창 레이어, 작업표시줄.
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { APP_IDS } from '../windows/apps'
 import type { Size } from '../windows/geometry'
-import { stableOrder, useWindowStore } from '../windows/store'
+import { type WindowState, type WindowStore, stableOrder, useWindowStore } from '../windows/store'
 import { DesktopIcon } from './DesktopIcon'
 import { Taskbar } from './Taskbar'
 import { TileDivider } from './TileDivider'
 import { type ClosingWindow, Window } from './Window'
-import { animationsEnabled } from './useWindowAnimation'
+import { useClosingWindows } from './useClosingWindows'
+
+// 닫힌 창은 마지막 상태와 그때의 타일 그룹 비율로 그린다.
+const closingSnapshot = (win: WindowState, prev: WindowStore): ClosingWindow => ({ win, tileSplit: prev.tileSplit })
 
 export function Desktop() {
   const areaRef = useRef<HTMLDivElement>(null)
@@ -20,34 +23,10 @@ export function Desktop() {
   // 창 DOM이 옮겨지지 않게 한다(옮겨지면 창 안의 스크롤 위치나 iframe이 초기화된다).
   // 닫힌 창은 저장소에서 바로 지워지지만, 닫기 애니메이션이 끝나 onClosed가 불릴 때까지
   // 마지막 상태(closing)로 계속 그린다.
-  const [closing, setClosing] = useState<ReadonlyMap<string, ClosingWindow>>(() => new Map())
+  const [closing, onClosed] = useClosingWindows(closingSnapshot)
   const [order, setOrder] = useState<string[]>([])
   const renderIds = stableOrder(order, ids, closing)
   if (renderIds.length !== order.length || renderIds.some((id, i) => id !== order[i])) setOrder(renderIds)
-
-  // 저장소에서 지워진 창의 마지막 상태와 타일 그룹 비율을 받아 둔다. 이 갱신은 창을 지운 갱신과 같은 렌더에 반영되어
-  // 창이 한 번도 빠지지 않는다. 애니메이션이 꺼져 있으면 받아 두지 않아 바로 사라진다.
-  useEffect(
-    () =>
-      useWindowStore.subscribe((s, prev) => {
-        if (s.windows === prev.windows || !animationsEnabled()) return
-        const alive = new Set(s.windows.map((w) => w.id))
-        const removed = prev.windows.filter((w) => !alive.has(w.id))
-        if (removed.length === 0) return
-        setClosing((m) => new Map([...m, ...removed.map((w) => [w.id, { win: w, tileSplit: prev.tileSplit }] as const)]))
-      }),
-    [],
-  )
-  const onClosed = useCallback(
-    (id: string) =>
-      setClosing((m) => {
-        if (!m.has(id)) return m
-        const next = new Map(m)
-        next.delete(id)
-        return next
-      }),
-    [],
-  )
 
   useLayoutEffect(() => {
     const el = areaRef.current

@@ -1,11 +1,15 @@
-import { type PointerEvent, type TransitionEvent, useEffect, useRef, useState } from 'react'
+import { type PointerEvent, type TransitionEvent, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import { IconImage } from '../icons/IconImage'
 import { getApp } from '../windows/apps'
 import { type WindowState, selectActiveId, useWindowStore } from '../windows/store'
 import { Clock } from './Clock'
 import { ProfileMenu } from './ProfileMenu'
+import { TASK_ENTER_MS, TASK_LEAVE_MS, withLeaving } from './taskbarAnim'
 import { type DragLayout, type Slot, dragLayout } from './taskbarDrag'
+import { useClosingWindows } from './useClosingWindows'
+import { animationsEnabled } from './useWindowAnimation'
+import { EASING } from './windowAnim'
 
 const { minimize, raiseGroup, reorder } = useWindowStore.getState()
 
@@ -46,6 +50,29 @@ interface DragView {
   settling: boolean
 }
 
+// 닫힌 창의 버튼은 마지막 상태로 퇴장 애니메이션을 재생한다.
+const leavingSnapshot = (w: WindowState) => w
+
+// 버튼 사이 간격(px). 등장·퇴장 중인 버튼이 차지하는 간격도 함께 늘리고 줄여, 끝날 때 버튼이 튀지 않게 한다.
+const gapOf = (el: Element | null) => (el ? parseFloat(getComputedStyle(el).columnGap) || 0 : 0)
+
+// enterTask는 새로 그려진 버튼을 너비 0에서 제 너비로 펼친다. 같은 함수를 ref로 넘기므로
+// 버튼이 처음 그려질 때만 불린다(순서가 바뀌어 DOM이 옮겨질 때는 불리지 않는다).
+function enterTask(li: HTMLLIElement | null) {
+  if (!li || !animationsEnabled()) return
+  // 개발 모드(StrictMode)에서는 ref가 두 번 불리므로, 앞서 건 애니메이션을 지운 뒤 제 너비를 잰다.
+  li.getAnimations().forEach((a) => a.cancel())
+  const width = li.getBoundingClientRect().width
+  const gap = gapOf(li.parentElement)
+  li.animate(
+    [
+      { width: '0px', marginRight: `${-gap}px`, opacity: 0, overflow: 'hidden' },
+      { width: `${width}px`, marginRight: '0px', opacity: 1, overflow: 'hidden' },
+    ],
+    { duration: TASK_ENTER_MS, easing: EASING },
+  )
+}
+
 // sameIds는 창 id 순서가 같은지 비교한다.
 const sameIds = (a: readonly string[], b: readonly WindowState[]) =>
   a.length === b.length && a.every((id, i) => id === b[i].id)
@@ -54,6 +81,18 @@ export function Taskbar() {
   const windows = useWindowStore((s) => s.windows)
   const activeId = useWindowStore(selectActiveId)
   const listRef = useRef<HTMLUListElement>(null)
+  // 닫힌 창의 버튼은 저장소에서 바로 지워지지만, 퇴장 애니메이션이 끝나 onLeft가 불릴 때까지
+  // 원래 자리에 마지막 상태로 남긴다.
+  const [leaving, onLeft] = useClosingWindows(leavingSnapshot)
+  const [order, setOrder] = useState<string[]>([])
+  const renderIds = withLeaving(
+    order,
+    windows.map((w) => w.id),
+    leaving,
+  )
+  if (renderIds.length !== order.length || renderIds.some((id, i) => id !== order[i])) setOrder(renderIds)
+  // 퇴장 애니메이션을 시작한 버튼 id
+  const leaveStarted = useRef(new Set<string>())
   const press = useRef<Press | null>(null)
   const [view, setView] = useState<DragView | null>(null)
   // 드래그를 놓은 직후 버튼에 들어오는 click을 무시한다.
@@ -105,6 +144,36 @@ export function Taskbar() {
 
   useEffect(() => () => window.clearTimeout(settleTimer.current), [])
 
+  // 닫힌 창의 버튼을 지금 너비·투명도에서 접으며 사라지게 한다. 등장 도중이어도 이어 간다.
+  useLayoutEffect(() => {
+    for (const id of leaving.keys()) {
+      if (leaveStarted.current.has(id)) continue
+      const li = listRef.current?.querySelector<HTMLLIElement>(`li[data-task-id="${CSS.escape(id)}"]`)
+      if (!li) {
+        onLeft(id)
+        continue
+      }
+      leaveStarted.current.add(id)
+      const width = li.getBoundingClientRect().width
+      const style = getComputedStyle(li)
+      const { opacity, marginRight } = style
+      const gap = gapOf(li.parentElement)
+      li.getAnimations().forEach((a) => a.cancel())
+      // 끝난 뒤 버튼이 빠질 때까지 다시 보이지 않도록 마지막 프레임을 유지한다.
+      const a = li.animate(
+        [
+          { width: `${width}px`, marginRight, opacity, overflow: 'hidden' },
+          { width: '0px', marginRight: `${-gap}px`, opacity: 0, overflow: 'hidden' },
+        ],
+        { duration: TASK_LEAVE_MS, easing: EASING, fill: 'forwards' },
+      )
+      a.onfinish = () => {
+        leaveStarted.current.delete(id)
+        onLeft(id)
+      }
+    }
+  }, [leaving, onLeft])
+
   const onPointerDown = (e: PointerEvent<HTMLButtonElement>, w: WindowState, index: number) => {
     suppressClick.current = false
     if (e.button !== 0 || press.current) return
@@ -131,10 +200,13 @@ export function Taskbar() {
       const list = listRef.current
       if (Math.abs(dx) < DRAG_THRESHOLD || !list) return
       // 드래그를 시작할 때 한 번만 잰다. 이후로는 transform만 바뀌어 배치가 그대로다.
-      p.slots = Array.from(list.children, (li) => {
-        const r = li.getBoundingClientRect()
-        return { left: r.left, width: r.width }
-      })
+      // 퇴장 중인 버튼은 빼고 잰다. 남은 버튼의 순서가 windows[] 순서와 같다.
+      p.slots = Array.from(list.children)
+        .filter((li) => !li.classList.contains('leaving'))
+        .map((li) => {
+          const r = li.getBoundingClientRect()
+          return { left: r.left, width: r.width }
+        })
       p.gap = parseFloat(getComputedStyle(list).columnGap) || 0
       p.phase = 'drag'
     }
@@ -173,7 +245,22 @@ export function Taskbar() {
     <div className="taskbar-dock">
       <nav className="taskbar" aria-label="작업표시줄">
         <ul ref={listRef} className="taskbar-items">
-          {windows.map((w, i) => {
+          {renderIds.map((id) => {
+            const ghost = leaving.get(id)
+            const i = windows.findIndex((w) => w.id === id)
+            if (i < 0) {
+              if (!ghost) return null
+              // 퇴장 중인 버튼: 클릭·포커스를 받지 않고, 창 최소화 애니메이션의 목표(data-window-id)도 아니다.
+              return (
+                <li key={id} className="leaving" data-task-id={id} inert>
+                  <button type="button" className="task">
+                    <IconImage name={getApp(ghost.appId).icon} size={20} />
+                    <span className="task-title">{ghost.title}</span>
+                  </button>
+                </li>
+              )
+            }
+            const w = windows[i]
             const active = w.id === activeId
             const classes = ['task', active && 'active', w.minimized && 'minimized'].filter(Boolean).join(' ')
             const dragging = view?.id === w.id
@@ -185,6 +272,8 @@ export function Taskbar() {
             return (
               <li
                 key={w.id}
+                ref={enterTask}
+                data-task-id={w.id}
                 className={liClasses}
                 style={offset ? { transform: `translateX(${offset}px)` } : undefined}
                 onTransitionEnd={(e) => onTransitionEnd(e, w.id)}

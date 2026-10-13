@@ -447,6 +447,9 @@ button {
   cursor: pointer;
   /* 터치로 끌 때 브라우저가 포인터를 스크롤용으로 가져가지 않게 한다. */
   touch-action: none;
+  transition:
+    background-color 120ms ease,
+    opacity 200ms ease;
 }
 
 .task:hover {
@@ -468,6 +471,9 @@ button {
   border-radius: 2px;
   background: var(--text-muted);
   translate: -50% 0;
+  transition:
+    width 200ms ease,
+    background-color 200ms ease;
 }
 
 .task.active::after {
@@ -477,6 +483,14 @@ button {
 
 .task.minimized {
   opacity: 0.65;
+}
+
+/* 버튼 상태 전환(배경, 활성 표시, 최소화 흐림)은 동작 줄이기 설정이면 끈다. */
+@media (prefers-reduced-motion: reduce) {
+  .task,
+  .task::after {
+    transition: none;
+  }
 }
 
 .task-title {
