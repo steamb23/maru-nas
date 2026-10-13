@@ -3,6 +3,8 @@ import { flushSync } from 'react-dom'
 import { IconImage } from '../icons/IconImage'
 import { getApp } from '../windows/apps'
 import { type WindowState, selectActiveId, useWindowStore } from '../windows/store'
+import { Clock } from './Clock'
+import { ProfileMenu } from './ProfileMenu'
 import { type DragLayout, type Slot, dragLayout } from './taskbarDrag'
 
 const { minimize, raiseGroup, reorder } = useWindowStore.getState()
@@ -210,6 +212,11 @@ export function Taskbar() {
             )
           })}
         </ul>
+        {/* 트레이: 시계, 그리고 오른쪽 끝에 고정된 프로필 메뉴 */}
+        <div className="taskbar-tray">
+          <Clock />
+          <ProfileMenu />
+        </div>
       </nav>
     </div>
   )

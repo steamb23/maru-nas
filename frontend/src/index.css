@@ -403,10 +403,14 @@ button {
   box-shadow: 0 6px 24px rgb(0 0 0 / 0.25);
   backdrop-filter: blur(12px);
   pointer-events: auto;
+  display: flex;
+  gap: 8px;
 }
 
 .taskbar-items {
   display: flex;
+  flex: 1;
+  min-width: 0;
   gap: 4px;
   height: 100%;
   margin: 0;
@@ -478,6 +482,250 @@ button {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+}
+
+/* 트레이: 창 목록이 늘어나도 줄어들지 않고 오른쪽 끝에 붙어 있다. */
+.taskbar-tray {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  height: 100%;
+}
+
+.taskbar-clock {
+  padding: 0 8px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  cursor: default;
+}
+
+/* ---- 프로필 메뉴 ---- */
+
+.profile {
+  position: relative;
+  height: 100%;
+}
+
+.profile-button {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  aspect-ratio: 1;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  cursor: pointer;
+}
+
+.profile-button:hover,
+.profile-button[aria-expanded='true'] {
+  background: var(--hover-bg);
+}
+
+.profile-avatar {
+  display: grid;
+  flex: none;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+}
+
+/* 작업표시줄이 화면 아래에 있으므로 버튼 위로, 오른쪽 끝에 맞춰 연다.
+   작업표시줄의 backdrop-filter 안에서는 겹친 블러가 제대로 보이지 않아 불투명 배경을 쓴다. */
+.profile-menu {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + var(--float-gap) + 4px);
+  min-width: 220px;
+  padding: 6px;
+  border: 1px solid var(--window-border);
+  border-radius: 10px;
+  background: var(--window-bg);
+  box-shadow: 0 8px 28px rgb(0 0 0 / 0.3);
+}
+
+.profile-menu-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 8px 10px;
+}
+
+.profile-menu-user {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.profile-menu-name {
+  overflow: hidden;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.profile-menu-role {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.profile-menu-group {
+  display: flex;
+  flex-direction: column;
+  padding-top: 6px;
+  border-top: 1px solid var(--window-border);
+}
+
+.profile-menu-group + .profile-menu-group {
+  margin-top: 6px;
+}
+
+.profile-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.profile-menu-item:hover,
+.profile-menu-item:focus-visible {
+  background: var(--hover-bg);
+  outline: none;
+}
+
+/* ---- 로그인 화면 ---- */
+
+.auth-screen {
+  display: grid;
+  place-items: center;
+  padding: 16px;
+}
+
+.login-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: min(360px, 100%);
+  padding: 28px 28px 20px;
+  border: 1px solid var(--window-border);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--window-bg) 92%, transparent);
+  box-shadow: 0 16px 48px rgb(0 0 0 / 0.35);
+  backdrop-filter: blur(16px);
+}
+
+.login-avatar {
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+}
+
+.login-title {
+  margin: 0 0 4px;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.login-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.login-field input {
+  padding: 9px 10px;
+  border: 1px solid var(--window-border);
+  border-radius: 8px;
+  background: var(--window-bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+}
+
+.login-field input:focus {
+  border-color: var(--accent);
+  outline: 2px solid color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.login-submit,
+.login-secondary {
+  padding: 9px 12px;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.login-submit {
+  margin-top: 4px;
+  background: var(--accent);
+  color: #fff;
+}
+
+.login-submit:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.login-secondary {
+  background: var(--hover-bg);
+}
+
+.login-error,
+.login-notice,
+.login-hint {
+  width: 100%;
+  margin: 0;
+  font-size: 13px;
+}
+
+.login-error,
+.login-notice {
+  padding: 8px 12px;
+  border-radius: 6px;
+}
+
+.login-error {
+  background: light-dark(#fde8e8, #4a2224);
+  color: light-dark(#b42318, #ffb4ab);
+}
+
+.login-notice {
+  background: light-dark(#e8f0fe, #1f3350);
+  color: light-dark(#1a4fa0, #b3d1ff);
+}
+
+.login-hint {
+  color: var(--text-muted);
+}
+
+.login-footnote {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--text-muted);
 }
 
 /* ---- 시스템 정보 창 ---- */
