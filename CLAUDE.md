@@ -61,6 +61,7 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
   - `src/shell/`: 데스크톱 셸 컴포넌트(바탕화면, 창 프레임, 작업표시줄)
   - `src/shell/nativeGuard.ts`: 텍스트 선택·드래그·브라우저 컨텍스트 메뉴는 기본 금지(선택은 `index.css`의 `user-select`, 나머지는 문서 전체 리스너). `selectable` 클래스는 텍스트 선택이 꼭 필요한 영역에만 붙인다(시스템 정보 같은 현황 수치는 선택 불가). 텍스트 입력 요소(input, textarea, contenteditable)는 자동 허용
   - `src/shell/taskbarDrag.ts`: 작업표시줄 버튼 드래그 정렬의 배치 계산(DOM 없음). 드래그 중에는 transform으로만 움직이고 놓은 뒤 순서를 반영한다. 전환 효과는 부모가 아닌 각 `li` 클래스에 둔다
+  - `src/shell/windowAnim.ts`: 창 최대화·최소화 애니메이션 설정값과 FLIP 위치 계산(DOM 없음). 재생은 `useWindowAnimation.ts`(Web Animations API, transform·opacity만). 켜기/끄기는 `WINDOW_ANIMATIONS` 상수이며 설정 기능이 생기면 그쪽으로 옮긴다
   - `src/sysinfo/`: 시스템 정보 창. 주기 요청은 `poller.ts`(응답 후 다음 요청 예약, 중첩 없음)
   - `src/icons/`: 리졸버와 `IconImage`(컬러는 `<img>`, symbolic은 `mask-image`)
   - 컴포넌트 테스트용 DOM 환경(jsdom 등)은 쓰지 않는다. 로직을 순수 함수·저장소로 분리해 테스트하고, 화면 동작은 브라우저에서 확인한다

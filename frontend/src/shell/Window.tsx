@@ -6,6 +6,7 @@ import { type Point, type Rect, type Size, restoreGrab } from '../windows/geomet
 import { selectActiveId, useWindowStore } from '../windows/store'
 import { PlaceholderWindow } from './PlaceholderWindow'
 import { ResizeHandles } from './ResizeHandles'
+import { useWindowAnimation } from './useWindowAnimation'
 
 interface Props {
   id: string
@@ -34,6 +35,8 @@ export function Window({ id, bounds }: Props) {
   const win = useWindowStore((s) => s.windows.find((w) => w.id === id))
   const active = useWindowStore((s) => selectActiveId(s) === id)
   const drag = useRef<Drag | null>(null)
+  const sectionRef = useRef<HTMLElement>(null)
+  const anim = useWindowAnimation(sectionRef, id, win?.minimized ?? false, win?.maximized ?? false)
 
   if (!win) return null
   const app = getApp(win.appId)
@@ -62,6 +65,9 @@ export function Window({ id, bounds }: Props) {
       d.dx = offset.x
       d.dy = offset.y
       d.restore = undefined
+      // 최대화 창에서 포인터 쪽으로 줄어드는 애니메이션. 애니메이션은 창 위치에 얹히는 상대 이동이라
+      // 이어지는 드래그로 창이 움직여도 함께 따라가고, 잡은 지점은 포인터 아래에 남는다.
+      anim.captureFrom()
       unmaximizeAt(id, e.clientX - d.dx, e.clientY - d.dy, bounds)
       return
     }
@@ -70,18 +76,26 @@ export function Window({ id, bounds }: Props) {
   const endDrag = (e: PointerEvent<HTMLElement>) => {
     if (drag.current?.pointerId === e.pointerId) drag.current = null
   }
+  // 최대화를 바꾸기 직전 위치를 남겨 애니메이션이 그 위치에서 시작되게 한다.
+  const onToggleMaximize = () => {
+    anim.captureFrom()
+    toggleMaximize(id)
+  }
 
-  const classes = ['window', active && 'active', win.maximized && 'maximized'].filter(Boolean).join(' ')
-  // 최소화한 창은 언마운트하지 않고 숨긴다. 창 내용의 상태가 유지된다.
+  const classes = ['window', active && 'active', win.maximized && 'maximized', anim.minimizing && 'minimizing']
+    .filter(Boolean)
+    .join(' ')
+  // 최소화한 창은 언마운트하지 않고 숨긴다. 창 내용의 상태가 유지된다. 최소화 애니메이션이 끝난 뒤에 숨긴다.
   const style = win.maximized
     ? { zIndex: win.z }
     : { zIndex: win.z, left: win.x, top: win.y, width: win.width, height: win.height }
 
   return (
     <section
+      ref={sectionRef}
       className={classes}
       style={style}
-      hidden={win.minimized}
+      hidden={anim.hidden}
       aria-label={win.title}
       onPointerDownCapture={() => focus(id)}
     >
@@ -93,7 +107,7 @@ export function Window({ id, bounds }: Props) {
         onPointerCancel={endDrag}
         onLostPointerCapture={endDrag}
         onDoubleClick={(e) => {
-          if (!fromButton(e)) toggleMaximize(id)
+          if (!fromButton(e)) onToggleMaximize()
         }}
       >
         <IconImage name={app.icon} size={20} />
@@ -107,7 +121,7 @@ export function Window({ id, bounds }: Props) {
             className="win-btn"
             aria-label={win.maximized ? '이전 크기로' : '최대화'}
             title={win.maximized ? '이전 크기로' : '최대화'}
-            onClick={() => toggleMaximize(id)}
+            onClick={onToggleMaximize}
           >
             <IconImage name={win.maximized ? 'window-restore-symbolic' : 'window-maximize-symbolic'} size={16} />
           </button>

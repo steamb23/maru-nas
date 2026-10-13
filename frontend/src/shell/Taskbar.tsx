@@ -188,10 +188,12 @@ export function Taskbar() {
                 style={offset ? { transform: `translateX(${offset}px)` } : undefined}
                 onTransitionEnd={(e) => onTransitionEnd(e, w.id)}
               >
+                {/* data-window-id: 창 최소화 애니메이션이 이 버튼 위치를 찾는다(useWindowAnimation.ts). */}
                 <button
                   type="button"
                   className={classes}
                   aria-pressed={active}
+                  data-window-id={w.id}
                   onPointerDown={(e) => onPointerDown(e, w, i)}
                   onPointerMove={onPointerMove}
                   onPointerUp={onPointerUp}

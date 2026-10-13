@@ -123,6 +123,14 @@ button {
 
 /* ---- 창 ---- */
 
+/* 창 내용(제목 표시줄의 아이콘·제목·버튼, 본문)의 투명도. 최대화 애니메이션(shell/windowAnim.ts)이
+   창 틀만 늘어나 보이도록 이 값을 애니메이션한다. 등록해야 숫자로 보간된다. */
+@property --window-content-opacity {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 1;
+}
+
 .window {
   position: absolute;
   display: flex;
@@ -132,6 +140,13 @@ button {
   border-radius: 10px;
   background: var(--window-bg);
   box-shadow: 0 6px 24px rgb(0 0 0 / 0.25);
+  /* 최대화·최소화 애니메이션(shell/windowAnim.ts)의 transform 기준점 */
+  transform-origin: 0 0;
+}
+
+/* 최소화 애니메이션 중에는 사라지는 창이 클릭을 받지 않는다. */
+.window.minimizing {
+  pointer-events: none;
 }
 
 /* display: flex가 hidden 속성의 기본 스타일을 덮지 않도록 한다. */
@@ -287,6 +302,11 @@ button {
   flex: 1;
   min-height: 0;
   overflow: auto;
+}
+
+.titlebar > *,
+.window-body {
+  opacity: var(--window-content-opacity);
 }
 
 .symbolic-icon {
