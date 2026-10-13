@@ -40,7 +40,7 @@ export function SystemInfoWindow({ active }: Props) {
           연결 끊김 — 다시 연결하는 중…
         </p>
       )}
-      <dl className={status === 'disconnected' ? 'sysinfo-list stale' : 'sysinfo-list'}>
+      <dl className={status === 'disconnected' ? 'sysinfo-list selectable stale' : 'sysinfo-list selectable'}>
         <Meter label="CPU" percent={data ? data.cpu.usagePercent : null} />
         <Meter
           label="메모리"

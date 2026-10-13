@@ -30,10 +30,22 @@ body,
   height: 100%;
 }
 
+/* 텍스트 선택은 기본 금지하고 선택 허용 영역과 입력 요소에서만 허용한다.
+   드래그·컨텍스트 메뉴 제한(shell/nativeGuard.ts)과 범위를 맞춘다. */
 body {
   margin: 0;
   overflow: hidden;
   color: var(--text);
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.selectable,
+input,
+textarea,
+[contenteditable]:not([contenteditable='false']) {
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 button {
@@ -49,7 +61,6 @@ button {
   display: flex;
   flex-direction: column;
   background: linear-gradient(160deg, #2b5876 0%, #4e4376 100%);
-  user-select: none;
 }
 
 .desktop-area {
@@ -271,7 +282,6 @@ button {
   flex: 1;
   min-height: 0;
   overflow: auto;
-  user-select: text;
 }
 
 .symbolic-icon {
