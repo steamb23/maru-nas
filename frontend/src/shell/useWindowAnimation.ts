@@ -1,6 +1,7 @@
-// 창 최대화·최소화 애니메이션 재생. 위치 계산과 설정값은 windowAnim.ts에 있다.
+// 창 최대화·타일링·최소화 애니메이션 재생. 위치 계산과 설정값은 windowAnim.ts에 있다.
 //
-// - 최대화·복원: 버튼·더블클릭, 최대화된 창 끌기 핸들러가 captureFrom()으로 바뀌기 전 위치를 남긴 경우에만 재생한다.
+// - 배치 전환(최대화·타일링과 그 해제): 버튼·더블클릭, 창 끌기 핸들러가 captureFrom()으로 바뀌기 전 위치를
+//   남긴 경우에만 재생한다. 타일 그룹의 경계 조절처럼 배치 방식이 그대로인 크기 변화는 재생하지 않는다.
 //   창 틀이 늘어나는 동안 창 내용은 숨겼다가 끝무렵에 페이드인해, 내용이 늘어나 보이지 않게 한다.
 // - 최소화·복원: 작업표시줄, 바탕화면 아이콘 등 어디서 바뀌든 minimized 상태 변화를 보고 재생한다.
 //   최소화 애니메이션이 끝날 때까지는 창을 숨기지 않는다.
@@ -8,6 +9,7 @@
 import { type RefObject, useCallback, useLayoutEffect, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import type { Rect } from '../windows/geometry'
+import type { WindowLayout } from '../windows/tiling'
 import {
   CONTENT_FADE_START,
   EASING,
@@ -23,7 +25,7 @@ import {
 
 type MinAnim = 'minimize' | 'restore' | null
 
-function animationsEnabled(): boolean {
+export function animationsEnabled(): boolean {
   return WINDOW_ANIMATIONS && !window.matchMedia('(prefers-reduced-motion: reduce)').matches
 }
 
@@ -43,7 +45,7 @@ export interface WindowAnimation {
   hidden: boolean
   // 최소화 애니메이션 중인지. 이때는 창이 클릭을 받지 않는다.
   minimizing: boolean
-  // captureFrom은 최대화를 바꾸기 직전에 호출해 지금 위치에서 애니메이션이 시작되게 한다.
+  // captureFrom은 배치 방식(최대화·타일링)을 바꾸기 직전에 호출해 지금 위치에서 애니메이션이 시작되게 한다.
   captureFrom: () => void
 }
 
@@ -51,7 +53,7 @@ export function useWindowAnimation(
   ref: RefObject<HTMLElement | null>,
   id: string,
   minimized: boolean,
-  maximized: boolean,
+  layout: WindowLayout,
 ): WindowAnimation {
   const [prevMinimized, setPrevMinimized] = useState(minimized)
   const [minAnim, setMinAnim] = useState<MinAnim>(null)
@@ -63,8 +65,8 @@ export function useWindowAnimation(
 
   // 재생 중인 애니메이션. 핸들러는 자기가 아직 현재 애니메이션인지 이 값으로 확인한다.
   const current = useRef<Animation | null>(null)
-  // captureFrom이 잰 최대화 전환 전 위치
-  const maxFrom = useRef<Rect | null>(null)
+  // captureFrom이 잰 배치 전환 전 위치
+  const layoutFrom = useRef<Rect | null>(null)
 
   const stop = () => {
     const a = current.current
@@ -80,12 +82,12 @@ export function useWindowAnimation(
 
   const captureFrom = useCallback(() => {
     const el = ref.current
-    if (el && animationsEnabled()) maxFrom.current = rectOf(el)
+    if (el && animationsEnabled()) layoutFrom.current = rectOf(el)
   }, [ref])
 
   useLayoutEffect(() => {
-    const from = maxFrom.current
-    maxFrom.current = null
+    const from = layoutFrom.current
+    layoutFrom.current = null
     const el = ref.current
     if (!from || !el) return
     stop()
@@ -103,7 +105,7 @@ export function useWindowAnimation(
       'none',
       'linear',
     )
-  }, [ref, maximized])
+  }, [ref, layout])
 
   useLayoutEffect(() => {
     const el = ref.current

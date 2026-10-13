@@ -6,6 +6,7 @@ import type { Size } from '../windows/geometry'
 import { stableOrder, useWindowStore } from '../windows/store'
 import { DesktopIcon } from './DesktopIcon'
 import { Taskbar } from './Taskbar'
+import { TileDivider } from './TileDivider'
 import { Window } from './Window'
 
 export function Desktop() {
@@ -45,6 +46,7 @@ export function Desktop() {
             </li>
           ))}
         </ul>
+        <TileDivider bounds={bounds} />
         {renderIds.map((id) => (
           <Window key={id} id={id} bounds={bounds} />
         ))}

@@ -1,4 +1,4 @@
-// 창 최대화·최소화 애니메이션의 설정값과 위치 계산(DOM 없음).
+// 창 최대화·타일링·최소화 애니메이션의 설정값과 위치 계산(DOM 없음).
 // 애니메이션은 FLIP 방식으로 transform과 opacity만 움직인다. 위치·크기를 직접 움직이면
 // 매 프레임 레이아웃을 다시 계산하게 된다. 실제 재생은 useWindowAnimation.ts가 한다.
 import type { Rect, Size } from '../windows/geometry'
@@ -7,8 +7,9 @@ import type { Rect, Size } from '../windows/geometry'
 // TODO: 설정 기능이 생기면 이 값을 사용자 설정에서 읽어 끄고 켤 수 있게 한다.
 export const WINDOW_ANIMATIONS = true
 
+// 최대화·타일링 전환 시간
 export const MAXIMIZE_MS = 200
-// 최대화 애니메이션은 창 틀만 늘어나 보이도록 창 내용(index.css의 --window-content-opacity)을 숨겼다가,
+// 최대화·타일링 애니메이션은 창 틀만 늘어나 보이도록 창 내용(index.css의 --window-content-opacity)을 숨겼다가,
 // 전체 시간의 이 비율 지점부터 끝까지 페이드인한다. 이때는 틀이 거의 제 크기라 내용이 늘어나 보이지 않는다.
 export const CONTENT_FADE_START = 0.35
 export const MINIMIZE_MS = 220

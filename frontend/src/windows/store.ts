@@ -5,12 +5,13 @@
 import { create } from 'zustand'
 import { type AppId, getApp } from './apps'
 import { type Rect, type Size, cascadePosition, clampPosition } from './geometry'
+import { DEFAULT_TILE_SPLIT, type TileSide, type TileZone, splitForTiling, tilePartner } from './tiling'
 
 export interface WindowState {
   id: string
   appId: AppId
   title: string
-  // x, y, width, height는 최대화·최소화 중에도 보존되어 복원 시 그대로 쓰인다.
+  // x, y, width, height는 최대화·타일링·최소화 중에도 보존되어 복원 시 그대로 쓰인다.
   x: number
   y: number
   width: number
@@ -18,13 +19,17 @@ export interface WindowState {
   // 클수록 앞. 포커스할 때마다 nextZ를 받아 맨 앞으로 간다.
   z: number
   minimized: boolean
+  // maximized와 tile은 동시에 켜지지 않는다. 둘 다 꺼져 있으면 x, y, width, height에 놓인다.
   maximized: boolean
+  tile: TileSide | null
 }
 
 interface WindowData {
   windows: WindowState[]
   nextZ: number
   nextId: number
+  // 좌우 타일 그룹의 왼쪽 비율. 좌우 타일 창이 모두 이 값 하나를 공유하므로 바꾸면 함께 다시 배치된다.
+  tileSplit: number
 }
 
 interface WindowActions {
@@ -35,14 +40,23 @@ interface WindowActions {
   minimize: (id: string) => void
   // restore는 최소화를 풀고 맨 앞으로 가져온다. 최대화 여부는 바꾸지 않는다.
   restore: (id: string) => void
+  // toggleMaximize는 타일링된 창을 최대화하면 타일링을 푼다. 다시 복원하면 타일링 전 위치·크기로 돌아간다.
   toggleMaximize: (id: string) => void
-  // unmaximizeAt은 최대화를 풀고 창을 (x, y)로 옮긴다. 크기는 최대화 전 크기로 돌아간다.
-  // 최대화된 창을 끌어 복원할 때 쓴다. 최대화되지 않은 창에는 아무것도 하지 않는다.
-  unmaximizeAt: (id: string, x: number, y: number, bounds: Size) => void
-  // moveTo는 최대화된 창에는 아무것도 하지 않는다.
+  // tile은 창을 타일링 영역 zone에 놓고 맨 앞으로 가져온다. max는 최대화다.
+  // 좌우에 놓을 때 반대쪽에 타일 창이 없으면 새 그룹이므로 비율을 반반으로 되돌린다.
+  tile: (id: string, zone: TileZone) => void
+  // setTileSplit은 좌우 타일 그룹의 비율을 바꾼다. 제한은 tiling의 clampSplit이 계산하고 여기서는 반영만 한다.
+  setTileSplit: (split: number) => void
+  // raiseGroup은 창을 복원해 맨 앞으로 가져오고, 타일 그룹의 짝 창이 있으면 그 창도 복원해 바로 뒤에 둔다.
+  // 짝 창이 없으면 restore와 같다.
+  raiseGroup: (id: string) => void
+  // detachAt은 최대화·타일링을 풀고 창을 (x, y)로 옮긴다. 크기는 최대화·타일링 전 크기로 돌아간다.
+  // 최대화·타일링된 창을 끌어 떼어 낼 때 쓴다. 최대화도 타일링도 아닌 창에는 아무것도 하지 않는다.
+  detachAt: (id: string, x: number, y: number, bounds: Size) => void
+  // moveTo는 최대화·타일링된 창에는 아무것도 하지 않는다(보존한 위치를 지킨다).
   moveTo: (id: string, x: number, y: number, bounds: Size) => void
   // resize는 창 위치·크기를 rect로 바꾼다. 제한은 geometry의 resizeRect가 계산하고 여기서는 반영만 한다.
-  // 최대화된 창에는 아무것도 하지 않는다.
+  // 최대화·타일링된 창에는 아무것도 하지 않는다.
   resize: (id: string, rect: Rect) => void
   // clampAll은 데스크톱 영역이 줄었을 때 모든 창을 다시 제한한다.
   clampAll: (bounds: Size) => void
@@ -52,7 +66,10 @@ interface WindowActions {
 
 export type WindowStore = WindowData & WindowActions
 
-export const initialWindowData: WindowData = { windows: [], nextZ: 1, nextId: 1 }
+export const initialWindowData: WindowData = { windows: [], nextZ: 1, nextId: 1, tileSplit: DEFAULT_TILE_SPLIT }
+
+// isFree는 창이 최대화·타일링되지 않아 x, y, width, height에 놓여 있는지 확인한다.
+const isFree = (w: WindowState) => !w.maximized && w.tile === null
 
 export const useWindowStore = create<WindowStore>()((set, get) => {
   // Change는 한 창의 새 상태와, 필요하면 갱신할 nextZ다. null이면 바뀐 것이 없다.
@@ -102,6 +119,7 @@ export const useWindowStore = create<WindowStore>()((set, get) => {
         z: s.nextZ,
         minimized: false,
         maximized: false,
+        tile: null,
       }
       set({ windows: [...s.windows, win], nextZ: s.nextZ + 1, nextId: s.nextId + 1 })
       return id
@@ -115,24 +133,43 @@ export const useWindowStore = create<WindowStore>()((set, get) => {
 
     restore: (id) => update(id, (w, s) => raise(w, s, { minimized: false })),
 
-    toggleMaximize: (id) => update(id, (w, s) => raise(w, s, { maximized: !w.maximized })),
+    toggleMaximize: (id) => update(id, (w, s) => raise(w, s, { maximized: !w.maximized, tile: null })),
 
-    unmaximizeAt: (id, x, y, bounds) =>
+    tile: (id, zone) => {
+      const s = get()
+      if (zone !== 'max') {
+        const split = splitForTiling(s.windows, id, zone, s.tileSplit)
+        if (split !== s.tileSplit) set({ tileSplit: split })
+      }
+      update(id, (w, s) =>
+        raise(w, s, zone === 'max' ? { maximized: true, tile: null } : { maximized: false, tile: zone }),
+      )
+    },
+
+    setTileSplit: (split) => set((s) => (s.tileSplit === split ? s : { tileSplit: split })),
+
+    raiseGroup: (id) => {
+      const partner = tilePartner(get().windows, id)
+      if (partner) get().restore(partner.id)
+      get().restore(id)
+    },
+
+    detachAt: (id, x, y, bounds) =>
       update(id, (w) => {
-        if (!w.maximized) return null
-        return { win: { ...w, maximized: false, ...clampPosition({ ...w, x, y }, bounds) } }
+        if (isFree(w)) return null
+        return { win: { ...w, maximized: false, tile: null, ...clampPosition({ ...w, x, y }, bounds) } }
       }),
 
     moveTo: (id, x, y, bounds) =>
       update(id, (w) => {
-        if (w.maximized) return null
+        if (!isFree(w)) return null
         const pos = clampPosition({ ...w, x, y }, bounds)
         return pos.x === w.x && pos.y === w.y ? null : { win: { ...w, ...pos } }
       }),
 
     resize: (id, { x, y, width, height }) =>
       update(id, (w) => {
-        if (w.maximized) return null
+        if (!isFree(w)) return null
         if (x === w.x && y === w.y && width === w.width && height === w.height) return null
         return { win: { ...w, x, y, width, height } }
       }),

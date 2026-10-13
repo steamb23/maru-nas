@@ -235,26 +235,140 @@ describe('stableOrder', () => {
   })
 })
 
-describe('unmaximizeAt', () => {
+describe('detachAt', () => {
   it('최대화를 풀고 원래 크기로 지정한 위치에 놓는다', () => {
     const a = store().open('system-info', bounds)
     const { width, height } = win(a)
     store().toggleMaximize(a)
-    store().unmaximizeAt(a, 300, 200, bounds)
+    store().detachAt(a, 300, 200, bounds)
     expect(win(a)).toMatchObject({ maximized: false, x: 300, y: 200, width, height })
+  })
+
+  it('타일링을 풀고 원래 크기로 지정한 위치에 놓는다', () => {
+    const a = store().open('system-info', bounds)
+    const { width, height } = win(a)
+    store().tile(a, 'left')
+    store().detachAt(a, 300, 200, bounds)
+    expect(win(a)).toMatchObject({ tile: null, x: 300, y: 200, width, height })
   })
 
   it('위치는 clampPosition으로 제한한다', () => {
     const a = store().open('system-info', bounds)
     store().toggleMaximize(a)
-    store().unmaximizeAt(a, 100, -40, bounds)
+    store().detachAt(a, 100, -40, bounds)
     expect(win(a).y).toBe(0)
   })
 
-  it('최대화되지 않은 창은 바꾸지 않는다', () => {
+  it('최대화·타일링되지 않은 창은 바꾸지 않는다', () => {
     const a = store().open('system-info', bounds)
     const before = store().windows
-    store().unmaximizeAt(a, 300, 200, bounds)
+    store().detachAt(a, 300, 200, bounds)
     expect(store().windows).toBe(before)
+  })
+})
+
+describe('tile', () => {
+  it('좌우에 타일링해도 원래 위치·크기는 보존된다', () => {
+    const a = store().open('files', bounds)
+    store().moveTo(a, 250, 120, bounds)
+    const { x, y, width, height } = win(a)
+    store().tile(a, 'right')
+    expect(win(a)).toMatchObject({ tile: 'right', maximized: false, x, y, width, height })
+  })
+
+  it('max에 놓으면 최대화하고 타일링은 끈다', () => {
+    const a = store().open('files', bounds)
+    store().tile(a, 'left')
+    store().tile(a, 'max')
+    expect(win(a)).toMatchObject({ maximized: true, tile: null })
+  })
+
+  it('최대화된 창을 좌우에 놓으면 최대화를 끈다', () => {
+    const a = store().open('files', bounds)
+    store().toggleMaximize(a)
+    store().tile(a, 'left')
+    expect(win(a)).toMatchObject({ maximized: false, tile: 'left' })
+  })
+
+  it('타일링한 창은 맨 앞으로 온다', () => {
+    const a = store().open('files', bounds)
+    store().open('storage', bounds)
+    store().tile(a, 'left')
+    expect(activeId()).toBe(a)
+  })
+
+  it('타일링된 창을 최대화했다 복원하면 타일링 전 위치·크기로 돌아온다', () => {
+    const a = store().open('files', bounds)
+    const { x, y, width, height } = win(a)
+    store().tile(a, 'left')
+    store().toggleMaximize(a)
+    expect(win(a)).toMatchObject({ maximized: true, tile: null })
+    store().toggleMaximize(a)
+    expect(win(a)).toMatchObject({ maximized: false, tile: null, x, y, width, height })
+  })
+
+  it('타일링된 창은 이동·크기 조절하지 않는다', () => {
+    const a = store().open('files', bounds)
+    store().tile(a, 'left')
+    const before = store().windows
+    store().moveTo(a, 10, 10, bounds)
+    store().resize(a, { x: 10, y: 10, width: 300, height: 300 })
+    expect(store().windows).toBe(before)
+  })
+
+  it('반대쪽에 타일 창이 있으면 그룹의 비율을 유지한다', () => {
+    const a = store().open('files', bounds)
+    const b = store().open('storage', bounds)
+    store().tile(a, 'left')
+    store().setTileSplit(0.6)
+    store().tile(b, 'right')
+    expect(store().tileSplit).toBe(0.6)
+  })
+
+  it('반대쪽이 비어 있으면 새 그룹이므로 비율을 반반으로 되돌린다', () => {
+    const a = store().open('files', bounds)
+    store().tile(a, 'left')
+    store().setTileSplit(0.6)
+    store().tile(a, 'right')
+    expect(store().tileSplit).toBe(0.5)
+  })
+})
+
+describe('raiseGroup', () => {
+  it('짝 창을 복원해 바로 뒤에 두고 대상 창을 맨 앞에 둔다', () => {
+    const a = store().open('files', bounds)
+    const b = store().open('storage', bounds)
+    const c = store().open('system-info', bounds)
+    store().tile(a, 'left')
+    store().tile(b, 'right')
+    store().minimize(b)
+    store().focus(c)
+    store().raiseGroup(a)
+    expect(win(b).minimized).toBe(false)
+    expect(activeId()).toBe(a)
+    expect(win(b).z).toBeGreaterThan(win(c).z)
+    expect(win(a).z).toBeGreaterThan(win(b).z)
+  })
+
+  it('짝 창이 없으면 restore와 같다', () => {
+    const a = store().open('files', bounds)
+    const b = store().open('storage', bounds)
+    store().tile(a, 'left')
+    store().minimize(a)
+    const bz = win(b).z
+    store().raiseGroup(a)
+    expect(win(a).minimized).toBe(false)
+    expect(activeId()).toBe(a)
+    expect(win(b)).toMatchObject({ z: bz, minimized: false })
+  })
+
+  it('같은 쪽에 타일링된 창은 짝이 아니다', () => {
+    const a = store().open('files', bounds)
+    const b = store().open('storage', bounds)
+    store().tile(a, 'left')
+    store().tile(b, 'left')
+    store().minimize(b)
+    store().raiseGroup(a)
+    expect(win(b).minimized).toBe(true)
   })
 })

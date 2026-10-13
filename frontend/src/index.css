@@ -5,7 +5,8 @@
 
   /* windows/geometry.ts의 TITLEBAR_HEIGHT와 맞춘다. */
   --titlebar-height: 36px;
-  /* 떠 있는 작업표시줄과 최대화 창이 화면 가장자리·서로와 두는 간격 */
+  /* 떠 있는 작업표시줄과 최대화·타일 창이 화면 가장자리·서로와 두는 간격.
+     최대화·타일 창 배치는 windows/geometry.ts의 FLOAT_GAP으로 계산하므로 함께 바꾼다. */
   --float-gap: 8px;
   /* 작업표시줄 패널 두께와, 창 영역에서 빼는 높이 */
   --taskbar-height: 44px;
@@ -158,12 +159,6 @@ button {
   box-shadow: 0 10px 36px rgb(0 0 0 / 0.4);
 }
 
-/* 최대화한 창도 작업표시줄처럼 화면 가장자리와 작업표시줄에서 떨어져 떠 있다.
-   창 영역 아래쪽 끝이 작업표시줄 위쪽 끝이므로 같은 간격이 생긴다. */
-.window.maximized {
-  inset: var(--float-gap);
-}
-
 /* 크기 조절 핸들. 창 테두리 안쪽에 겹쳐 놓으므로 제목 표시줄 위쪽 가장자리도 크기 조절 영역이 된다. */
 .resize-handle {
   position: absolute;
@@ -233,6 +228,65 @@ button {
   bottom: 0;
   left: 0;
   cursor: nesw-resize;
+}
+
+/* 타일 창의 안쪽 변 핸들. 위아래 모서리 핸들이 없으므로 변 전체를 쓴다. */
+.resize-handle.tile-resize {
+  top: 0;
+  bottom: 0;
+}
+
+/* ---- 타일링 ---- */
+
+/* 최대화·타일 창의 위치는 windows/tiling.ts의 tileRect가 계산해 인라인으로 지정한다.
+   창 영역 아래쪽 끝이 작업표시줄 위쪽 끝이므로 작업표시줄과도 --float-gap만큼 떨어진다. */
+
+/* 창을 끄는 동안 놓으면 들어갈 자리를 보여 주는 가이드. 창과 같은 모양으로 떠 있다.
+   바탕화면과 창 위에 모두 겹치므로 색 구성표와 관계없이 밝은 회색 반투명으로 둔다. */
+.tile-preview {
+  position: absolute;
+  border: 1px solid rgb(255 255 255 / 0.25);
+  border-radius: 10px;
+  background: rgb(232 234 238 / 0.15);
+  box-shadow: 0 6px 24px rgb(0 0 0 / 0.25);
+  backdrop-filter: blur(12px);
+  pointer-events: none;
+}
+
+.tile-preview.animated {
+  animation: tile-preview-in 150ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+@keyframes tile-preview-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+
+/* 좌우 타일 그룹 사이 간격. 끌어서 두 창의 너비를 함께 바꾼다. 평소에는 비어 보이고,
+   올리거나 끄는 동안 가운데에 손잡이 막대를 보여 준다. */
+.tile-divider {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  cursor: ew-resize;
+  touch-action: none;
+}
+
+.tile-divider-grip {
+  width: 4px;
+  height: 40px;
+  border-radius: 2px;
+  background: rgb(255 255 255 / 0.7);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.35);
+  opacity: 0;
+  transition: opacity 120ms;
+}
+
+.tile-divider:hover .tile-divider-grip,
+.tile-divider.dragging .tile-divider-grip {
+  opacity: 1;
 }
 
 .titlebar {

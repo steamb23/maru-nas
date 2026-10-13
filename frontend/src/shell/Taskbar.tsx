@@ -5,18 +5,17 @@ import { getApp } from '../windows/apps'
 import { type WindowState, selectActiveId, useWindowStore } from '../windows/store'
 import { type DragLayout, type Slot, dragLayout } from './taskbarDrag'
 
-const { focus, minimize, restore, reorder } = useWindowStore.getState()
+const { minimize, raiseGroup, reorder } = useWindowStore.getState()
 
 // 이 거리 이상 가로로 끌어야 드래그로 본다. 그보다 짧으면 클릭이다.
 const DRAG_THRESHOLD = 4
 // index.css의 작업표시줄 li 전환 시간과 맞춘다. transitionend를 놓쳤을 때의 대비용이다.
 const SETTLE_MS = 200
 
-// 작업표시줄 버튼: 최소화된 창은 복원, 활성 창은 최소화, 그 밖의 창은 맨 앞으로.
+// 작업표시줄 버튼: 활성 창은 최소화, 그 밖의 창은 복원해 맨 앞으로. 타일 그룹의 창이면 짝 창도 함께 앞으로 온다.
 function onTaskClick(w: WindowState, active: boolean) {
-  if (w.minimized) restore(w.id)
-  else if (active) minimize(w.id)
-  else focus(w.id)
+  if (active && !w.minimized) minimize(w.id)
+  else raiseGroup(w.id)
 }
 
 // Press는 버튼을 누른 순간부터 드래그가 끝날 때까지의 포인터 정보다.

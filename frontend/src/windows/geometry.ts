@@ -14,6 +14,8 @@ export interface Rect extends Point, Size {}
 
 // Window.tsx의 제목 표시줄 높이와 맞춰야 한다(index.css의 --titlebar-height).
 export const TITLEBAR_HEIGHT = 36
+// 최대화·타일링한 창이 화면 가장자리·서로와 두는 간격(index.css의 --float-gap).
+export const FLOAT_GAP = 8
 // 창을 좌우로 화면 밖에 끌어도 제목 표시줄이 이만큼은 화면에 남는다.
 // 왼쪽으로 밀면 오른쪽 끝의 창 버튼 영역(index.css의 .win-btn 30px × 3 + 간격 + 여백 ≈ 98px)만
 // 남게 되는데, 버튼 위에서는 드래그가 시작되지 않으므로 그보다 넉넉히 잡는다.
@@ -100,9 +102,9 @@ export function cascadePosition(index: number, size: Size, bounds: Size): Point 
   )
 }
 
-// restoreGrab은 최대화한 창의 제목 표시줄을 grab 지점에서 잡고 끌어 복원할 때, 복원된 창(size)에서
-// 포인터가 잡고 있을 지점을 창 왼쪽 위 기준으로 반환한다. 가로는 최대화 창에서 잡은 비율을 유지하고,
-// 세로는 제목 표시줄 안에서 잡은 높이를 유지한다(Windows 11과 같은 방식).
+// restoreGrab은 최대화·타일 창의 제목 표시줄을 grab 지점에서 잡고 끌어 떼어 낼 때, 떼어 낸 창(size)에서
+// 포인터가 잡고 있을 지점을 창 왼쪽 위 기준으로 반환한다. 가로는 최대화·타일 창에서 잡은 비율을 유지하고,
+// 세로는 제목 표시줄 안에서 잡은 높이를 유지한다.
 export function restoreGrab(grab: Point, maxRect: Rect, size: Size): Point {
   const ratio = maxRect.width > 0 ? clamp((grab.x - maxRect.x) / maxRect.width, 0, 1) : 0
   return {
