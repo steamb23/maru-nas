@@ -1,0 +1,114 @@
+# 애드온 구조
+
+기능 창(시스템 정보, 저장소, 온도, 네트워크, 컨테이너 등)을 같은 계약으로 만들기 위한 설계다. 3단계에서 도입한다. 항목별 데이터 출처는 [data-sources.md](data-sources.md)를 본다.
+
+범위는 아래 두 층이다.
+
+1. **애드온 계약**: 애드온이 무엇을 필요로 하고 무엇을 호출하는지 선언하는 manifest, provider, capability
+2. **내장 애드온**: 저장소 안에 소스로 들어 있고 함께 빌드되는 애드온. 기능을 추가하려면 포크해서 기여하거나 직접 빌드해서 쓴다
+
+런타임에 불러오는 애드온은 만들지 않는다. 아래 "향후 고려"에 나중을 위한 제약만 적어 둔다.
+
+## 애드온 계약
+
+### manifest
+
+애드온마다 하나씩 둔다. Go 코드 곳곳에 흩어 두지 않고 직렬화할 수 있는 데이터 구조로 정의한다. 런타임 선언형 애드온이 생기더라도 같은 구조를 그대로 읽을 수 있게 하려는 것이다.
+
+| 필드 | 내용 |
+|---|---|
+| `id` | 고유 이름(`storage`, `containers` 등). 창 종류 식별자와 같다 |
+| `title`, `icon` | 창 제목, freedesktop 아이콘 이름(리졸버로 해석) |
+| `defaultSize`, `minSize` | 창 기본·최소 크기. 지금의 `AppDef`에 있는 값 |
+| `requires.plugins` | 필요한 OMV 플러그인 패키지 이름. 비어 있으면 플러그인 없이 동작한다 |
+| `requires.admin` | admin만 쓸 수 있는지 여부 |
+| `rpc.read` | 호출하는 읽기 전용 OMV RPC (`Service.method`) |
+| `rpc.write` | 호출하는 상태 변경 OMV RPC. 4단계 전에는 비어 있어야 한다 |
+
+한 애드온 안에서도 출처마다 조건이 다를 수 있다(예: 온도는 hwmon은 누구나, SMART 디스크 온도는 admin). 그래서 `requires`는 "창을 열 수 있는 최소 조건"이고, provider별 조건은 provider가 따로 선언한다.
+
+### provider
+
+- 한 항목의 데이터를 한 출처에서 가져오는 구현이다. 인터페이스는 대략 다음 형태다
+  - `Name()`: 출처 이름(`hwmon`, `omv-cputemp` 등). 응답에 출처로 담긴다
+  - `Requires()`: 이 provider에 필요한 플러그인과 역할
+  - 데이터 메서드: 요청 컨텍스트와 세션(OMV RPC 클라이언트, 역할)을 받는다
+- 애드온은 provider를 우선순위대로 갖는다
+  - 쓸 수 있는 것 중 첫 번째를 쓰거나, 항목에 따라 결과를 합친다
+  - 합칠 때는 같은 센서·장치가 중복되지 않게 한다
+- 직접 읽기 provider는 `fs.FS`를 주입받는다. 지금의 `sysinfo.Reader`와 같은 방식이다
+- OMV RPC provider는 RPC 클라이언트 인터페이스를 주입받는다. 테스트에서는 가짜 클라이언트를 넣는다
+
+### capability 감지
+
+- 플러그인 설치 여부
+  - `/usr/share/openmediavault/engined/rpc/<name>.inc` 파일이 있는지와 `/var/lib/dpkg/status`의 패키지 상태로 판단한다. 둘 다 root 없이 읽힌다
+  - 백엔드 시작 시 확인하고, 로그인할 때와 일정 주기마다 다시 확인한다. 실행 중에 플러그인을 설치하거나 지운 경우를 반영하기 위해서다
+- 세션 역할: 로그인 응답의 `permissions.role`에서 얻은 admin 여부
+- `/api/capabilities`는 두 정보를 합쳐 애드온과 provider별로 다음 값을 돌려준다
+  - `available`
+  - `reason`: `plugin_missing`, `admin_required` 등
+  - `sources`: 쓸 수 있는 provider 이름 목록
+- 프론트는 이 결과대로 아이콘을 숨기거나, 창 안에 "플러그인 필요", "관리자 전용"으로 안내한다
+- 실제 호출이 OMV에서 `RPC service '...' not found.`(HTTP 404)로 실패하면 provider를 쓸 수 없는 상태로 바꾼다. 이 경로는 마지막 안전장치일 뿐, 감지의 기본 수단이 아니다
+
+### RPC 허용 목록과 단계 규칙
+
+- 백엔드의 OMV RPC 중계(`/desk/rpc`와 provider의 내부 호출)는 등록된 manifest의 `rpc.read`·`rpc.write`에 있는 메서드만 통과시킨다
+- 쓰기 RPC 허용 여부는 백엔드 한 곳(상수)에서 정한다. 3단계에서는 꺼 둔다
+- 테스트로 "모든 내장 애드온의 `rpc.write`가 비어 있다"를 확인한다. 이 테스트는 4단계에서 바꾼다
+- 역할 검사는 OMV가 최종적으로 한다. 백엔드는 `requires.admin`으로 불필요한 호출을 미리 막을 뿐이다
+
+## 내장 애드온
+
+### 위치와 등록
+
+- 백엔드: `backend/internal/addons/<id>/`. manifest와 provider, 그리고 필요하면 API 핸들러를 둔다. `internal/addons`의 정적 목록에 등록한다
+- 프론트엔드: `frontend/src/addons/<id>/`. 창 컴포넌트와 데이터 훅을 둔다. 정적 목록에 등록한다
+- 프론트 목록은 지금의 `windows/apps.ts`처럼 `as const` 객체로 둔다. 컴파일 타임 타입(`AppId`)을 유지하기 위해서다
+- 별도 패키지, 런타임 로딩, Go `plugin` 패키지는 쓰지 않는다
+
+### 3단계에서 정할 것
+
+- manifest를 어디에 둘지
+  - 백엔드와 프론트가 같은 manifest를 읽어야 한다
+  - 후보 1: 애드온 디렉터리의 JSON 파일을 Go는 `go:embed`로, 프론트는 import로 읽는다
+  - 후보 2: Go 구조체를 원본으로 두고 tygo와 생성 스크립트로 프론트 목록을 만든다
+- 백엔드 id 목록과 프론트 id 목록이 어긋나지 않게 하는 검사 방법
+
+### 새 애드온 추가 체크리스트
+
+1. 데이터 출처를 정하고 [data-sources.md](data-sources.md)에 추가한다. root가 필요한 정보는 OMV RPC로만 가져온다
+2. RPC 메서드 이름과 역할은 추측하지 않는다. `/usr/share/openmediavault/engined/rpc/*.inc`에서 확인한다
+3. manifest의 `requires`와 `rpc.read`를 채운다. `rpc.write`는 현재 단계가 허용할 때만 채운다
+4. provider를 만든다
+   - 입력부(`fs.FS`, RPC 클라이언트)를 주입받게 한다
+   - `testdata/`에 합성한 픽스처로 테스트한다. 식별 정보(시리얼, MAC, IP, 호스트 이름, 사용자 이름)는 가짜 값으로 바꾼다
+5. 응답 구조체를 `internal/api`에 추가하고 `make types`를 실행한다
+6. 프론트 창 컴포넌트를 만든다
+   - capability가 없을 때의 안내와 "연결 끊김" 상태를 처리한다
+   - 주기 요청은 `poller.ts` 방식을 따른다
+7. 아이콘은 리졸버 매핑 테이블에 추가한다
+8. `make check`, `make build`
+
+## 향후 고려 (구현하지 않음)
+
+공개 후 필요해지면 다시 검토한다. 지금 설계는 이 둘을 막지 않는 정도만 신경 쓴다.
+
+### 선언형 애드온
+
+- YAML 같은 데이터만으로 정의한다. "이 RPC를 호출해 표·게이지·키-값으로 보여 준다" 정도다. OMV workbench의 `dashboard.d/*.yaml` 위젯과 같은 방식이다
+- 실행하는 코드가 없으므로 비교적 안전하다. RPC 허용 목록과 단계 규칙도 manifest 검사로 그대로 강제할 수 있다
+- tempmon, zfs, nut처럼 RPC 하나를 표로 보여 주면 되는 플러그인 대부분이 여기에 해당한다
+
+### 코드 애드온
+
+- 이 대시보드는 OMV와 같은 출처로 서빙된다. 그래서 서드파티 JS를 그냥 실행하면 OMV workbench와 같은 출처 권한을 갖는다
+  - 브라우저에 OMV 로그인 쿠키가 있으면 `rpc.php`를 직접 호출할 수 있다. 백엔드 중계와 허용 목록을 모두 우회하게 된다
+  - workbench의 sessionStorage도 읽을 수 있다
+- 따라서 서드파티 프론트 코드는 반드시 `sandbox="allow-scripts"` iframe(`allow-same-origin` 없이, opaque origin)에 넣는다. 백엔드와는 postMessage SDK로만 통신하게 한다
+- 백엔드 확장은 Go `plugin`을 쓰지 않는다. Go 버전과 의존성 버전이 정확히 같아야 하고 언로드도 안 된다. 대신 별도 프로세스(유닉스 소켓 HTTP)를 백엔드가 중계하는 방식으로 한다
+
+### 공개 시 라이선스
+
+- 아이콘 테마 Colloid는 GPL-3.0이다. 빌드 결과에 함께 들어가므로 프로젝트와 배포물의 라이선스를 정할 때 이 점을 고려한다
