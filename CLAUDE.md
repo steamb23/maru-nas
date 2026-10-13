@@ -56,6 +56,11 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
   - Vite `base`는 `/desk/`. 개발 서버는 `/desk/api/*`를 `/desk`를 뗀 뒤 백엔드로 프록시한다
   - `server.fs.allow`는 `frontend/`와 `vendor/icons/`만 허용한다(개발 서버가 LAN에 열려 있으므로 저장소 루트 전체를 허용하지 않는다)
   - 개인 환경 값(`DEV_HOST`, `DEV_ALLOWED_HOSTS`, `OMVDESK_LISTEN`)은 커밋하지 않는 `frontend/.env.local`에 둔다
+  - `src/windows/`: 창 상태 저장소(`store.ts`), 앱 목록(`apps.ts`), 창 위치 제한(`geometry.ts`). DOM에 의존하지 않아 node 환경에서 테스트한다
+  - `src/shell/`: 데스크톱 셸 컴포넌트(바탕화면, 창 프레임, 작업표시줄)
+  - `src/sysinfo/`: 시스템 정보 창. 주기 요청은 `poller.ts`(응답 후 다음 요청 예약, 중첩 없음)
+  - `src/icons/`: 리졸버와 `IconImage`(컬러는 `<img>`, symbolic은 `mask-image`)
+  - 컴포넌트 테스트용 DOM 환경(jsdom 등)은 쓰지 않는다. 로직을 순수 함수·저장소로 분리해 테스트하고, 화면 동작은 브라우저에서 확인한다
 - **아이콘**: Colloid를 git submodule(shallow)로 `vendor/icons/colloid/`에 둔다. 리졸버는 `frontend/src/icons/resolver.ts`이며, 매핑 테이블에 `?url` import로 한 줄씩 추가한 아이콘만 번들에 들어간다(디렉터리 glob 금지)
 
 ## 명령어

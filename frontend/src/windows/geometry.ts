@@ -15,7 +15,9 @@ export interface Rect extends Point, Size {}
 // Window.tsx의 제목 표시줄 높이와 맞춰야 한다(index.css의 --titlebar-height).
 export const TITLEBAR_HEIGHT = 36
 // 창을 좌우로 화면 밖에 끌어도 제목 표시줄이 이만큼은 화면에 남는다.
-export const MIN_VISIBLE = 80
+// 왼쪽으로 밀면 오른쪽 끝의 창 버튼 영역(index.css의 .win-btn 30px × 3 + 간격 + 여백 ≈ 98px)만
+// 남게 되는데, 버튼 위에서는 드래그가 시작되지 않으므로 그보다 넉넉히 잡는다.
+export const MIN_VISIBLE = 150
 
 // 새 창의 첫 위치와 계단식 간격. 왼쪽의 바탕화면 아이콘 열을 피한다.
 const CASCADE_ORIGIN: Point = { x: 140, y: 40 }

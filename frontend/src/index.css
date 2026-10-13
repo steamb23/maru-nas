@@ -166,6 +166,7 @@ button {
   color: var(--text);
 }
 
+/* 버튼 영역 너비를 늘리면 windows/geometry.ts의 MIN_VISIBLE도 함께 늘린다. */
 .titlebar-buttons {
   display: flex;
   gap: 2px;
