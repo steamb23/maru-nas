@@ -7,6 +7,7 @@ import { type WindowState, type WindowStore, stableOrder, useWindowStore } from 
 import { DesktopIcon } from './DesktopIcon'
 import { Taskbar } from './Taskbar'
 import { TileDivider } from './TileDivider'
+import { enterDesktop } from './screenTransition'
 import { type ClosingWindow, Window } from './Window'
 import { useClosingWindows } from './useClosingWindows'
 
@@ -14,6 +15,7 @@ import { useClosingWindows } from './useClosingWindows'
 const closingSnapshot = (win: WindowState, prev: WindowStore): ClosingWindow => ({ win, tileSplit: prev.tileSplit })
 
 export function Desktop() {
+  const rootRef = useRef<HTMLDivElement>(null)
   const areaRef = useRef<HTMLDivElement>(null)
   // 데스크톱 영역(작업표시줄 제외) 크기. 창 위치 제한의 기준이다.
   const [bounds, setBounds] = useState<Size>(() => ({ width: window.innerWidth, height: window.innerHeight }))
@@ -43,8 +45,11 @@ export function Desktop() {
     return () => ro.disconnect()
   }, [])
 
+  // 로그인하거나 세션을 복원해 처음 그려질 때 내용이 커지며 나타난다.
+  useLayoutEffect(() => enterDesktop(rootRef.current), [])
+
   return (
-    <div className="desktop">
+    <div className="desktop" ref={rootRef}>
       <div className="desktop-area" ref={areaRef}>
         <ul className="desktop-icons" aria-label="바탕화면">
           {APP_IDS.map((appId) => (

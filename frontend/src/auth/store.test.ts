@@ -1,14 +1,18 @@
 import { describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../api/client'
 import type { LoginResponse, SessionInfo } from '../api/types.gen'
-import { type AuthApi, createAuthStore } from './store'
+import { type AuthApi, type ScreenChange, createAuthStore } from './store'
 
 const admin: SessionInfo = { username: 'admin', admin: true }
 const user: SessionInfo = { username: 'user', admin: false }
 const authed = (s: SessionInfo): LoginResponse => ({ status: 'authenticated', session: s })
 const challenge: LoginResponse = { status: 'challengeRequired', challenge: { kind: 'totp' } }
 
-function setup(api: Partial<AuthApi> = {}, now = () => 1_000_000) {
+function setup(
+  api: Partial<AuthApi> = {},
+  now = () => 1_000_000,
+  beforeScreenChange?: (change: ScreenChange) => Promise<void>,
+) {
   const resetWindows = vi.fn()
   const full: AuthApi = {
     fetchSession: vi.fn(async () => admin),
@@ -17,7 +21,7 @@ function setup(api: Partial<AuthApi> = {}, now = () => 1_000_000) {
     logout: vi.fn(async () => {}),
     ...api,
   }
-  const store = createAuthStore({ api: full, resetWindows, now })
+  const store = createAuthStore({ api: full, resetWindows, now, beforeScreenChange })
   return { store, api: full, resetWindows }
 }
 
@@ -172,5 +176,106 @@ describe('만료 시각', () => {
     await store.getState().login('admin', 'pw')
     store.getState().expire()
     expect(store.getState().expiresAt).toBeNull()
+  })
+})
+
+// transition은 끝을 직접 정하는 화면 전환 훅이다. 불린 방향은 calls에 남는다.
+function transition() {
+  const calls: ScreenChange[] = []
+  let finish = () => {}
+  const hook = vi.fn((change: ScreenChange) => {
+    calls.push(change)
+    return new Promise<void>((resolve) => (finish = resolve))
+  })
+  return { hook, calls, finish: () => finish() }
+}
+
+// flush는 대기 중인 Promise 후속 처리를 모두 돌린다.
+const flush = () => new Promise((r) => setTimeout(r, 0))
+
+describe('화면 전환', () => {
+  it('로그인은 나가는 애니메이션이 끝난 뒤 데스크톱으로 바꾼다', async () => {
+    const t = transition()
+    const { store } = setup({}, undefined, t.hook)
+    const pending = store.getState().login('admin', 'pw')
+    await flush()
+    expect(t.calls).toEqual(['signIn'])
+    expect(store.getState().status).not.toBe('loggedIn')
+    t.finish()
+    await pending
+    expect(store.getState().status).toBe('loggedIn')
+  })
+
+  it('2차 인증을 마칠 때도 같은 전환을 거치고, 2차 인증 요구로는 전환하지 않는다', async () => {
+    const t = transition()
+    const { store } = setup({ login: async () => challenge }, undefined, t.hook)
+    await store.getState().login('totp', 'pw')
+    expect(t.calls).toEqual([])
+    const pending = store.getState().verify('123456')
+    await flush()
+    expect(t.calls).toEqual(['signIn'])
+    t.finish()
+    await pending
+    expect(store.getState().status).toBe('loggedIn')
+  })
+
+  it('세션 복원은 전환을 거치지 않는다', async () => {
+    const t = transition()
+    const { store } = setup({}, undefined, t.hook)
+    await store.getState().restore()
+    expect(t.hook).not.toHaveBeenCalled()
+    expect(store.getState().status).toBe('loggedIn')
+  })
+
+  it('로그아웃은 요청과 나가는 애니메이션이 모두 끝난 뒤 로그인 화면으로 바꾼다', async () => {
+    const t = transition()
+    const { store, api, resetWindows } = setup({}, undefined, t.hook)
+    await store.getState().restore()
+    const pending = store.getState().logout()
+    await flush()
+    expect(t.calls).toEqual(['signOut'])
+    expect(api.logout).toHaveBeenCalled()
+    expect(store.getState().status).toBe('loggedIn')
+    expect(resetWindows).not.toHaveBeenCalled()
+    t.finish()
+    await pending
+    expect(resetWindows).toHaveBeenCalledOnce()
+    expect(store.getState().status).toBe('loggedOut')
+  })
+
+  it('세션 만료도 같은 전환을 거치고, 그동안 다시 들어온 만료·로그아웃은 무시한다', async () => {
+    const t = transition()
+    const { store, api } = setup({}, undefined, t.hook)
+    await store.getState().restore()
+    store.getState().expire()
+    store.getState().expire()
+    await store.getState().logout()
+    expect(t.calls).toEqual(['signOut'])
+    expect(api.logout).not.toHaveBeenCalled()
+    expect(store.getState().status).toBe('loggedIn')
+    t.finish()
+    await flush()
+    expect(store.getState()).toMatchObject({ status: 'loggedOut', notice: 'expired' })
+  })
+
+  it('로그아웃 중에 다른 요청이 받은 401(만료)은 무시한다', async () => {
+    const t = transition()
+    const { store } = setup({}, undefined, t.hook)
+    await store.getState().restore()
+    const pending = store.getState().logout()
+    store.getState().expire()
+    t.finish()
+    await pending
+    expect(t.calls).toEqual(['signOut'])
+    expect(store.getState()).toMatchObject({ status: 'loggedOut', notice: null })
+  })
+
+  it('전환 훅이 실패해도 화면은 바꾼다', async () => {
+    const { store } = setup({}, undefined, async () => Promise.reject(new Error('x')))
+    await store.getState().login('admin', 'pw')
+    expect(store.getState().status).toBe('loggedIn')
+    store.getState().expire()
+    await flush()
+    expect(store.getState().status).toBe('loggedOut')
   })
 })

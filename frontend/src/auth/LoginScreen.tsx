@@ -1,6 +1,7 @@
 // 로그인 화면과 서버 연결 끊김 화면. 인증은 백엔드가 OMV에 위임한다.
-import { type FormEvent, useEffect, useRef, useState } from 'react'
+import { type FormEvent, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { IconImage } from '../icons/IconImage'
+import { enterLogin } from '../shell/screenTransition'
 import { type LoginError, loginErrorMessage } from './messages'
 import { useAuthStore } from './store'
 
@@ -41,6 +42,10 @@ export function LoginScreen() {
   const [remaining, lock] = useCountdown()
   const passwordRef = useRef<HTMLInputElement>(null)
   const codeRef = useRef<HTMLInputElement>(null)
+  const cardRef = useRef<HTMLElement>(null)
+
+  // 처음 그려질 때(앱 시작, 로그아웃, 세션 만료) 카드가 줄어들며 나타난다.
+  useLayoutEffect(() => enterLogin(cardRef.current), [])
 
   const inChallenge = status === 'challenge' && challenge !== null
   const redirectOnly = inChallenge && !!challenge.redirectUrl
@@ -102,7 +107,7 @@ export function LoginScreen() {
 
   return (
     <div className="desktop auth-screen">
-      <main className="login-card" aria-labelledby="login-title">
+      <main ref={cardRef} className="login-card" aria-labelledby="login-title">
         <div className="login-avatar">
           <IconImage name="avatar-default-symbolic" size={40} />
         </div>
