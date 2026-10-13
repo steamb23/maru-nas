@@ -234,3 +234,27 @@ describe('stableOrder', () => {
     expect(stableOrder([], ['b', 'a'])).toEqual(['b', 'a'])
   })
 })
+
+describe('unmaximizeAt', () => {
+  it('최대화를 풀고 원래 크기로 지정한 위치에 놓는다', () => {
+    const a = store().open('system-info', bounds)
+    const { width, height } = win(a)
+    store().toggleMaximize(a)
+    store().unmaximizeAt(a, 300, 200, bounds)
+    expect(win(a)).toMatchObject({ maximized: false, x: 300, y: 200, width, height })
+  })
+
+  it('위치는 clampPosition으로 제한한다', () => {
+    const a = store().open('system-info', bounds)
+    store().toggleMaximize(a)
+    store().unmaximizeAt(a, 100, -40, bounds)
+    expect(win(a).y).toBe(0)
+  })
+
+  it('최대화되지 않은 창은 바꾸지 않는다', () => {
+    const a = store().open('system-info', bounds)
+    const before = store().windows
+    store().unmaximizeAt(a, 300, 200, bounds)
+    expect(store().windows).toBe(before)
+  })
+})

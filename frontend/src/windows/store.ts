@@ -36,6 +36,9 @@ interface WindowActions {
   // restore는 최소화를 풀고 맨 앞으로 가져온다. 최대화 여부는 바꾸지 않는다.
   restore: (id: string) => void
   toggleMaximize: (id: string) => void
+  // unmaximizeAt은 최대화를 풀고 창을 (x, y)로 옮긴다. 크기는 최대화 전 크기로 돌아간다.
+  // 최대화된 창을 끌어 복원할 때 쓴다. 최대화되지 않은 창에는 아무것도 하지 않는다.
+  unmaximizeAt: (id: string, x: number, y: number, bounds: Size) => void
   // moveTo는 최대화된 창에는 아무것도 하지 않는다.
   moveTo: (id: string, x: number, y: number, bounds: Size) => void
   // resize는 창 위치·크기를 rect로 바꾼다. 제한은 geometry의 resizeRect가 계산하고 여기서는 반영만 한다.
@@ -113,6 +116,12 @@ export const useWindowStore = create<WindowStore>()((set, get) => {
     restore: (id) => update(id, (w, s) => raise(w, s, { minimized: false })),
 
     toggleMaximize: (id) => update(id, (w, s) => raise(w, s, { maximized: !w.maximized })),
+
+    unmaximizeAt: (id, x, y, bounds) =>
+      update(id, (w) => {
+        if (!w.maximized) return null
+        return { win: { ...w, maximized: false, ...clampPosition({ ...w, x, y }, bounds) } }
+      }),
 
     moveTo: (id, x, y, bounds) =>
       update(id, (w) => {

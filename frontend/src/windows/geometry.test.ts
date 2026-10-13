@@ -9,6 +9,7 @@ import {
   cascadePosition,
   clampPosition,
   resizeRect,
+  restoreGrab,
 } from './geometry'
 
 const bounds = { width: 1280, height: 720 }
@@ -153,5 +154,21 @@ describe('resizeRect', () => {
               expect(r.width).toBeGreaterThanOrEqual(minSize?.width ?? MIN_WIDTH)
               expect(r.height).toBeGreaterThanOrEqual(minSize?.height ?? MIN_HEIGHT)
             }
+  })
+})
+
+describe('restoreGrab', () => {
+  const maxRect = { x: 8, y: 8, width: 1264, height: 732 }
+
+  it('최대화 창에서 잡은 가로 비율을 복원된 창에서도 유지한다', () => {
+    // 최대화 창의 1/4 지점을 잡으면 복원된 창의 1/4 지점을 잡는다.
+    expect(restoreGrab({ x: 8 + 316, y: 20 }, maxRect, size)).toEqual({ x: 100, y: 12 })
+    expect(restoreGrab({ x: 8, y: 8 }, maxRect, size)).toEqual({ x: 0, y: 0 })
+    expect(restoreGrab({ x: 8 + 1264, y: 8 }, maxRect, size)).toEqual({ x: 400, y: 0 })
+  })
+
+  it('잡은 지점이 창 밖이어도 창 안으로 제한한다', () => {
+    expect(restoreGrab({ x: -50, y: 0 }, maxRect, size)).toEqual({ x: 0, y: 0 })
+    expect(restoreGrab({ x: 2000, y: 100 }, maxRect, size)).toEqual({ x: 400, y: TITLEBAR_HEIGHT })
   })
 })
