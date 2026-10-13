@@ -560,6 +560,12 @@ button {
   border-radius: 10px;
   background: var(--window-bg);
   box-shadow: 0 8px 28px rgb(0 0 0 / 0.3);
+  /* 열기·닫기 애니메이션이 프로필 버튼 쪽에서 커지고 줄어들게 한다. */
+  transform-origin: right bottom;
+}
+
+.profile-menu.closing {
+  pointer-events: none;
 }
 
 .profile-menu-header {

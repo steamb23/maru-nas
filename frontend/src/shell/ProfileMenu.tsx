@@ -1,11 +1,21 @@
 // 작업표시줄 오른쪽 끝의 프로필 버튼과 메뉴.
-import { type KeyboardEvent, useEffect, useId, useRef, useState } from 'react'
+import { type KeyboardEvent, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import type { SessionInfo } from '../api/types.gen'
 import { useAuthStore } from '../auth/store'
 import { IconImage } from '../icons/IconImage'
 import { PROFILE_MENU_ITEMS, type ProfileMenuItemId, groupItems, nextIndex, visibleItems } from './profileMenu'
+import { animationsEnabled } from './useWindowAnimation'
+import { CLOSE_EASING, EASING } from './windowAnim'
 
 const { logout } = useAuthStore.getState()
+
+// 메뉴는 프로필 버튼 쪽(오른쪽 아래, index.css의 transform-origin)에서 조금 아래·작은 상태로 떠오르며 나타나고,
+// 닫을 때는 더 짧게 살짝 가라앉으며 사라진다. 창 애니메이션과 같은 켜기/끄기·동작 줄이기 설정을 따른다.
+const MENU_OPEN_MS = 160
+const MENU_CLOSE_MS = 110
+const MENU_OPEN_FROM: Keyframe = { opacity: 0, transform: 'translateY(8px) scale(0.96)' }
+const MENU_CLOSE_TO: Keyframe = { opacity: 0, transform: 'translateY(4px) scale(0.98)' }
+const MENU_SHOWN: Keyframe = { opacity: 1, transform: 'none' }
 
 // 메뉴 항목 동작. profileMenu.ts의 항목 id마다 하나씩 둔다.
 const actions: Record<ProfileMenuItemId, () => void> = {
@@ -25,21 +35,52 @@ export function ProfileAvatar({ size }: { user: SessionInfo; size: number }) {
 export function ProfileMenu() {
   const user = useAuthStore((s) => s.user)
   const [open, setOpen] = useState(false)
+  // 닫기 애니메이션 중이면 true. 그동안 메뉴를 그려 두되 클릭·포커스는 받지 않는다.
+  const [closing, setClosing] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
   const menuId = useId()
 
-  const close = (focusButton: boolean) => {
+  const show = () => {
+    setOpen(true)
+    setClosing(false)
+  }
+  const hide = () => {
     setOpen(false)
+    setClosing(animationsEnabled())
+  }
+  const close = (focusButton: boolean) => {
+    hide()
     if (focusButton) buttonRef.current?.focus()
   }
+
+  // 열기·닫기 애니메이션. 닫는 중에 다시 열면 지금 보이는 투명도·위치에서 이어 간다.
+  useLayoutEffect(() => {
+    const el = menuRef.current
+    if (!el || !animationsEnabled()) return
+    const style = getComputedStyle(el)
+    const from: Keyframe = { opacity: style.opacity, transform: style.transform }
+    const running = el.getAnimations().length > 0
+    el.getAnimations().forEach((a) => a.cancel())
+    if (open) {
+      el.animate([running ? from : MENU_OPEN_FROM, MENU_SHOWN], { duration: MENU_OPEN_MS, easing: EASING })
+    } else {
+      // 끝난 뒤 메뉴가 지워지는 렌더링까지 원래 모습이 한 프레임 비치지 않도록 마지막 상태를 유지한다.
+      const anim = el.animate([from, MENU_CLOSE_TO], {
+        duration: MENU_CLOSE_MS,
+        easing: CLOSE_EASING,
+        fill: 'forwards',
+      })
+      anim.onfinish = () => setClosing(false)
+    }
+  }, [open])
 
   // 열려 있는 동안 메뉴 밖을 누르면 닫는다. 누른 곳의 동작(창 클릭 등)은 그대로 둔다.
   useEffect(() => {
     if (!open) return
     const onPointerDown = (e: PointerEvent) => {
-      if (!rootRef.current?.contains(e.target as Node)) setOpen(false)
+      if (!rootRef.current?.contains(e.target as Node)) hide()
     }
     document.addEventListener('pointerdown', onPointerDown, true)
     return () => document.removeEventListener('pointerdown', onPointerDown, true)
@@ -60,7 +101,7 @@ export function ProfileMenu() {
       return
     }
     if (e.key === 'Tab') {
-      setOpen(false)
+      hide()
       return
     }
     const items = Array.from(menuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]') ?? [])
@@ -83,12 +124,19 @@ export function ProfileMenu() {
         aria-controls={open ? menuId : undefined}
         aria-label={`사용자 메뉴 (${user.username})`}
         title={user.username}
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => (open ? hide() : show())}
       >
         <ProfileAvatar user={user} size={28} />
       </button>
-      {open && (
-        <div id={menuId} ref={menuRef} className="profile-menu" role="menu" onKeyDown={onMenuKeyDown}>
+      {(open || closing) && (
+        <div
+          id={menuId}
+          ref={menuRef}
+          className={closing ? 'profile-menu closing' : 'profile-menu'}
+          role="menu"
+          inert={closing}
+          onKeyDown={onMenuKeyDown}
+        >
           <div className="profile-menu-header">
             <ProfileAvatar user={user} size={36} />
             <div className="profile-menu-user">
