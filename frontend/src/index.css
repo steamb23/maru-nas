@@ -5,7 +5,11 @@
 
   /* windows/geometry.ts의 TITLEBAR_HEIGHT와 맞춘다. */
   --titlebar-height: 36px;
+  /* 떠 있는 작업표시줄과 최대화 창이 화면 가장자리·서로와 두는 간격 */
+  --float-gap: 8px;
+  /* 작업표시줄 패널 두께와, 창 영역에서 빼는 높이 */
   --taskbar-height: 44px;
+  --taskbar-reserve: calc(var(--taskbar-height) + var(--float-gap));
 
   --accent: #3c84f7;
   --text: light-dark(#1f2328, #e6e8eb);
@@ -58,16 +62,17 @@ button {
 .desktop {
   position: fixed;
   inset: 0;
-  display: flex;
-  flex-direction: column;
+  overflow: hidden;
   background: linear-gradient(160deg, #2b5876 0%, #4e4376 100%);
 }
 
+/* 창 영역. 크기는 창 위치 제한과 최대화의 기준이며 작업표시줄 자리는 뺀다.
+   창은 작업표시줄 아래로 내려가도 잘리지 않고 작업표시줄 뒤로 지나간다(화면 가장자리에서는 .desktop이 자른다).
+   isolation으로 창의 z-index가 작업표시줄을 넘지 못하게 한다. */
 .desktop-area {
-  position: relative;
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
+  position: absolute;
+  inset: 0 0 var(--taskbar-reserve) 0;
+  isolation: isolate;
 }
 
 .desktop-icons {
@@ -138,10 +143,10 @@ button {
   box-shadow: 0 10px 36px rgb(0 0 0 / 0.4);
 }
 
+/* 최대화한 창도 작업표시줄처럼 화면 가장자리와 작업표시줄에서 떨어져 떠 있다.
+   창 영역 아래쪽 끝이 작업표시줄 위쪽 끝이므로 같은 간격이 생긴다. */
 .window.maximized {
-  inset: 0;
-  border-radius: 0;
-  border-width: 0;
+  inset: var(--float-gap);
 }
 
 /* 크기 조절 핸들. 창 테두리 안쪽에 겹쳐 놓으므로 제목 표시줄 위쪽 가장자리도 크기 조절 영역이 된다. */
@@ -302,13 +307,28 @@ button {
 
 /* ---- 작업표시줄 ---- */
 
+/* 작업표시줄 자리. 패널 바깥의 빈 곳은 클릭이 아래의 창·바탕화면으로 지나가게 한다. */
+.taskbar-dock {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1;
+  height: var(--taskbar-reserve);
+  pointer-events: none;
+}
+
+/* KDE Plasma식 떠 있는 패널. 최대화된 창이 있어도 떠 있다. */
 .taskbar {
-  flex: none;
-  height: var(--taskbar-height);
+  position: absolute;
+  inset: 0 var(--float-gap) var(--float-gap);
   padding: 4px 8px;
-  border-top: 1px solid var(--window-border);
+  border: 1px solid var(--window-border);
+  border-radius: 12px;
   background: var(--taskbar-bg);
+  box-shadow: 0 6px 24px rgb(0 0 0 / 0.25);
   backdrop-filter: blur(12px);
+  pointer-events: auto;
 }
 
 .taskbar-items {

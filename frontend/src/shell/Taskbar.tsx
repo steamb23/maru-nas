@@ -169,45 +169,47 @@ export function Taskbar() {
   }
 
   return (
-    <nav className="taskbar" aria-label="작업표시줄">
-      <ul ref={listRef} className="taskbar-items">
-        {windows.map((w, i) => {
-          const active = w.id === activeId
-          const classes = ['task', active && 'active', w.minimized && 'minimized'].filter(Boolean).join(' ')
-          const dragging = view?.id === w.id
-          const offset = view ? (dragging ? view.layout.dx : view.layout.shifts[i]) : 0
-          let liClasses: string | undefined
-          if (dragging) liClasses = view.settling ? 'dragging settling' : 'dragging'
-          else if (view) liClasses = 'shifting'
+    <div className="taskbar-dock">
+      <nav className="taskbar" aria-label="작업표시줄">
+        <ul ref={listRef} className="taskbar-items">
+          {windows.map((w, i) => {
+            const active = w.id === activeId
+            const classes = ['task', active && 'active', w.minimized && 'minimized'].filter(Boolean).join(' ')
+            const dragging = view?.id === w.id
+            const offset = view ? (dragging ? view.layout.dx : view.layout.shifts[i]) : 0
+            let liClasses: string | undefined
+            if (dragging) liClasses = view.settling ? 'dragging settling' : 'dragging'
+            else if (view) liClasses = 'shifting'
 
-          return (
-            <li
-              key={w.id}
-              className={liClasses}
-              style={offset ? { transform: `translateX(${offset}px)` } : undefined}
-              onTransitionEnd={(e) => onTransitionEnd(e, w.id)}
-            >
-              <button
-                type="button"
-                className={classes}
-                aria-pressed={active}
-                onPointerDown={(e) => onPointerDown(e, w, i)}
-                onPointerMove={onPointerMove}
-                onPointerUp={onPointerUp}
-                onPointerCancel={onPointerLost}
-                onLostPointerCapture={onPointerLost}
-                onClick={() => {
-                  if (suppressClick.current) suppressClick.current = false
-                  else onTaskClick(w, active)
-                }}
+            return (
+              <li
+                key={w.id}
+                className={liClasses}
+                style={offset ? { transform: `translateX(${offset}px)` } : undefined}
+                onTransitionEnd={(e) => onTransitionEnd(e, w.id)}
               >
-                <IconImage name={getApp(w.appId).icon} size={20} />
-                <span className="task-title">{w.title}</span>
-              </button>
-            </li>
-          )
-        })}
-      </ul>
-    </nav>
+                <button
+                  type="button"
+                  className={classes}
+                  aria-pressed={active}
+                  onPointerDown={(e) => onPointerDown(e, w, i)}
+                  onPointerMove={onPointerMove}
+                  onPointerUp={onPointerUp}
+                  onPointerCancel={onPointerLost}
+                  onLostPointerCapture={onPointerLost}
+                  onClick={() => {
+                    if (suppressClick.current) suppressClick.current = false
+                    else onTaskClick(w, active)
+                  }}
+                >
+                  <IconImage name={getApp(w.appId).icon} size={20} />
+                  <span className="task-title">{w.title}</span>
+                </button>
+              </li>
+            )
+          })}
+        </ul>
+      </nav>
+    </div>
   )
 }
