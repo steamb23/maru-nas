@@ -121,6 +121,19 @@ describe('resizeRect', () => {
     for (const v of Object.values(r)) expect(Number.isInteger(v)).toBe(true)
   })
 
+  it('minSize를 넘기면 그 크기에서 멈춘다', () => {
+    const minSize = { width: 320, height: 260 }
+    expect(resizeRect(start, 'se', -5000, -5000, bounds, minSize)).toEqual({ x: 200, y: 100, ...minSize })
+    const nw = resizeRect(start, 'nw', 5000, 5000, bounds, minSize)
+    expect(nw).toEqual({ x: start.x + start.width - 320, y: start.y + start.height - 260, ...minSize })
+  })
+
+  it('공통 하한보다 작은 minSize는 공통 하한으로 올라간다', () => {
+    const r = resizeRect(start, 'se', -5000, -5000, bounds, { width: 10, height: 10 })
+    expect(r.width).toBe(MIN_WIDTH)
+    expect(r.height).toBe(MIN_HEIGHT)
+  })
+
   it('크기를 조절해도 제목 표시줄은 다시 잡을 수 있다', () => {
     const edges: ResizeEdge[] = ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw']
     const starts = [
@@ -129,14 +142,16 @@ describe('resizeRect', () => {
       { ...clampPosition({ x: 5000, y: 5000, ...size }, bounds), ...size },
     ]
     const deltas = [-5000, -100, 0, 100, 5000]
-    for (const s of starts)
-      for (const edge of edges)
-        for (const dx of deltas)
-          for (const dy of deltas) {
-            const r = resizeRect(s, edge, dx, dy, bounds)
-            expect(clampPosition(r, bounds)).toEqual({ x: r.x, y: r.y })
-            expect(r.width).toBeGreaterThanOrEqual(MIN_WIDTH)
-            expect(r.height).toBeGreaterThanOrEqual(MIN_HEIGHT)
-          }
+    const minSizes = [undefined, { width: 360, height: 280 }]
+    for (const minSize of minSizes)
+      for (const s of starts)
+        for (const edge of edges)
+          for (const dx of deltas)
+            for (const dy of deltas) {
+              const r = resizeRect(s, edge, dx, dy, bounds, minSize)
+              expect(clampPosition(r, bounds)).toEqual({ x: r.x, y: r.y })
+              expect(r.width).toBeGreaterThanOrEqual(minSize?.width ?? MIN_WIDTH)
+              expect(r.height).toBeGreaterThanOrEqual(minSize?.height ?? MIN_HEIGHT)
+            }
   })
 })

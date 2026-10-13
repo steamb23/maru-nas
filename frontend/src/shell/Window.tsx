@@ -94,7 +94,7 @@ export function Window({ id, bounds }: Props) {
       <div className="window-body">
         {app.kind === 'system-info' ? <SystemInfoWindow active={!win.minimized} /> : <PlaceholderWindow />}
       </div>
-      {!win.maximized && <ResizeHandles id={id} rect={win} bounds={bounds} />}
+      {!win.maximized && <ResizeHandles id={id} rect={win} bounds={bounds} minSize={app.minSize} />}
     </section>
   )
 }

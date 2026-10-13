@@ -7,6 +7,8 @@ interface Props {
   // 현재 창의 위치·크기. 크기 조절을 시작할 때의 기준이 된다.
   rect: Rect
   bounds: Size
+  // 앱별 최소 크기. 생략하면 공통 하한을 쓴다.
+  minSize?: Size
 }
 
 interface Resize {
@@ -24,7 +26,7 @@ const { resize } = useWindowStore.getState()
 
 // ResizeHandles는 창 테두리 안쪽의 변·모서리 핸들이다. 최대화된 창에는 그리지 않는다.
 // 포커스는 창(section)의 onPointerDownCapture가 처리한다.
-export function ResizeHandles({ id, rect, bounds }: Props) {
+export function ResizeHandles({ id, rect, bounds, minSize }: Props) {
   const drag = useRef<Resize | null>(null)
 
   const onPointerDown = (edge: ResizeEdge) => (e: PointerEvent<HTMLElement>) => {
@@ -37,7 +39,7 @@ export function ResizeHandles({ id, rect, bounds }: Props) {
   const onPointerMove = (e: PointerEvent<HTMLElement>) => {
     const d = drag.current
     if (!d || d.pointerId !== e.pointerId) return
-    resize(id, resizeRect(d.start, d.edge, e.clientX - d.startX, e.clientY - d.startY, bounds))
+    resize(id, resizeRect(d.start, d.edge, e.clientX - d.startX, e.clientY - d.startY, bounds, minSize))
   }
   const endDrag = (e: PointerEvent<HTMLElement>) => {
     if (drag.current?.pointerId === e.pointerId) drag.current = null

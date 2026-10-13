@@ -18,7 +18,8 @@ export const TITLEBAR_HEIGHT = 36
 // 왼쪽으로 밀면 오른쪽 끝의 창 버튼 영역(index.css의 .win-btn 30px × 3 + 간격 + 여백 ≈ 98px)만
 // 남게 되는데, 버튼 위에서는 드래그가 시작되지 않으므로 그보다 넉넉히 잡는다.
 export const MIN_VISIBLE = 150
-// 크기 조절로 줄일 수 있는 최소 크기. 제목 표시줄의 아이콘·제목 일부·버튼 영역이 들어가야 하며,
+// 모든 창 공통 최소 크기(하한). 앱별 최소 크기도 이보다 작아질 수 없다.
+// 제목 표시줄의 아이콘·제목 일부·버튼 영역이 들어가야 하며,
 // MIN_WIDTH ≥ MIN_VISIBLE이어야 resizeRect의 제한이 clampPosition과 어긋나지 않는다.
 export const MIN_WIDTH = 240
 export const MIN_HEIGHT = 120
@@ -56,24 +57,33 @@ function clampEdge(v: number, lo: number, hi: number): number {
 
 // resizeRect는 start 창의 edge 쪽 변을 (dx, dy)만큼 끌었을 때의 새 위치·크기를 계산한다.
 // 끄는 변만 움직이고 반대쪽 변은 고정된다. 제한은 다음과 같다.
-//   - 너비·높이는 MIN_WIDTH·MIN_HEIGHT 이상
+//   - 너비·높이는 minSize 이상. minSize가 공통 하한(MIN_WIDTH·MIN_HEIGHT)보다 작으면 공통 하한을 쓴다
 //   - 데스크톱 밖으로는 키울 수 없다. 이미 밖에 걸쳐 있던 창을 강제로 줄이지는 않는다
 //   - 제목 표시줄을 다시 잡을 수 있다(clampPosition과 같은 조건)
-export function resizeRect(start: Rect, edge: ResizeEdge, dx: number, dy: number, bounds: Size): Rect {
+export function resizeRect(
+  start: Rect,
+  edge: ResizeEdge,
+  dx: number,
+  dy: number,
+  bounds: Size,
+  minSize: Size = { width: MIN_WIDTH, height: MIN_HEIGHT },
+): Rect {
+  const minW = Math.max(minSize.width, MIN_WIDTH)
+  const minH = Math.max(minSize.height, MIN_HEIGHT)
   let left = start.x
   let top = start.y
   let right = start.x + start.width
   let bottom = start.y + start.height
 
   if (edge.includes('w')) {
-    left = clampEdge(left + dx, Math.min(0, start.x), Math.min(right - MIN_WIDTH, bounds.width - MIN_VISIBLE))
+    left = clampEdge(left + dx, Math.min(0, start.x), Math.min(right - minW, bounds.width - MIN_VISIBLE))
   } else if (edge.includes('e')) {
-    right = clampEdge(right + dx, Math.max(left + MIN_WIDTH, MIN_VISIBLE), Math.max(bounds.width, right))
+    right = clampEdge(right + dx, Math.max(left + minW, MIN_VISIBLE), Math.max(bounds.width, right))
   }
   if (edge.includes('n')) {
-    top = clampEdge(top + dy, 0, Math.min(bottom - MIN_HEIGHT, bounds.height - TITLEBAR_HEIGHT))
+    top = clampEdge(top + dy, 0, Math.min(bottom - minH, bounds.height - TITLEBAR_HEIGHT))
   } else if (edge.includes('s')) {
-    bottom = clampEdge(bottom + dy, top + MIN_HEIGHT, Math.max(bounds.height, bottom))
+    bottom = clampEdge(bottom + dy, top + minH, Math.max(bounds.height, bottom))
   }
 
   const x = Math.round(left)
