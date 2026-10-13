@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { MIN_VISIBLE, TITLEBAR_HEIGHT } from './geometry'
-import { type WindowState, initialWindowData, selectActiveId, useWindowStore } from './store'
+import { type WindowState, initialWindowData, moveItem, selectActiveId, stableOrder, useWindowStore } from './store'
 
 const bounds = { width: 1280, height: 720 }
 
@@ -165,5 +165,72 @@ describe('resize', () => {
     const before = store().windows
     store().resize(a, { x, y, width, height })
     expect(store().windows).toBe(before)
+  })
+})
+
+describe('reorder', () => {
+  const order = () => store().windows.map((w) => w.id)
+
+  it('창을 지정한 자리로 옮긴다', () => {
+    const [a, b, c] = [
+      store().open('system-info', bounds),
+      store().open('files', bounds),
+      store().open('storage', bounds),
+    ]
+    store().reorder(a, 2)
+    expect(order()).toEqual([b, c, a])
+    store().reorder(a, 0)
+    expect(order()).toEqual([a, b, c])
+    store().reorder(c, 1)
+    expect(order()).toEqual([a, c, b])
+  })
+
+  it('범위를 벗어난 자리는 양 끝으로 제한한다', () => {
+    const a = store().open('system-info', bounds)
+    const b = store().open('files', bounds)
+    store().reorder(a, 99)
+    expect(order()).toEqual([b, a])
+    store().reorder(a, -5)
+    expect(order()).toEqual([a, b])
+  })
+
+  it('z와 활성 창은 바뀌지 않는다', () => {
+    const a = store().open('system-info', bounds)
+    const b = store().open('files', bounds)
+    store().reorder(b, 0)
+    expect(win(b).z).toBeGreaterThan(win(a).z)
+    expect(activeId()).toBe(b)
+  })
+
+  it('같은 자리이거나 없는 창이면 상태가 바뀌지 않는다', () => {
+    const a = store().open('system-info', bounds)
+    store().open('files', bounds)
+    const before = store().windows
+    store().reorder(a, 0)
+    store().reorder('nope', 1)
+    expect(store().windows).toBe(before)
+  })
+})
+
+describe('moveItem', () => {
+  it('원본을 바꾸지 않고 새 배열을 반환한다', () => {
+    const arr = ['a', 'b', 'c', 'd']
+    expect(moveItem(arr, 0, 2)).toEqual(['b', 'c', 'a', 'd'])
+    expect(moveItem(arr, 3, 1)).toEqual(['a', 'd', 'b', 'c'])
+    expect(arr).toEqual(['a', 'b', 'c', 'd'])
+  })
+})
+
+describe('stableOrder', () => {
+  it('next의 순서가 바뀌어도 prev의 순서를 유지한다', () => {
+    expect(stableOrder(['a', 'b', 'c'], ['c', 'a', 'b'])).toEqual(['a', 'b', 'c'])
+  })
+
+  it('닫힌 id는 빼고 새 id는 next의 순서대로 뒤에 붙인다', () => {
+    expect(stableOrder(['a', 'b', 'c'], ['e', 'c', 'a', 'd'])).toEqual(['a', 'c', 'e', 'd'])
+  })
+
+  it('처음에는 next 순서를 그대로 쓴다', () => {
+    expect(stableOrder([], ['b', 'a'])).toEqual(['b', 'a'])
   })
 })

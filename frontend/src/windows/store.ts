@@ -43,6 +43,8 @@ interface WindowActions {
   resize: (id: string, rect: Rect) => void
   // clampAll은 데스크톱 영역이 줄었을 때 모든 창을 다시 제한한다.
   clampAll: (bounds: Size) => void
+  // reorder는 창을 windows[]의 toIndex 자리로 옮긴다. windows[] 순서가 작업표시줄 순서다.
+  reorder: (id: string, toIndex: number) => void
 }
 
 export type WindowStore = WindowData & WindowActions
@@ -137,8 +139,34 @@ export const useWindowStore = create<WindowStore>()((set, get) => {
         })
         return changed ? { windows } : s
       }),
+
+    reorder: (id, toIndex) =>
+      set((s) => {
+        const from = s.windows.findIndex((w) => w.id === id)
+        if (from < 0) return s
+        const to = Math.min(Math.max(Math.trunc(toIndex), 0), s.windows.length - 1)
+        return to === from ? s : { windows: moveItem(s.windows, from, to) }
+      }),
   }
 })
+
+// moveItem은 arr[from]을 to 자리로 옮긴 새 배열을 반환한다.
+export function moveItem<T>(arr: readonly T[], from: number, to: number): T[] {
+  const out = arr.slice()
+  const [item] = out.splice(from, 1)
+  out.splice(to, 0, item)
+  return out
+}
+
+// stableOrder는 화면에 그릴 창 id 순서를 반환한다. prev의 순서를 유지한 채 닫힌 id는 빼고
+// 새로 열린 id는 next의 순서대로 뒤에 붙인다. 작업표시줄 순서(windows[])를 바꿔도 창 DOM이
+// 다시 붙지 않게 해서, 창 안의 스크롤 위치나 iframe이 초기화되지 않게 한다.
+export function stableOrder(prev: readonly string[], next: readonly string[]): string[] {
+  const alive = new Set(next)
+  const kept = prev.filter((id) => alive.has(id))
+  const seen = new Set(kept)
+  return [...kept, ...next.filter((id) => !seen.has(id))]
+}
 
 // selectActiveId는 최소화되지 않은 창 중 맨 앞 창의 id를 반환한다. 없으면 null.
 export function selectActiveId(s: WindowData): string | null {
