@@ -4,12 +4,16 @@
 // 테이블에 import한 파일만 번들에 포함된다. 디렉터리 단위 glob을 쓰면 테마 전체가
 // 실행 파일에 들어가므로, 아이콘을 쓸 때마다 여기에 한 줄씩 추가한다.
 
+import windowClose from '@colloid/actions/symbolic/window-close-symbolic.svg?url'
+import windowMaximize from '@colloid/actions/symbolic/window-maximize-symbolic.svg?url'
+import windowMinimize from '@colloid/actions/symbolic/window-minimize-symbolic.svg?url'
+import windowRestore from '@colloid/actions/symbolic/window-restore-symbolic.svg?url'
 import utilitiesSystemMonitor from '@colloid/apps/scalable/utilities-system-monitor.svg?url'
 import driveHarddisk from '@colloid/devices/scalable/drive-harddisk.svg?url'
 import folder from '@colloid/places/scalable/folder.svg?url'
 
 // color: 컬러 아이콘. <img>로 그대로 쓴다.
-// symbolic: 단색 -symbolic 아이콘. mask-image 등으로 currentColor를 입힌다(1단계에서 구현).
+// symbolic: 단색 -symbolic 아이콘. IconImage가 mask-image로 currentColor를 입힌다.
 export type IconKind = 'color' | 'symbolic'
 
 export interface Icon {
@@ -18,6 +22,10 @@ export interface Icon {
 }
 
 const ICONS = {
+  'window-close-symbolic': { url: windowClose, kind: 'symbolic' },
+  'window-maximize-symbolic': { url: windowMaximize, kind: 'symbolic' },
+  'window-minimize-symbolic': { url: windowMinimize, kind: 'symbolic' },
+  'window-restore-symbolic': { url: windowRestore, kind: 'symbolic' },
   'utilities-system-monitor': { url: utilitiesSystemMonitor, kind: 'color' },
   'drive-harddisk': { url: driveHarddisk, kind: 'color' },
   folder: { url: folder, kind: 'color' },
