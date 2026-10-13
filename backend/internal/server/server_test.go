@@ -1,13 +1,22 @@
 package server
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
+	"io"
+	"log"
 	"net/http"
 	"net/http/httptest"
+	"strings"
+	"sync"
 	"testing"
+	"time"
 
 	"omv-desktop-dashboard/backend/internal/api"
+	"omv-desktop-dashboard/backend/internal/auth"
+	"omv-desktop-dashboard/backend/internal/omv"
+	"omv-desktop-dashboard/backend/internal/omv/omvfake"
 )
 
 type fakeSource struct {
@@ -21,56 +30,510 @@ var static = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 	w.Write([]byte("static"))
 })
 
-func get(t *testing.T, h http.Handler, path string) *httptest.ResponseRecorder {
+type clock struct {
+	mu sync.Mutex
+	t  time.Time
+}
+
+func (c *clock) Now() time.Time {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.t
+}
+
+func (c *clock) Add(d time.Duration) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.t = c.t.Add(d)
+}
+
+// env는 백엔드 핸들러 + 실제 omv.Client + 가짜 OMV(omvfake)를 묶은 테스트 환경이다.
+type env struct {
+	t     *testing.T
+	h     http.Handler
+	fake  *omvfake.Server
+	omvTS *httptest.Server
+	clk   *clock
+	store *auth.Store
+	logs  *bytes.Buffer
+}
+
+type envOptions struct {
+	system     SystemSource
+	omvTimeout time.Duration
+	failDelay  time.Duration
+	interval   time.Duration
+	// omvTimeoutOff면 OMV 자동 로그아웃을 끈다(timeout 0).
+	omvTimeoutOff bool
+	brokenOMV     bool
+	omvOverride   OMV
+}
+
+func newEnv(t *testing.T, o envOptions) *env {
 	t.Helper()
+	clk := &clock{t: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)}
+	if o.omvTimeout == 0 && !o.omvTimeoutOff {
+		o.omvTimeout = 5 * time.Minute
+	}
+	if o.failDelay == 0 {
+		o.failDelay = -1
+	}
+	if o.system == nil {
+		o.system = fakeSource{resp: api.SystemResponse{UptimeSeconds: 1}}
+	}
+	fake := omvfake.New(omvfake.DefaultUsers(), o.omvTimeout)
+	fake.Now = clk.Now
+	ts := httptest.NewServer(fake)
+	t.Cleanup(ts.Close)
+	if o.brokenOMV {
+		ts.Close()
+	}
+
+	store := auth.NewStore()
+	store.Now = clk.Now
+	lim := auth.NewLimiter()
+	lim.Now = clk.Now
+	var client OMV = omv.NewClient(ts.URL, "omvdesk-test/1")
+	if o.omvOverride != nil {
+		client = o.omvOverride
+	}
+
+	logs := &bytes.Buffer{}
+	prev := log.Writer()
+	log.SetOutput(logs)
+	t.Cleanup(func() { log.SetOutput(prev) })
+
+	h := New(Config{
+		System:        o.system,
+		Static:        static,
+		OMV:           client,
+		Sessions:      store,
+		Limiter:       lim,
+		CheckInterval: o.interval,
+		FailDelay:     o.failDelay,
+		Now:           clk.Now,
+	})
+	return &env{t: t, h: h, fake: fake, omvTS: ts, clk: clk, store: store, logs: logs}
+}
+
+// browser는 쿠키를 보관하는 간이 브라우저다.
+type browser struct {
+	e       *env
+	cookies map[string]*http.Cookie
+	header  http.Header
+}
+
+func (e *env) browser() *browser {
+	return &browser{e: e, cookies: map[string]*http.Cookie{}, header: http.Header{}}
+}
+
+func (b *browser) do(method, path string, body any) *httptest.ResponseRecorder {
+	b.e.t.Helper()
+	var rd io.Reader
+	if body != nil {
+		buf, _ := json.Marshal(body)
+		rd = bytes.NewReader(buf)
+	}
+	req := httptest.NewRequest(method, path, rd)
+	if method == http.MethodPost {
+		req.Header.Set("Content-Type", "application/json")
+	}
+	for k, v := range b.header {
+		req.Header[k] = v
+	}
+	for _, ck := range b.cookies {
+		req.AddCookie(&http.Cookie{Name: ck.Name, Value: ck.Value})
+	}
 	rec := httptest.NewRecorder()
-	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, path, nil))
+	b.e.h.ServeHTTP(rec, req)
+	for _, ck := range rec.Result().Cookies() {
+		if ck.MaxAge < 0 {
+			delete(b.cookies, ck.Name)
+		} else {
+			b.cookies[ck.Name] = ck
+		}
+	}
 	return rec
 }
 
-func TestHealth(t *testing.T) {
-	rec := get(t, New(fakeSource{}, static), "/api/health")
-	if rec.Code != http.StatusOK {
-		t.Fatalf("status %d", rec.Code)
+func (b *browser) login(user, pass string) *httptest.ResponseRecorder {
+	return b.do(http.MethodPost, "/api/login", api.LoginRequest{Username: user, Password: pass})
+}
+
+func decode[T any](t *testing.T, rec *httptest.ResponseRecorder) T {
+	t.Helper()
+	var v T
+	if err := json.NewDecoder(bytes.NewReader(rec.Body.Bytes())).Decode(&v); err != nil {
+		t.Fatalf("decode %q: %v", rec.Body.String(), err)
 	}
-	var got api.HealthResponse
-	if err := json.NewDecoder(rec.Body).Decode(&got); err != nil || got.Status != "ok" {
-		t.Errorf("body %q, err %v", rec.Body.String(), err)
+	return v
+}
+
+func wantStatus(t *testing.T, rec *httptest.ResponseRecorder, status int) {
+	t.Helper()
+	if rec.Code != status {
+		t.Fatalf("status %d, want %d (body %s)", rec.Code, status, rec.Body.String())
 	}
 }
 
-func TestSystem(t *testing.T) {
+func wantCode(t *testing.T, rec *httptest.ResponseRecorder, status int, code string) api.ErrorResponse {
+	t.Helper()
+	wantStatus(t, rec, status)
+	got := decode[api.ErrorResponse](t, rec)
+	if got.Code != code {
+		t.Fatalf("code %q, want %q", got.Code, code)
+	}
+	return got
+}
+
+func TestHealthAndStatic(t *testing.T) {
+	e := newEnv(t, envOptions{})
+	b := e.browser()
+	wantStatus(t, b.do(http.MethodGet, "/api/health", nil), http.StatusOK)
+	wantStatus(t, b.do(http.MethodGet, "/api/nope", nil), http.StatusNotFound)
+	if rec := b.do(http.MethodGet, "/index.html", nil); rec.Body.String() != "static" {
+		t.Errorf("static body %q", rec.Body.String())
+	}
+}
+
+func TestRequiresLogin(t *testing.T) {
+	e := newEnv(t, envOptions{})
+	b := e.browser()
+	wantCode(t, b.do(http.MethodGet, "/api/system", nil), http.StatusUnauthorized, api.ErrUnauthorized)
+	wantCode(t, b.do(http.MethodGet, "/api/session", nil), http.StatusUnauthorized, api.ErrUnauthorized)
+	b.cookies[SessionCookie] = &http.Cookie{Name: SessionCookie, Value: "forged"}
+	wantCode(t, b.do(http.MethodGet, "/api/system", nil), http.StatusUnauthorized, api.ErrUnauthorized)
+	if _, ok := b.cookies[SessionCookie]; ok {
+		t.Error("invalid session cookie not cleared")
+	}
+}
+
+func TestLoginAndSession(t *testing.T) {
 	want := api.SystemResponse{
 		CPU:           api.CPUInfo{UsagePercent: 12.5},
 		Memory:        api.MemoryInfo{TotalBytes: 100, UsedBytes: 40, AvailableBytes: 60},
 		UptimeSeconds: 99,
 	}
-	rec := get(t, New(fakeSource{resp: want}, static), "/api/system")
-	if rec.Code != http.StatusOK {
-		t.Fatalf("status %d", rec.Code)
+	e := newEnv(t, envOptions{system: fakeSource{resp: want}})
+	b := e.browser()
+	rec := b.login("admin", "admin")
+	wantStatus(t, rec, http.StatusOK)
+	got := decode[api.LoginResponse](t, rec)
+	if got.Status != api.LoginAuthenticated || got.Session == nil || got.Session.Username != "admin" || !got.Session.Admin {
+		t.Fatalf("login response %+v", got)
 	}
-	var got api.SystemResponse
-	if err := json.NewDecoder(rec.Body).Decode(&got); err != nil {
-		t.Fatal(err)
+
+	ck := b.cookies[SessionCookie]
+	if ck == nil || !ck.HttpOnly || ck.SameSite != http.SameSiteStrictMode || ck.Path != "/desk" || ck.Secure {
+		t.Fatalf("session cookie %+v", ck)
 	}
-	if got != want {
-		t.Errorf("got %+v, want %+v", got, want)
+
+	// 새로고침·새 탭: 같은 쿠키로 세션을 복원한다.
+	rec = b.do(http.MethodGet, "/api/session", nil)
+	wantStatus(t, rec, http.StatusOK)
+	if s := decode[api.SessionInfo](t, rec); s.Username != "admin" || !s.Admin {
+		t.Errorf("session %+v", s)
 	}
+	rec = b.do(http.MethodGet, "/api/system", nil)
+	wantStatus(t, rec, http.StatusOK)
+	if s := decode[api.SystemResponse](t, rec); s != want {
+		t.Errorf("system %+v", s)
+	}
+
+	u := e.browser()
+	wantStatus(t, u.login("user", "user"), http.StatusOK)
+	if s := decode[api.SessionInfo](t, u.do(http.MethodGet, "/api/session", nil)); s.Admin {
+		t.Error("non-admin reported as admin")
+	}
+}
+
+func TestSecureCookieBehindHTTPS(t *testing.T) {
+	e := newEnv(t, envOptions{})
+	b := e.browser()
+	b.header.Set("X-Forwarded-Proto", "https")
+	wantStatus(t, b.login("admin", "admin"), http.StatusOK)
+	if ck := b.cookies[SessionCookie]; ck == nil || !ck.Secure {
+		t.Fatalf("cookie not secure behind https: %+v", ck)
+	}
+}
+
+func TestWrongPassword(t *testing.T) {
+	e := newEnv(t, envOptions{failDelay: 50 * time.Millisecond})
+	b := e.browser()
+	start := time.Now()
+	rec := b.login("admin", "wrong")
+	if d := time.Since(start); d < 50*time.Millisecond {
+		t.Errorf("failure answered after %v, want delay", d)
+	}
+	got := wantCode(t, rec, http.StatusBadRequest, api.ErrInvalidCredentials)
+	if strings.Contains(rec.Body.String(), "trace") || strings.Contains(got.Error, ".inc") {
+		t.Errorf("body leaks omv trace: %s", rec.Body.String())
+	}
+	if _, ok := b.cookies[SessionCookie]; ok {
+		t.Error("session cookie set on failure")
+	}
+	// 없는 사용자도 같은 응답이다.
+	wantCode(t, b.login("nobody", "x"), http.StatusBadRequest, api.ErrInvalidCredentials)
+	wantCode(t, b.login("", "x"), http.StatusBadRequest, api.ErrBadRequest)
+}
+
+func TestLoginRateLimit(t *testing.T) {
+	e := newEnv(t, envOptions{})
+	b := e.browser()
+	for range auth.FreeFailures + 1 {
+		wantCode(t, b.login("admin", "wrong"), http.StatusBadRequest, api.ErrInvalidCredentials)
+	}
+	// 잠긴 동안에는 맞는 비밀번호도 OMV에 보내지 않는다.
+	before := len(e.fake.Calls())
+	rec := b.login("admin", "admin")
+	got := wantCode(t, rec, http.StatusTooManyRequests, api.ErrRateLimited)
+	if rec.Header().Get("Retry-After") != "30" || got.RetryAfterSeconds != 30 {
+		t.Errorf("retry after %q / %d", rec.Header().Get("Retry-After"), got.RetryAfterSeconds)
+	}
+	if len(e.fake.Calls()) != before {
+		t.Error("locked login reached omv")
+	}
+	e.clk.Add(auth.BaseLockout)
+	wantStatus(t, b.login("admin", "admin"), http.StatusOK)
+}
+
+func TestRequireJSON(t *testing.T) {
+	e := newEnv(t, envOptions{})
+	req := httptest.NewRequest(http.MethodPost, "/api/login", strings.NewReader("username=admin&password=admin"))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rec := httptest.NewRecorder()
+	e.h.ServeHTTP(rec, req)
+	wantStatus(t, rec, http.StatusUnsupportedMediaType)
+	wantStatus(t, e.browser().do(http.MethodGet, "/api/login", nil), http.StatusNotFound)
+}
+
+func TestLogout(t *testing.T) {
+	e := newEnv(t, envOptions{})
+	b := e.browser()
+	wantStatus(t, b.login("admin", "admin"), http.StatusOK)
+	stolen := b.cookies[SessionCookie].Value
+
+	wantStatus(t, b.do(http.MethodPost, "/api/logout", struct{}{}), http.StatusNoContent)
+	if _, ok := b.cookies[SessionCookie]; ok {
+		t.Error("session cookie not cleared")
+	}
+	wantCode(t, b.do(http.MethodGet, "/api/system", nil), http.StatusUnauthorized, api.ErrUnauthorized)
+	// 지운 세션 ID를 다시 보내도 401이다.
+	b.cookies[SessionCookie] = &http.Cookie{Name: SessionCookie, Value: stolen}
+	wantCode(t, b.do(http.MethodGet, "/api/system", nil), http.StatusUnauthorized, api.ErrUnauthorized)
+	if n := e.fake.ActiveSessions(); n != 0 {
+		t.Errorf("omv sessions left %d", n)
+	}
+	// 로그인하지 않은 상태의 로그아웃도 성공한다.
+	wantStatus(t, e.browser().do(http.MethodPost, "/api/logout", struct{}{}), http.StatusNoContent)
+}
+
+func TestOMVSessionExpiry(t *testing.T) {
+	e := newEnv(t, envOptions{})
+	b := e.browser()
+	wantStatus(t, b.login("admin", "admin"), http.StatusOK)
+	e.fake.Expire("admin")
+
+	// 확인 주기 안에서는 OMV에 묻지 않는다.
+	wantStatus(t, b.do(http.MethodGet, "/api/system", nil), http.StatusOK)
+	e.clk.Add(60 * time.Second)
+	wantCode(t, b.do(http.MethodGet, "/api/system", nil), http.StatusUnauthorized, api.ErrUnauthorized)
+	if e.store.Len() != 0 {
+		t.Error("dashboard session not deleted")
+	}
+	if _, ok := b.cookies[SessionCookie]; ok {
+		t.Error("session cookie not cleared")
+	}
+}
+
+func TestPollingDoesNotExtendButActivityDoes(t *testing.T) {
+	e := newEnv(t, envOptions{omvTimeout: 5 * time.Minute})
+	poll := e.browser()
+	active := e.browser()
+	wantStatus(t, poll.login("admin", "admin"), http.StatusOK)
+	wantStatus(t, active.login("user", "user"), http.StatusOK)
+
+	expiredAt := time.Duration(0)
+	for i := 1; i <= 10; i++ {
+		e.clk.Add(time.Minute)
+		wantStatus(t, active.do(http.MethodPost, "/api/session/activity", struct{}{}), http.StatusOK)
+		wantStatus(t, active.do(http.MethodGet, "/api/system", nil), http.StatusOK)
+		if expiredAt == 0 && poll.do(http.MethodGet, "/api/system", nil).Code == http.StatusUnauthorized {
+			expiredAt = time.Duration(i) * time.Minute
+		}
+	}
+	// 주기 요청만 있는 세션은 OMV timeout(5분)이 지나면 만료된다.
+	if expiredAt != 6*time.Minute {
+		t.Errorf("polling-only session expired at %v, want 6m", expiredAt)
+	}
+}
+
+func TestChallengeFlow(t *testing.T) {
+	e := newEnv(t, envOptions{})
+	b := e.browser()
+	rec := b.login("totp", "totp")
+	wantStatus(t, rec, http.StatusOK)
+	got := decode[api.LoginResponse](t, rec)
+	if got.Status != api.LoginChallengeRequired || got.Challenge == nil || got.Challenge.Kind != "totp" || got.Session != nil {
+		t.Fatalf("login response %+v", got)
+	}
+	if _, ok := b.cookies[SessionCookie]; ok {
+		t.Fatal("session cookie set before verify")
+	}
+	if b.cookies[PendingCookie] == nil {
+		t.Fatal("pending cookie not set")
+	}
+	wantStatus(t, b.do(http.MethodGet, "/api/session", nil), http.StatusUnauthorized)
+
+	wantCode(t, b.do(http.MethodPost, "/api/login/verify", api.VerifyRequest{Response: "000000"}),
+		http.StatusBadRequest, api.ErrChallengeFailed)
+	rec = b.do(http.MethodPost, "/api/login/verify", api.VerifyRequest{Response: "123456"})
+	wantStatus(t, rec, http.StatusOK)
+	if got := decode[api.LoginResponse](t, rec); got.Session == nil || got.Session.Username != "totp" || !got.Session.Admin {
+		t.Fatalf("verify response %+v", got)
+	}
+	if _, ok := b.cookies[PendingCookie]; ok {
+		t.Error("pending cookie not cleared")
+	}
+	wantStatus(t, b.do(http.MethodGet, "/api/system", nil), http.StatusOK)
+	// 대기는 한 번만 쓸 수 있다.
+	b.cookies[PendingCookie] = &http.Cookie{Name: PendingCookie, Value: "replayed"}
+	wantCode(t, b.do(http.MethodPost, "/api/login/verify", api.VerifyRequest{Response: "123456"}),
+		http.StatusUnauthorized, api.ErrChallengeExpired)
+}
+
+func TestChallengeExpires(t *testing.T) {
+	e := newEnv(t, envOptions{})
+	b := e.browser()
+	wantStatus(t, b.login("totp", "totp"), http.StatusOK)
+	e.clk.Add(auth.PendingTTL + time.Second)
+	wantCode(t, b.do(http.MethodPost, "/api/login/verify", api.VerifyRequest{Response: "123456"}),
+		http.StatusUnauthorized, api.ErrChallengeExpired)
+	wantCode(t, e.browser().do(http.MethodPost, "/api/login/verify", api.VerifyRequest{Response: "1"}),
+		http.StatusUnauthorized, api.ErrChallengeExpired)
+}
+
+func TestOMVUnavailable(t *testing.T) {
+	e := newEnv(t, envOptions{brokenOMV: true})
+	wantCode(t, e.browser().login("admin", "admin"), http.StatusBadGateway, api.ErrOMVUnavailable)
+}
+
+func TestOMVDownKeepsSession(t *testing.T) {
+	e := newEnv(t, envOptions{})
+	b := e.browser()
+	wantStatus(t, b.login("admin", "admin"), http.StatusOK)
+	e.omvTS.Close()
+	e.clk.Add(2 * time.Minute)
+	// OMV에 연결할 수 없어도 /proc 현황은 계속 보인다.
+	wantStatus(t, b.do(http.MethodGet, "/api/system", nil), http.StatusOK)
+	wantStatus(t, b.do(http.MethodPost, "/api/session/activity", struct{}{}), http.StatusOK)
 }
 
 func TestSystemError(t *testing.T) {
-	rec := get(t, New(fakeSource{err: errors.New("boom")}, static), "/api/system")
-	if rec.Code != http.StatusInternalServerError {
-		t.Errorf("status %d", rec.Code)
+	e := newEnv(t, envOptions{system: fakeSource{err: errors.New("boom")}})
+	b := e.browser()
+	wantStatus(t, b.login("admin", "admin"), http.StatusOK)
+	wantStatus(t, b.do(http.MethodGet, "/api/system", nil), http.StatusInternalServerError)
+}
+
+func TestForwardedFor(t *testing.T) {
+	e := newEnv(t, envOptions{})
+	b := e.browser()
+	// 앞쪽 항목은 브라우저가 지어낼 수 있으므로 프록시가 붙인 마지막 항목을 쓴다.
+	b.header.Set("X-Forwarded-For", "203.0.113.99, 192.0.2.7")
+	wantStatus(t, b.login("admin", "admin"), http.StatusOK)
+	calls := e.fake.Calls()
+	if calls[0].ForwardedFor != "192.0.2.7" {
+		t.Errorf("forwarded for %q", calls[0].ForwardedFor)
 	}
 }
 
-func TestUnknownAPIAndStatic(t *testing.T) {
-	h := New(fakeSource{}, static)
-	if rec := get(t, h, "/api/nope"); rec.Code != http.StatusNotFound {
-		t.Errorf("/api/nope status %d", rec.Code)
+func TestNoSecretsInLogs(t *testing.T) {
+	e := newEnv(t, envOptions{})
+	b := e.browser()
+	b.login("admin", "wrong-password-xyz")
+	b.login("admin", "admin")
+	dashID := b.cookies[SessionCookie].Value
+	b.do(http.MethodPost, "/api/logout", struct{}{})
+	c := e.browser()
+	c.login("totp", "totp")
+	pendingID := c.cookies[PendingCookie].Value
+	c.do(http.MethodPost, "/api/login/verify", api.VerifyRequest{Response: "999999"})
+	c.do(http.MethodPost, "/api/login/verify", api.VerifyRequest{Response: "123456"})
+
+	logs := e.logs.String()
+	secrets := []string{"wrong-password-xyz", "999999", "123456", dashID, pendingID}
+	for _, call := range e.fake.Calls() {
+		if call.SessionID != "" {
+			secrets = append(secrets, call.SessionID)
+		}
 	}
-	if rec := get(t, h, "/index.html"); rec.Body.String() != "static" {
-		t.Errorf("static body %q", rec.Body.String())
+	for _, s := range secrets {
+		if strings.Contains(logs, s) {
+			t.Errorf("log contains secret %q:\n%s", s, logs)
+		}
+	}
+	if !strings.Contains(logs, "login ok") || !strings.Contains(logs, "login failed") {
+		t.Errorf("expected auth events in log:\n%s", logs)
+	}
+}
+
+func expiresIn(t *testing.T, rec *httptest.ResponseRecorder) int {
+	t.Helper()
+	wantStatus(t, rec, http.StatusOK)
+	s := decode[api.SessionInfo](t, rec)
+	if s.ExpiresInSeconds == nil {
+		t.Fatalf("no expiresInSeconds in %s", rec.Body.String())
+	}
+	return *s.ExpiresInSeconds
+}
+
+func TestSessionExpiry(t *testing.T) {
+	e := newEnv(t, envOptions{omvTimeout: 5 * time.Minute})
+	b := e.browser()
+	rec := b.login("admin", "admin")
+	wantStatus(t, rec, http.StatusOK)
+	if s := decode[api.LoginResponse](t, rec).Session; s.ExpiresInSeconds == nil || *s.ExpiresInSeconds != 300 {
+		t.Fatalf("login expiresInSeconds %+v", s)
+	}
+	// 주기 요청과 세션 확인은 만료 시각을 늦추지 않는다.
+	e.clk.Add(2 * time.Minute)
+	wantStatus(t, b.do(http.MethodGet, "/api/system", nil), http.StatusOK)
+	if got := expiresIn(t, b.do(http.MethodGet, "/api/session", nil)); got != 180 {
+		t.Errorf("after 2m expiresInSeconds %d, want 180", got)
+	}
+	// 활동 신호는 만료 시각을 늘린다.
+	if got := expiresIn(t, b.do(http.MethodPost, "/api/session/activity", struct{}{})); got != 300 {
+		t.Errorf("after activity expiresInSeconds %d, want 300", got)
+	}
+}
+
+func TestExpiredEstimateForcesCheck(t *testing.T) {
+	// 확인 주기를 길게 둬도 예상 만료 시각이 지나면 바로 OMV에 확인한다.
+	e := newEnv(t, envOptions{omvTimeout: 5 * time.Minute, interval: time.Hour})
+	b := e.browser()
+	wantStatus(t, b.login("admin", "admin"), http.StatusOK)
+	e.clk.Add(5*time.Minute + time.Second)
+	wantCode(t, b.do(http.MethodGet, "/api/session", nil), http.StatusUnauthorized, api.ErrUnauthorized)
+}
+
+func TestTimeoutChangeIsPickedUp(t *testing.T) {
+	e := newEnv(t, envOptions{omvTimeout: 5 * time.Minute})
+	b := e.browser()
+	wantStatus(t, b.login("admin", "admin"), http.StatusOK)
+	e.fake.SetTimeout(10 * time.Minute)
+	if got := expiresIn(t, b.do(http.MethodPost, "/api/session/activity", struct{}{})); got != 600 {
+		t.Errorf("expiresInSeconds %d, want 600", got)
+	}
+}
+
+func TestAutoLogoutOff(t *testing.T) {
+	e := newEnv(t, envOptions{omvTimeoutOff: true})
+	b := e.browser()
+	wantStatus(t, b.login("admin", "admin"), http.StatusOK)
+	rec := b.do(http.MethodGet, "/api/session", nil)
+	wantStatus(t, rec, http.StatusOK)
+	if s := decode[api.SessionInfo](t, rec); s.ExpiresInSeconds != nil {
+		t.Errorf("expiresInSeconds %d with auto logout off", *s.ExpiresInSeconds)
 	}
 }
