@@ -207,9 +207,14 @@ export function moveItem<T>(arr: readonly T[], from: number, to: number): T[] {
 // stableOrder는 화면에 그릴 창 id 순서를 반환한다. prev의 순서를 유지한 채 닫힌 id는 빼고
 // 새로 열린 id는 next의 순서대로 뒤에 붙인다. 작업표시줄 순서(windows[])를 바꿔도 창 DOM이
 // 다시 붙지 않게 해서, 창 안의 스크롤 위치나 iframe이 초기화되지 않게 한다.
-export function stableOrder(prev: readonly string[], next: readonly string[]): string[] {
+// keep에 든 id는 닫혔어도 제자리에 남긴다(닫기 애니메이션 중인 창).
+export function stableOrder(
+  prev: readonly string[],
+  next: readonly string[],
+  keep: { has: (id: string) => boolean } = new Set(),
+): string[] {
   const alive = new Set(next)
-  const kept = prev.filter((id) => alive.has(id))
+  const kept = prev.filter((id) => alive.has(id) || keep.has(id))
   const seen = new Set(kept)
   return [...kept, ...next.filter((id) => !seen.has(id))]
 }

@@ -233,6 +233,10 @@ describe('stableOrder', () => {
   it('처음에는 next 순서를 그대로 쓴다', () => {
     expect(stableOrder([], ['b', 'a'])).toEqual(['b', 'a'])
   })
+
+  it('keep에 든 id는 닫혔어도 제자리에 남긴다', () => {
+    expect(stableOrder(['a', 'b', 'c', 'e'], ['c', 'a', 'd'], new Set(['b']))).toEqual(['a', 'b', 'c', 'd'])
+  })
 })
 
 describe('detachAt', () => {

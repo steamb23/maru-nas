@@ -1,4 +1,4 @@
-// 창 최대화·타일링·최소화 애니메이션의 설정값과 위치 계산(DOM 없음).
+// 창 열기·닫기·최대화·타일링·최소화 애니메이션의 설정값과 위치 계산(DOM 없음).
 // 애니메이션은 FLIP 방식으로 transform과 opacity만 움직인다. 위치·크기를 직접 움직이면
 // 매 프레임 레이아웃을 다시 계산하게 된다. 실제 재생은 useWindowAnimation.ts가 한다.
 import type { Rect, Size } from '../windows/geometry'
@@ -14,6 +14,14 @@ export const MAXIMIZE_MS = 200
 export const CONTENT_FADE_START = 0.35
 export const MINIMIZE_MS = 220
 export const EASING = 'cubic-bezier(0.2, 0, 0, 1)'
+
+// 창을 열 때는 이 비율에서 커지며 나타나고, 닫을 때는 이 비율로 줄어들며 사라진다(창 가운데 기준).
+export const OPEN_MS = 180
+export const OPEN_SCALE = 0.9
+export const CLOSE_MS = 150
+export const CLOSE_SCALE = 0.9
+// 닫기는 사라지는 동작이라 처음에 천천히, 끝으로 갈수록 빠르게 움직인다.
+export const CLOSE_EASING = 'cubic-bezier(0.4, 0, 1, 1)'
 
 // 작업표시줄 버튼을 찾지 못했을 때 최소화 애니메이션이 제자리에서 줄어드는 비율
 export const FALLBACK_SCALE = 0.85

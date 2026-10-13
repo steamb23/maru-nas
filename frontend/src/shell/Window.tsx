@@ -1,9 +1,9 @@
-import { type PointerEvent, useRef, useState } from 'react'
+import { type PointerEvent, useCallback, useRef, useState } from 'react'
 import { IconImage } from '../icons/IconImage'
 import { SystemInfoWindow } from '../sysinfo/SystemInfoWindow'
 import { getApp } from '../windows/apps'
 import { type Point, type Rect, type Size, restoreGrab } from '../windows/geometry'
-import { selectActiveId, useWindowStore } from '../windows/store'
+import { type WindowState, selectActiveId, useWindowStore } from '../windows/store'
 import { type TileZone, layoutOf, tileRect, tileZoneAt } from '../windows/tiling'
 import { PlaceholderWindow } from './PlaceholderWindow'
 import { ResizeHandles } from './ResizeHandles'
@@ -11,9 +11,19 @@ import { TilePreview } from './TilePreview'
 import { TileResizeHandle } from './TileResizeHandle'
 import { useWindowAnimation } from './useWindowAnimation'
 
+// ClosingWindow는 저장소에서 지워진(닫힌) 창의 마지막 상태와, 그때의 타일 그룹 비율이다.
+export interface ClosingWindow {
+  win: WindowState
+  tileSplit: number
+}
+
 interface Props {
   id: string
   bounds: Size
+  // 닫힌 창이면 마지막 상태. 닫기 애니메이션 동안 이 상태로 그린다.
+  closingState?: ClosingWindow
+  // 닫기 애니메이션이 끝나면 부른다. Desktop이 이때 창을 목록에서 뺀다.
+  onClosed: (id: string) => void
 }
 
 interface Drag {
@@ -40,16 +50,28 @@ const { focus, close, minimize, toggleMaximize, tile, detachAt, moveTo } = useWi
 // 버튼 위에서 시작한 포인터 동작은 드래그·더블클릭으로 다루지 않는다.
 const fromButton = (e: { target: EventTarget }) => e.target instanceof Element && e.target.closest('button') !== null
 
-export function Window({ id, bounds }: Props) {
-  const win = useWindowStore((s) => s.windows.find((w) => w.id === id))
+export function Window({ id, bounds, closingState, onClosed }: Props) {
+  const stored = useWindowStore((s) => s.windows.find((w) => w.id === id))
+  const win = stored ?? closingState?.win
+  const closing = stored === undefined && closingState !== undefined
   const active = useWindowStore((s) => selectActiveId(s) === id)
   // 타일 그룹의 비율은 타일 창만 구독한다. 다른 창은 비율이 바뀌어도 다시 그리지 않는다.
-  const tileSplit = useWindowStore((s) => (s.windows.find((w) => w.id === id)?.tile ? s.tileSplit : null))
+  // 닫힌 창은 닫을 때의 비율로 그린다(저장소에서 빠져 구독 결과가 null이 되므로).
+  const storedSplit = useWindowStore((s) => (s.windows.find((w) => w.id === id)?.tile ? s.tileSplit : null))
+  const tileSplit = closing ? closingState.tileSplit : storedSplit
   const drag = useRef<Drag | null>(null)
   // 끄는 동안 놓으면 들어갈 타일링 영역. 가이드(TilePreview)를 그린다.
   const [zone, setZone] = useState<TileZone | null>(null)
   const sectionRef = useRef<HTMLElement>(null)
-  const anim = useWindowAnimation(sectionRef, id, win?.minimized ?? false, win ? layoutOf(win) : 'free')
+  const handleClosed = useCallback(() => onClosed(id), [onClosed, id])
+  const anim = useWindowAnimation(
+    sectionRef,
+    id,
+    win?.minimized ?? false,
+    win ? layoutOf(win) : 'free',
+    closing,
+    handleClosed,
+  )
 
   if (!win) return null
   const app = getApp(win.appId)
@@ -122,6 +144,7 @@ export function Window({ id, bounds }: Props) {
     win.maximized && 'maximized',
     win.tile && 'tiled',
     anim.minimizing && 'minimizing',
+    closing && 'closing',
   ]
     .filter(Boolean)
     .join(' ')
@@ -139,6 +162,7 @@ export function Window({ id, bounds }: Props) {
         style={style}
         hidden={anim.hidden}
         aria-label={win.title}
+        aria-hidden={closing || undefined}
         onPointerDownCapture={() => focus(id)}
       >
         <header
@@ -173,7 +197,7 @@ export function Window({ id, bounds }: Props) {
           </div>
         </header>
         <div className="window-body">
-          {app.kind === 'system-info' ? <SystemInfoWindow active={!win.minimized} /> : <PlaceholderWindow />}
+          {app.kind === 'system-info' ? <SystemInfoWindow active={!win.minimized && !closing} /> : <PlaceholderWindow />}
         </div>
         {layout === 'free' && <ResizeHandles id={id} rect={win} bounds={bounds} minSize={app.minSize} />}
         {win.tile && <TileResizeHandle side={win.tile} bounds={bounds} />}

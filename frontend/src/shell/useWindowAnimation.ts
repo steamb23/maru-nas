@@ -1,5 +1,8 @@
-// 창 최대화·타일링·최소화 애니메이션 재생. 위치 계산과 설정값은 windowAnim.ts에 있다.
+// 창 열기·닫기·최대화·타일링·최소화 애니메이션 재생. 위치 계산과 설정값은 windowAnim.ts에 있다.
 //
+// - 열기: 창이 처음 그려질 때 조금 작은 크기에서 커지며 나타난다. 최소화된 채로 그려지면 재생하지 않는다.
+// - 닫기: 저장소에서는 창이 바로 지워지고, Desktop이 그 창을 닫기 애니메이션이 끝날 때까지 남겨 둔다.
+//   closing이 켜지면 줄어들며 사라지고, 끝나면 onClosed로 알려 Desktop이 창을 뺀다.
 // - 배치 전환(최대화·타일링과 그 해제): 버튼·더블클릭, 창 끌기 핸들러가 captureFrom()으로 바뀌기 전 위치를
 //   남긴 경우에만 재생한다. 타일 그룹의 경계 조절처럼 배치 방식이 그대로인 크기 변화는 재생하지 않는다.
 //   창 틀이 늘어나는 동안 창 내용은 숨겼다가 끝무렵에 페이드인해, 내용이 늘어나 보이지 않게 한다.
@@ -11,11 +14,16 @@ import { flushSync } from 'react-dom'
 import type { Rect } from '../windows/geometry'
 import type { WindowLayout } from '../windows/tiling'
 import {
+  CLOSE_EASING,
+  CLOSE_MS,
+  CLOSE_SCALE,
   CONTENT_FADE_START,
   EASING,
   FALLBACK_SCALE,
   MAXIMIZE_MS,
   MINIMIZE_MS,
+  OPEN_MS,
+  OPEN_SCALE,
   WINDOW_ANIMATIONS,
   fitInside,
   flipTransform,
@@ -54,6 +62,10 @@ export function useWindowAnimation(
   id: string,
   minimized: boolean,
   layout: WindowLayout,
+  // 저장소에서 지워져 닫기 애니메이션을 재생할 차례인지
+  closing: boolean,
+  // 닫기 애니메이션이 끝났거나 재생하지 않을 때 한 번 부른다.
+  onClosed: () => void,
 ): WindowAnimation {
   const [prevMinimized, setPrevMinimized] = useState(minimized)
   const [minAnim, setMinAnim] = useState<MinAnim>(null)
@@ -83,6 +95,21 @@ export function useWindowAnimation(
   const captureFrom = useCallback(() => {
     const el = ref.current
     if (el && animationsEnabled()) layoutFrom.current = rectOf(el)
+  }, [ref])
+
+  // 처음 그려질 때 커지며 나타난다. minimized는 처음 값만 본다.
+  const openedMinimized = useRef(minimized)
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el || openedMinimized.current || !animationsEnabled()) return
+    const layout = rectOf(el)
+    const a = play(el, [
+      { transform: flipTransform(layout, scaleAbout(layout, OPEN_SCALE)), opacity: 0 },
+      { transform: 'none', opacity: 1 },
+    ], OPEN_MS)
+    a.onfinish = () => {
+      if (current.current === a) current.current = null
+    }
   }, [ref])
 
   useLayoutEffect(() => {
@@ -155,7 +182,39 @@ export function useWindowAnimation(
     }
   }, [ref, id, minAnim])
 
-  // 창이 닫히면 재생 중인 애니메이션을 멈춘다.
+  useLayoutEffect(() => {
+    if (!closing) return
+    const el = ref.current
+    // 숨겨진(최소화된) 창은 보여 줄 것이 없으므로 바로 끝낸다.
+    if (!el || el.hidden || !animationsEnabled()) {
+      stop()
+      onClosed()
+      return
+    }
+    // 열기·복원 도중에 닫혀도 지금 보이는 위치와 투명도에서 이어 간다.
+    const running = current.current !== null
+    const visual = rectOf(el)
+    const opacity = running ? Number(getComputedStyle(el).opacity) : 1
+    stop()
+    const layout = rectOf(el)
+    // 끝난 뒤 언마운트될 때까지 다시 보이지 않도록 마지막 프레임을 유지한다.
+    const a = play(
+      el,
+      [
+        { transform: flipTransform(layout, visual), opacity },
+        { transform: flipTransform(layout, scaleAbout(layout, CLOSE_SCALE)), opacity: 0 },
+      ],
+      CLOSE_MS,
+      'forwards',
+      CLOSE_EASING,
+    )
+    a.onfinish = () => {
+      if (current.current !== a) return
+      onClosed()
+    }
+  }, [ref, closing, onClosed])
+
+  // 창이 언마운트되면 재생 중인 애니메이션을 멈춘다.
   useLayoutEffect(() => stop, [])
 
   return { hidden: minimized && minAnim !== 'minimize', minimizing: minimized && minAnim === 'minimize', captureFrom }

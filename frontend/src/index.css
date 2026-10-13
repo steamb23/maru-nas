@@ -141,12 +141,13 @@ button {
   border-radius: 10px;
   background: var(--window-bg);
   box-shadow: 0 6px 24px rgb(0 0 0 / 0.25);
-  /* 최대화·최소화 애니메이션(shell/windowAnim.ts)의 transform 기준점 */
+  /* 창 애니메이션(shell/windowAnim.ts)의 transform 기준점 */
   transform-origin: 0 0;
 }
 
-/* 최소화 애니메이션 중에는 사라지는 창이 클릭을 받지 않는다. */
-.window.minimizing {
+/* 최소화·닫기 애니메이션 중에는 사라지는 창이 클릭을 받지 않는다. */
+.window.minimizing,
+.window.closing {
   pointer-events: none;
 }
 
