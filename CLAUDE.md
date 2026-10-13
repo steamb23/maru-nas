@@ -57,8 +57,10 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
   - `server.fs.allow`는 `frontend/`와 `vendor/icons/`만 허용한다(개발 서버가 LAN에 열려 있으므로 저장소 루트 전체를 허용하지 않는다)
   - 개인 환경 값(`DEV_HOST`, `DEV_ALLOWED_HOSTS`, `OMVDESK_LISTEN`)은 커밋하지 않는 `frontend/.env.local`에 둔다
   - `src/windows/`: 창 상태 저장소(`store.ts`), 앱 목록(`apps.ts`), 창 위치·크기 제한(`geometry.ts`). DOM에 의존하지 않아 node 환경에서 테스트한다
+    - `windows[]` 순서가 작업표시줄 순서다. `Desktop`은 `stableOrder`로 창을 처음 연 순서대로 그려, 작업표시줄 순서를 바꿔도 창 DOM이 옮겨지지 않게 한다(옮겨지면 창 안의 스크롤 위치·iframe이 초기화된다)
   - `src/shell/`: 데스크톱 셸 컴포넌트(바탕화면, 창 프레임, 작업표시줄)
   - `src/shell/nativeGuard.ts`: 텍스트 선택·드래그·브라우저 컨텍스트 메뉴는 기본 금지(선택은 `index.css`의 `user-select`, 나머지는 문서 전체 리스너). `selectable` 클래스는 텍스트 선택이 꼭 필요한 영역에만 붙인다(시스템 정보 같은 현황 수치는 선택 불가). 텍스트 입력 요소(input, textarea, contenteditable)는 자동 허용
+  - `src/shell/taskbarDrag.ts`: 작업표시줄 버튼 드래그 정렬의 배치 계산(DOM 없음). 드래그 중에는 transform으로만 움직이고 놓은 뒤 순서를 반영한다. 전환 효과는 부모가 아닌 각 `li` 클래스에 둔다
   - `src/sysinfo/`: 시스템 정보 창. 주기 요청은 `poller.ts`(응답 후 다음 요청 예약, 중첩 없음)
   - `src/icons/`: 리졸버와 `IconImage`(컬러는 `<img>`, symbolic은 `mask-image`)
   - 컴포넌트 테스트용 DOM 환경(jsdom 등)은 쓰지 않는다. 로직을 순수 함수·저장소로 분리해 테스트하고, 화면 동작은 브라우저에서 확인한다
