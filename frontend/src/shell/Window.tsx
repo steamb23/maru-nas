@@ -1,5 +1,6 @@
 import { type PointerEvent, useRef } from 'react'
 import { IconImage } from '../icons/IconImage'
+import { SystemInfoWindow } from '../sysinfo/SystemInfoWindow'
 import { getApp } from '../windows/apps'
 import type { Size } from '../windows/geometry'
 import { selectActiveId, useWindowStore } from '../windows/store'
@@ -90,7 +91,7 @@ export function Window({ id, bounds }: Props) {
         </div>
       </header>
       <div className="window-body">
-        <PlaceholderWindow />
+        {app.kind === 'system-info' ? <SystemInfoWindow active={!win.minimized} /> : <PlaceholderWindow />}
       </div>
     </section>
   )
