@@ -1,0 +1,4 @@
+[submodule "vendor/icons/colloid"]
+	path = vendor/icons/colloid
+	url = https://github.com/vinceliuice/Colloid-icon-theme.git
+	shallow = true

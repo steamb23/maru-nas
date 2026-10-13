@@ -1,0 +1,22 @@
+# 개인 환경 정보
+CLAUDE.local.md
+.claude/settings.local.json
+*.local
+.env.local
+.env.*.local
+
+# 의존성
+node_modules/
+
+# 빌드 결과물
+/bin/
+/backend/internal/web/static/dist/
+/frontend/dist/
+
+# 로그·도구
+*.log
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+*.sw?

@@ -1,0 +1,6 @@
+packages:
+  - path: "omv-desktop-dashboard/backend/internal/api"
+    output_path: "../frontend/src/api/types.gen.ts"
+    frontmatter: |
+      // 원본: backend/internal/api
+      // `make types`로 다시 생성한다.
