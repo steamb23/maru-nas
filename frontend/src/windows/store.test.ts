@@ -143,3 +143,27 @@ describe('close', () => {
     expect(activeId()).toBe(a)
   })
 })
+
+describe('resize', () => {
+  it('위치와 크기를 함께 바꾼다', () => {
+    const a = store().open('system-info', bounds)
+    store().resize(a, { x: 10, y: 20, width: 500, height: 400 })
+    expect(win(a)).toMatchObject({ x: 10, y: 20, width: 500, height: 400 })
+  })
+
+  it('최대화된 창은 크기를 바꾸지 않는다', () => {
+    const a = store().open('system-info', bounds)
+    store().toggleMaximize(a)
+    const before = win(a)
+    store().resize(a, { x: 10, y: 20, width: 500, height: 400 })
+    expect(win(a)).toBe(before)
+  })
+
+  it('같은 값이면 상태가 바뀌지 않는다', () => {
+    const a = store().open('system-info', bounds)
+    const { x, y, width, height } = win(a)
+    const before = store().windows
+    store().resize(a, { x, y, width, height })
+    expect(store().windows).toBe(before)
+  })
+})

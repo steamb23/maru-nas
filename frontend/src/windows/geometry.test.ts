@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest'
-import { MIN_VISIBLE, TITLEBAR_HEIGHT, cascadePosition, clampPosition } from './geometry'
+import {
+  MIN_HEIGHT,
+  MIN_VISIBLE,
+  MIN_WIDTH,
+  type Rect,
+  type ResizeEdge,
+  TITLEBAR_HEIGHT,
+  cascadePosition,
+  clampPosition,
+  resizeRect,
+} from './geometry'
 
 const bounds = { width: 1280, height: 720 }
 const size = { width: 400, height: 300 }
@@ -50,5 +60,83 @@ describe('cascadePosition', () => {
 
   it('일정 개수마다 처음 위치로 돌아간다', () => {
     expect(cascadePosition(8, size, bounds)).toEqual(cascadePosition(0, size, bounds))
+  })
+})
+
+describe('resizeRect', () => {
+  const start: Rect = { x: 200, y: 100, width: 400, height: 300 }
+
+  it('오른쪽·아래 변을 끌면 위치는 그대로 두고 크기만 바꾼다', () => {
+    expect(resizeRect(start, 'e', 50, 999, bounds)).toEqual({ ...start, width: 450 })
+    expect(resizeRect(start, 's', 999, 40, bounds)).toEqual({ ...start, height: 340 })
+  })
+
+  it('왼쪽·위쪽 변을 끌면 반대쪽 변은 고정된다', () => {
+    const w = resizeRect(start, 'w', -50, 0, bounds)
+    expect(w).toEqual({ x: 150, y: 100, width: 450, height: 300 })
+    const n = resizeRect(start, 'n', 0, 30, bounds)
+    expect(n).toEqual({ x: 200, y: 130, width: 400, height: 270 })
+  })
+
+  it('모서리는 두 축을 함께 바꾼다', () => {
+    expect(resizeRect(start, 'nw', -20, -30, bounds)).toEqual({ x: 180, y: 70, width: 420, height: 330 })
+    expect(resizeRect(start, 'se', 20, 30, bounds)).toEqual({ x: 200, y: 100, width: 420, height: 330 })
+  })
+
+  it('최소 크기보다 줄어들지 않는다', () => {
+    const se = resizeRect(start, 'se', -5000, -5000, bounds)
+    expect(se).toEqual({ x: 200, y: 100, width: MIN_WIDTH, height: MIN_HEIGHT })
+  })
+
+  it('왼쪽·위쪽 변으로 최소 크기까지 줄여도 반대쪽 변은 고정된다', () => {
+    const nw = resizeRect(start, 'nw', 5000, 5000, bounds)
+    expect(nw.width).toBe(MIN_WIDTH)
+    expect(nw.height).toBe(MIN_HEIGHT)
+    expect(nw.x + nw.width).toBe(start.x + start.width)
+    expect(nw.y + nw.height).toBe(start.y + start.height)
+  })
+
+  it('위쪽 변은 화면 위로 나가지 않는다', () => {
+    const n = resizeRect(start, 'n', 0, -5000, bounds)
+    expect(n.y).toBe(0)
+    expect(n.y + n.height).toBe(start.y + start.height)
+  })
+
+  it('데스크톱 밖으로는 키울 수 없다', () => {
+    const se = resizeRect(start, 'se', 5000, 5000, bounds)
+    expect(se.x + se.width).toBe(bounds.width)
+    expect(se.y + se.height).toBe(bounds.height)
+    expect(resizeRect(start, 'w', -5000, 0, bounds).x).toBe(0)
+  })
+
+  it('이미 데스크톱 밖에 걸친 창은 강제로 줄이지 않는다', () => {
+    const over: Rect = { x: 1000, y: 600, width: 400, height: 300 }
+    expect(resizeRect(over, 'se', 10, 10, bounds)).toEqual(over)
+    const left: Rect = { x: -100, y: 100, width: 400, height: 300 }
+    expect(resizeRect(left, 'w', -10, 0, bounds)).toEqual(left)
+  })
+
+  it('결과는 정수 픽셀이다', () => {
+    const r = resizeRect(start, 'nw', 10.4, -7.6, bounds)
+    for (const v of Object.values(r)) expect(Number.isInteger(v)).toBe(true)
+  })
+
+  it('크기를 조절해도 제목 표시줄은 다시 잡을 수 있다', () => {
+    const edges: ResizeEdge[] = ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw']
+    const starts = [
+      start,
+      { ...clampPosition({ x: -5000, y: 0, ...size }, bounds), ...size },
+      { ...clampPosition({ x: 5000, y: 5000, ...size }, bounds), ...size },
+    ]
+    const deltas = [-5000, -100, 0, 100, 5000]
+    for (const s of starts)
+      for (const edge of edges)
+        for (const dx of deltas)
+          for (const dy of deltas) {
+            const r = resizeRect(s, edge, dx, dy, bounds)
+            expect(clampPosition(r, bounds)).toEqual({ x: r.x, y: r.y })
+            expect(r.width).toBeGreaterThanOrEqual(MIN_WIDTH)
+            expect(r.height).toBeGreaterThanOrEqual(MIN_HEIGHT)
+          }
   })
 })

@@ -4,7 +4,7 @@
 // node 환경 테스트에서 그대로 쓸 수 있다.
 import { create } from 'zustand'
 import { type AppId, getApp } from './apps'
-import { type Size, cascadePosition, clampPosition } from './geometry'
+import { type Rect, type Size, cascadePosition, clampPosition } from './geometry'
 
 export interface WindowState {
   id: string
@@ -38,6 +38,9 @@ interface WindowActions {
   toggleMaximize: (id: string) => void
   // moveTo는 최대화된 창에는 아무것도 하지 않는다.
   moveTo: (id: string, x: number, y: number, bounds: Size) => void
+  // resize는 창 위치·크기를 rect로 바꾼다. 제한은 geometry의 resizeRect가 계산하고 여기서는 반영만 한다.
+  // 최대화된 창에는 아무것도 하지 않는다.
+  resize: (id: string, rect: Rect) => void
   // clampAll은 데스크톱 영역이 줄었을 때 모든 창을 다시 제한한다.
   clampAll: (bounds: Size) => void
 }
@@ -114,6 +117,13 @@ export const useWindowStore = create<WindowStore>()((set, get) => {
         if (w.maximized) return null
         const pos = clampPosition({ ...w, x, y }, bounds)
         return pos.x === w.x && pos.y === w.y ? null : { win: { ...w, ...pos } }
+      }),
+
+    resize: (id, { x, y, width, height }) =>
+      update(id, (w) => {
+        if (w.maximized) return null
+        if (x === w.x && y === w.y && width === w.width && height === w.height) return null
+        return { win: { ...w, x, y, width, height } }
       }),
 
     clampAll: (bounds) =>
