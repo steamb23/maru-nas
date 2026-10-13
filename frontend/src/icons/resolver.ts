@@ -4,6 +4,8 @@
 // 테이블에 import한 파일만 번들에 포함된다. 디렉터리 단위 glob을 쓰면 테마 전체가
 // 실행 파일에 들어가므로, 아이콘을 쓸 때마다 여기에 한 줄씩 추가한다.
 
+import utilitiesSystemMonitor from '@colloid/apps/scalable/utilities-system-monitor.svg?url'
+import driveHarddisk from '@colloid/devices/scalable/drive-harddisk.svg?url'
 import folder from '@colloid/places/scalable/folder.svg?url'
 
 // color: 컬러 아이콘. <img>로 그대로 쓴다.
@@ -16,6 +18,8 @@ export interface Icon {
 }
 
 const ICONS = {
+  'utilities-system-monitor': { url: utilitiesSystemMonitor, kind: 'color' },
+  'drive-harddisk': { url: driveHarddisk, kind: 'color' },
   folder: { url: folder, kind: 'color' },
 } as const satisfies Record<string, Icon>
 
