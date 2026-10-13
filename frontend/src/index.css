@@ -320,6 +320,20 @@ button {
   list-style: none;
 }
 
+/* 작업표시줄 버튼 드래그 정렬. 순서는 드래그를 놓은 뒤에 바뀌고, 그 전까지는 transform으로만 움직인다.
+   전환 효과는 부모가 아닌 각 li의 클래스에 둔다. 순서를 반영할 때 li의 transform과 클래스는 함께
+   바뀌지만 부모 클래스는 나중에 바뀌어, 그 사이 스타일 계산이 끼면 transform 해제가 애니메이션된다.
+   전환 시간은 shell/Taskbar.tsx의 SETTLE_MS와 맞춘다. */
+.taskbar-items > li.shifting,
+.taskbar-items > li.settling {
+  transition: transform 200ms ease;
+}
+
+.taskbar-items > li.dragging {
+  position: relative;
+  z-index: 1;
+}
+
 .task {
   position: relative;
   display: flex;
@@ -332,6 +346,8 @@ button {
   border-radius: 6px;
   background: none;
   cursor: pointer;
+  /* 터치로 끌 때 브라우저가 포인터를 스크롤용으로 가져가지 않게 한다. */
+  touch-action: none;
 }
 
 .task:hover {
