@@ -1,12 +1,12 @@
-import { type PointerEvent, useCallback, useRef, useState } from 'react'
+import { type PointerEvent, memo, useCallback, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { IconImage } from '../icons/IconImage'
 import { AddonUnavailable } from '../addons/AddonUnavailable'
-import { appAccess, requiredPlugins, useCapabilitiesStore } from '../addons/capabilities'
+import { type UnavailableReason, appAccess, requiredPlugins, useCapabilitiesStore } from '../addons/capabilities'
 import { usePageVisible } from '../addons/common/usePageVisible'
 import { ADDON_VIEWS } from '../addons/registry'
-import { getApp, isAddonApp } from '../windows/apps'
-import { type Point, type Rect, type Size, restoreGrab } from '../windows/geometry'
+import { type AppId, getApp, isAddonApp } from '../windows/apps'
+import { type Point, type Rect, type Size, clampPosition, restoreGrab } from '../windows/geometry'
 import { type WindowState, selectActiveId, useWindowStore } from '../windows/store'
 import { type TileZone, layoutOf, tileRect, tileZoneAt } from '../windows/tiling'
 import { PlaceholderWindow } from './PlaceholderWindow'
@@ -43,6 +43,8 @@ interface Drag {
   fixedRect?: Rect
   // 지금 놓으면 들어갈 타일링 영역. 렌더링을 기다리지 않고 pointerup에서 바로 쓰려고 여기에도 둔다.
   zone: TileZone | null
+  // 끄는 동안 요소 style에 직접 넣은 위치. 저장소에는 놓을 때 한 번만 반영한다.
+  pos: Point | null
 }
 
 // 이 거리 이상 끌어야 드래그로 본다. 창을 화면 위쪽에 붙여 둔 채 클릭할 때 조금 흔들려도
@@ -53,6 +55,22 @@ const { focus, close, minimize, toggleMaximize, tile, detachAt, moveTo } = useWi
 
 // 버튼 위에서 시작한 포인터 동작은 드래그·더블클릭으로 다루지 않는다.
 const fromButton = (e: { target: EventTarget }) => e.target instanceof Element && e.target.closest('button') !== null
+
+// WindowBody는 창 내용이다. 창을 옮기거나 크기를 바꾸거나 앞으로 가져와 창 틀이 다시 그려져도
+// 내용은 다시 그리지 않는다(항목이 많은 창에서 끌기가 버벅이지 않게).
+const WindowBody = memo(function WindowBody({
+  appId,
+  notice,
+  active,
+}: {
+  appId: AppId
+  notice: UnavailableReason | null
+  active: boolean
+}) {
+  const View = isAddonApp(appId) ? ADDON_VIEWS[appId].Window : null
+  if (notice) return <AddonUnavailable reason={notice} plugins={requiredPlugins(appId)} />
+  return View ? <View active={active} /> : <PlaceholderWindow />
+})
 
 export function Window({ id, bounds, closingState, onClosed }: Props) {
   const { t } = useTranslation()
@@ -84,7 +102,6 @@ export function Window({ id, bounds, closingState, onClosed }: Props) {
 
   if (!win) return null
   const app = getApp(win.appId)
-  const View = isAddonApp(win.appId) ? ADDON_VIEWS[win.appId].Window : null
   const title = t(app.titleKey)
   const maximizeLabel = win.maximized ? t('window.restore') : t('window.maximize')
   const layout = layoutOf(win)
@@ -97,9 +114,9 @@ export function Window({ id, bounds, closingState, onClosed }: Props) {
       const section = e.currentTarget.parentElement
       if (!section) return
       const fixedRect = { x: section.offsetLeft, y: section.offsetTop, width: section.offsetWidth, height: section.offsetHeight }
-      drag.current = { pointerId: e.pointerId, dx: 0, dy: 0, start, moved: false, fixedRect, zone: null }
+      drag.current = { pointerId: e.pointerId, dx: 0, dy: 0, start, moved: false, fixedRect, zone: null, pos: null }
     } else {
-      drag.current = { pointerId: e.pointerId, dx: e.clientX - win.x, dy: e.clientY - win.y, start, moved: false, zone: null }
+      drag.current = { pointerId: e.pointerId, dx: e.clientX - win.x, dy: e.clientY - win.y, start, moved: false, zone: null, pos: null }
     }
     e.currentTarget.setPointerCapture(e.pointerId)
   }
@@ -119,30 +136,46 @@ export function Window({ id, bounds, closingState, onClosed }: Props) {
       // 최대화·타일 창에서 포인터 쪽으로 줄어드는 애니메이션. 애니메이션은 창 위치에 얹히는 상대 이동이라
       // 이어지는 드래그로 창이 움직여도 함께 따라가고, 잡은 지점은 포인터 아래에 남는다.
       anim.captureFrom()
+      // 떼어 내기는 크기·레이아웃이 바뀌므로 저장소로 반영해 다시 그린다.
       detachAt(id, e.clientX - d.dx, e.clientY - d.dy, bounds)
     } else {
-      moveTo(id, e.clientX - d.dx, e.clientY - d.dy, bounds)
+      // 끄는 동안에는 저장소를 바꾸지 않고 요소 style만 바꾼다. 저장소를 바꾸면 창 내용까지 매번 다시 그려진다.
+      // 크기는 저장소에서 읽는다. 떼어 낸 직후에는 이 렌더의 win이 아직 떼어 내기 전 크기다.
+      const cur = useWindowStore.getState().windows.find((w) => w.id === id)
+      const el = sectionRef.current
+      if (cur && el) {
+        const pos = clampPosition({ ...cur, x: e.clientX - d.dx, y: e.clientY - d.dy }, bounds)
+        el.style.left = `${pos.x}px`
+        el.style.top = `${pos.y}px`
+        d.pos = pos
+      }
     }
     // 영역은 창이 아니라 포인터 위치로 정한다. 창 위치는 clampPosition으로 제한되지만 포인터는 가장자리까지 간다.
     d.zone = tileZoneAt({ x: e.clientX, y: e.clientY }, bounds)
     setZone(d.zone)
   }
+  // endDrag는 끄는 동안 style로만 옮긴 위치를 저장소에 반영한다. style은 지우지 않는다.
+  // 저장소 값이 같아지므로 React가 그리는 style과 어긋나지 않는다.
+  const endDrag = (d: Drag) => {
+    drag.current = null
+    setZone(null)
+    if (d.pos) moveTo(id, d.pos.x, d.pos.y, bounds)
+  }
   // 놓았을 때 타일링 영역 안이면 그 자리에 배치한다.
   const onPointerUp = (e: PointerEvent<HTMLElement>) => {
     const d = drag.current
     if (!d || d.pointerId !== e.pointerId) return
-    drag.current = null
-    setZone(null)
+    endDrag(d)
     if (d.zone) {
       anim.captureFrom()
       tile(id, d.zone)
     }
   }
-  // 취소되면 배치하지 않고 가이드만 지운다. pointerup 뒤에 오는 lostpointercapture는 이미 끝난 드래그라 무시된다.
+  // 취소되면 배치하지 않고 옮긴 위치만 반영한다. pointerup 뒤에 오는 lostpointercapture는 이미 끝난 드래그라 무시된다.
   const cancelDrag = (e: PointerEvent<HTMLElement>) => {
-    if (drag.current?.pointerId !== e.pointerId) return
-    drag.current = null
-    setZone(null)
+    const d = drag.current
+    if (d?.pointerId !== e.pointerId) return
+    endDrag(d)
   }
   // 최대화를 바꾸기 직전 위치를 남겨 애니메이션이 그 위치에서 시작되게 한다.
   const onToggleMaximize = () => {
@@ -213,13 +246,7 @@ export function Window({ id, bounds, closingState, onClosed }: Props) {
           </div>
         </header>
         <div className="window-body">
-          {notice ? (
-            <AddonUnavailable reason={notice} plugins={requiredPlugins(win.appId)} />
-          ) : View ? (
-            <View active={!win.minimized && !closing && pageVisible} />
-          ) : (
-            <PlaceholderWindow />
-          )}
+          <WindowBody appId={win.appId} notice={notice} active={!win.minimized && !closing && pageVisible} />
         </div>
         {layout === 'free' && <ResizeHandles id={id} rect={win} bounds={bounds} minSize={app.minSize} />}
         {win.tile && <TileResizeHandle side={win.tile} bounds={bounds} />}
