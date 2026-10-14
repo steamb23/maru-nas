@@ -144,5 +144,6 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 - Podman 모드의 컨테이너 목록(미검증 표시 중)
 - 4단계 조작을 실제 OMV로 확인한다(사용자가 `make dev`로). 컨테이너: `Compose.doContainerCommand` → `Exec.isRunning` 흐름, 실패한 docker 명령이 `Exec.isRunning` 예외로 오는지. 서비스: `Services.getStatus`의 실제 이름·값, 어댑터별 get → set(스키마 속성만) → `Config.applyChangesBg` → `Exec.isRunning` 흐름, 적용 대기 중 거절. 지금은 omvfake로만 검증했다
 
+- `install.sh`로 실제 설치한 뒤(사용자가 실행): 유닛 하드닝(`ProtectSystem=strict`, `PrivateDevices`, `RestrictAddressFamilies` 등) 아래에서 모든 애드온 데이터가 나오는지, Docker Caddy의 `/run/onmaru` 바인드 마운트가 서비스 재시작·재부팅 후에도 유지되는지. 지금은 `systemd-run --user`로 비슷한 제한을 걸어 가짜 OMV로만 확인했다
 - 같은 출처에서 OMV workbench를 iframe 창으로 띄울 수 있는지
 - 같은 탭 iframe은 sessionStorage를 공유하므로, 대시보드 로그인 후 OMV 창도 로그인 상태로 보이게 할 수 있는지. OMV 내부 저장 키(`username`, `permissions`)에 의존하는 실험이라 OMV 업데이트 시 깨질 수 있다. 실험 브랜치에서만 다룬다
