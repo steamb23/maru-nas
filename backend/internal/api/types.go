@@ -157,6 +157,35 @@ type Filesystem struct {
 	ReadOnly       bool   `json:"readOnly,omitempty"`
 }
 
+// NetworkResponse는 GET /api/addons/network의 응답이다.
+type NetworkResponse struct {
+	AddonSources `tstype:",extends"`
+	// SampledAtMs는 카운터를 읽은 시각이다. 백엔드 프로세스 시작 기준의 단조 시각(밀리초)이며,
+	// 같은 백엔드의 두 응답 차이로 속도를 계산하는 데만 쓴다(벽시계 시각이 아니다).
+	SampledAtMs int64 `json:"sampledAtMs"`
+	// Interfaces는 물리 인터페이스를 먼저, 가상 인터페이스를 뒤에 둔다. 루프백과 veth는 뺀다.
+	Interfaces []NetInterface `json:"interfaces"`
+}
+
+// NetInterface는 네트워크 인터페이스 하나의 상태와 누적 카운터다.
+type NetInterface struct {
+	Name string `json:"name"`
+	// Virtual은 물리 장치가 없는 인터페이스(브리지, docker0, VPN 등)인지다.
+	Virtual bool `json:"virtual,omitempty"`
+	// State는 커널 operstate 값이다(up, down, unknown, dormant, lowerlayerdown 등).
+	State string `json:"state"`
+	// SpeedMbps는 링크 속도다. 모르거나 링크가 내려가 있으면 없다.
+	SpeedMbps int    `json:"speedMbps,omitempty"`
+	RxBytes   uint64 `json:"rxBytes"`
+	TxBytes   uint64 `json:"txBytes"`
+	RxPackets uint64 `json:"rxPackets"`
+	TxPackets uint64 `json:"txPackets"`
+	RxErrors  uint64 `json:"rxErrors"`
+	TxErrors  uint64 `json:"txErrors"`
+	RxDropped uint64 `json:"rxDropped"`
+	TxDropped uint64 `json:"txDropped"`
+}
+
 // Preferences는 GET /api/preferences의 응답이며 로그인한 사용자의 대시보드 설정이다.
 // 백엔드 상태 디렉터리에 사용자별로 저장되어 로그아웃해도 남는다.
 type Preferences struct {
