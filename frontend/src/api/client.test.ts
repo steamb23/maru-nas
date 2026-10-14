@@ -2,12 +2,15 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   ApiError,
   fetchCapabilities,
+  fetchPreferences,
   fetchSession,
   fetchSystem,
   isCapabilitiesResponse,
   isLoginResponse,
+  isPreferences,
   login,
   logout,
+  saveWidgets,
   sendActivity,
   setUnauthorizedHandler,
 } from './client'
@@ -180,5 +183,52 @@ describe('isCapabilitiesResponse', () => {
     await expect(fetchCapabilities()).rejects.toThrow('unexpected response shape')
     stubFetch(Response.json(ok))
     await expect(fetchCapabilities()).resolves.toEqual(ok)
+  })
+})
+
+describe('preferences', () => {
+  const placement = { addon: 'system-info', right: 0, top: 0, cols: 3, rows: 2 }
+
+  it.each([
+    ['저장한 적 없음', {}],
+    ['빈 배치', { widgets: [] }],
+    ['위젯 하나', { widgets: [placement] }],
+  ])('%s를 받는다', (_name, v) => {
+    expect(isPreferences(v)).toBe(true)
+  })
+
+  it.each([
+    ['null', null],
+    ['widgets가 배열 아님', { widgets: {} }],
+    ['addon 없음', { widgets: [{ ...placement, addon: undefined }] }],
+    ['음수 좌표', { widgets: [{ ...placement, right: -1 }] }],
+    ['소수 좌표', { widgets: [{ ...placement, top: 0.5 }] }],
+    ['크기가 문자열', { widgets: [{ ...placement, cols: '3' }] }],
+  ])('%s는 거부한다', (_name, v) => {
+    expect(isPreferences(v)).toBe(false)
+  })
+
+  it('fetchPreferences는 형식이 다르면 던진다', async () => {
+    stubFetch(Response.json({ widgets: 'x' }))
+    await expect(fetchPreferences()).rejects.toThrow('unexpected response shape')
+  })
+
+  it('saveWidgets는 JSON 본문으로 PUT하고 204를 받는다', async () => {
+    const fn = stubFetch(new Response(null, { status: 204 }))
+    await saveWidgets([placement])
+    const [url, init] = fn.mock.calls[0]
+    expect(url).toMatch(/\/api\/preferences\/widgets$/)
+    expect(init?.method).toBe('PUT')
+    expect(new Headers(init?.headers).get('Content-Type')).toBe('application/json')
+    expect(JSON.parse(String(init?.body))).toEqual({ widgets: [placement] })
+  })
+
+  it('saveWidgets의 401은 로그인 화면으로 보낸다', async () => {
+    const onUnauthorized = vi.fn()
+    const off = setUnauthorizedHandler(onUnauthorized)
+    stubFetch(unauthorized())
+    await expect(saveWidgets([])).rejects.toBeInstanceOf(ApiError)
+    expect(onUnauthorized).toHaveBeenCalledOnce()
+    off()
   })
 })

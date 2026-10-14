@@ -4,8 +4,11 @@ import type {
   ChallengeInfo,
   ErrorResponse,
   LoginResponse,
+  Preferences,
   SessionInfo,
   SystemResponse,
+  WidgetPlacement,
+  WidgetsRequest,
 } from './types.gen'
 
 // BASE_URL은 Vite base 설정값('/desk/')이다.
@@ -81,10 +84,10 @@ interface RequestOptions {
   authRequest?: boolean
 }
 
-async function request(method: 'GET' | 'POST', path: string, opts: RequestOptions = {}): Promise<Response> {
+async function request(method: 'GET' | 'POST' | 'PUT', path: string, opts: RequestOptions = {}): Promise<Response> {
   const init: RequestInit = { method, signal: opts.signal, credentials: 'same-origin' }
-  if (method === 'POST') {
-    // 백엔드는 POST에 application/json만 받는다(CSRF 보조 장치).
+  if (method !== 'GET') {
+    // 백엔드는 본문이 있는 요청에 application/json만 받는다(CSRF 보조 장치).
     init.headers = { 'Content-Type': 'application/json' }
     init.body = JSON.stringify(opts.body ?? {})
   }
@@ -219,4 +222,31 @@ export async function sendActivity(): Promise<SessionInfo> {
     throw new Error('/session/activity: unexpected response shape')
   }
   return data
+}
+
+export function isWidgetPlacement(v: unknown): v is WidgetPlacement {
+  return (
+    isObj(v) &&
+    isStr(v.addon) &&
+    [v.right, v.top, v.cols, v.rows].every((n) => isNum(n) && Number.isInteger(n) && n >= 0)
+  )
+}
+
+export function isPreferences(v: unknown): v is Preferences {
+  return isObj(v) && (v.widgets === undefined || (Array.isArray(v.widgets) && v.widgets.every(isWidgetPlacement)))
+}
+
+// fetchPreferences는 로그인한 사용자의 대시보드 설정(위젯 배치 등)을 가져온다.
+export async function fetchPreferences(signal?: AbortSignal): Promise<Preferences> {
+  const data = await getJSON('/preferences', { signal })
+  if (!isPreferences(data)) {
+    throw new Error('/preferences: unexpected response shape')
+  }
+  return data
+}
+
+// saveWidgets는 위젯 배치 전체를 저장한다. 다른 설정은 바꾸지 않는다.
+export async function saveWidgets(widgets: readonly WidgetPlacement[]): Promise<void> {
+  const body: WidgetsRequest = { widgets: [...widgets] }
+  await request('PUT', '/preferences/widgets', { body })
 }
