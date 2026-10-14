@@ -66,6 +66,12 @@ type PluginData struct {
 	Containers    []Container
 	CPUTemp       float64
 	Services      []ServiceStatus
+	// ServiceSettings는 모듈 이름 → 서비스 설정 객체다(services.go).
+	ServiceSettings map[string]map[string]any
+	// Dirty는 적용 대기 중인 모듈 이름이다(Config.isDirty).
+	Dirty []string
+	// FailApply면 Config.applyChangesBg가 실패한다.
+	FailApply bool
 	// FailContainers는 doContainerCommand가 실패하는 컨테이너 이름이다.
 	FailContainers []string
 	// Missing은 설치되지 않은 것처럼 404("RPC service ... not found.")를 돌려줄 서비스다.
@@ -101,8 +107,9 @@ func DefaultPluginData() PluginData {
 			{Name: "fail2ban", Title: "fail2ban", Enabled: true, Running: false},
 			{Name: "Docker", Title: "Docker", Enabled: true, Running: true},
 		},
-		CPUTemp:        47,
-		FailContainers: []string{"broken"},
+		ServiceSettings: defaultServiceSettings(),
+		CPUTemp:         47,
+		FailContainers:  []string{"broken"},
 	}
 }
 
@@ -143,6 +150,15 @@ func (s *Server) handlePlugin(sess *session, service, method string, params json
 			return errStatus(http.StatusForbidden, "Invalid context role.")
 		}
 		return nil
+	}
+	if _, ok := serviceRPC[service]; ok || service == "Config" {
+		// 서비스 설정·적용 RPC는 모두 관리자 전용이다. 저장하기 전에 확인한다.
+		if e := adminOnly(); e != nil {
+			return nil, e, true
+		}
+		if res, rerr, ok := s.handleService(service, method, params); ok {
+			return res, rerr, true
+		}
 	}
 	switch service + "." + method {
 	case "Smart.getList":

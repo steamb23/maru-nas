@@ -276,9 +276,33 @@ export const MANIFESTS = {
     },
     "rpc": {
       "read": [
-        "Services.getStatus"
+        "Services.getStatus",
+        "Config.isDirty",
+        "Exec.isRunning",
+        "SSH.get",
+        "SMB.getSettings",
+        "NFS.getSettings",
+        "Rsyncd.getSettings"
+      ],
+      "write": [
+        "Config.applyChangesBg",
+        "SSH.set",
+        "SMB.setSettings",
+        "NFS.setSettings",
+        "Rsyncd.setSettings"
       ]
-    }
+    },
+    "actions": [
+      {
+        "name": "enable",
+        "admin": true
+      },
+      {
+        "name": "disable",
+        "admin": true,
+        "confirm": true
+      }
+    ]
   },
 } as const satisfies Record<string, AddonManifest>
 

@@ -10,7 +10,9 @@ import (
 
 	"omv-desktop-dashboard/backend/internal/addons"
 	"omv-desktop-dashboard/backend/internal/addons/containers"
+	"omv-desktop-dashboard/backend/internal/addons/services"
 	"omv-desktop-dashboard/backend/internal/api"
+	"omv-desktop-dashboard/backend/internal/omv/omvfake"
 )
 
 // actionEnv는 테스트용 조작 애드온을 등록한 환경이다.
@@ -214,4 +216,59 @@ func TestActionBuiltinContainers(t *testing.T) {
 	user := e.browser()
 	wantStatus(t, user.login("user", "user"), http.StatusOK)
 	wantCode(t, act(user, "containers", "start", "web"), http.StatusForbidden, api.ErrAdminRequired)
+}
+
+// 실제 내장 애드온(services)의 켜기·끄기가 가짜 OMV까지 가는 경로.
+func TestActionBuiltinServices(t *testing.T) {
+	e, _, _ := newDataEnv(t, services.New())
+	e.fake.SetBgPolls(0)
+	admin := e.browser()
+	wantStatus(t, admin.login("admin", "admin"), http.StatusOK)
+	status := func(name string) api.Service {
+		t.Helper()
+		r := admin.do(http.MethodGet, "/api/addons/services", nil)
+		wantStatus(t, r, http.StatusOK)
+		for _, s := range decode[api.ServicesResponse](t, r).Services {
+			if s.Name == name {
+				return s
+			}
+		}
+		t.Fatalf("service %s not found", name)
+		return api.Service{}
+	}
+
+	// 가짜 OMV는 set 스키마 밖의 속성(NFS의 shares)을 거절하므로 통과하면 골라 보낸 것이다.
+	wantStatus(t, act(admin, "services", "enable", "nfs"), http.StatusNoContent)
+	if s := status("nfs"); !s.Enabled || !s.Running || !s.Toggleable {
+		t.Errorf("nfs after enable %+v", s)
+	}
+	wantStatus(t, act(admin, "services", "disable", "ssh"), http.StatusNoContent)
+	if s := status("ssh"); s.Enabled || s.Running {
+		t.Errorf("ssh after disable %+v", s)
+	}
+	if s := status("fail2ban"); s.Toggleable {
+		t.Error("fail2ban toggleable")
+	}
+
+	// 적용하지 않은 변경이 있으면 설정을 바꾸지 않는다.
+	data := omvfake.DefaultPluginData()
+	data.Dirty = []string{"samba"}
+	e.fake.SetPluginData(data)
+	before := len(e.fake.Calls())
+	wantCode(t, act(admin, "services", "disable", "samba"), http.StatusConflict, api.ErrConfigDirty)
+	for _, c := range e.fake.Calls()[before:] {
+		if c.Method == "setSettings" {
+			t.Error("setSettings called while dirty")
+		}
+	}
+
+	data = omvfake.DefaultPluginData()
+	data.FailApply = true
+	e.fake.SetPluginData(data)
+	wantCode(t, act(admin, "services", "disable", "samba"), http.StatusBadGateway, api.ErrActionFailed)
+	wantCode(t, act(admin, "services", "enable", "fail2ban"), http.StatusBadRequest, api.ErrBadRequest)
+
+	user := e.browser()
+	wantStatus(t, user.login("user", "user"), http.StatusOK)
+	wantCode(t, act(user, "services", "enable", "nfs"), http.StatusForbidden, api.ErrAdminRequired)
 }
