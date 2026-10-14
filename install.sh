@@ -1,10 +1,16 @@
 #!/usr/bin/env bash
-# 온마루(Onmaru) 설치 스크립트. systemd 서비스로 설치하거나 다시 설치(업그레이드)한다.
+# 온마루(Onmaru) 설치 스크립트. 빌드한 뒤 systemd 서비스로 설치하거나 다시 설치(업그레이드)한다.
 #
-#   make build                      먼저 일반 사용자로 빌드한다(이 스크립트는 빌드하지 않는다)
-#   sudo ./install.sh               설치 또는 업그레이드. 기존 설정이 있으면 기본값으로 쓴다
-#   sudo ./install.sh --uninstall
-#   --lang en|ko                    안내 문구 언어. 생략하면 로캘(LC_ALL, LC_MESSAGES, LANG)로 고른다
+#   ./install.sh                    1단계: 실행한 계정으로 빌드한다(일반 사용자 또는 root만 있는 환경의 root)
+#                                   2단계: root가 아니면 sudo로 자신을 --service-install로 다시 실행한다
+#   ./install.sh --no-build         빌드를 건너뛰고 기존 bin/onmaru를 설치한다
+#   ./install.sh --uninstall        제거한다(root가 아니면 sudo로 다시 실행한다)
+#   ./install.sh --service-install  2단계만 실행한다(root 전용). 설정 질문, 사용자 생성, 유닛 작성, 시작
+#   --lang en|ko                    안내 문구 언어. 생략하면 로캘(LC_ALL, LC_MESSAGES, LANG)로 고른다.
+#                                   sudo로 다시 실행할 때는 명시적으로 넘겨 같은 언어를 유지한다
+#
+# 일반 사용자가 sudo ./install.sh로 실행하면 root로 빌드하지 않는다(저장소에 root 소유 파일이 생기고,
+# sudo의 PATH에는 사용자의 go·npm이 없을 수 있다). 이때는 기존 실행 파일로 설치만 할지 묻는다.
 #
 # 리버스 프록시 설정은 하지 않는다. README.md의 "리버스 프록시"를 참고한다.
 # 생성하는 설정 파일(유닛, /etc/default/onmaru)의 주석은 언어와 상관없이 영어로 쓴다.
@@ -20,6 +26,8 @@ readonly SOCKET_PATH=$RUNTIME_DIR/onmaru.sock
 readonly NGINX_WEBGUI=/etc/nginx/sites-enabled/openmediavault-webgui
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SELF=$root/$(basename "${BASH_SOURCE[0]}")
+readonly SELF
 readonly BIN_SRC=$root/bin/onmaru
 readonly DIST_INDEX=$root/backend/internal/web/static/dist/index.html
 
@@ -35,6 +43,8 @@ detect_lang() {
   local l=${LC_ALL:-${LC_MESSAGES:-${LANG:-}}}
   [[ $l == ko* ]] && echo ko || echo en
 }
+
+is_root() { [[ $EUID -eq 0 ]]; }
 
 info() { printf '\033[1;34m==>\033[0m %s\n' "$*"; }
 warn() { printf '\033[1;33m%s:\033[0m %s\n' "$(t warning 경고)" "$*" >&2; }
@@ -106,21 +116,73 @@ detect_omv_url() {
 usage() {
   if [[ $LANG_UI == ko ]]; then
     cat <<EOF
-사용법: sudo $0 [--uninstall] [--lang en|ko]
+사용법: $0 [--no-build | --uninstall | --service-install] [--lang en|ko]
 
-  (옵션 없음)    설치하거나 업그레이드합니다. 먼저 일반 사용자로 'make build'를 실행하세요
-  --uninstall    서비스, 실행 파일, 설정을 제거합니다
-  --lang en|ko   안내 문구 언어(기본값은 로캘에 따름)
+  (옵션 없음)        빌드한 뒤 설치하거나 업그레이드합니다. 설치 단계에서 필요하면 sudo를 사용합니다
+  --no-build         빌드를 건너뛰고 기존 bin/onmaru를 설치합니다
+  --uninstall        서비스, 실행 파일, 설정을 제거합니다
+  --service-install  빌드 없이 설치 단계만 실행합니다(root 전용)
+  --lang en|ko       안내 문구 언어(기본값은 로캘에 따름)
+
+일반 사용자는 sudo 없이 실행하세요. 빌드는 그 사용자로 하고, 설치 단계만 sudo로 실행합니다.
 EOF
   else
     cat <<EOF
-Usage: sudo $0 [--uninstall] [--lang en|ko]
+Usage: $0 [--no-build | --uninstall | --service-install] [--lang en|ko]
 
-  (no option)    install or upgrade. Run 'make build' as a normal user first
-  --uninstall    remove the service, binary and settings
-  --lang en|ko   language of the messages (default: from the locale)
+  (no option)        build, then install or upgrade. Uses sudo for the install step when needed
+  --no-build         skip the build and install the existing bin/onmaru
+  --uninstall        remove the service, binary and settings
+  --service-install  run only the install step, without building (root only)
+  --lang en|ko       language of the messages (default: from the locale)
+
+Normal users should run it without sudo: the build runs as that user and only the install step uses sudo.
 EOF
   fi
+}
+
+# build: 1단계. 실행한 계정으로 빌드한다. 처음 클론한 상태면 서브모듈과 npm 의존성부터 준비한다.
+build() {
+  info "$(t "Building as $(id -un)" "$(id -un) 계정으로 빌드")"
+  local tool
+  for tool in make go npm; do
+    command -v "$tool" >/dev/null 2>&1 ||
+      die "$(t "'$tool' not found in PATH. Install it, or build elsewhere and use --no-build." \
+        "PATH에서 '$tool'을 찾을 수 없습니다. 설치하거나, 다른 곳에서 빌드한 뒤 --no-build를 사용하세요.")"
+  done
+  if [[ -z $(ls -A "$root/vendor/icons/colloid" 2>/dev/null) ]]; then
+    command -v git >/dev/null 2>&1 || die "$(t "'git' is required to fetch the icon submodule" "아이콘 서브모듈을 받으려면 'git'이 필요합니다")"
+    info "$(t "Fetching the icon submodule" "아이콘 서브모듈 받는 중")"
+    git -C "$root" submodule update --init --depth 1
+  fi
+  if [[ ! -d $root/frontend/node_modules ]]; then
+    info "$(t "Installing frontend dependencies" "프론트엔드 의존성 설치 중")"
+    npm --prefix "$root/frontend" ci
+  fi
+  make -C "$root" build
+  info "$(t "Build finished: $BIN_SRC" "빌드 완료: $BIN_SRC")"
+}
+
+# as_root ACTION(service-install|uninstall): root면 바로 실행하고, 아니면 sudo로 자신을 다시 실행한다.
+as_root() {
+  local action=$1
+  if is_root; then
+    run_root "$action"
+    return
+  fi
+  command -v sudo >/dev/null 2>&1 ||
+    die "$(t "root privileges are required and sudo is not installed. Run this as root." \
+      "root 권한이 필요한데 sudo가 없습니다. root로 실행하세요.")"
+  info "$(t "Root privileges are needed for the next step; running sudo" "다음 단계에는 root 권한이 필요해 sudo를 실행합니다")"
+  exec sudo "$SELF" "--$action" --lang "$LANG_UI"
+}
+
+run_root() {
+  command -v systemctl >/dev/null 2>&1 || die "$(t "systemd is required" "systemd가 필요합니다")"
+  case $1 in
+    service-install) install_service ;;
+    uninstall) uninstall ;;
+  esac
 }
 
 uninstall() {
@@ -154,8 +216,8 @@ uninstall() {
 }
 
 install_service() {
-  [[ -x $BIN_SRC ]] || die "$(t "$BIN_SRC not found. Run 'make build' as a normal user first." \
-    "$BIN_SRC 파일이 없습니다. 먼저 일반 사용자로 'make build'를 실행하세요.")"
+  [[ -x $BIN_SRC ]] || die "$(t "$BIN_SRC not found. Run $SELF without options to build it first." \
+    "$BIN_SRC 파일이 없습니다. 먼저 옵션 없이 $SELF 를 실행해 빌드하세요.")"
   if [[ ! -f $DIST_INDEX ]]; then
     warn "$(t "frontend build not found ($DIST_INDEX). The binary will serve a 'frontend not built' page." \
       "프론트엔드 빌드가 없습니다($DIST_INDEX). 화면 대신 'frontend not built' 안내만 나옵니다.")"
@@ -433,10 +495,12 @@ next_steps() {
 
 main() {
   LANG_UI=$(detect_lang)
-  local action=install
+  local action=install do_build=1
   while (($#)); do
     case $1 in
       --uninstall) action=uninstall ;;
+      --service-install) action=service-install ;;
+      --no-build) do_build=0 ;;
       --lang)
         [[ ${2:-} == en || ${2:-} == ko ]] || { usage >&2; exit 2; }
         LANG_UI=$2
@@ -448,14 +512,29 @@ main() {
     esac
     shift
   done
-  [[ $EUID -eq 0 ]] || die "$(t "run as root: sudo $0" "root로 실행하세요: sudo $0")"
-  command -v systemctl >/dev/null 2>&1 || die "$(t "systemd is required" "systemd가 필요합니다")"
-
-  if [[ $action == uninstall ]]; then
-    uninstall
-  else
-    install_service
-  fi
+  case $action in
+    uninstall)
+      as_root uninstall
+      ;;
+    service-install)
+      is_root || die "$(t "--service-install must run as root. Run $SELF without options instead." \
+        "--service-install은 root로만 실행할 수 있습니다. 대신 옵션 없이 $SELF 를 실행하세요.")"
+      run_root service-install
+      ;;
+    install)
+      # 일반 사용자가 sudo로 실행했다면 root로 빌드하지 않는다.
+      if (( do_build )) && is_root && [[ -n ${SUDO_USER:-} && $SUDO_USER != root ]]; then
+        warn "$(t "running under sudo: the build is skipped to avoid root-owned files in the repository. To build, run $SELF without sudo." \
+          "sudo로 실행되어 빌드를 건너뜁니다(저장소에 root 소유 파일이 생기지 않게). 빌드하려면 sudo 없이 $SELF 를 실행하세요.")"
+        confirm "$(t "Install the existing $BIN_SRC instead?" "대신 기존 $BIN_SRC 로 설치할까요?")" n || exit 1
+        do_build=0
+      fi
+      if (( do_build )); then
+        build
+      fi
+      as_root service-install
+      ;;
+  esac
 }
 
 main "$@"
