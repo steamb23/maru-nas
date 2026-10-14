@@ -347,6 +347,18 @@ button {
 .widget-preview {
   z-index: 1;
   transform-origin: 0 0;
+  transition: opacity 100ms;
+}
+
+/* 놓을 수 없는 자리. 요소는 남겨 두고 숨기기만 한다(WidgetPreview). */
+.widget-preview.hidden {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .widget-preview {
+    transition: none;
+  }
 }
 
 .tile-preview.animated {

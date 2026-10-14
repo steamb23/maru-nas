@@ -8,6 +8,9 @@ export const PREVIEW_ENTER_MS = 150
 export const PREVIEW_ENTER_SCALE = 0.96
 // 놓을 칸이 바뀔 때 새 칸으로 미끄러지는 시간
 export const PREVIEW_MOVE_MS = 140
+// 이동 곡선. 빠르게 끌면 칸이 바뀔 때마다 이동이 다시 시작되므로, 출발 속도가 0인 곡선(EASING)을 쓰면
+// 가이드가 매번 멈췄다 다시 가속해 끊겨 보인다. 처음이 가장 빠른 감속 곡선으로 새 칸을 바로 따라간다.
+export const PREVIEW_MOVE_EASING = 'cubic-bezier(0, 0, 0.2, 1)'
 // 끌던 위젯을 놓았을 때 놓은 자리(또는 원래 자리)로 미끄러지는 시간
 export const DROP_MS = 180
 

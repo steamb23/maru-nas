@@ -85,8 +85,10 @@ export function WidgetFrame({
   const pageVisible = usePageVisible()
   const ref = useRef<HTMLElement>(null)
   const [mode, setMode] = useState<Mode>('idle')
-  // 놓을 자리. 놓을 수 없는 자리면 null(가이드를 그리지 않는다). 놓을 때 바로 쓰려고 ref에도 둔다.
-  const [target, setTarget] = useState<CellRect | null>(null)
+  // 가이드. cell은 마지막으로 놓을 수 있던 자리이고, 지금 자리에 놓을 수 없으면 visible이 false다(숨기기만 한다).
+  // 놓을 수 있는 자리를 아직 한 번도 만나지 않았으면 null이다.
+  const [guide, setGuide] = useState<{ cell: CellRect; visible: boolean } | null>(null)
+  // 지금 놓을 자리. 놓을 수 없는 자리면 null. 놓을 때 바로 쓰려고 ref에 둔다.
   const targetRef = useRef<CellRect | null>(null)
   // 끌기를 끝낸 순간 위젯이 보이던 자리. 다음 렌더에서 그 자리부터 제자리로 미끄러지게 한다.
   const dropFrom = useRef<PxRect | null>(null)
@@ -111,7 +113,10 @@ export function WidgetFrame({
   const showTarget = (next: CellRect | null) => {
     const valid = next && canPlace(next, others, grid, reserved) ? next : null
     targetRef.current = valid
-    setTarget((prev) => (sameCell(prev, valid) ? prev : valid))
+    setGuide((prev) => {
+      if (!valid) return prev && prev.visible ? { ...prev, visible: false } : prev
+      return prev && prev.visible && sameCell(prev.cell, valid) ? prev : { cell: valid, visible: true }
+    })
   }
 
   const begin = (m: Mode) => {
@@ -131,7 +136,7 @@ export function WidgetFrame({
       applyPx(el, rect)
     }
     targetRef.current = null
-    setTarget(null)
+    setGuide(null)
     setMode('idle')
     onInteract(false)
     if (commit && placed && !sameCell(placed, cells)) onCommit({ addon: id, ...placed })
@@ -225,7 +230,7 @@ export function WidgetFrame({
 
   return (
     <>
-      {target && <WidgetPreview rect={cellToPx(target, area)} />}
+      {guide && <WidgetPreview rect={cellToPx(guide.cell, area)} visible={guide.visible} />}
       <section
         ref={ref}
         className={classes}
