@@ -9,6 +9,7 @@ import (
 	"testing/fstest"
 
 	"omv-desktop-dashboard/backend/internal/addons"
+	"omv-desktop-dashboard/backend/internal/addons/smart"
 	"omv-desktop-dashboard/backend/internal/api"
 )
 
@@ -94,7 +95,12 @@ func (f *fakeRPC) Call(context.Context, string, string, any) (json.RawMessage, e
 
 func fetchWith(t *testing.T, hw *Hwmon, rpc *fakeRPC, sources ...string) (api.TemperatureResponse, error) {
 	t.Helper()
-	a := New(hw)
+	return fetchWithSmart(t, hw, smart.NewCache(0, 0), rpc, sources...)
+}
+
+func fetchWithSmart(t *testing.T, hw *Hwmon, cache *smart.Cache, rpc addons.RPCCaller, sources ...string) (api.TemperatureResponse, error) {
+	t.Helper()
+	a := New(hw, cache)
 	res, err := a.Fetch(context.Background(), addons.Request{Sources: sources, RPC: rpc})
 	return res.(api.TemperatureResponse), err
 }
@@ -144,5 +150,62 @@ func TestFetchPartialAndTotalFailure(t *testing.T) {
 	// 쓸 수 있는 출처가 모두 실패하면 오류다.
 	if _, err := fetchWith(t, broken, rpc, SourceCPUTemp); err == nil {
 		t.Error("want error")
+	}
+}
+
+// smartRPC는 Smart.getList만 답한다. nvme0n1(hwmon nvme0과 같은 디스크), sdx(hwmon drivetemp와 같음),
+// sdy(SMART에만 있음), sdz(온도 모름)가 있다.
+type smartRPC struct{ calls int }
+
+func (s *smartRPC) Call(_ context.Context, service, method string, _ any) (json.RawMessage, error) {
+	s.calls++
+	if service+"."+method != "Smart.getList" {
+		return nil, errors.New("unexpected " + service + "." + method)
+	}
+	return json.RawMessage(`{"total": 4, "data": [
+		{"devicename": "nvme0n1", "model": "Fake NVMe", "size": "1", "temperature": 40, "overallstatus": "GOOD"},
+		{"devicename": "sdx", "model": "Fake SATA", "size": "1", "temperature": 33, "overallstatus": "GOOD"},
+		{"devicename": "sdy", "model": "Fake HDD", "size": "1", "temperature": 36, "overallstatus": "GOOD"},
+		{"devicename": "sdz", "model": "Fake USB", "size": "1", "temperature": "", "overallstatus": "GOOD"}
+	]}`), nil
+}
+
+func TestFetchAddsCachedSmartTemps(t *testing.T) {
+	cache := smart.NewCache(0, 0)
+	rpc := &smartRPC{}
+	hw := NewHwmonFS(sampleHwmon())
+
+	// SMART 캐시가 비어 있으면 디스크 온도를 더하지 않고 SMART를 부르지도 않는다.
+	res, err := fetchWithSmart(t, hw, cache, rpc, SourceHwmon, smart.Source)
+	if err != nil || rpc.calls != 0 || len(res.Sources) != 1 {
+		t.Fatalf("sources %v calls %d err %v", res.Sources, rpc.calls, err)
+	}
+
+	if _, err := cache.Get(context.Background(), rpc, false); err != nil {
+		t.Fatal(err)
+	}
+	res, _ = fetchWithSmart(t, hw, cache, rpc, SourceHwmon, smart.Source)
+	if rpc.calls != 1 {
+		t.Errorf("temperature fetch called smart (%d calls)", rpc.calls)
+	}
+	var fromSmart []string
+	for _, g := range res.Groups {
+		if g.Source == smart.Source {
+			fromSmart = append(fromSmart, g.Device)
+			if g.CheckedAt == "" || g.Kind != api.SensorDisk || g.Name != "Fake HDD" {
+				t.Errorf("group %+v", g)
+			}
+		}
+	}
+	if len(fromSmart) != 1 || fromSmart[0] != "sdy" {
+		t.Errorf("smart groups %v", fromSmart)
+	}
+
+	// 일반 사용자(smart provider 없음)에게는 더하지 않는다.
+	res, _ = fetchWithSmart(t, hw, cache, rpc, SourceHwmon)
+	for _, g := range res.Groups {
+		if g.Source == smart.Source {
+			t.Error("smart temps shown without admin source")
+		}
 	}
 }

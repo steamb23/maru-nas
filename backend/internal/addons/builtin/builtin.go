@@ -39,7 +39,7 @@ func New(d Deps) *addons.Registry {
 		sysinfo.New(d.System),
 		storage.New(d.Storage),
 		network.New(d.Network),
-		temperature.New(d.Hwmon),
+		temperature.New(d.Hwmon, d.Smart),
 		containers.New(),
 		smart.New(d.Smart),
 	)

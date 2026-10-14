@@ -6,8 +6,11 @@ import (
 	"io/fs"
 	"math"
 	"os"
+	"regexp"
+	"time"
 
 	"omv-desktop-dashboard/backend/internal/addons"
+	"omv-desktop-dashboard/backend/internal/addons/smart"
 	"omv-desktop-dashboard/backend/internal/api"
 )
 
@@ -65,18 +68,20 @@ func (cpuTemp) Requires() api.Requirements {
 	return api.Requirements{Plugins: []string{cpuTempPlugin}}
 }
 
-// New는 온도 애드온을 반환한다.
-func New(hw *Hwmon) addons.Addon {
+// New는 온도 애드온을 반환한다. 관리자에게는 SMART 캐시(smartCache)에 있는 디스크 온도를 더한다.
+// SMART 캐시는 읽기만 하며 SMART 조회(디스크를 깨움)를 일으키지 않는다. SMART 애드온이 보관한
+// 값이 없으면 SATA 디스크 온도는 나오지 않는다.
+func New(hw *Hwmon, smartCache *smart.Cache) addons.Addon {
 	return addons.Addon{
 		Manifest:  Manifest,
-		Providers: []addons.Provider{hw, cpuTemp{}},
+		Providers: []addons.Provider{hw, cpuTemp{}, smart.Provider{}},
 		Fetch: func(ctx context.Context, req addons.Request) (any, error) {
-			return fetch(ctx, req, hw)
+			return fetch(ctx, req, hw, smartCache)
 		},
 	}
 }
 
-func fetch(ctx context.Context, req addons.Request, hw *Hwmon) (api.TemperatureResponse, error) {
+func fetch(ctx context.Context, req addons.Request, hw *Hwmon, smartCache *smart.Cache) (api.TemperatureResponse, error) {
 	res := api.TemperatureResponse{
 		AddonSources: api.AddonSources{Sources: []string{}},
 		Groups:       []api.SensorGroup{},
@@ -110,10 +115,45 @@ func fetch(ctx context.Context, req addons.Request, hw *Hwmon) (api.TemperatureR
 			})
 		}
 	}
+	if req.Has(smart.Source) {
+		if snap, ok := smartCache.Peek(); ok {
+			res.Sources = append(res.Sources, smart.Source)
+			res.Groups = append(res.Groups, smartGroups(snap, res.Groups)...)
+		}
+	}
 	SortGroups(res.Groups)
 	// 쓸 수 있는 출처가 모두 실패했을 때만 요청 전체를 실패로 본다.
 	if len(res.Sources) == 0 && len(errs) > 0 {
 		return res, errors.Join(errs...)
 	}
 	return res, nil
+}
+
+// nvmeNamespace는 NVMe 네임스페이스 장치 이름(nvme0n1)에서 컨트롤러 이름(nvme0)을 얻는다.
+var nvmeNamespace = regexp.MustCompile(`^(nvme\d+)n\d+$`)
+
+// smartGroups는 SMART 캐시의 디스크 온도 중 hwmon이 이미 보여 주는 디스크를 뺀 것이다.
+// hwmon의 nvme는 컨트롤러(nvme0), drivetemp는 블록 장치(sda)로 장치를 알려 준다.
+func smartGroups(snap smart.Snapshot, hwmon []api.SensorGroup) []api.SensorGroup {
+	covered := make(map[string]bool)
+	for _, g := range hwmon {
+		if g.Kind == api.SensorDisk && g.Device != "" {
+			covered[g.Device] = true
+		}
+	}
+	var out []api.SensorGroup
+	for _, d := range snap.Disks {
+		if d.Celsius == nil || covered[d.Device] {
+			continue
+		}
+		if m := nvmeNamespace.FindStringSubmatch(d.Device); m != nil && covered[m[1]] {
+			continue
+		}
+		out = append(out, api.SensorGroup{
+			ID: "smart:" + d.Device, Kind: api.SensorDisk, Name: d.Model, Device: d.Device,
+			Source: smart.Source, Sensors: []api.Sensor{{Celsius: *d.Celsius}},
+			CheckedAt: snap.CheckedAt.Format(time.RFC3339),
+		})
+	}
+	return out
 }
