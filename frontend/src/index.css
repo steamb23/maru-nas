@@ -342,15 +342,16 @@ button {
   pointer-events: none;
 }
 
-/* 위젯 배치 가이드. 모양은 타일링 가이드와 같고, 등장·이동 애니메이션은 WidgetPreview가 재생한다
-   (FLIP 계산을 위해 기준점을 왼쪽 위에 둔다). 끄는 위젯 바로 아래, 다른 위젯 위에 놓인다. */
+/* 위젯 배치 가이드. 모양은 타일링 가이드와 같고, 위치·크기는 WidgetPreview가 스프링으로 transform을 바꿔 움직인다
+   (FLIP 계산을 위해 기준점을 왼쪽 위에 둔다). 나타나고 숨는 투명도는 이 전환이 맡는다.
+   끄는 위젯 바로 아래, 다른 위젯 위에 놓인다. */
 .widget-preview {
   z-index: 1;
   transform-origin: 0 0;
   transition: opacity 100ms;
 }
 
-/* 놓을 수 없는 자리. 요소는 남겨 두고 숨기기만 한다(WidgetPreview). */
+/* 아직 놓을 자리를 만나지 않았거나 놓을 수 없는 자리. 요소는 남겨 두고 숨기기만 한다(WidgetPreview). */
 .widget-preview.hidden {
   opacity: 0;
 }

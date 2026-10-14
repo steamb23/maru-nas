@@ -27,7 +27,7 @@ import type { ContextMenuItem } from './contextMenu'
 import { type DragDelta, usePointerDrag } from './usePointerDrag'
 import { mergeHandlers, useContextMenuTrigger } from './useContextMenuTrigger'
 import { animationsEnabled } from './useWindowAnimation'
-import { WidgetPreview } from './WidgetPreview'
+import { WidgetPreview, type WidgetPreviewHandle } from './WidgetPreview'
 import { DROP_MS, slideKeyframes } from './widgetPreviewAnim'
 import { EASING } from './windowAnim'
 
@@ -85,11 +85,11 @@ export function WidgetFrame({
   const pageVisible = usePageVisible()
   const ref = useRef<HTMLElement>(null)
   const [mode, setMode] = useState<Mode>('idle')
-  // 가이드. cell은 마지막으로 놓을 수 있던 자리이고, 지금 자리에 놓을 수 없으면 visible이 false다(숨기기만 한다).
-  // 놓을 수 있는 자리를 아직 한 번도 만나지 않았으면 null이다.
-  const [guide, setGuide] = useState<{ cell: CellRect; visible: boolean } | null>(null)
-  // 지금 놓을 자리. 놓을 수 없는 자리면 null. 놓을 때 바로 쓰려고 ref에 둔다.
+  // 지금 놓을 자리. 놓을 수 없는 자리면 null. 가이드는 렌더 없이 previewRef로 움직인다.
   const targetRef = useRef<CellRect | null>(null)
+  const previewRef = useRef<WidgetPreviewHandle>(null)
+  // 끌기를 시작할 때의 놓을 자리. 가이드는 시작 렌더에서 그려지므로 첫 이동의 자리를 이것으로 넘긴다.
+  const [previewStart, setPreviewStart] = useState<PxRect | null>(null)
   // 끌기를 끝낸 순간 위젯이 보이던 자리. 다음 렌더에서 그 자리부터 제자리로 미끄러지게 한다.
   const dropFrom = useRef<PxRect | null>(null)
   const lastDelta = useRef<DragDelta>({ dx: 0, dy: 0 })
@@ -113,15 +113,13 @@ export function WidgetFrame({
   const showTarget = (next: CellRect | null) => {
     const valid = next && canPlace(next, others, grid, reserved) ? next : null
     targetRef.current = valid
-    setGuide((prev) => {
-      if (!valid) return prev && prev.visible ? { ...prev, visible: false } : prev
-      return prev && prev.visible && sameCell(prev.cell, valid) ? prev : { cell: valid, visible: true }
-    })
+    previewRef.current?.moveTo(valid && cellToPx(valid, area))
   }
 
   const begin = (m: Mode) => {
     if (mode === m) return
     setMode(m)
+    setPreviewStart(targetRef.current && cellToPx(targetRef.current, area))
     onInteract(true)
   }
 
@@ -136,7 +134,6 @@ export function WidgetFrame({
       applyPx(el, rect)
     }
     targetRef.current = null
-    setGuide(null)
     setMode('idle')
     onInteract(false)
     if (commit && placed && !sameCell(placed, cells)) onCommit({ addon: id, ...placed })
@@ -172,10 +169,11 @@ export function WidgetFrame({
     onMove: (d) => {
       // 길게 눌러 메뉴를 연 누름은 끌기로 이어 가지 않는다.
       if (menu.openedByPress()) return
-      begin('drag')
       lastDelta.current = d
       if (ref.current) ref.current.style.transform = `translate(${d.dx}px, ${d.dy}px)`
+      // 놓을 자리를 먼저 정해야 begin이 가이드의 첫 자리로 쓴다.
       showTarget(snapCell({ x: rect.x + d.dx, y: rect.y + d.dy }, cells, area))
+      begin('drag')
     },
     onEnd: (moved, d) => {
       if (menu.openedByPress()) {
@@ -205,12 +203,12 @@ export function WidgetFrame({
       resizeEdge.current = (e.currentTarget.dataset.edge as ResizeEdge | undefined) ?? 'se'
     },
     onMove: (d) => {
-      begin('resize')
       const edge = resizeEdge.current
       // 위젯은 포인터를 따라 픽셀 단위로 늘어나고, 가이드는 칸에 맞춘 크기를 보여 준다.
       const gridPx = cellToPx({ right: 0, top: 0, ...grid }, area)
       if (ref.current) applyPx(ref.current, resizePx(rect, edge, d.dx, d.dy, def.minSize, def.maxSize, gridPx))
       showTarget(resizeCells(cells, edge, d.dx, d.dy, def.minSize, def.maxSize, grid))
+      begin('resize')
     },
     onEnd: () => finish(true),
     onCancel: () => finish(false),
@@ -230,7 +228,7 @@ export function WidgetFrame({
 
   return (
     <>
-      {guide && <WidgetPreview rect={cellToPx(guide.cell, area)} visible={guide.visible} />}
+      {mode !== 'idle' && <WidgetPreview ref={previewRef} initial={previewStart} />}
       <section
         ref={ref}
         className={classes}
