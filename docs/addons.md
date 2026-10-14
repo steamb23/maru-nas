@@ -1,6 +1,6 @@
 # 애드온 구조
 
-기능(시스템 정보, 저장소, 온도, 네트워크, 컨테이너 등)을 같은 계약으로 만들기 위한 설계다. 각 기능은 창과 바탕화면 위젯 중 하나 이상의 보기로 보여 준다. 3단계에서 도입한다(3-1 애드온 계약, 3-2 위젯 시스템, 3-3 위젯 세부 구현). 항목별 데이터 출처는 [data-sources.md](data-sources.md)를 본다.
+기능(시스템 정보, 저장소, 온도, 네트워크, 컨테이너 등)을 같은 계약으로 만들기 위한 설계다. 각 기능은 창과 바탕화면 위젯 중 하나 이상의 보기로 보여 준다. 3단계에서 도입했고(3-1 애드온 계약, 3-2 위젯 시스템, 3-3 위젯 세부 구현), 4단계에서 상태를 바꾸는 조작을 더했다(4-1 조작 계약). 항목별 데이터 출처는 [data-sources.md](data-sources.md)를 본다.
 
 범위는 아래 두 층이다.
 
@@ -24,9 +24,10 @@
 | `requires.plugins` | 필요한 OMV 플러그인 패키지 이름. 비어 있으면 플러그인 없이 동작한다. `internal/addons`의 `knownPlugins` 표에 있는 이름만 쓸 수 있다 |
 | `requires.admin` | admin만 쓸 수 있는지 여부 |
 | `rpc.read` | 호출하는 읽기 전용 OMV RPC (`Service.method`) |
-| `rpc.write` | 호출하는 상태 변경 OMV RPC. 4단계 전에는 비어 있어야 한다 |
+| `rpc.write` | 호출하는 상태 변경 OMV RPC. 조작(`actions`)만 부른다 |
+| `actions` | 상태를 바꾸는 조작(`name`, `admin`, `confirm`). 구현은 `Addon.Actions`. 아래 "조작" |
 
-레지스트리(`addons.NewRegistry`)는 등록할 때 manifest를 검사한다: id 형식(소문자·숫자·`-`)과 중복, 보기 1개 이상(창 또는 위젯), 크기(위젯은 최소 ≤ 기본 ≤ 최대), `Service.method` 형식, 같은 메서드를 읽기와 쓰기로 함께 선언하지 않기, `Session.*` 금지(로그인·로그아웃은 백엔드만 부른다), provider 1개 이상.
+레지스트리(`addons.NewRegistry`)는 등록할 때 manifest를 검사한다: id 형식(소문자·숫자·`-`)과 중복, 보기 1개 이상(창 또는 위젯), 크기(위젯은 최소 ≤ 기본 ≤ 최대), `Service.method` 형식, 같은 메서드를 읽기와 쓰기로 함께 선언하지 않기, `Session.*` 금지(로그인·로그아웃은 백엔드만 부른다), 조작 선언과 구현의 1:1 일치(조작이 있으면 `rpc.write` 1개 이상), provider 1개 이상.
 
 한 애드온 안에서도 출처마다 조건이 다를 수 있다(예: 온도는 hwmon은 누구나, SMART 디스크 온도는 admin). 그래서 `requires`는 "창·위젯을 쓸 수 있는 최소 조건"이고, provider별 조건은 provider가 따로 선언한다.
 
@@ -59,10 +60,11 @@
 
 ### RPC 허용 목록과 단계 규칙
 
-- 백엔드의 OMV RPC 중계(`/desk/api/rpc`와 provider의 내부 호출)는 등록된 manifest의 `rpc.read`·`rpc.write`에 있는 메서드만 통과시킨다(`Registry.Classify`, 대소문자까지 정확히 일치)
-- 쓰기 RPC 허용 여부는 백엔드 한 곳(상수 `addons.WritesEnabled`)에서 정한다. 3단계에서는 꺼 둔다
-- 테스트로 "모든 내장 애드온의 `rpc.write`가 비어 있다"를 확인한다. 이 테스트는 4단계에서 바꾼다
-- 역할 검사는 OMV가 최종적으로 한다. 백엔드는 `requires.admin`으로 불필요한 호출을 미리 막을 뿐이다
+- 백엔드의 OMV RPC 호출(`/desk/api/rpc` 중계, provider의 내부 호출, 조작)은 등록된 manifest의 `rpc.read`·`rpc.write`에 있는 메서드만 통과시킨다(`Registry.Classify`, 대소문자까지 정확히 일치)
+- 쓰기 RPC 허용 여부는 백엔드 한 곳(상수 `addons.WritesEnabled`)에서 정한다. 3단계에서는 꺼 두었고 4단계에서 켰다
+- 켜져 있어도 **쓰기는 조작으로만** 부른다. `/api/rpc` 중계와 `Fetch`는 쓰기를 거부한다. `Compose.doContainerCommand`처럼 파라미터를 검사하지 않고 셸 명령을 만드는 OMV 메서드가 있어서, 쓰기 파라미터는 브라우저가 아니라 애드온 Go 코드가 만들어야 한다
+- 테스트(`builtin`)로 "쓰기를 선언한 내장 애드온은 조작이 있다"를 확인한다
+- 역할 검사는 OMV가 최종적으로 한다. 백엔드는 `requires.admin`과 조작의 `admin`으로 불필요한 호출을 미리 막을 뿐이다
 
 ### `/api/rpc` 중계
 
@@ -70,7 +72,7 @@
 
 | 상황 | 응답 |
 |---|---|
-| 허용 목록에 없음, 쓰기인데 `WritesEnabled`가 꺼짐 | 403 `rpc_forbidden` (OMV에 보내지 않음) |
+| 허용 목록에 없음, 쓰기 메서드 | 403 `rpc_forbidden` (OMV에 보내지 않음) |
 | 메서드를 선언한 애드온을 이 사용자가 쓸 수 없음 | 403 `admin_required` / `plugin_missing` (OMV에 보내지 않음) |
 | OMV 401 | 대시보드 세션을 지우고 401 |
 | OMV 404 (RPC 서비스 없음) | 플러그인 감지를 다시 하도록 표시하고 502 `omv_error` |
@@ -88,12 +90,48 @@
 - `addons.Addon.Fetch(ctx, Request)`가 응답을 만든다. 없으면 `GET /api/addons/{id}`는 404다. 시스템 정보는 3-1 이전부터 있던 `/api/system`을 그대로 쓴다
 - `Request`: `Admin`, `Sources`(capability로 계산한 쓸 수 있는 provider, 우선순위 순서. `Has(name)`), `Refresh`(`?refresh=1`, 캐시를 쓰는 애드온만 본다), `RPC`
 - `RPC`(`addons.RPCCaller`)는 서버가 요청마다 사용자 세션으로 만든다
-  - **호출한 애드온 자신이** manifest `rpc.read`에 선언한 메서드만 부른다(`Registry.Classify`로 확인, 다른 애드온이 선언한 메서드는 거부). 쓰기는 `WritesEnabled`
+  - **호출한 애드온 자신이** manifest `rpc.read`에 선언한 메서드만 부른다(`Registry.Classify`로 확인, 다른 애드온이 선언한 메서드는 거부). 쓰기는 부를 수 없다(조작에서만)
   - 항상 `updatelastaccess=false`로 부른다. 위젯 주기 요청이 OMV 세션을 연장하면 안 된다
   - OMV 401이면 provider가 오류를 삼켜도 대시보드 세션을 지우고 401로 응답한다. 404(RPC 서비스 없음)면 플러그인 감지를 다시 하게 한다
 - 서버(`internal/server/addondata.go`)는 capability를 먼저 확인한다(403 `admin_required`/`plugin_missing`, OMV에 보내지 않음). `Fetch`가 실패하면 OMV 호출 실패는 502 `omv_error`, 그 밖은 500
 - 응답은 모두 `api.AddonSources`(`sources`: 값을 보탠 provider, `failedSources`: 쓸 수 있었지만 실패한 provider)를 품는다. 일부 출처만 실패하면 나머지 값으로 응답하고, 모두 실패했을 때만 오류로 본다
 - 프론트: `fetchAddon(id, guard, {refresh})`(`api/client.ts`)와 응답 형태 검사(`api/guards.ts`), 공통 폴링 훅 `usePolledData`(`refresh()` 포함)
+
+### 조작 (4-1단계에서 정함)
+
+상태를 바꾸는 일(컨테이너 시작·정지, 서비스 켜기·끄기)은 애드온 조작으로만 한다.
+
+- manifest `actions`: `name`(소문자·숫자·`-`), `admin`(관리자만), `confirm`(실행 전 확인). `admin`은 애드온의 `requires.admin`과 따로 정한다(컨테이너 목록은 누구나 보고 조작은 관리자만)
+- 구현 `Addon.Actions[name]`: `Timeout`(0이면 1분)과 `Run(ctx, ActionRequest{Admin, Target, RPC})`
+  - `Target`은 브라우저가 보낸 값이다. OMV에 넘기기 전에 애드온이 형식과 존재를 검사하고, 잘못되면 `ErrInvalidTarget`
+  - OMV 파라미터는 고정값과 검사한 대상으로 애드온이 만든다. 브라우저가 보낸 다른 값은 넘기지 않는다
+  - 시작하지 않고 거절할 이유가 있으면 `*ActionError{Status, Code}`(예: 409 `config_dirty`)
+  - `RPC`는 그 애드온이 선언한 읽기·쓰기를 부를 수 있다(`updatelastaccess=false`)
+- OMV 백그라운드 작업: `execBgProc`·`callMethodBg`를 쓰는 메서드는 상태 파일 이름만 바로 돌려준다. `addons.WaitBg`가 `Exec.isRunning`(관리자 전용, 끝난 상태 파일을 지움)을 500ms마다 불러 끝날 때까지 기다린다. 실패는 OMV가 `Exec.isRunning`에서 예외로 알려 주므로 `ErrActionFailed`, 시간 초과는 `ErrActionTimeout`이다. 시간 초과나 백엔드 재시작 때 OMV 쪽 작업은 계속 돌고 상태 파일은 남는다
+- API: `POST /api/addons/{id}/actions/{action}`, 본문 `{target}`(4KB 이하), 성공하면 204
+
+| 상황 | 응답 |
+|---|---|
+| 애드온·조작 없음 | 404 |
+| capability 없음, 조작의 `admin`인데 관리자가 아님 | 403 `admin_required` / `plugin_missing` (OMV에 보내지 않음) |
+| 같은 (애드온, 대상)에 진행 중인 조작 | 409 `action_busy` |
+| 잘못된 대상 | 400 `bad_request` |
+| `ActionError` | 그 상태와 코드 |
+| 백그라운드 작업 실패 | 502 `action_failed` |
+| 시간 초과 | 504 `action_timeout` |
+| OMV 401 | 대시보드 세션을 지우고 401 |
+| 그 밖의 OMV 오류 | 502 `omv_error` |
+
+- 브라우저 연결이 끊겨도 백엔드는 `Timeout`까지 기다린다. OMV 쪽 작업은 어차피 계속 돌므로, 끝날 때까지 진행 중 표시를 유지해 같은 조작이 겹치지 않게 한다
+- 로그는 `user/addon/action/target/result`만 남긴다. OMV 오류 메시지는 별도 줄로 남기고 브라우저에 넘기지 않는다(trace는 클라이언트가 버린다)
+- 프론트(`addons/common/`)
+  - 상태: `actionState.ts`(대상별 running → settling → 해제 또는 error, 확인은 한 번에 하나). 성공한 대상은 다음 현황 응답(`settle`)까지 잠가 둔다
+  - 실행: `useAddonActions(id, onDone)`. manifest의 `confirm`이면 확인을 열고, 아니면 바로 실행한다. 성공·실패 모두 `onDone`(보통 `refresh`)을 부른다
+  - 화면: `RowActions.tsx`
+    - 행 버튼(`RowActionButtons`) → 행 아래 인라인 확인(`RowActionPanel`, 취소에 포커스)
+    - 우클릭 메뉴(`actionMenuItems`) → 확인 대화상자(`ActionConfirmDialog`). `.window` 기준 절대 위치로 제목 표시줄 아래만 덮어 그 창만 막는다. 포커스를 가두고 Esc는 취소다
+    - 실패는 행 아래에 오류 코드별 문구로 보여 준다
+  - 조작 버튼은 관리자에게만 보여 준다. 위젯에서는 조작하지 않는다(위젯은 끌어서 옮기는 요소라 잘못 누르기 쉽다)
 
 ## 보기: 창과 위젯
 
