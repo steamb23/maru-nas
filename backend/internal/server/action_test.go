@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -271,4 +272,26 @@ func TestActionBuiltinServices(t *testing.T) {
 	user := e.browser()
 	wantStatus(t, user.login("user", "user"), http.StatusOK)
 	wantCode(t, act(user, "services", "enable", "nfs"), http.StatusForbidden, api.ErrAdminRequired)
+}
+
+// 서비스 켜기·끄기를 연달아 하면 뒤의 것은 앞의 적용을 기다린다. 앞 요청이 남긴 적용 대기 때문에
+// config_dirty로 거절하지 않는다.
+func TestActionServicesSerialized(t *testing.T) {
+	e, _, _ := newDataEnv(t, services.New())
+	e.fake.SetBgPolls(3)
+	admin := e.browser()
+	wantStatus(t, admin.login("admin", "admin"), http.StatusOK)
+
+	first := make(chan *httptest.ResponseRecorder)
+	go func() { first <- act(admin, "services", "disable", "ssh") }()
+	// 첫 요청이 적용을 시작할 때까지(가짜 OMV에 applyChangesBg가 올 때까지) 기다린다.
+	deadline := time.Now().Add(5 * time.Second)
+	for !slices.ContainsFunc(e.fake.Calls(), func(c omvfake.Call) bool { return c.Method == "applyChangesBg" }) {
+		if time.Now().After(deadline) {
+			t.Fatal("first toggle did not start applying")
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	wantStatus(t, act(admin, "services", "enable", "nfs"), http.StatusNoContent)
+	wantStatus(t, <-first, http.StatusNoContent)
 }

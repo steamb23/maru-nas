@@ -260,6 +260,7 @@
 - 켜기·끄기는 어댑터 표(`adapters`)에 있는 서비스만 한다: SSH(`SSH.get`/`set`), SMB/CIFS(`SMB.getSettings`/`setSettings`), NFS, Rsync 서버(`Rsyncd`). 응답의 `toggleable`로 알려 주고, 창은 나머지 서비스에 "OMV에서 설정" 안내를 둔다
 - 흐름(`toggle`): `Config.isDirty`가 참이면 409 `config_dirty`로 거절(사용자가 workbench에서 적용하지 않은 변경을 대신 배포하지 않기 위해) → get, 이미 원하는 값이면 성공 → get 결과에서 set 스키마 속성만 골라 `enable`만 바꿔 set → `Config.applyChangesBg({modules: [], force: false})` → `WaitBg`. 시간 제한 3분
   - set 스키마(`datamodels/rpc.<svc>.json`)는 속성이 모두 필수다. get은 다른 속성도 줄 수 있으므로(NFS의 `shares`) 그대로 넘기지 않는다
+  - 이 백엔드의 켜기·끄기는 하나씩 실행한다(`toggleLock`). 적용이 끝나기 전에는 OMV가 적용 대기로 표시하므로, 겹치면 뒤의 요청이 앞 요청의 변경 때문에 `config_dirty`로 거절되기 때문이다. 뒤의 요청은 기다리며, 기다리는 시간도 시간 제한에 들어간다
   - isDirty와 set 사이에 다른 곳에서 만든 변경이 함께 배포될 수 있는 경쟁 조건은 받아들인다
   - set이 성공하고 적용이 실패하면 설정은 바뀐 채 적용 대기로 남는다(OMV workbench에 표시됨). `action_failed`로 알린다
 - 끄기 확인 문구는 서비스마다 무엇이 끊기는지 알려 준다(SSH 세션, SMB·NFS 클라이언트, rsync 백업)

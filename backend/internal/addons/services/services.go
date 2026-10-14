@@ -107,6 +107,12 @@ func New() addons.Addon {
 	}
 }
 
+// toggleLock은 이 백엔드의 켜기·끄기를 하나씩 실행하게 한다. 적용(4~5)이 끝나기 전에는 OMV가 적용 대기로
+// 표시하므로, 겹쳐 실행하면 뒤의 요청이 앞 요청의 변경 때문에 config_dirty로 거절된다. 뒤의 요청은 앞의 것이 끝날
+// 때까지 기다린다(기다리는 시간도 Timeout에 들어간다). 이 프로세스 안의 조작만 막으며, 그사이 workbench에서
+// 만든 변경은 아래 경쟁 조건과 같다.
+var toggleLock = make(chan struct{}, 1)
+
 // toggle은 서비스를 켜거나 끄는 조작이다. OMV workbench에서 서비스 설정의 "사용"을 바꾸고 적용하는 것과 같다.
 //
 //  1. Config.isDirty: OMV에 적용하지 않은 변경이 있으면 아무것도 바꾸지 않고 거절한다(409 config_dirty).
@@ -124,6 +130,12 @@ func toggle(enable bool) func(context.Context, addons.ActionRequest) error {
 		a, ok := adapters[req.Target]
 		if !ok {
 			return addons.ErrInvalidTarget
+		}
+		select {
+		case toggleLock <- struct{}{}:
+			defer func() { <-toggleLock }()
+		case <-ctx.Done():
+			return addons.ErrActionTimeout
 		}
 		var dirty bool
 		if err := addons.CallInto(ctx, req.RPC, "Config", "isDirty", map[string]any{}, &dirty); err != nil {
