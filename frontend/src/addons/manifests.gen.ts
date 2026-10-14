@@ -38,6 +38,39 @@ export const MANIFESTS = {
     "requires": {},
     "rpc": {}
   },
+  "storage": {
+    "id": "storage",
+    "title": "apps.storage",
+    "icon": "drive-harddisk",
+    "views": {
+      "window": {
+        "defaultSize": {
+          "width": 560,
+          "height": 400
+        },
+        "minSize": {
+          "width": 360,
+          "height": 240
+        }
+      },
+      "widget": {
+        "defaultSize": {
+          "cols": 3,
+          "rows": 2
+        },
+        "minSize": {
+          "cols": 2,
+          "rows": 2
+        },
+        "maxSize": {
+          "cols": 5,
+          "rows": 5
+        }
+      }
+    },
+    "requires": {},
+    "rpc": {}
+  },
 } as const satisfies Record<string, AddonManifest>
 
 export type AddonId = keyof typeof MANIFESTS

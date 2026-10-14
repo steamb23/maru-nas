@@ -7,14 +7,13 @@ import (
 	"os"
 
 	"omv-desktop-dashboard/backend/internal/addons/builtin"
-	"omv-desktop-dashboard/backend/internal/addons/sysinfo"
 )
 
 func main() {
 	out := flag.String("o", "../frontend/src/addons/manifests.gen.ts", "출력 파일")
 	flag.Parse()
 
-	src, err := builtin.New(builtin.Deps{System: sysinfo.NewReader()}).GenerateTS()
+	src, err := builtin.New(builtin.HostDeps()).GenerateTS()
 	if err != nil {
 		log.Fatal(err)
 	}

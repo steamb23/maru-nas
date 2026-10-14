@@ -177,6 +177,53 @@ export interface RPCRequest {
   params?: { [key: string]: unknown };
 }
 /**
+ * AddonSources는 애드온 데이터 응답(GET /api/addons/{id})에 공통으로 담는 출처 정보다.
+ */
+export interface AddonSources {
+  /**
+   * Sources는 이번 응답에 값을 보탠 provider 이름이다(우선순위 순서).
+   */
+  sources: string[];
+  /**
+   * FailedSources는 쓸 수 있었지만 이번에 실패한 provider 이름이다. 나머지 출처의 값은 그대로 담는다.
+   */
+  failedSources?: string[];
+}
+/**
+ * StorageResponse는 GET /api/addons/storage의 응답이다.
+ */
+export interface StorageResponse extends AddonSources {
+  /**
+   * Filesystems는 로컬 파일시스템이다(마운트 경로 순서).
+   */
+  filesystems: Filesystem[];
+}
+/**
+ * Filesystem은 마운트된 파일시스템 하나의 용량이다. 바이트 단위다.
+ */
+export interface Filesystem {
+  /**
+   * Device는 장치 경로(/dev/sda1 등)나 풀 이름이다.
+   */
+  device: string;
+  /**
+   * Label은 파일시스템 라벨이다. 없으면 비어 있다.
+   */
+  label?: string;
+  mountPoint: string;
+  type: string;
+  totalBytes: number /* uint64 */;
+  /**
+   * UsedBytes = 전체 - 남은 공간(root 예약분 포함).
+   */
+  usedBytes: number /* uint64 */;
+  /**
+   * AvailableBytes는 일반 사용자가 쓸 수 있는 남은 공간이다(root 예약분 제외).
+   */
+  availableBytes: number /* uint64 */;
+  readOnly?: boolean;
+}
+/**
  * Preferences는 GET /api/preferences의 응답이며 로그인한 사용자의 대시보드 설정이다.
  * 백엔드 상태 디렉터리에 사용자별로 저장되어 로그아웃해도 남는다.
  */

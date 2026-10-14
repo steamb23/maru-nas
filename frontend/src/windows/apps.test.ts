@@ -25,7 +25,8 @@ describe('애드온 앱', () => {
 
   it('준비 중 앱은 애드온이 아니다', () => {
     expect(isAddonApp('files')).toBe(false)
-    expect(getApp('storage').kind).toBe('placeholder')
+    expect(getApp('files').kind).toBe('placeholder')
+    expect(getApp('storage').kind).toBe('addon')
   })
 
   it('준비 중 앱과 애드온의 id가 겹치지 않는다', () => {
@@ -34,6 +35,6 @@ describe('애드온 앱', () => {
   })
 
   it('애드온 앱이 앞에, 준비 중 앱이 뒤에 놓인다', () => {
-    expect(APP_IDS).toEqual(['system-info', 'files', 'storage'])
+    expect(APP_IDS).toEqual(['system-info', 'storage', 'files'])
   })
 })

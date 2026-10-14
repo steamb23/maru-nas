@@ -79,6 +79,18 @@
     "open": "열기",
     "remove": "위젯 제거",
     "add": "위젯 추가",
-    "noSpace": "자리 없음"
+    "noSpace": "자리 없음",
+    "more": "외 {{count}}개",
+    "empty": "표시할 항목 없음"
+  },
+  "storage": {
+    "root": "시스템",
+    "empty": "파일시스템이 없습니다.",
+    "readOnly": "읽기 전용",
+    "usage": "{{total}} 중 {{used}} 사용 · {{free}} 남음"
+  },
+  "addonWindow": {
+    "disconnected": "연결 끊김 — 다시 연결하는 중…",
+    "partial": "일부 정보를 가져오지 못했습니다."
   }
 }

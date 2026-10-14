@@ -1180,3 +1180,212 @@ button {
   height: 6px;
   margin-top: 4px;
 }
+
+/* ---- 애드온 공통: 위젯 ---- */
+
+/* 위젯 본문의 세로 목록. 아래 여백(10px)은 addons/common/widgetRows.ts와 맞춘다. */
+.addon-widget {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  height: 100%;
+  padding: 2px 12px 10px;
+  overflow: hidden;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 연결이 끊기면 마지막 값을 흐리게 보여 준다(상태 문구는 흐리게 하지 않는다). */
+.addon-widget.stale > :not(.widget-status) {
+  opacity: 0.45;
+}
+
+.widget-item {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.widget-line {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  line-height: 20px;
+}
+
+.widget-name {
+  overflow: hidden;
+  flex: 0 1 auto;
+  min-width: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.widget-detail {
+  overflow: hidden;
+  flex: 1 1 0;
+  min-width: 0;
+  color: var(--text-muted);
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.widget-value {
+  flex: none;
+  margin-left: auto;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.widget-detail + .widget-value {
+  margin-left: 0;
+}
+
+.widget-more,
+.widget-empty {
+  flex: none;
+  margin: 0;
+  color: var(--text-muted);
+}
+
+/* ---- 애드온 공통: 창 ---- */
+
+.addon-window {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+}
+
+.addon-banner {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: light-dark(#fde8e8, #4a2224);
+  color: light-dark(#b42318, #ffb4ab);
+  font-weight: 600;
+}
+
+.addon-banner.notice {
+  background: light-dark(#fff4e0, #47381c);
+  color: light-dark(#8a5300, #ffd8a0);
+  font-weight: 400;
+}
+
+.addon-empty {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.addon-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  transition: opacity 0.2s;
+}
+
+.addon-list.stale {
+  opacity: 0.45;
+}
+
+.addon-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--window-border);
+  border-radius: 8px;
+}
+
+.addon-card-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.addon-card-title {
+  overflow: hidden;
+  min-width: 0;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.addon-card-value {
+  flex: none;
+  margin-left: auto;
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.addon-card-sub {
+  overflow: hidden;
+  font-size: 12px;
+  color: var(--text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.addon-section-title {
+  margin: 4px 0 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.badge {
+  flex: none;
+  padding: 0 6px;
+  border-radius: 4px;
+  background: var(--hover-bg);
+  font-size: 11px;
+  line-height: 18px;
+  color: var(--text-muted);
+}
+
+/* ---- 애드온 공통: 막대·상태 색 ---- */
+
+.meter {
+  height: 6px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--hover-bg);
+}
+
+.addon-card .meter {
+  height: 8px;
+  margin: 2px 0;
+  border-radius: 4px;
+}
+
+.meter-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+  transition: width 0.4s ease-out;
+}
+
+.meter-fill.warn {
+  background: #e8a317;
+}
+
+.meter-fill.crit {
+  background: #d93025;
+}
+
+.level-warn {
+  color: light-dark(#a35f00, #f5b54a);
+}
+
+.level-crit {
+  color: light-dark(#c5221f, #ff8a80);
+}

@@ -32,12 +32,6 @@ const PLACEHOLDER_APPS = {
     kind: 'placeholder',
     defaultSize: { width: 640, height: 420 },
   },
-  storage: {
-    titleKey: 'apps.storage',
-    icon: 'drive-harddisk',
-    kind: 'placeholder',
-    defaultSize: { width: 560, height: 400 },
-  },
 } as const satisfies Record<string, AppDef>
 
 export type AppId = WindowAddonId | keyof typeof PLACEHOLDER_APPS
