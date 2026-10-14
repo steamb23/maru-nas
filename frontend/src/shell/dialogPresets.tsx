@@ -1,6 +1,6 @@
 // 명령형 대화상자의 기본 형태(문구 + 단추, 확인, 알림)와, 컴포넌트에서 범위에 묶어 쓰는 훅.
 // 모두 dialogs.ts의 openDialog 위에 만든 것이라, 더 복잡한 내용은 openDialog로 직접 그린다.
-import { type ReactNode, useContext, useMemo } from 'react'
+import { type ReactNode, createRef, useContext, useMemo } from 'react'
 import type { ModalOptions } from './Modal'
 import { type MessageButton, MessageButtons, MessageText } from './MessageDialog'
 import { type DialogScope, type DialogSpec, openDialog } from './dialogs'
@@ -18,11 +18,13 @@ export interface MessageDialogOptions extends PresetOptions {
 // messageDialog는 누른 단추의 id로 끝난다. 취소면 null이다.
 export function messageDialog(scope: DialogScope, opts: MessageDialogOptions): Promise<string | null> {
   const { message, buttons, focusId, ...options } = opts
+  const focusRef = createRef<HTMLButtonElement>()
   return openDialog<string>(scope, {
     role: 'alertdialog',
+    initialFocus: focusId ? focusRef : undefined,
     ...options,
     render: () => <MessageText>{message}</MessageText>,
-    footer: (ctl) => <MessageButtons buttons={buttons} focusId={focusId} onPress={ctl.close} />,
+    footer: (ctl) => <MessageButtons buttons={buttons} focusId={focusId} focusRef={focusRef} onPress={ctl.close} />,
   })
 }
 
