@@ -3,7 +3,6 @@ import {
   type ProfileMenuItem,
   PROFILE_MENU_ITEMS,
   groupItems,
-  nextIndex,
   submenuKey,
   visibleItems,
 } from './profileMenu'
@@ -30,16 +29,6 @@ describe('profileMenu', () => {
     expect(groupItems([])).toEqual([])
   })
 
-  it('화살표 키 이동은 양 끝에서 넘어간다', () => {
-    expect(nextIndex(-1, 3, 'ArrowDown')).toBe(0)
-    expect(nextIndex(2, 3, 'ArrowDown')).toBe(0)
-    expect(nextIndex(-1, 3, 'ArrowUp')).toBe(2)
-    expect(nextIndex(0, 3, 'ArrowUp')).toBe(2)
-    expect(nextIndex(1, 3, 'End')).toBe(2)
-    expect(nextIndex(1, 3, 'Home')).toBe(0)
-    expect(nextIndex(1, 3, 'x')).toBe(1)
-    expect(nextIndex(0, 0, 'ArrowDown')).toBe(-1)
-  })
 
   it('좌우 화살표로 하위 메뉴를 열고, 하위 메뉴에서는 좌우 화살표·Esc로 닫는다', () => {
     expect(submenuKey('ArrowLeft', false)).toBe('open')

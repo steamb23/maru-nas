@@ -48,22 +48,6 @@ export function groupItems(items: readonly ProfileMenuItem[]): ProfileMenuItem[]
   return groups
 }
 
-// nextIndex는 화살표 키로 옮길 항목 위치다. 끝에서는 반대쪽 끝으로 넘어간다.
-export function nextIndex(current: number, count: number, key: string): number {
-  if (count === 0) return -1
-  switch (key) {
-    case 'ArrowDown':
-      return (current + 1 + count) % count
-    case 'ArrowUp':
-      return current < 0 ? count - 1 : (current - 1 + count) % count
-    case 'Home':
-      return 0
-    case 'End':
-      return count - 1
-  }
-  return current
-}
-
 // submenuKey는 하위 메뉴를 여닫는 키인지 판단한다. 하위 메뉴는 프로필 메뉴 왼쪽에 열리지만,
 // 좌우 어느 화살표로도 열고 닫게 한다(시각적 방향과 "오른쪽 = 안으로" 관례를 둘 다 받는다).
 // Enter·Space는 버튼 클릭으로 처리되므로 여기서 다루지 않는다.

@@ -75,6 +75,10 @@
     "label": "Widgets",
     "disconnected": "Disconnected",
     "pluginMissing": "Plugin required",
-    "adminRequired": "Administrators only"
+    "adminRequired": "Administrators only",
+    "open": "Open",
+    "remove": "Remove widget",
+    "add": "Add widget",
+    "noSpace": "No space"
   }
 }

@@ -23,7 +23,9 @@ import {
 import { canPlace } from '../widgets/layout'
 import { isAddonApp } from '../windows/apps'
 import { useWindowStore } from '../windows/store'
+import type { ContextMenuItem } from './contextMenu'
 import { type DragDelta, usePointerDrag } from './usePointerDrag'
+import { mergeHandlers, useContextMenuTrigger } from './useContextMenuTrigger'
 import { animationsEnabled } from './useWindowAnimation'
 import { WidgetPreview } from './WidgetPreview'
 import { DROP_MS, slideKeyframes } from './widgetPreviewAnim'
@@ -44,6 +46,8 @@ interface Props {
   onCommit: (edited: WidgetPlacement) => void
   // 끌거나 크기를 바꾸는 동안 true. 레이어를 창 위로 올린다.
   onInteract: (active: boolean) => void
+  // 위젯을 바탕화면에서 뺀다(위젯 메뉴의 "위젯 제거").
+  onRemove: (id: WidgetAddonId) => void
 }
 
 type Mode = 'idle' | 'drag' | 'resize'
@@ -62,7 +66,19 @@ function applyPx(el: HTMLElement, r: PxRect) {
   el.style.height = `${r.height}px`
 }
 
-export function WidgetFrame({ id, placement, area, grid, reserved, others, notice, plugins, onCommit, onInteract }: Props) {
+export function WidgetFrame({
+  id,
+  placement,
+  area,
+  grid,
+  reserved,
+  others,
+  notice,
+  plugins,
+  onCommit,
+  onInteract,
+  onRemove,
+}: Props) {
   const { t } = useTranslation()
   const def = getWidget(id)
   const View = ADDON_VIEWS[id].Widget
@@ -125,15 +141,42 @@ export function WidgetFrame({ id, placement, area, grid, reserved, others, notic
     if (opensWindow) useWindowStore.getState().open(id, area)
   }
 
+  // 우클릭·메뉴 키·길게 누르기로 여는 위젯 메뉴
+  const menu = useContextMenuTrigger({
+    items: () => {
+      const items: ContextMenuItem[] = []
+      if (opensWindow) {
+        items.push(
+          { kind: 'action', id: 'open', labelKey: 'widgets.open', icon: 'document-open-symbolic', onSelect: openWindow },
+          { kind: 'separator', id: 'sep' },
+        )
+      }
+      items.push({
+        kind: 'action',
+        id: 'remove',
+        labelKey: 'widgets.remove',
+        icon: 'list-remove-symbolic',
+        onSelect: () => onRemove(id),
+      })
+      return items
+    },
+  })
+
   const moveHandlers = usePointerDrag({
     threshold: DRAG_THRESHOLD,
     onMove: (d) => {
+      // 길게 눌러 메뉴를 연 누름은 끌기로 이어 가지 않는다.
+      if (menu.openedByPress()) return
       begin('drag')
       lastDelta.current = d
       if (ref.current) ref.current.style.transform = `translate(${d.dx}px, ${d.dy}px)`
       showTarget(snapCell({ x: rect.x + d.dx, y: rect.y + d.dy }, cells, area))
     },
     onEnd: (moved, d) => {
+      if (menu.openedByPress()) {
+        if (mode === 'drag') finish(false)
+        return
+      }
       if (!moved) {
         openWindow()
         return
@@ -169,7 +212,9 @@ export function WidgetFrame({ id, placement, area, grid, reserved, others, notic
   })
 
   const onKeyDown = (e: KeyboardEvent<HTMLElement>) => {
-    if (e.target !== e.currentTarget || (e.key !== 'Enter' && e.key !== ' ')) return
+    if (e.target !== e.currentTarget) return
+    menu.handlers.onKeyDown(e)
+    if (e.key !== 'Enter' && e.key !== ' ') return
     e.preventDefault()
     openWindow()
   }
@@ -187,8 +232,8 @@ export function WidgetFrame({ id, placement, area, grid, reserved, others, notic
         style={{ left: rect.x, top: rect.y, width: rect.width, height: rect.height }}
         aria-label={title}
         tabIndex={0}
+        {...mergeHandlers(menu.handlers, moveHandlers)}
         onKeyDown={onKeyDown}
-        {...moveHandlers}
       >
         <header className="widget-title">
           <IconImage name={def.manifest.icon} size={16} />

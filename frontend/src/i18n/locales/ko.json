@@ -75,6 +75,10 @@
     "label": "위젯",
     "disconnected": "연결 끊김",
     "pluginMissing": "플러그인이 필요합니다",
-    "adminRequired": "관리자 전용"
+    "adminRequired": "관리자 전용",
+    "open": "열기",
+    "remove": "위젯 제거",
+    "add": "위젯 추가",
+    "noSpace": "자리 없음"
   }
 }

@@ -10,37 +10,21 @@ import {
   PROFILE_MENU_ITEMS,
   type ProfileMenuActionId,
   groupItems,
-  nextIndex,
   submenuKey,
   visibleItems,
 } from './profileMenu'
+import { MENU_CLOSE_MS, MENU_CLOSE_TO, MENU_OPEN_FROM, MENU_OPEN_MS, MENU_SHOWN } from './menuAnim'
+import { moveFocus } from './menuFocus'
 import { animationsEnabled } from './useWindowAnimation'
 import { CLOSE_EASING, EASING } from './windowAnim'
 
 const { logout } = useAuthStore.getState()
 
-// 메뉴는 프로필 버튼 쪽(오른쪽 아래, index.css의 transform-origin)에서 조금 아래·작은 상태로 떠오르며 나타나고,
-// 닫을 때는 더 짧게 살짝 가라앉으며 사라진다. 창 애니메이션과 같은 켜기/끄기·동작 줄이기 설정을 따른다.
-const MENU_OPEN_MS = 160
-const MENU_CLOSE_MS = 110
-const MENU_OPEN_FROM: Keyframe = { opacity: 0, transform: 'translateY(8px) scale(0.96)' }
-const MENU_CLOSE_TO: Keyframe = { opacity: 0, transform: 'translateY(4px) scale(0.98)' }
-const MENU_SHOWN: Keyframe = { opacity: 1, transform: 'none' }
+// 메뉴는 프로필 버튼 쪽(오른쪽 아래, index.css의 transform-origin)에서 나타나고 사라진다(menuAnim.ts).
 
 // 메뉴 항목 동작. profileMenu.ts의 action 항목 id마다 하나씩 둔다.
 const actions: Record<ProfileMenuActionId, () => void> = {
   logout: () => void logout(),
-}
-
-// moveFocus는 화살표·Home·End 키로 root 안의 selector 항목 사이에서 포커스를 옮긴다. 옮겼으면 true.
-function moveFocus(root: HTMLElement | null, selector: string, e: KeyboardEvent<HTMLElement>): boolean {
-  const items = Array.from(root?.querySelectorAll<HTMLButtonElement>(selector) ?? [])
-  const current = items.indexOf(document.activeElement as HTMLButtonElement)
-  const next = nextIndex(current, items.length, e.key)
-  if (next === current) return false
-  e.preventDefault()
-  items[next]?.focus()
-  return true
 }
 
 // ProfileAvatar는 사용자 아바타다. 지금은 기본 아이콘만 그린다.
