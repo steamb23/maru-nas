@@ -1,6 +1,6 @@
 # 애드온 구조
 
-기능(시스템 정보, 저장소, 온도, 네트워크, 컨테이너 등)을 같은 계약으로 만들기 위한 설계다. 각 기능은 창과 바탕화면 위젯 중 하나 이상의 보기로 보여 준다. 3단계에서 도입했고(3-1 애드온 계약, 3-2 위젯 시스템, 3-3 위젯 세부 구현), 4단계에서 상태를 바꾸는 조작을 더했다(4-1 조작 계약). 항목별 데이터 출처는 [data-sources.md](data-sources.md)를 본다.
+기능(시스템 정보, 저장소, 온도, 네트워크, 컨테이너 등)을 같은 계약으로 만들기 위한 설계다. 각 기능은 창과 바탕화면 위젯 중 하나 이상의 보기로 보여 준다. 3단계에서 도입했고(3-1 애드온 계약, 3-2 위젯 시스템, 3-3 위젯 세부 구현), 4단계에서 상태를 바꾸는 조작을 더했다(4-1 조작 계약, 4-2 컨테이너 조작, 4-3 OMV 서비스). 항목별 데이터 출처는 [data-sources.md](data-sources.md)를 본다.
 
 범위는 아래 두 층이다.
 
@@ -245,6 +245,24 @@
 - 파라미터는 OMV workbench의 SMART 대시보드 위젯과 같은 `{start: 0, limit: -1}`이다
 - `overallstatus`는 workbench의 색 구분을 따라 good(GOOD), warning(BAD_SECTOR), failing(BAD_ATTRIBUTE_NOW, BAD_ATTRIBUTE_IN_THE_PAST, BAD_SECTOR_MANY), unknown(BAD_STATUS 등)으로 줄이고 원래 값도 준다. 시리얼 번호·WWN은 브라우저에 넘기지 않는다
 - 위젯은 10분마다 백엔드에 묻지만 백엔드는 기준 시각을 넘긴 경우에만 OMV를 부른다
+
+### 4단계 내장 애드온
+
+| id | 이름 | requires | provider | 조작 | 위젯 / 창 갱신 |
+|---|---|---|---|---|---|
+| `containers` | 컨테이너 | compose 플러그인 | `omv-compose` | `start`, `stop`(확인), `restart`(확인), 관리자 | 30초 / 15초 |
+| `services` | 서비스 | admin | `omv-services` | `enable`, `disable`(확인) | 30초 / 10초 |
+
+#### 서비스 (`services`, 4-3단계)
+
+- 상태: `Services.getStatus`(관리자). `IServiceStatus`를 구현한 OMV 모듈마다 `{name, title, enabled, running}`이다. `name`은 대개 모듈 이름(`ssh`, `samba`, `nfs`, `rsyncd`)이지만 compose 플러그인처럼 다른 값(`Docker`)을 쓰는 모듈도 있다. `title`은 OMV가 번역한 문구라 표시에만 쓴다. 참거짓을 숫자·문자열로 주는 플러그인이 있을 수 있어 느슨하게 읽는다
+- 상태 점: 켜짐+실행 ok, 켜짐+멈춤 위험, 꺼짐+실행 주의(설정과 다름), 꺼짐 idle. 위젯과 창 모두 문제 있는 것부터 보여 준다
+- 켜기·끄기는 어댑터 표(`adapters`)에 있는 서비스만 한다: SSH(`SSH.get`/`set`), SMB/CIFS(`SMB.getSettings`/`setSettings`), NFS, Rsync 서버(`Rsyncd`). 응답의 `toggleable`로 알려 주고, 창은 나머지 서비스에 "OMV에서 설정" 안내를 둔다
+- 흐름(`toggle`): `Config.isDirty`가 참이면 409 `config_dirty`로 거절(사용자가 workbench에서 적용하지 않은 변경을 대신 배포하지 않기 위해) → get, 이미 원하는 값이면 성공 → get 결과에서 set 스키마 속성만 골라 `enable`만 바꿔 set → `Config.applyChangesBg({modules: [], force: false})` → `WaitBg`. 시간 제한 3분
+  - set 스키마(`datamodels/rpc.<svc>.json`)는 속성이 모두 필수다. get은 다른 속성도 줄 수 있으므로(NFS의 `shares`) 그대로 넘기지 않는다
+  - isDirty와 set 사이에 다른 곳에서 만든 변경이 함께 배포될 수 있는 경쟁 조건은 받아들인다
+  - set이 성공하고 적용이 실패하면 설정은 바뀐 채 적용 대기로 남는다(OMV workbench에 표시됨). `action_failed`로 알린다
+- 끄기 확인 문구는 서비스마다 무엇이 끊기는지 알려 준다(SSH 세션, SMB·NFS 클라이언트, rsync 백업)
 
 ### 시스템 정보
 

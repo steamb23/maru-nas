@@ -49,6 +49,12 @@
   - `execBgProc`로 돌기 때문에 바로 상태 파일 이름(문자열)을 돌려준다. 끝났는지와 실패는 `Exec.isRunning`(admin)으로 확인한다. docker 명령이 0이 아닌 값으로 끝나면 `Exec.isRunning`이 예외를 던진다
   - Podman 모드에서는 같은 명령을 `DOCKER_HOST`를 바꿔 실행한다(미검증)
 
+- OMV 서비스 상태: `Services.getStatus`(admin, `{total, data}`). 모듈의 `getStatus()`를 모은 것이며 `enabled`는 대개 설정 DB의 `enable`, `running`은 `systemctl is-active`다(compose 플러그인은 `systemctl is-enabled`)
+- OMV 서비스 켜기·끄기: 시작·정지 RPC가 따로 없다. workbench처럼 서비스 설정의 `enable`을 바꾸고 설정을 적용한다
+  - 설정: `SSH.get`/`SSH.set`, `SMB.getSettings`/`setSettings`, `NFS.getSettings`/`setSettings`, `Rsyncd.getSettings`/`setSettings`(모두 admin). set 스키마는 모든 속성이 필수다. `SMB.getSettings`는 `shares`를, `Rsyncd.getSettings`는 `modules`를 빼고 주지만 `NFS.getSettings`는 `shares`를 그대로 준다(`versions`는 배열로 바꿔 줌). `SMB.setSettings`는 켤 때 호스트 이름이 15자를 넘으면 거절한다
+  - 저장하면 OMV가 그 모듈(과 관련 모듈)을 적용 대기로 표시한다. `Config.isDirty`(admin, `modules` 생략 가능)로 확인하고, `Config.applyChangesBg`(admin, `{modules, force}`, 모두 필수)로 배포한다. `modules`가 비어 있으면 적용 대기 모듈을 모두 배포하므로, 대시보드는 적용 대기가 없을 때만 바꾼다. `applyChanges`는 끝나면 설정 리비전 파일을 모두 지운다(workbench의 "되돌리기" 기준이 사라짐)
+  - `callMethodBg`로 돌기 때문에 상태 파일 이름을 돌려주고, 끝났는지는 `Exec.isRunning`으로 확인한다
+
 ## 호환 후보 플러그인
 
 "설치"는 이 NAS에 설치되어 있는지를 뜻한다. 3단계는 설치된 플러그인을 먼저 구현한다.
