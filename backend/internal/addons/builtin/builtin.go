@@ -6,6 +6,7 @@ import (
 	"omv-desktop-dashboard/backend/internal/addons/network"
 	"omv-desktop-dashboard/backend/internal/addons/storage"
 	"omv-desktop-dashboard/backend/internal/addons/sysinfo"
+	"omv-desktop-dashboard/backend/internal/addons/temperature"
 )
 
 // Deps는 내장 애드온의 provider가 쓰는 입력이다.
@@ -13,11 +14,12 @@ type Deps struct {
 	System  *sysinfo.Reader
 	Storage *storage.Reader
 	Network *network.Reader
+	Hwmon   *temperature.Hwmon
 }
 
 // HostDeps는 호스트의 /proc, /sys 등을 읽는 입력이다. 만들 때 파일을 읽지 않는다.
 func HostDeps() Deps {
-	return Deps{System: sysinfo.NewReader(), Storage: storage.NewReader(), Network: network.NewReader()}
+	return Deps{System: sysinfo.NewReader(), Storage: storage.NewReader(), Network: network.NewReader(), Hwmon: temperature.NewHwmon()}
 }
 
 // New는 내장 애드온 레지스트리를 만든다. 목록은 컴파일 타임에 정해지므로

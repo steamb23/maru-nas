@@ -186,6 +186,46 @@ type NetInterface struct {
 	TxDropped uint64 `json:"txDropped"`
 }
 
+// TemperatureResponse는 GET /api/addons/temperature의 응답이다.
+type TemperatureResponse struct {
+	AddonSources `tstype:",extends"`
+	// Groups는 칩·장치별 센서 묶음이다. CPU, 디스크, 그 밖의 순서다.
+	Groups []SensorGroup `json:"groups"`
+}
+
+// 센서 묶음 종류. SensorGroup.Kind에 들어간다.
+const (
+	SensorCPU   = "cpu"
+	SensorDisk  = "disk"
+	SensorOther = "other"
+)
+
+// SensorGroup은 한 칩·장치의 온도 센서 묶음이다.
+type SensorGroup struct {
+	// ID는 응답 안에서 고유한 식별자다(hwmon 이름과 장치, SMART 장치 이름 등).
+	ID   string `json:"id"`
+	Kind string `json:"kind" tstype:"'cpu' | 'disk' | 'other'"`
+	// Name은 칩 이름(coretemp, nvme, acpitz 등)이나 디스크 모델명이다.
+	Name string `json:"name"`
+	// Device는 디스크 장치 이름(nvme0, sda 등)이다. 디스크가 아니면 없다.
+	Device string `json:"device,omitempty"`
+	// Source는 이 묶음을 가져온 provider 이름이다.
+	Source  string   `json:"source"`
+	Sensors []Sensor `json:"sensors"`
+	// CheckedAt은 값을 읽은 시각(RFC 3339)이다. 캐시한 값(SMART)에만 있다.
+	CheckedAt string `json:"checkedAt,omitempty"`
+}
+
+// Sensor는 온도 센서 하나다. 섭씨다.
+type Sensor struct {
+	// Label은 센서 이름(Package id 0, Composite 등)이다. 없으면 비어 있다.
+	Label   string  `json:"label,omitempty"`
+	Celsius float64 `json:"celsius"`
+	// HighCelsius, CritCelsius는 칩이 알려 주는 경고·위험 온도다. 없으면 없다.
+	HighCelsius *float64 `json:"highCelsius,omitempty"`
+	CritCelsius *float64 `json:"critCelsius,omitempty"`
+}
+
 // Preferences는 GET /api/preferences의 응답이며 로그인한 사용자의 대시보드 설정이다.
 // 백엔드 상태 디렉터리에 사용자별로 저장되어 로그아웃해도 남는다.
 type Preferences struct {
