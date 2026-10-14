@@ -39,12 +39,13 @@
   "window": {
     "minimize": "Minimize",
     "maximize": "Maximize",
-    "restore": "Restore",
+    "restore": "Restore down",
     "close": "Close",
     "placeholder": "Coming soon"
   },
   "taskbar": {
     "label": "Taskbar",
+    "restore": "Restore",
     "closeOthers": "Close others",
     "closeRight": "Close to the right",
     "closeAll": "Close all"

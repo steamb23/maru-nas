@@ -27,6 +27,7 @@ function selectItem(ws: readonly WindowState[], id: string, item: string) {
       closed = ids
     },
     minimize: (w) => calls.push(`minimize ${w}`),
+    raiseGroup: (w) => calls.push(`raiseGroup ${w}`),
     restore: (w) => calls.push(`restore ${w}`),
     toggleMaximize: (w) => calls.push(`toggleMaximize ${w}`),
   }
@@ -38,9 +39,14 @@ function selectItem(ws: readonly WindowState[], id: string, item: string) {
 }
 
 describe('taskMenuItems', () => {
-  it('최소화는 그 창을 최소화하고, 이미 최소화된 창이면 비활성이다', () => {
+  it('최소화는 그 창을 최소화한다', () => {
     expect(selectItem(windows, 'b', 'minimize').calls).toEqual(['minimize b'])
-    expect(selectItem([{ ...win('a'), minimized: true }], 'a', 'minimize').action.disabled).toBe(true)
+  })
+
+  it('최소화된 창이면 최소화 대신 복원(짝 창과 함께)이 있다', () => {
+    const minimized = [{ ...win('a'), minimized: true }]
+    expect(selectItem(minimized, 'a', 'restore').calls).toEqual(['raiseGroup a'])
+    expect(() => selectItem(minimized, 'a', 'minimize')).toThrow()
   })
 
   it('최대화는 최대화를 바꾸고, 최대화된 창이면 이전 크기로 표시한다', () => {
@@ -84,8 +90,7 @@ describe('taskMenuItems', () => {
 
   it('없는 창이면 항목이 없다', () => {
     const noop = () => {}
-    expect(taskMenuItems(windows, 'x', { closeMany: noop, minimize: noop, restore: noop, toggleMaximize: noop })).toEqual(
-      [],
-    )
+    const actions = { closeMany: noop, minimize: noop, raiseGroup: noop, restore: noop, toggleMaximize: noop }
+    expect(taskMenuItems(windows, 'x', actions)).toEqual([])
   })
 })

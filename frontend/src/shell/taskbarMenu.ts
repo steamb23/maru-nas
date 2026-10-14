@@ -4,7 +4,7 @@ import type { ContextMenuItem } from './contextMenu'
 
 // TaskMenuActions는 메뉴 항목이 부르는 창 저장소 동작이다.
 // 최대화 애니메이션처럼 화면 처리가 더 필요하면 호출하는 쪽이 감싸서 넘긴다.
-export type TaskMenuActions = Pick<WindowStore, 'closeMany' | 'minimize' | 'restore' | 'toggleMaximize'>
+export type TaskMenuActions = Pick<WindowStore, 'closeMany' | 'minimize' | 'raiseGroup' | 'restore' | 'toggleMaximize'>
 
 // taskMenuItems는 창 id의 작업표시줄 버튼 메뉴 항목이다. "오른쪽"은 windows[](작업표시줄) 순서 기준이다.
 // 닫을 창 목록은 메뉴를 연 시점의 windows로 정한다. 그 사이 닫힌 창은 closeMany가 무시한다.
@@ -18,14 +18,16 @@ export function taskMenuItems(windows: readonly WindowState[], id: string, actio
   const right = all.slice(index + 1)
   const { closeMany } = actions
   return [
-    {
-      kind: 'action',
-      id: 'minimize',
-      labelKey: 'window.minimize',
-      icon: 'window-minimize-symbolic',
-      disabled: win.minimized,
-      onSelect: () => actions.minimize(id),
-    },
+    // 최소화된 창이면 복원한다. 작업표시줄 버튼 클릭처럼 타일 그룹의 짝 창도 함께 앞으로 온다.
+    win.minimized
+      ? { kind: 'action', id: 'restore', labelKey: 'taskbar.restore', onSelect: () => actions.raiseGroup(id) }
+      : {
+          kind: 'action',
+          id: 'minimize',
+          labelKey: 'window.minimize',
+          icon: 'window-minimize-symbolic',
+          onSelect: () => actions.minimize(id),
+        },
     {
       kind: 'action',
       id: 'maximize',

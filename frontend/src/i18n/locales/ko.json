@@ -45,6 +45,7 @@
   },
   "taskbar": {
     "label": "작업표시줄",
+    "restore": "복원",
     "closeOthers": "다른 항목 닫기",
     "closeRight": "오른쪽 항목 닫기",
     "closeAll": "모두 닫기"

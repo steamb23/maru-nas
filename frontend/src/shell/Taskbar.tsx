@@ -31,6 +31,7 @@ function onTaskClick(w: WindowState, active: boolean) {
 const taskMenuActions: TaskMenuActions = {
   closeMany,
   minimize,
+  raiseGroup,
   restore,
   toggleMaximize: (id) => {
     captureWindowLayout(id)
