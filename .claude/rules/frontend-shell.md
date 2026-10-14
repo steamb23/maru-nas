@@ -15,13 +15,13 @@ paths:
 
 - `windows[]` 순서가 작업표시줄 순서다
 - `Desktop`은 `stableOrder`로 창을 처음 연 순서대로 그린다. 작업표시줄 순서를 바꿔도 창 DOM이 옮겨지면 안 된다(옮겨지면 창 안의 스크롤 위치·iframe이 초기화된다)
-- 위젯은 창 시스템과 분리한다. `windows[]`와 창 컴포넌트에 위젯용 분기를 넣지 않는다(`docs/addons.md`의 "보기: 창과 위젯")
+- 위젯은 창 시스템과 분리한다. `windows[]`와 창 컴포넌트에 위젯용 분기를 넣지 않는다(`.claude/docs/addons.md`의 "보기: 창과 위젯")
 - 창을 끄는 동안 위치는 저장소를 바꾸지 않고 요소 style(`left`·`top`)만 바꾸며, 놓거나 취소될 때 `moveTo`로 한 번 반영한다(style은 지우지 않는다). 떼어 내기(`detachAt`)만 끄는 중에 저장소를 바꾼다
 - 창 내용은 `memo`한 `WindowBody`로 그린다. 창 틀이 다시 그려져도(포커스, 크기 조절, 타일 가이드) 내용은 다시 그리지 않는다
 
 ## 위젯 레이어
 
-- 설계와 결정 사항은 `docs/addons.md`의 "위젯 시스템"에 있다
+- 설계와 결정 사항은 `.claude/docs/addons.md`의 "위젯 시스템"에 있다
 - `WidgetLayer`는 `.desktop-area` 안에서 아이콘 다음, 창 앞(DOM 순서)에 그린다. 평소에는 창 아래이고, 위젯을 끌거나 크기를 바꾸는 동안만 창 위로 올라온다(`.widget-layer.raised`)
 - `src/widgets/`와 `src/windows/`는 서로 import하지 않는다. 위젯이 창을 여는 일은 `shell/WidgetFrame.tsx`가 창 저장소의 `open`을 불러 처리한다
 - 저장 배치는 `widgets/store.ts`, 화면 배치는 `fitLayout`으로 렌더링 때 계산한다. 저장 배치는 사용자가 바꾼 위젯만 `commitPlacement`로 바꾼다(화면 크기 변화로 바꾸지 않는다)

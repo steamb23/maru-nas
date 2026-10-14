@@ -2,7 +2,7 @@
 //
 // 애드온은 manifest(api.Manifest)와 우선순위 순서의 provider 목록이다. 내장 애드온은
 // internal/addons/<id>/에 두고 internal/addons/builtin의 정적 목록에 등록한다.
-// 런타임 로딩이나 Go plugin 패키지는 쓰지 않는다(docs/addons.md).
+// 런타임 로딩이나 Go plugin 패키지는 쓰지 않는다(.claude/docs/addons.md).
 package addons
 
 import (

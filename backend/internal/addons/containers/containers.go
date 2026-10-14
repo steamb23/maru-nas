@@ -1,5 +1,5 @@
 // Package containers는 컨테이너 애드온이다. openmediavault-compose 플러그인의 Compose.getContainers로
-// 컨테이너 목록을 가져온다. Docker·Podman 소켓은 직접 읽지 않는다(docs/data-sources.md).
+// 컨테이너 목록을 가져온다. Docker·Podman 소켓은 직접 읽지 않는다(.claude/docs/data-sources.md).
 package containers
 
 import (

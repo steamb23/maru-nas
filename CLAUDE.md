@@ -52,11 +52,11 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 
 ## 애드온과 위젯 (3단계)
 
-상세 설계는 `docs/addons.md`, 출처별 표와 플러그인 조사는 `docs/data-sources.md`.
+상세 설계는 `.claude/docs/addons.md`, 출처별 표와 플러그인 조사는 `.claude/docs/data-sources.md`.
 
 - **애드온 = manifest + provider + 보기(창, 위젯)**. 시스템 정보를 포함한 모든 기능을 같은 계약으로 만든다. 보기는 창과 바탕화면 위젯 중 하나 이상이며, 둘은 같은 provider·API를 쓰고 화면만 다르다
 - **위젯은 창 시스템과 분리한다**. 바탕화면 위 별도 레이어에 그리드 칸 단위로 붙이고, 창 저장소·창 컴포넌트에 위젯용 분기를 넣지 않는다. 공유는 provider, `/api/*`, `poller.ts`, 공통 훅까지만 한다
-  - 그리드는 오른쪽 위 기준이고, 배치는 백엔드에 사용자별로 저장한다(`/api/preferences`). 추가·제거는 컨텍스트 메뉴(`shell/contextMenu.ts`)로 한다. 상세는 `docs/addons.md`의 "위젯 시스템"
+  - 그리드는 오른쪽 위 기준이고, 배치는 백엔드에 사용자별로 저장한다(`/api/preferences`). 추가·제거는 컨텍스트 메뉴(`shell/contextMenu.ts`)로 한다. 상세는 `.claude/docs/addons.md`의 "위젯 시스템"
 - `/desk/api/rpc` 중계는 manifest 허용 목록의 read 메서드만 통과시킨다. write는 애드온 조작(`POST /api/addons/{id}/actions/{action}`)으로만 부르며, 조작이 대상을 검사하고 OMV 파라미터를 직접 만든다
 - 내장 애드온만 정적 목록으로 둔다(백엔드 `internal/addons/<id>/` + `internal/addons/builtin`, 프론트 `src/addons/<id>/` + `src/addons/registry.ts`). 컴파일 타임 타입(`AppId`)을 유지하고, 별도 패키지·런타임 로딩·Go `plugin`은 쓰지 않는다
 - manifest 원본은 Go 구조체이고 프론트 목록(`manifests.gen.ts`)은 `make types`로 생성한다. 백엔드·프론트 id 일치는 Go 골든 테스트와 tsc(`Record<AddonId, …>`)가 검사한다
@@ -94,12 +94,12 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
      - 위젯 레이어와 새 기능 애드온은 만들지 않는다
    - 3-2. 위젯 시스템 구현: 바탕화면 위젯 레이어(그리드 배치, 추가·제거·이동·크기 조절, 배치 저장)와 manifest의 위젯 보기 선언을 만든다. 완료
      - 시스템 정보의 CPU 사용률·RAM·가동 시간을 첫 위젯으로 옮겨 위젯 시스템을 검증한다
-     - 정한 내용은 `docs/addons.md`의 "위젯 시스템"에 있다. 위젯 잠금(프로필 설정)은 나중에 추가한다
+     - 정한 내용은 `.claude/docs/addons.md`의 "위젯 시스템"에 있다. 위젯 잠금(프로필 설정)은 나중에 추가한다
    - 3-3. 위젯 세부 구현: 디스크 용량, SMART, 온도, 네트워크, 컨테이너 목록을 내장 애드온의 위젯으로 구현한다. 완료
      - 현재 설치된 플러그인 기준으로 먼저 구현한다. 컨테이너는 Docker 런타임 기준으로 검증한다
      - 위젯으로 부족한 항목은 같은 애드온에 창 보기를 둔다
    - 시스템 정보 창은 위젯으로 요약을 옮긴 뒤 나중에 프로세스 모니터로 확장한다(시점 미정, 사용자가 정한다). 프로세스 목록 읽기는 읽기 전용이지만 프로세스 종료 같은 조작은 4단계 이후다
-4. 간단한 조작: 컨테이너 시작·정지, 서비스 켜기·끄기를 OMV RPC로. 쓰기 RPC는 애드온 조작으로만 부른다(`docs/addons.md`의 "조작"). 실제 OMV로 호출해 보는 것은 사용자가 한다
+4. 간단한 조작: 컨테이너 시작·정지, 서비스 켜기·끄기를 OMV RPC로. 쓰기 RPC는 애드온 조작으로만 부른다(`.claude/docs/addons.md`의 "조작"). 실제 OMV로 호출해 보는 것은 사용자가 한다
    - 4-1. 조작 계약: manifest `actions`, `POST /api/addons/{id}/actions/{action}`, 백그라운드 작업 대기(`WaitBg`), 프론트 공통 조작 UI(행 버튼·인라인 확인·우클릭 메뉴·확인 대화상자). 완료
    - 4-2. 컨테이너 시작·정지·재시작(`Compose.doContainerCommand`, 관리자). 완료
    - 4-3. OMV 서비스 애드온(`services`, 관리자): 상태 위젯·창, 핵심 서비스(SSH, SMB/CIFS, NFS, Rsync 서버)의 켜기·끄기(설정의 `enable` 변경 + `Config.applyChangesBg`). OMV에 적용하지 않은 변경이 있으면 거부한다. 완료
