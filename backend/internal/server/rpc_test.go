@@ -10,6 +10,7 @@ import (
 
 	"omv-desktop-dashboard/backend/internal/api"
 	"omv-desktop-dashboard/backend/internal/omv"
+	"omv-desktop-dashboard/backend/internal/omv/omvfake"
 )
 
 // recordingOMV는 실제 클라이언트로 넘기면서 Call 요청을 기록한다.
@@ -167,7 +168,10 @@ func TestRPCOMVErrors(t *testing.T) {
 	b := e.browser()
 	wantStatus(t, b.login("admin", "admin"), http.StatusOK)
 
-	// 가짜 OMV에 Smart 서비스가 없다 → 404. 플러그인 감지를 다시 하도록 표시한다.
+	// Smart 서비스가 없다 → 404. 플러그인 감지를 다시 하도록 표시한다.
+	data := omvfake.DefaultPluginData()
+	data.Missing = []string{"Smart"}
+	e.fake.SetPluginData(data)
 	wantCode(t, b.do(http.MethodPost, "/api/rpc", rpcReq("Smart", "getList", "")), http.StatusBadGateway, api.ErrOMVError)
 	if e.plugins.invalidates != 1 {
 		t.Errorf("invalidates = %d, want 1", e.plugins.invalidates)

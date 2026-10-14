@@ -124,6 +124,7 @@ func New(cfg Config) http.Handler {
 	mux.HandleFunc("POST /api/session/activity", h.requireSession(h.activity))
 	mux.HandleFunc("GET /api/system", h.requireSession(h.system))
 	mux.HandleFunc("GET /api/capabilities", h.requireSession(h.capabilities))
+	mux.HandleFunc("GET /api/addons/{id}", h.requireSession(h.addonData))
 	mux.HandleFunc("POST /api/rpc", h.requireSession(h.rpc))
 	mux.HandleFunc("GET /api/preferences", h.requireSession(h.preferences))
 	mux.HandleFunc("PUT /api/preferences/widgets", h.requireSession(h.setWidgets))

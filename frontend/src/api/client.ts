@@ -10,6 +10,7 @@ import type {
   WidgetPlacement,
   WidgetsRequest,
 } from './types.gen'
+import { isArrayOf, isNum, isObj, isOptional, isStr } from './guards'
 
 // BASE_URL은 Vite base 설정값('/desk/')이다.
 const API_BASE = `${import.meta.env.BASE_URL}api`
@@ -57,10 +58,6 @@ export function setUnauthorizedHandler(fn: () => void): () => void {
     if (onUnauthorized === fn) onUnauthorized = null
   }
 }
-
-const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v)
-const isStr = (v: unknown): v is string => typeof v === 'string'
-const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null
 
 async function toApiError(path: string, res: Response): Promise<ApiError> {
   let code: ErrorCode | undefined
@@ -175,6 +172,31 @@ export async function fetchCapabilities(signal?: AbortSignal): Promise<Capabilit
     throw new Error('/capabilities: unexpected response shape')
   }
   return data
+}
+
+export interface FetchAddonOptions {
+  signal?: AbortSignal
+  // 백엔드 캐시를 건너뛰고 다시 가져오게 한다(SMART 새로고침 등). 캐시가 없는 애드온은 무시한다.
+  refresh?: boolean
+}
+
+// fetchAddon은 애드온 하나의 현황 데이터를 가져온다(GET /api/addons/{id}). guard로 응답 형태를 검사한다.
+export async function fetchAddon<T>(
+  id: string,
+  guard: (v: unknown) => v is T,
+  opts: FetchAddonOptions = {},
+): Promise<T> {
+  const path = `/addons/${encodeURIComponent(id)}${opts.refresh ? '?refresh=1' : ''}`
+  const data = await getJSON(path, { signal: opts.signal })
+  if (!guard(data)) {
+    throw new Error(`${path}: unexpected response shape`)
+  }
+  return data
+}
+
+// hasAddonSources는 애드온 응답에 공통으로 들어 있는 출처 필드를 검사한다.
+export function hasAddonSources(v: Record<string, unknown>): boolean {
+  return isArrayOf(v.sources, isStr) && isOptional(v.failedSources, (x): x is string[] => isArrayOf(x, isStr))
 }
 
 export async function fetchSystem(signal?: AbortSignal): Promise<SystemResponse> {

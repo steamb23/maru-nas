@@ -1,0 +1,144 @@
+package omvfake
+
+import (
+	"encoding/json"
+	"net/http"
+	"slices"
+)
+
+// 코어·플러그인 RPC의 합성 응답. 형식은 OMV 8 소스를 따른다.
+//
+//   - Smart.getList (admin): engined/rpc/smart.inc. rpc.common.getlist 파라미터, {total, data}
+//   - Compose.getContainers (모두): engined/rpc/compose.inc(openmediavault-compose).
+//     첫 행은 런타임 행(name Docker/Podman, status는 번역된 문구), 나머지는 docker container ls
+//   - CpuTemp.get (모두): engined/rpc/cputemp.inc(openmediavault-cputemp). {cputemp: 숫자}
+//
+// 역할이 모자라면 OMV의 validateMethodContext처럼 403 "Invalid context role."을 돌려준다.
+// 값은 모두 가짜다(모델명, 장치, 시리얼, 이미지 이름).
+
+// SmartDevice는 Smart.getList의 data 한 행이다.
+type SmartDevice struct {
+	DeviceName          string   `json:"devicename"`
+	CanonicalDeviceFile string   `json:"canonicaldevicefile"`
+	DeviceFile          string   `json:"devicefile"`
+	DeviceLinks         []string `json:"devicelinks"`
+	Model               string   `json:"model"`
+	// Size는 바이트 수 문자열이다(OMV는 큰 정수를 문자열로 준다).
+	Size string `json:"size"`
+	// Temperature는 섭씨 정수, 모르면 빈 문자열이다.
+	Temperature   any    `json:"temperature"`
+	Description   string `json:"description"`
+	Vendor        string `json:"vendor"`
+	SerialNumber  string `json:"serialnumber"`
+	WWN           string `json:"wwn"`
+	OverallStatus string `json:"overallstatus"`
+	UUID          string `json:"uuid"`
+	Monitor       bool   `json:"monitor"`
+	Used          bool   `json:"_used"`
+}
+
+// Container는 Compose.getContainers의 한 행이다.
+type Container struct {
+	Image  string `json:"image"`
+	Name   string `json:"name"`
+	Status string `json:"status"`
+}
+
+// PluginData는 가짜 OMV가 돌려주는 코어·플러그인 RPC 값이다. SetPluginData로 바꾼다.
+type PluginData struct {
+	Smart []SmartDevice
+	// Runtime은 Compose.getContainers 첫 행이다. RuntimeStatus는 OMV가 번역한 문구다.
+	Runtime       string
+	RuntimeStatus string
+	Containers    []Container
+	CPUTemp       float64
+	// Missing은 설치되지 않은 것처럼 404("RPC service ... not found.")를 돌려줄 서비스다.
+	Missing []string
+}
+
+// DefaultPluginData는 개발 서버와 테스트가 쓰는 합성 값이다.
+func DefaultPluginData() PluginData {
+	return PluginData{
+		Smart: []SmartDevice{
+			fakeDisk("nvme0n1", "Fake NVMe SSD 1TB", "1000204886016", 38, "GOOD"),
+			fakeDisk("sda", "Fake SATA SSD 2TB", "2000398934016", 31, "GOOD"),
+			fakeDisk("sdb", "Fake HDD 8TB", "8001563222016", 36, "BAD_ATTRIBUTE_IN_THE_PAST"),
+			fakeDisk("sdc", "Fake USB Disk", "500107862016", "", "GOOD"),
+		},
+		Runtime:       "Docker",
+		RuntimeStatus: "running",
+		Containers: []Container{
+			{Image: "example/web:1.0", Name: "web", Status: "Up 3 days (healthy)"},
+			{Image: "example/db:16", Name: "db", Status: "Up 3 days"},
+			{Image: "example/cache:7", Name: "cache", Status: "Up 2 hours (Paused)"},
+			{Image: "example/app:dev", Name: "app", Status: "Restarting (1) 10 seconds ago"},
+			{Image: "example/worker:latest", Name: "worker", Status: "Up 5 minutes (unhealthy)"},
+			{Image: "example/backup:latest", Name: "backup", Status: "Exited (0) 5 hours ago"},
+			{Image: "example/init:latest", Name: "init", Status: "Created"},
+		},
+		CPUTemp: 47,
+	}
+}
+
+func fakeDisk(name, model, size string, temp any, status string) SmartDevice {
+	return SmartDevice{
+		DeviceName:          name,
+		CanonicalDeviceFile: "/dev/" + name,
+		DeviceFile:          "/dev/disk/by-id/fake-" + name,
+		DeviceLinks:         []string{"/dev/disk/by-id/fake-" + name},
+		Model:               model,
+		Size:                size,
+		Temperature:         temp,
+		Description:         model,
+		Vendor:              "Fake",
+		SerialNumber:        "FAKE-SERIAL-" + name,
+		WWN:                 "0x0000000000000000",
+		OverallStatus:       status,
+		UUID:                "fa4e0000-0000-4000-8000-000000000000",
+		Monitor:             true,
+	}
+}
+
+// SetPluginData는 코어·플러그인 RPC 응답을 바꾼다.
+func (s *Server) SetPluginData(d PluginData) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.plugin = d
+}
+
+// handlePlugin은 코어·플러그인 RPC를 처리한다. 모르는 메서드면 ok가 false다.
+func (s *Server) handlePlugin(sess *session, service, method string, params json.RawMessage) (any, *rpcError, bool) {
+	d := s.plugin
+	if slices.Contains(d.Missing, service) {
+		return nil, errStatus(http.StatusNotFound, "RPC service '"+service+"' not found."), true
+	}
+	adminOnly := func() *rpcError {
+		if !sess.admin {
+			return errStatus(http.StatusForbidden, "Invalid context role.")
+		}
+		return nil
+	}
+	switch service + "." + method {
+	case "Smart.getList":
+		if e := adminOnly(); e != nil {
+			return nil, e, true
+		}
+		var p struct {
+			Start *int `json:"start"`
+		}
+		if json.Unmarshal(params, &p) != nil || p.Start == nil {
+			return nil, errStatus(http.StatusInternalServerError, "Invalid RPC parameters."), true
+		}
+		data := slices.Clone(d.Smart)
+		if data == nil {
+			data = []SmartDevice{}
+		}
+		return map[string]any{"total": len(data), "data": data}, nil, true
+	case "Compose.getContainers":
+		rows := []Container{{Image: "", Name: d.Runtime, Status: d.RuntimeStatus}}
+		return append(rows, d.Containers...), nil, true
+	case "CpuTemp.get":
+		return map[string]any{"cputemp": d.CPUTemp}, nil, true
+	}
+	return nil, nil, false
+}

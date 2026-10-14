@@ -6,6 +6,8 @@
 package addons
 
 import (
+	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"regexp"
@@ -33,7 +35,36 @@ type Addon struct {
 	Manifest api.Manifest
 	// Providers는 우선순위 순서다. 쓸 수 있는 것 중 앞의 것을 먼저 쓴다.
 	Providers []Provider
+	// Fetch는 GET /api/addons/{id}의 응답을 만든다. 없으면 그 경로는 404다.
+	// 서버는 capability를 먼저 확인하므로 Fetch는 쓸 수 있는 사용자에게만 불린다.
+	Fetch func(ctx context.Context, req Request) (any, error)
 }
+
+// Request는 Fetch 호출 하나의 입력이다.
+type Request struct {
+	// Admin은 요청한 사용자가 OMV 관리자인지다.
+	Admin bool
+	// Sources는 이 사용자가 쓸 수 있는 provider 이름이다(우선순위 순서, Capability의 sources).
+	Sources []string
+	// Refresh는 사용자가 새로고침을 눌렀는지다(?refresh=1). 캐시를 쓰는 애드온만 본다.
+	Refresh bool
+	// RPC는 요청한 사용자의 OMV 세션으로 OMV RPC를 부른다.
+	RPC RPCCaller
+}
+
+// Has는 name provider를 쓸 수 있는지다.
+func (r Request) Has(name string) bool { return slices.Contains(r.Sources, name) }
+
+// RPCCaller는 provider가 OMV RPC를 부를 때 쓴다. 서버가 요청마다 사용자 세션으로 만든다.
+//
+// 그 애드온이 manifest에 선언한 메서드만 부를 수 있고(Registry.Classify), 쓰기 메서드는
+// WritesEnabled가 켜져야 한다. OMV 세션의 마지막 접근 시각은 갱신하지 않는다.
+type RPCCaller interface {
+	Call(ctx context.Context, service, method string, params any) (json.RawMessage, error)
+}
+
+// ErrRPCNotAllowed는 애드온이 선언하지 않았거나 지금 단계가 허용하지 않는 RPC를 부르려 했다는 뜻이다.
+var ErrRPCNotAllowed = errors.New("rpc method is not allowed for this addon")
 
 // RPCKind는 OMV RPC 메서드가 허용 목록에서 어떤 종류인지다.
 type RPCKind int
@@ -219,4 +250,16 @@ func (r *Registry) Classify(service, method string) (RPCKind, []string) {
 		return RPCNone, nil
 	}
 	return e.kind, slices.Clone(e.addons)
+}
+
+// CallInto는 RPC를 부르고 결과 JSON을 out에 디코딩한다.
+func CallInto(ctx context.Context, c RPCCaller, service, method string, params, out any) error {
+	raw, err := c.Call(ctx, service, method, params)
+	if err != nil {
+		return err
+	}
+	if err := json.Unmarshal(raw, out); err != nil {
+		return fmt.Errorf("rpc %s.%s: decode response: %w", service, method, err)
+	}
+	return nil
 }

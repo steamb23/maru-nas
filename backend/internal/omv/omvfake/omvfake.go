@@ -12,6 +12,7 @@
 //     options.updatelastaccess=false면 마지막 접근 시각을 갱신하지 않는다.
 //   - 인증이 필요한 서비스(Session 밖)는 세션이 없으면 401.
 //   - WebGui.getAutoLogoutSettings는 세션 timeout을 분 단위로 돌려준다(OMV 설정과 같은 단위).
+//   - Smart.getList, Compose.getContainers, CpuTemp.get은 합성 값을 돌려준다(plugins.go).
 //   - 로그인 성공 시 OPENMEDIAVAULT-LOGIN-* 쿠키가 없으면 "새 브라우저 로그인"
 //     메일을 보낸 것으로 센다(LoginMails).
 //
@@ -84,6 +85,7 @@ type Server struct {
 	verifyFail map[string]*failure
 	calls      []Call
 	mails      int
+	plugin     PluginData
 }
 
 type session struct {
@@ -116,6 +118,7 @@ func New(users []User, timeout time.Duration) *Server {
 		timeout:    timeout,
 		sessions:   make(map[string]*session),
 		verifyFail: make(map[string]*failure),
+		plugin:     DefaultPluginData(),
 	}
 	for _, u := range users {
 		s.users[u.Name] = u
@@ -282,6 +285,9 @@ func (s *Server) handle(req *request, body rpcBody, touch bool) (any, *rpcError)
 			"sshpubkeys": []string{},
 			"_readonly":  false,
 		}, nil
+	}
+	if res, rerr, ok := s.handlePlugin(req.sess, body.Service, body.Method, body.Params); ok {
+		return res, rerr
 	}
 	return nil, errStatus(http.StatusNotFound, "RPC service '"+body.Service+"' not found.")
 }

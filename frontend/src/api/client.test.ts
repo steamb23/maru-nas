@@ -1,10 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   ApiError,
+  fetchAddon,
   fetchCapabilities,
   fetchPreferences,
   fetchSession,
   fetchSystem,
+  hasAddonSources,
   isCapabilitiesResponse,
   isLoginResponse,
   isPreferences,
@@ -230,5 +232,36 @@ describe('preferences', () => {
     await expect(saveWidgets([])).rejects.toBeInstanceOf(ApiError)
     expect(onUnauthorized).toHaveBeenCalledOnce()
     off()
+  })
+})
+
+describe('fetchAddon', () => {
+  const isThing = (v: unknown): v is { n: number } =>
+    typeof v === 'object' && v !== null && typeof (v as { n?: unknown }).n === 'number'
+
+  it('애드온 경로로 GET하고 refresh면 쿼리를 붙인다', async () => {
+    const fn = stubFetch(Response.json({ n: 1 }))
+    await expect(fetchAddon('smart', isThing)).resolves.toEqual({ n: 1 })
+    expect(fn.mock.calls[0][0]).toMatch(/\/api\/addons\/smart$/)
+    const fn2 = stubFetch(Response.json({ n: 2 }))
+    await fetchAddon('smart', isThing, { refresh: true })
+    expect(fn2.mock.calls[0][0]).toMatch(/\/api\/addons\/smart\?refresh=1$/)
+  })
+
+  it('형식이 다르면 던진다', async () => {
+    stubFetch(Response.json({ n: 'x' }))
+    await expect(fetchAddon('smart', isThing)).rejects.toThrow(/unexpected response shape/)
+  })
+
+  it('capability 오류 코드를 ApiError에 담는다', async () => {
+    stubFetch(Response.json({ error: 'addon is not available', code: 'admin_required' }, { status: 403 }))
+    await expect(fetchAddon('smart', isThing)).rejects.toMatchObject({ status: 403, code: 'admin_required' })
+  })
+
+  it('hasAddonSources는 출처 목록을 검사한다', () => {
+    expect(hasAddonSources({ sources: ['proc'] })).toBe(true)
+    expect(hasAddonSources({ sources: ['proc'], failedSources: ['omv-smart'] })).toBe(true)
+    expect(hasAddonSources({ sources: 'proc' })).toBe(false)
+    expect(hasAddonSources({ sources: [], failedSources: [1] })).toBe(false)
   })
 })
