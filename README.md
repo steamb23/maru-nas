@@ -16,28 +16,43 @@ OpenMediaVault 8 위에 올리는 데스크톱형 웹 대시보드입니다. 창
 ./install.sh
 ```
 
-일반 사용자 계정이라면 **sudo 없이** 실행해 주세요. 인터랙티브 설치 스크립트이며 두 단계로 진행됩니다.
+일반 사용자 계정이라면 **sudo 없이** 실행해 주세요. 인터랙티브 설치 스크립트이며 다음 순서로 진행됩니다.
 
-1. **빌드**: 실행한 계정으로 빌드합니다. 처음 클론한 상태라면 아이콘 서브모듈과 npm 의존성부터 준비합니다(`make build` → `bin/onmaru`).
-2. **설치**: root 권한이 필요한 단계입니다. 일반 사용자라면 스크립트가 스스로 `sudo ./install.sh --service-install`을 실행하므로 비밀번호를 한 번 입력하게 됩니다. root 계정만 있는 환경이라면 sudo 없이 그대로 이어서 진행합니다.
+1. **설정 입력**: 서비스 사용자, 수신 방식, OMV 주소, SMART 갱신 시각을 묻고 요약을 보여 준 뒤 확인을 받습니다. 입력은 이 단계에서 모두 끝납니다.
+2. **빌드**: 실행한 계정으로 빌드합니다. 처음 클론한 상태라면 아이콘 서브모듈과 npm 의존성부터 준비합니다(`make build` → `bin/onmaru`).
+3. **설치**: root 권한이 필요한 단계입니다. 일반 사용자라면 스크립트가 1단계의 설정을 옵션으로 넘겨 스스로 `sudo ./install.sh --service-install ...`을 실행하므로 비밀번호만 한 번 입력하면 됩니다. root 계정만 있는 환경이라면 sudo 없이 그대로 이어서 진행합니다.
 
-설치 단계에서는 서비스 사용자, 수신 방식, OMV 주소, SMART 갱신 시각을 물어본 뒤 다음 작업을 합니다.
+설치 단계에서는 다음 작업을 합니다.
 
 - 시스템 사용자를 만들고(기본값 `onmaru`), `bin/onmaru`를 `/usr/local/bin/onmaru`에 설치합니다.
 - 설정 파일 `/etc/default/onmaru`와 systemd 유닛 `/etc/systemd/system/onmaru.service`를 작성한 뒤 서비스를 시작합니다.
 - 사용자 설정(위젯 배치)은 `/var/lib/onmaru`(`StateDirectory=`)에 저장됩니다.
 
-다시 실행하면 기존 설정을 기본값으로 보여 주며, 업그레이드할 때도 같은 명령을 사용합니다. 안내 문구는 로캘에 따라 영어 또는 한국어로 표시되며, `--lang en|ko`로 직접 고를 수도 있습니다.
+다시 실행하면 기존 설정을 기본값으로 보여 주며, 업그레이드할 때도 같은 명령을 사용합니다. 설정이 바뀌면 기존 `/etc/default/onmaru`는 `/etc/default/onmaru.bak-<시각>`으로 백업됩니다. 안내 문구는 로캘에 따라 영어 또는 한국어로 표시되며, `--lang en|ko`로 직접 고를 수도 있습니다.
 
 | 옵션 | 설명 |
 |---|---|
 | (없음) | 빌드한 뒤 설치하거나 업그레이드합니다. |
 | `--no-build` | 빌드를 건너뛰고 기존 `bin/onmaru`를 설치합니다. |
 | `--uninstall` | 서비스, 실행 파일, 설정을 제거합니다. |
-| `--service-install` | 빌드 없이 설치 단계만 실행합니다(root 전용). |
+| `--service-install` | 빌드 없이 설치 단계만 실행합니다(root 전용). 아래 설정 옵션을 모두 주면 묻지 않고 설치합니다. |
 | `--lang en\|ko` | 안내 문구 언어를 고릅니다. |
+| `--user NAME` | 서비스 사용자입니다(기본값 `onmaru`). |
+| `--listen ADDR` | 수신 주소입니다. `127.0.0.1:8090`, `unix:/run/onmaru/onmaru.sock`, 또는 `host:port`를 지정합니다. |
+| `--allow-non-loopback` | 루프백이 아닌 `--listen` 주소를 허용합니다(위험). |
+| `--omv-url URL` | OMV 웹 UI 주소입니다(루프백). |
+| `--smart-refresh-at HH:MM` | SMART 정보를 매일 다시 가져올 시각입니다. |
 
-일반 사용자가 `sudo ./install.sh`로 실행하면 빌드를 건너뜁니다. root로 빌드하면 저장소에 root 소유 파일이 생기고, sudo 환경의 PATH에는 사용자가 설치한 Go·npm이 없을 수 있기 때문입니다. 이때는 기존 `bin/onmaru`로 설치만 할지 물어봅니다.
+설정 옵션으로 준 항목은 묻지 않습니다. 옵션 없이 실행할 때는 설정을 모두 주더라도 요약을 보여 주고 진행 여부를 확인합니다. 확인까지 생략하는 것은 root로 `--service-install`에 설정을 모두 준 경우뿐이므로, 자동화에는 다음과 같이 사용합니다(빌드는 미리 해 두어야 합니다).
+
+```sh
+./install.sh --service-install --user onmaru --listen unix:/run/onmaru/onmaru.sock \
+  --omv-url http://127.0.0.1:8001 --smart-refresh-at 00:00
+```
+
+root로 실행했는데 저장소의 소유자가 root가 아니면(`sudo ./install.sh`, `sudo -i`, `su` 등) 빌드를 건너뜁니다. root로 빌드하면 저장소에 root 소유 파일이 생기고, sudo 환경의 PATH에는 사용자가 설치한 Go·npm이 없을 수 있기 때문입니다. 이때는 기존 `bin/onmaru`로 설치만 할지 물어봅니다.
+
+개발 서버(`make dev`)의 백엔드도 기본으로 `127.0.0.1:8090`을 사용합니다. 같은 머신에서 개발한다면 서비스는 Unix 소켓이나 다른 포트로 설치해 주세요. 설치 스크립트는 포트가 이미 사용 중이면 경고합니다.
 
 제거하려면 `./install.sh --uninstall`을 실행합니다. `/var/lib/onmaru`와 서비스 사용자는 확인을 받은 뒤에만 삭제합니다. 제거하면 `/run/onmaru`도 지워지므로, 컨테이너 프록시에 이 디렉터리를 마운트해 두었다면 다시 설치한 뒤 프록시 컨테이너를 다시 만들어야 합니다.
 
@@ -51,7 +66,7 @@ OpenMediaVault 8 위에 올리는 데스크톱형 웹 대시보드입니다. 창
 |---|---|---|---|
 | `-listen` | `ONMARU_LISTEN` | `127.0.0.1:8090` | 수신 주소입니다. 루프백 `host:port` 또는 `unix:/절대/경로.sock`(Unix 소켓, 권한 `0660`)을 지정합니다. |
 | `-allow-non-loopback` | `ONMARU_ALLOW_NON_LOOPBACK` | `false` | 루프백이 아닌 TCP 주소(`0.0.0.0:8090` 등)도 허용합니다. 위험하니 아래 설명을 먼저 읽어 주세요. |
-| `-omv-url` | `ONMARU_OMV_URL` | `http://127.0.0.1` | OMV 웹 UI(nginx) 주소입니다. 백엔드가 `<주소>/rpc.php`로 로그인을 위임합니다. 루프백 주소만 허용합니다. OMV 웹 UI 포트를 바꿨다면 포트까지 적어 주세요(설치 스크립트는 nginx 설정에서 포트를 찾아 제안합니다). |
+| `-omv-url` | `ONMARU_OMV_URL` | `http://127.0.0.1` | OMV 웹 UI(nginx) 주소입니다. 백엔드가 `<주소>/rpc.php`로 로그인을 위임합니다. 루프백 주소만 허용합니다. OMV 웹 UI 포트를 바꿨다면 포트까지 적어 주세요(설치 스크립트는 nginx 설정에서 포트를 찾아 제안합니다). 백엔드는 평문 HTTP로만 접속하므로 OMV의 "Force SSL/TLS"는 꺼져 있어야 합니다. |
 | `-cookie-path` | `ONMARU_COOKIE_PATH` | `/` | 브라우저가 보는 대시보드 경로(세션 쿠키의 Path)입니다. 경로 접두사 아래에 둘 때 좁힐 수 있습니다. |
 | `-state-dir` | `ONMARU_STATE_DIR`, `STATE_DIRECTORY` | (없음) | 사용자 설정을 저장할 디렉터리입니다(`users/<사용자 이름>.json`). 비워 두면 메모리에만 보관하므로 재시작하면 사라집니다. systemd의 `StateDirectory=`가 `STATE_DIRECTORY`를 넘겨줍니다. |
 | `-smart-refresh-at` | `ONMARU_SMART_REFRESH_AT` | `00:00` | SMART 정보를 하루 한 번 다시 가져오는 기준 시각입니다(`HH:MM`, 서버 로컬 시간). 마지막 조회가 이 시각 이전이면 다음 접속 때 다시 가져옵니다. SMART 조회는 대기 중인 디스크를 깨우므로 자동 주기 조회는 하지 않습니다. |
@@ -71,7 +86,7 @@ OpenMediaVault 8 위에 올리는 데스크톱형 웹 대시보드입니다. 창
 | 그 밖에 꼭 필요한 경우 | `-allow-non-loopback`과 `0.0.0.0:8090` 등 | 해당 주소 |
 
 - 컨테이너 안의 `127.0.0.1`은 컨테이너 자기 자신을 가리키므로 호스트의 루프백에 닿지 않습니다. 그래서 Docker 안의 프록시에는 Unix 소켓을 권장합니다.
-- 소켓은 `onmaru:onmaru` 소유에 권한 `0660`입니다. 컨테이너의 root는 접속할 수 있고, 호스트에서 실행하는 프록시라면 프록시 사용자를 서비스 그룹(`onmaru`)에 추가해 주세요.
+- 소켓은 서비스 사용자와 그 기본 그룹(기본값 `onmaru:onmaru`) 소유에 권한 `0660`입니다. root로 실행되는 컨테이너는 접속할 수 있습니다. 비root 사용자로 실행되는 프록시 이미지나 userns-remap 환경에서는 접속할 수 없으니, 프록시 프로세스가 그 그룹 권한을 갖도록 설정해 주세요. 호스트에서 실행하는 프록시라면 프록시 사용자를 서비스 그룹에 추가합니다.
 - systemd 유닛은 `RuntimeDirectoryPreserve=yes`로 `/run/onmaru`를 재시작 사이에도 유지합니다. 디렉터리가 새로 만들어지면 컨테이너의 바인드 마운트가 이전 디렉터리를 계속 가리켜 연결이 끊기기 때문입니다.
 - **루프백이 아닌 주소에서 수신하는 것은 위험합니다.** 그 주소에 닿을 수 있는 누구나 프록시와 HTTPS를 거치지 않고 접속할 수 있으며, 비밀번호가 평문 HTTP로 전송됩니다. 또한 `X-Forwarded-For`·`X-Forwarded-Proto`를 위조해 로그인 시도 제한을 우회하거나 OMV 인증 로그(fail2ban)에 가짜 IP를 남길 수 있습니다. 이 방식을 사용한다면 방화벽으로 접근을 제한해 주세요.
 
