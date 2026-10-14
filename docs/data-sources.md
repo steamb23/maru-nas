@@ -1,6 +1,6 @@
 # 데이터 출처와 OMV 플러그인 의존성
 
-읽기 전용 위젯(3단계)의 각 항목을 어디서 가져올지 정리한 문서다. 애드온 구조는 [addons.md](addons.md)를 본다.
+3단계 애드온(창·위젯)의 각 항목을 어디서 가져올지 정리한 문서다. 애드온 구조는 [addons.md](addons.md)를 본다.
 
 - 조사 기준일: 2026-10-14, OMV 8.5.11 ("synchrony")
 - 설치된 플러그인의 RPC 이름·역할은 NAS의 `/usr/share/openmediavault/engined/rpc/*.inc`에서 확인했다
@@ -101,4 +101,4 @@
 - 권한이 필요 없는 직접 읽기(`/proc`, `/sys`)는 1차 출처로 쓴다
 - root가 필요한 정보(SMART, SATA 디스크 온도, 컨테이너)는 OMV RPC로만 가져온다
 - Docker·Podman 소켓을 직접 읽는 provider는 만들지 않는다. provider 구조이므로 포크해서 쓰는 사람이 직접 추가할 수는 있다
-- compose 플러그인이 없는 환경에서는 컨테이너 창을 숨기고 "compose 플러그인 필요"로 안내한다
+- compose 플러그인이 없는 환경에서는 컨테이너 창·위젯을 숨기고 "compose 플러그인 필요"로 안내한다
