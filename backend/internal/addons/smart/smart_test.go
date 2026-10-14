@@ -158,14 +158,24 @@ func TestCacheManualRefreshLimit(t *testing.T) {
 	ctx := context.Background()
 	c.Get(ctx, rpc, false)
 	clk.Set(at(10, 9, 0).Add(30 * time.Second))
-	c.Get(ctx, rpc, true)
+	snap, _ := c.Get(ctx, rpc, true)
+	if got := c.RefreshIn(snap); got != 30*time.Second {
+		t.Errorf("refresh in %v, want 30s", got)
+	}
 	if n := rpc.calls.Load(); n != 1 {
 		t.Fatalf("refresh within a minute called omv (%d calls)", n)
 	}
 	clk.Set(at(10, 9, 1))
-	c.Get(ctx, rpc, true)
+	snap, _ = c.Get(ctx, rpc, true)
 	if n := rpc.calls.Load(); n != 2 {
 		t.Fatalf("calls = %d, want 2", n)
+	}
+	if got := c.RefreshIn(snap); got != ManualInterval {
+		t.Errorf("refresh in %v right after fetch", got)
+	}
+	clk.Set(at(10, 9, 5))
+	if got := c.RefreshIn(snap); got != 0 {
+		t.Errorf("refresh in %v, want 0", got)
 	}
 }
 

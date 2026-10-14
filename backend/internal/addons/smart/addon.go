@@ -4,6 +4,7 @@ package smart
 
 import (
 	"context"
+	"math"
 	"time"
 
 	"omv-desktop-dashboard/backend/internal/addons"
@@ -54,9 +55,10 @@ func New(cache *Cache) addons.Addon {
 				return nil, err
 			}
 			return api.SmartResponse{
-				AddonSources: api.AddonSources{Sources: []string{Source}},
-				CheckedAt:    snap.CheckedAt.Format(time.RFC3339),
-				Disks:        snap.Disks,
+				AddonSources:     api.AddonSources{Sources: []string{Source}},
+				CheckedAt:        snap.CheckedAt.Format(time.RFC3339),
+				RefreshInSeconds: int(math.Ceil(cache.RefreshIn(snap).Seconds())),
+				Disks:            snap.Disks,
 			}, nil
 		},
 	}

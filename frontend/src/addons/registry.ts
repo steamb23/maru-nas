@@ -7,6 +7,8 @@ import { ContainersWidget } from './containers/ContainersWidget'
 import { ContainersWindow } from './containers/ContainersWindow'
 import { NetworkWidget } from './network/NetworkWidget'
 import { NetworkWindow } from './network/NetworkWindow'
+import { SmartWidget } from './smart/SmartWidget'
+import { SmartWindow } from './smart/SmartWindow'
 import { StorageWidget } from './storage/StorageWidget'
 import { StorageWindow } from './storage/StorageWindow'
 import { TemperatureWidget } from './temperature/TemperatureWidget'
@@ -27,4 +29,5 @@ export const ADDON_VIEWS: { [K in AddonId]: AddonViews<K> } = {
   network: { Window: NetworkWindow, Widget: NetworkWidget },
   temperature: { Window: TemperatureWindow, Widget: TemperatureWidget },
   containers: { Window: ContainersWindow, Widget: ContainersWidget },
+  smart: { Window: SmartWindow, Widget: SmartWidget },
 }

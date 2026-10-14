@@ -77,3 +77,14 @@ export function formatDateTime(iso: string, locale: string): string {
   if (Number.isNaN(d.getTime())) return iso
   return new Intl.DateTimeFormat(locale, { dateStyle: 'short', timeStyle: 'short' }).format(d)
 }
+
+// formatTime은 RFC 3339 시각을 짧은 시각으로 표시한다. 오늘이 아니면 날짜도 붙인다.
+export function formatTime(iso: string, locale: string, now = new Date()): string {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return iso
+  const sameDay = d.toDateString() === now.toDateString()
+  return new Intl.DateTimeFormat(
+    locale,
+    sameDay ? { timeStyle: 'short' } : { month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit' },
+  ).format(d)
+}

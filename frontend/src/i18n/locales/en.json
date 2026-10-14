@@ -58,7 +58,8 @@
     "storage": "Storage",
     "network": "Network",
     "temperature": "Temperature",
-    "containers": "Containers"
+    "containers": "Containers",
+    "smart": "Disk Health"
   },
   "sysinfo": {
     "disconnected": "Disconnected — reconnecting…",
@@ -135,6 +136,25 @@
       "healthy": "Healthy",
       "unhealthy": "Unhealthy",
       "starting": "Starting"
+    }
+  },
+  "smart": {
+    "checking": "Checking disks…",
+    "noDisks": "No SMART-capable disks.",
+    "allGood": "All disks healthy",
+    "problems_one": "{{count}} disk needs attention",
+    "problems_other": "{{count}} disks need attention",
+    "checkedShort": "Checked {{time}}",
+    "checkedAt": "Last checked {{time}}",
+    "refresh": "Check now",
+    "refreshing": "Checking…",
+    "wakeHint": "Checking wakes sleeping disks, so it runs automatically only once a day.",
+    "notMonitored": "Not monitored",
+    "status": {
+      "good": "Healthy",
+      "warning": "Warning",
+      "failing": "Failing",
+      "unknown": "Unknown"
     }
   }
 }

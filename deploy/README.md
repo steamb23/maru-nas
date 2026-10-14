@@ -17,6 +17,7 @@
 | `-omv-url` | `OMVDESK_OMV_URL` | `http://127.0.0.1` | OMV 웹 UI(nginx) 주소. 백엔드가 `<주소>/rpc.php`로 로그인을 위임한다. 루프백만 허용. OMV 웹 UI 포트를 바꿨다면 포트까지 적는다 |
 | `-cookie-path` | `OMVDESK_COOKIE_PATH` | `/desk` | 브라우저가 보는 대시보드 경로(세션 쿠키 Path) |
 | `-state-dir` | `OMVDESK_STATE_DIR`, `STATE_DIRECTORY` | (없음) | 사용자 설정(위젯 배치 등)을 저장할 디렉터리. `users/<사용자 이름>.json`으로 저장한다. 비우면 메모리에만 두어 재시작하면 사라진다 |
+| `-smart-refresh-at` | `OMVDESK_SMART_REFRESH_AT` | `00:00` | SMART 정보를 하루 한 번 다시 가져오는 기준 시각(`HH:MM`, 서버 로컬 시간). 마지막 조회가 이 시각 이전이면 다음 접속 때 다시 가져온다. SMART 조회는 대기 중인 디스크를 깨우므로 자동 주기 조회는 하지 않는다 |
 
 앞단 프록시(Caddy)가 지켜야 할 점:
 

@@ -258,8 +258,11 @@ type Container struct {
 type SmartResponse struct {
 	AddonSources `tstype:",extends"`
 	// CheckedAt은 OMV에서 가져온 시각(RFC 3339)이다.
-	CheckedAt string      `json:"checkedAt"`
-	Disks     []SmartDisk `json:"disks"`
+	CheckedAt string `json:"checkedAt"`
+	// RefreshInSeconds는 새로고침(?refresh=1)으로 다시 가져올 수 있기까지 남은 초다. 0이면 지금 된다.
+	// 시계 차이를 피하려고 절대 시각 대신 남은 시간으로 준다.
+	RefreshInSeconds int         `json:"refreshInSeconds"`
+	Disks            []SmartDisk `json:"disks"`
 }
 
 // SMART 상태 요약. SmartDisk.Status에 들어간다.

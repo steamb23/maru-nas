@@ -7,9 +7,11 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"omv-desktop-dashboard/backend/internal/addons"
 	"omv-desktop-dashboard/backend/internal/addons/containers"
+	"omv-desktop-dashboard/backend/internal/addons/smart"
 	"omv-desktop-dashboard/backend/internal/api"
 	"omv-desktop-dashboard/backend/internal/omv/omvfake"
 )
@@ -192,5 +194,51 @@ func TestAddonDataBuiltinContainers(t *testing.T) {
 	got := decode[api.ContainersResponse](t, r)
 	if got.Runtime != "docker" || len(got.Containers) != len(omvfake.DefaultPluginData().Containers) {
 		t.Errorf("got %+v", got)
+	}
+}
+
+// SMART는 관리자만 쓰고, 결과를 세션 사이에 함께 써서 OMV(smartctl)를 다시 부르지 않는다.
+func TestAddonDataBuiltinSmart(t *testing.T) {
+	cache := smart.NewCache(0, 0)
+	e, _, _ := newDataEnv(t, smart.New(cache))
+	cache.Now = e.clk.Now
+	smartCalls := func() int {
+		n := 0
+		for _, c := range e.fake.Calls() {
+			if c.Service == "Smart" {
+				n++
+			}
+		}
+		return n
+	}
+
+	user := e.browser()
+	wantStatus(t, user.login("user", "user"), http.StatusOK)
+	wantCode(t, user.do(http.MethodGet, "/api/addons/smart", nil), http.StatusForbidden, api.ErrAdminRequired)
+
+	a := e.browser()
+	wantStatus(t, a.login("admin", "admin"), http.StatusOK)
+	r := a.do(http.MethodGet, "/api/addons/smart", nil)
+	wantStatus(t, r, http.StatusOK)
+	if strings.Contains(r.Body.String(), "FAKE-SERIAL") {
+		t.Error("serial number sent to browser")
+	}
+	got := decode[api.SmartResponse](t, r)
+	if len(got.Disks) != len(omvfake.DefaultPluginData().Smart) || got.CheckedAt == "" {
+		t.Errorf("got %+v", got)
+	}
+
+	b := e.browser()
+	wantStatus(t, b.login("admin", "admin"), http.StatusOK)
+	wantStatus(t, b.do(http.MethodGet, "/api/addons/smart", nil), http.StatusOK)
+	// 새로고침은 1분이 지나야 다시 부른다.
+	wantStatus(t, b.do(http.MethodGet, "/api/addons/smart?refresh=1", nil), http.StatusOK)
+	if n := smartCalls(); n != 1 {
+		t.Errorf("smart calls = %d, want 1", n)
+	}
+	e.clk.Add(2 * time.Minute)
+	wantStatus(t, b.do(http.MethodGet, "/api/addons/smart?refresh=1", nil), http.StatusOK)
+	if n := smartCalls(); n != 2 {
+		t.Errorf("smart calls = %d, want 2", n)
 	}
 }

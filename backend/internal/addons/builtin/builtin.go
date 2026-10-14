@@ -5,6 +5,7 @@ import (
 	"omv-desktop-dashboard/backend/internal/addons"
 	"omv-desktop-dashboard/backend/internal/addons/containers"
 	"omv-desktop-dashboard/backend/internal/addons/network"
+	"omv-desktop-dashboard/backend/internal/addons/smart"
 	"omv-desktop-dashboard/backend/internal/addons/storage"
 	"omv-desktop-dashboard/backend/internal/addons/sysinfo"
 	"omv-desktop-dashboard/backend/internal/addons/temperature"
@@ -16,11 +17,19 @@ type Deps struct {
 	Storage *storage.Reader
 	Network *network.Reader
 	Hwmon   *temperature.Hwmon
+	// Smart는 SMART 결과를 모든 세션이 함께 쓰는 캐시다. SMART·온도 애드온이 함께 쓴다.
+	Smart *smart.Cache
 }
 
 // HostDeps는 호스트의 /proc, /sys 등을 읽는 입력이다. 만들 때 파일을 읽지 않는다.
 func HostDeps() Deps {
-	return Deps{System: sysinfo.NewReader(), Storage: storage.NewReader(), Network: network.NewReader(), Hwmon: temperature.NewHwmon()}
+	return Deps{
+		System:  sysinfo.NewReader(),
+		Storage: storage.NewReader(),
+		Network: network.NewReader(),
+		Hwmon:   temperature.NewHwmon(),
+		Smart:   smart.NewCache(0, 0),
+	}
 }
 
 // New는 내장 애드온 레지스트리를 만든다. 목록은 컴파일 타임에 정해지므로
@@ -32,6 +41,7 @@ func New(d Deps) *addons.Registry {
 		network.New(d.Network),
 		temperature.New(d.Hwmon),
 		containers.New(),
+		smart.New(d.Smart),
 	)
 	if err != nil {
 		panic(err)

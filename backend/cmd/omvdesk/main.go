@@ -19,6 +19,7 @@ import (
 
 	"omv-desktop-dashboard/backend/internal/addons"
 	"omv-desktop-dashboard/backend/internal/addons/builtin"
+	"omv-desktop-dashboard/backend/internal/addons/smart"
 	"omv-desktop-dashboard/backend/internal/omv"
 	"omv-desktop-dashboard/backend/internal/prefs"
 	"omv-desktop-dashboard/backend/internal/server"
@@ -38,6 +39,8 @@ func main() {
 	// systemd의 StateDirectory=를 쓰면 STATE_DIRECTORY가 설정된다.
 	stateDir := flag.String("state-dir", cmp.Or(os.Getenv("OMVDESK_STATE_DIR"), os.Getenv("STATE_DIRECTORY")),
 		"사용자 설정(위젯 배치 등)을 저장할 디렉터리. 비우면 메모리에만 둔다 (환경 변수 OMVDESK_STATE_DIR, STATE_DIRECTORY)")
+	smartAt := flag.String("smart-refresh-at", cmp.Or(os.Getenv("OMVDESK_SMART_REFRESH_AT"), "00:00"),
+		"SMART 정보를 하루 한 번 다시 가져오는 기준 시각 HH:MM, 서버 로컬 시간 (환경 변수 OMVDESK_SMART_REFRESH_AT)")
 	flag.Parse()
 
 	if err := checkLoopback(*listen); err != nil {
@@ -61,6 +64,11 @@ func main() {
 	}
 
 	deps := builtin.HostDeps()
+	hour, minute, err := smart.ParseRefreshAt(*smartAt)
+	if err != nil {
+		log.Fatal(err)
+	}
+	deps.Smart.RefreshHour, deps.Smart.RefreshMinute = hour, minute
 	plugins := addons.NewDetector()
 	plugins.Refresh()
 	log.Printf("detected omv plugins: %v", slices.Sorted(maps.Keys(plugins.Plugins())))

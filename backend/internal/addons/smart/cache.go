@@ -82,6 +82,11 @@ func (c *Cache) Peek() (Snapshot, bool) {
 	return *c.snap, true
 }
 
+// RefreshIn은 snap을 가져온 뒤 새로고침으로 다시 가져올 수 있기까지 남은 시간이다.
+func (c *Cache) RefreshIn(snap Snapshot) time.Duration {
+	return max(0, ManualInterval-c.Now().Sub(snap.CheckedAt))
+}
+
 // Get은 규칙(Cache 설명)에 따라 보관한 결과를 주거나 rpc로 새로 가져온다. force는 새로고침 요청이다.
 func (c *Cache) Get(ctx context.Context, rpc addons.RPCCaller, force bool) (Snapshot, error) {
 	for {

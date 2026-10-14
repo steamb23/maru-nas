@@ -374,6 +374,11 @@ export interface SmartResponse extends AddonSources {
    * CheckedAt은 OMV에서 가져온 시각(RFC 3339)이다.
    */
   checkedAt: string;
+  /**
+   * RefreshInSeconds는 새로고침(?refresh=1)으로 다시 가져올 수 있기까지 남은 초다. 0이면 지금 된다.
+   * 시계 차이를 피하려고 절대 시각 대신 남은 시간으로 준다.
+   */
+  refreshInSeconds: number /* int */;
   disks: SmartDisk[];
 }
 /**
