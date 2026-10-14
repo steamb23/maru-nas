@@ -57,10 +57,10 @@ func ReadHwmon(hw fs.FS) ([]api.SensorGroup, error) {
 			n, _ := strconv.Atoi(m[1])
 			prefix := dir + "/temp" + m[1] + "_"
 			s := api.Sensor{Label: readTrim(hw, prefix+"label"), Celsius: v}
-			if hi, ok := milli(readTrim(hw, prefix+"max")); ok && hi > 0 {
+			if hi, ok := limit(readTrim(hw, prefix+"max")); ok {
 				s.HighCelsius = &hi
 			}
-			if cr, ok := milli(readTrim(hw, prefix+"crit")); ok && cr > 0 {
+			if cr, ok := limit(readTrim(hw, prefix+"crit")); ok {
 				s.CritCelsius = &cr
 			}
 			sensors = append(sensors, indexed{n, s})
@@ -126,6 +126,13 @@ func milli(s string) (float64, bool) {
 		return 0, false
 	}
 	return float64(n/100) / 10, true
+}
+
+// limit은 경고·위험 온도 값이다. 칩에 따라 "없음"을 0이나 아주 큰 값(NVMe 센서의 65535-273.15 등)으로
+// 주므로 0 초과 200 미만만 쓴다.
+func limit(s string) (float64, bool) {
+	v, ok := milli(s)
+	return v, ok && v > 0 && v < 200
 }
 
 func readTrim(fsys fs.FS, name string) string {

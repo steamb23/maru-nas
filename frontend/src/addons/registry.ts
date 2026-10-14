@@ -7,6 +7,8 @@ import { NetworkWidget } from './network/NetworkWidget'
 import { NetworkWindow } from './network/NetworkWindow'
 import { StorageWidget } from './storage/StorageWidget'
 import { StorageWindow } from './storage/StorageWindow'
+import { TemperatureWidget } from './temperature/TemperatureWidget'
+import { TemperatureWindow } from './temperature/TemperatureWindow'
 import { SystemInfoWidget } from './system-info/SystemInfoWidget'
 import { SystemInfoWindow } from './system-info/SystemInfoWindow'
 import type { WidgetViewProps, WindowViewProps } from './types'
@@ -21,4 +23,5 @@ export const ADDON_VIEWS: { [K in AddonId]: AddonViews<K> } = {
   'system-info': { Window: SystemInfoWindow, Widget: SystemInfoWidget },
   storage: { Window: StorageWindow, Widget: StorageWidget },
   network: { Window: NetworkWindow, Widget: NetworkWidget },
+  temperature: { Window: TemperatureWindow, Widget: TemperatureWidget },
 }

@@ -104,6 +104,43 @@ export const MANIFESTS = {
     "requires": {},
     "rpc": {}
   },
+  "temperature": {
+    "id": "temperature",
+    "title": "apps.temperature",
+    "icon": "thermal-monitor",
+    "views": {
+      "window": {
+        "defaultSize": {
+          "width": 440,
+          "height": 420
+        },
+        "minSize": {
+          "width": 320,
+          "height": 240
+        }
+      },
+      "widget": {
+        "defaultSize": {
+          "cols": 2,
+          "rows": 2
+        },
+        "minSize": {
+          "cols": 2,
+          "rows": 1
+        },
+        "maxSize": {
+          "cols": 4,
+          "rows": 4
+        }
+      }
+    },
+    "requires": {},
+    "rpc": {
+      "read": [
+        "CpuTemp.get"
+      ]
+    }
+  },
 } as const satisfies Record<string, AddonManifest>
 
 export type AddonId = keyof typeof MANIFESTS

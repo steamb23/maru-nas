@@ -19,7 +19,7 @@ describe('fitList', () => {
   it('넘치면 마지막 줄을 나머지 개수에 쓴다', () => {
     expect(fitList([1, 2, 3, 4], 3)).toEqual({ shown: [1, 2], hidden: 2 })
   })
-  it('한 줄뿐이어도 항목 하나는 보여 준다', () => {
-    expect(fitList([1, 2], 1)).toEqual({ shown: [1], hidden: 1 })
+  it('한 줄뿐이면 항목 하나만 보여 주고 나머지 개수 줄은 두지 않는다', () => {
+    expect(fitList([1, 2], 1)).toEqual({ shown: [1], hidden: 0 })
   })
 })

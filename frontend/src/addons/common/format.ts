@@ -65,3 +65,15 @@ export function formatLinkSpeed(mbps: number, locale: string): string {
   const n = new Intl.NumberFormat(locale, { maximumFractionDigits: 1 })
   return mbps >= 1000 ? `${n.format(mbps / 1000)} Gbps` : `${n.format(mbps)} Mbps`
 }
+
+// formatCelsius는 섭씨 온도를 정수로 표시한다. 예: 45°C
+export function formatCelsius(celsius: number, locale: string): string {
+  return new Intl.NumberFormat(locale, { style: 'unit', unit: 'celsius', maximumFractionDigits: 0 }).format(celsius)
+}
+
+// formatDateTime은 RFC 3339 시각을 짧은 날짜·시각으로 표시한다. 읽을 수 없으면 원문을 그대로 준다.
+export function formatDateTime(iso: string, locale: string): string {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return iso
+  return new Intl.DateTimeFormat(locale, { dateStyle: 'short', timeStyle: 'short' }).format(d)
+}

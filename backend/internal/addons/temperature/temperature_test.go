@@ -32,6 +32,7 @@ func sampleHwmon() fstest.MapFS {
 		"hwmon2/temp1_crit":   file("84850"),
 		"hwmon2/temp2_input":  file("41850"),
 		"hwmon2/temp2_label":  file("Sensor 1"),
+		"hwmon2/temp2_max":    file("65261850"),
 		"hwmon2/temp10_input": file("50000"),
 
 		"hwmon3/name":               file("coretemp"),
@@ -74,7 +75,8 @@ func TestReadHwmon(t *testing.T) {
 	}
 	nvme := groups[1]
 	// temp10이 temp2 뒤에 온다(숫자 순서).
-	if len(nvme.Sensors) != 3 || nvme.Sensors[0].Celsius != 38.8 || nvme.Sensors[2].Celsius != 50 {
+	if len(nvme.Sensors) != 3 || nvme.Sensors[0].Celsius != 38.8 || nvme.Sensors[2].Celsius != 50 ||
+		nvme.Sensors[1].HighCelsius != nil {
 		t.Errorf("nvme %+v", nvme.Sensors)
 	}
 }

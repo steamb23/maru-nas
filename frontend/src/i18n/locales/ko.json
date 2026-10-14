@@ -56,7 +56,8 @@
     "systemInfo": "시스템 정보",
     "files": "파일",
     "storage": "저장소",
-    "network": "네트워크"
+    "network": "네트워크",
+    "temperature": "온도"
   },
   "sysinfo": {
     "disconnected": "연결 끊김 — 다시 연결하는 중…",
@@ -104,5 +105,11 @@
     "errors": "오류 {{errors}} · 버림 {{dropped}}",
     "virtual_one": "가상 인터페이스 {{count}}개",
     "virtual_other": "가상 인터페이스 {{count}}개"
+  },
+  "temperature": {
+    "empty": "온도 센서가 없습니다.",
+    "cpu": "CPU",
+    "sensor": "센서 {{n}}",
+    "checkedAt": "{{time}} 확인"
   }
 }
