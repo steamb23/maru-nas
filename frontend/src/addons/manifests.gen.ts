@@ -241,6 +241,45 @@ export const MANIFESTS = {
       ]
     }
   },
+  "services": {
+    "id": "services",
+    "title": "apps.services",
+    "icon": "preferences-system-network-server",
+    "views": {
+      "window": {
+        "defaultSize": {
+          "width": 440,
+          "height": 420
+        },
+        "minSize": {
+          "width": 340,
+          "height": 240
+        }
+      },
+      "widget": {
+        "defaultSize": {
+          "cols": 3,
+          "rows": 2
+        },
+        "minSize": {
+          "cols": 2,
+          "rows": 1
+        },
+        "maxSize": {
+          "cols": 4,
+          "rows": 5
+        }
+      }
+    },
+    "requires": {
+      "admin": true
+    },
+    "rpc": {
+      "read": [
+        "Services.getStatus"
+      ]
+    }
+  },
 } as const satisfies Record<string, AddonManifest>
 
 export type AddonId = keyof typeof MANIFESTS

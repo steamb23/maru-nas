@@ -1488,15 +1488,25 @@ button {
   font-variant-numeric: tabular-nums;
 }
 
-/* ---- 컨테이너 ---- */
+/* ---- 컨테이너 (서비스 창·위젯도 같은 행 모양을 쓴다) ---- */
 
-.ctr-widget {
+.ctr-widget,
+.svc-widget {
   gap: 6px;
 }
 
-.ctr-counts {
+.ctr-counts,
+.svc-counts {
   gap: 10px;
   font-weight: 600;
+}
+
+/* 좁은 위젯에서도 개수 요약은 한 줄에 둔다. */
+.svc-counts > span {
+  overflow: hidden;
+  min-width: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .status-dot {

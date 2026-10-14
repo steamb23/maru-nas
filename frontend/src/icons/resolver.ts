@@ -19,6 +19,7 @@ import windowMaximize from '@colloid/actions/symbolic/window-maximize-symbolic.s
 import windowMinimize from '@colloid/actions/symbolic/window-minimize-symbolic.svg?url'
 import windowRestore from '@colloid/actions/symbolic/window-restore-symbolic.svg?url'
 import gnomeDiskUtility from '@colloid/apps/scalable/org.gnome.DiskUtility.svg?url'
+import preferencesSystemNetworkServer from '@colloid/apps/scalable/preferences-system-network-server.svg?url'
 import preferencesSystemNetworkEthernet from '@colloid/apps/scalable/preferences-system-network-ethernet.svg?url'
 import preferencesVirtualizationContainer from '@colloid/apps/scalable/preferences-virtualization-container.svg?url'
 import thermalMonitor from '@colloid/apps/scalable/thermal-monitor.svg?url'
@@ -58,6 +59,7 @@ const ICONS = {
   'preferences-system-network-ethernet': { url: preferencesSystemNetworkEthernet, kind: 'color' },
   'thermal-monitor': { url: thermalMonitor, kind: 'color' },
   'preferences-virtualization-container': { url: preferencesVirtualizationContainer, kind: 'color' },
+  'preferences-system-network-server': { url: preferencesSystemNetworkServer, kind: 'color' },
   'org.gnome.DiskUtility': { url: gnomeDiskUtility, kind: 'color' },
   'drive-harddisk': { url: driveHarddisk, kind: 'color' },
   folder: { url: folder, kind: 'color' },

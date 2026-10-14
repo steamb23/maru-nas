@@ -63,7 +63,8 @@
     "network": "Network",
     "temperature": "Temperature",
     "containers": "Containers",
-    "smart": "Disk Health"
+    "smart": "Disk Health",
+    "services": "Services"
   },
   "sysinfo": {
     "disconnected": "Disconnected — reconnecting…",
@@ -170,6 +171,19 @@
       "warning": "Warning",
       "failing": "Failing",
       "unknown": "Unknown"
+    }
+  },
+  "services": {
+    "empty": "No services.",
+    "running_one": "{{count}} running",
+    "running_other": "{{count}} running",
+    "attention_one": "{{count}} issue",
+    "attention_other": "{{count}} issues",
+    "state": {
+      "running": "Running",
+      "stopped": "Enabled · Stopped",
+      "disabled": "Disabled",
+      "disabledRunning": "Disabled · Running"
     }
   },
   "actions": {

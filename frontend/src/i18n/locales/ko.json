@@ -63,7 +63,8 @@
     "network": "네트워크",
     "temperature": "온도",
     "containers": "컨테이너",
-    "smart": "디스크 건강"
+    "smart": "디스크 건강",
+    "services": "서비스"
   },
   "sysinfo": {
     "disconnected": "연결 끊김 — 다시 연결하는 중…",
@@ -170,6 +171,19 @@
       "warning": "주의",
       "failing": "위험",
       "unknown": "알 수 없음"
+    }
+  },
+  "services": {
+    "empty": "서비스가 없습니다.",
+    "running_one": "실행 {{count}}",
+    "running_other": "실행 {{count}}",
+    "attention_one": "주의 {{count}}",
+    "attention_other": "주의 {{count}}",
+    "state": {
+      "running": "실행 중",
+      "stopped": "켜짐 · 멈춤",
+      "disabled": "꺼짐",
+      "disabledRunning": "꺼짐 · 실행 중"
     }
   },
   "actions": {

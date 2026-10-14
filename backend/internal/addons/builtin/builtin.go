@@ -5,6 +5,7 @@ import (
 	"omv-desktop-dashboard/backend/internal/addons"
 	"omv-desktop-dashboard/backend/internal/addons/containers"
 	"omv-desktop-dashboard/backend/internal/addons/network"
+	"omv-desktop-dashboard/backend/internal/addons/services"
 	"omv-desktop-dashboard/backend/internal/addons/smart"
 	"omv-desktop-dashboard/backend/internal/addons/storage"
 	"omv-desktop-dashboard/backend/internal/addons/sysinfo"
@@ -42,6 +43,7 @@ func New(d Deps) *addons.Registry {
 		temperature.New(d.Hwmon, d.Smart),
 		containers.New(),
 		smart.New(d.Smart),
+		services.New(),
 	)
 	if err != nil {
 		panic(err)
