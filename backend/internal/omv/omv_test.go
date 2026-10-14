@@ -239,3 +239,28 @@ func TestErrors(t *testing.T) {
 		t.Errorf("network err %v", err)
 	}
 }
+
+// 마감 시각이 있는 ctx는 HTTP 클라이언트의 기본 제한 시간보다 오래 기다린다(SMART 조회가 디스크를 깨우는 경우).
+func TestCallDeadlineOverridesClientTimeout(t *testing.T) {
+	slow := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		time.Sleep(150 * time.Millisecond)
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"response": {"ok": true}, "error": null}`))
+	}))
+	t.Cleanup(slow.Close)
+	c := omv.NewClient(slow.URL, testUA)
+	c.HTTP.Timeout = 50 * time.Millisecond
+	req := omv.Request{SessionID: "s", Service: "Smart", Method: "getList"}
+
+	if _, err := c.Call(context.Background(), req); err == nil {
+		t.Error("want client timeout without a deadline")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	if _, err := c.Call(ctx, req); err != nil {
+		t.Errorf("call with deadline: %v", err)
+	}
+	if c.HTTP.Timeout != 50*time.Millisecond {
+		t.Error("client timeout changed")
+	}
+}

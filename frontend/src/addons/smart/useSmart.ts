@@ -7,8 +7,9 @@ import { isSmartResponse } from './smart'
 // 백엔드가 SMART 결과를 보관하고 하루 한 번(기준 시각 이후 첫 요청)만 OMV에 다시 묻는다.
 // 그래서 이 주기 요청은 보관한 결과를 받아 오거나 기준 시각을 넘겼는지 확인하는 정도다.
 export const SMART_POLL_INTERVAL_MS = 10 * 60_000
-// 보관한 결과가 없으면 백엔드가 디스크마다 smartctl을 실행하므로 오래 걸릴 수 있다.
-const SMART_TIMEOUT_MS = 60_000
+// 보관한 결과가 없으면 백엔드가 디스크마다 smartctl을 실행하므로(잠든 디스크는 깨어날 때까지) 오래 걸릴 수 있다.
+// 백엔드의 Smart.getList 제한 시간(2분)보다 길게 기다린다. 실패하면 다음 주기(10분)까지 다시 묻지 않기 때문이다.
+const SMART_TIMEOUT_MS = 150_000
 
 export interface SmartSample {
   response: SmartResponse

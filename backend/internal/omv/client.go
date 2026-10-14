@@ -117,6 +117,9 @@ type rpcResponse struct {
 
 // Call은 rpc.php를 한 번 호출한다. 네트워크 오류와 형식이 다른 응답은 *Error가 아닌
 // 오류로, OMV가 반환한 RPC 오류는 *Error로 돌려준다.
+//
+// ctx에 마감 시각이 있으면 HTTP 클라이언트의 기본 제한 시간(HTTP.Timeout) 대신 그것을 쓴다.
+// Smart.getList처럼 대기 중인 디스크를 깨워야 해서 오래 걸리는 호출에 쓴다.
 func (c *Client) Call(ctx context.Context, r Request) (Response, error) {
 	params := r.Params
 	if params == nil {
@@ -147,7 +150,13 @@ func (c *Client) Call(ctx context.Context, r Request) (Response, error) {
 		req.AddCookie(ck)
 	}
 
-	res, err := c.HTTP.Do(req)
+	hc := c.HTTP
+	if _, ok := ctx.Deadline(); ok && hc.Timeout > 0 {
+		cp := *hc
+		cp.Timeout = 0
+		hc = &cp
+	}
+	res, err := hc.Do(req)
 	if err != nil {
 		return Response{}, fmt.Errorf("omv rpc %s.%s: %w", r.Service, r.Method, err)
 	}
