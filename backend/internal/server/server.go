@@ -28,6 +28,8 @@ type OMV interface {
 	Verify(ctx context.Context, sessionID, username string, response any, clientIP string) (omv.LoginResult, error)
 	Logout(ctx context.Context, sessionID string) error
 	Probe(ctx context.Context, sessionID string, touch bool) (omv.SessionState, error)
+	// Call은 rpc.php를 한 번 호출한다. /api/rpc 중계에 쓴다.
+	Call(ctx context.Context, r omv.Request) (omv.Response, error)
 }
 
 // PluginDetector는 OMV 플러그인 설치 여부를 알려 준다. *addons.Detector가 구현한다.
@@ -116,6 +118,7 @@ func New(cfg Config) http.Handler {
 	mux.HandleFunc("POST /api/session/activity", h.requireSession(h.activity))
 	mux.HandleFunc("GET /api/system", h.requireSession(h.system))
 	mux.HandleFunc("GET /api/capabilities", h.requireSession(h.capabilities))
+	mux.HandleFunc("POST /api/rpc", h.requireSession(h.rpc))
 	mux.HandleFunc("/api/", func(w http.ResponseWriter, _ *http.Request) {
 		writeJSON(w, http.StatusNotFound, api.ErrorResponse{Error: "not found"})
 	})

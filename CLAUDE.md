@@ -36,7 +36,7 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
   - Docker는 쓰지 않는다(호스트 `/proc`, `/sys`, 네트워크를 직접 봐야 하므로)
   - systemd 유닛과 Caddy 설정 예시는 `deploy/`에 작성만 하고, 설치는 사용자가 한다
 - **백엔드는 얇은 API 서버**다. 역할은 (1) 현황 읽기: `/proc`·`/sys` 직접 읽기, root가 필요한 정보는 OMV RPC, (2) 설정 변경 요청을 OMV `rpc.php`로 전달, 두 가지뿐이다
-- **OMV RPC는 항상 백엔드가 중계한다**: 브라우저 → `/desk/rpc` → 백엔드 → OMV `rpc.php`. 브라우저가 `rpc.php`를 직접 호출하지 않는다
+- **OMV RPC는 항상 백엔드가 중계한다**: 브라우저 → `/desk/api/rpc` → 백엔드 → OMV `rpc.php`. 브라우저가 `rpc.php`를 직접 호출하지 않는다
   - 백엔드는 대시보드 세션마다 OMV 세션을 메모리에 보관하고, 항상 같은 주소(127.0.0.1)와 고정 User-Agent로 OMV를 호출한다
   - 브라우저의 쿠키를 OMV에 그대로 전달하지 않는다. OMV는 User-Agent가 다르면 세션을 파기하므로 사용자를 로그아웃시키게 된다
 - **인증**: 자체 로그인 화면에서 백엔드가 OMV `Session.login`(필요하면 `Session.verify`)으로 위임하고, 대시보드 자체 세션 쿠키를 발급한다. 세션 만료는 OMV timeout 기준 브라우저 타이머로 처리한다. 상세는 `.claude/rules/auth-omv.md`
@@ -55,7 +55,7 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 
 - **애드온 = manifest + provider + 보기(창, 위젯)**. 시스템 정보를 포함한 모든 기능을 같은 계약으로 만든다. 보기는 창과 바탕화면 위젯 중 하나 이상이며, 둘은 같은 provider·API를 쓰고 화면만 다르다
 - **위젯은 창 시스템과 분리한다**. 바탕화면 위 별도 레이어에 그리드 칸 단위로 붙이고, 창 저장소·창 컴포넌트에 위젯용 분기를 넣지 않는다. 공유는 provider, `/api/*`, `poller.ts`, 공통 훅까지만 한다
-- `/desk/rpc` 중계는 manifest 허용 목록(read·write 구분)에 있는 메서드만 통과시키고, 현재 단계가 허용하지 않는 write는 백엔드가 거부한다
+- `/desk/api/rpc` 중계는 manifest 허용 목록(read·write 구분)에 있는 메서드만 통과시키고, 현재 단계가 허용하지 않는 write는 백엔드가 거부한다
 - 내장 애드온만 정적 목록으로 둔다(백엔드 `internal/addons/<id>/`, 프론트 `src/addons/<id>/`). 컴파일 타임 타입(`AppId`)을 유지하고, 별도 패키지·런타임 로딩·Go `plugin`은 쓰지 않는다
 - 플러그인 설치 여부는 `/usr/share/openmediavault/engined/rpc/<name>.inc`와 `/var/lib/dpkg/status`로 감지해 `/api/capabilities`로 내려준다
 - provider는 권한이 필요 없는 직접 읽기(`/proc`, `/sys`)를 1차로, OMV RPC를 보강으로 쓰고 응답에 출처를 담는다

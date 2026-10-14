@@ -146,6 +146,18 @@ export interface AddonCapability {
   sources: string[];
 }
 /**
+ * RPCRequest는 POST /api/rpc의 요청 본문이다. 백엔드는 등록된 애드온이 선언한
+ * 메서드만 OMV rpc.php로 중계하고, 성공하면 OMV 응답의 response 값을 그대로 돌려준다.
+ */
+export interface RPCRequest {
+  service: string;
+  method: string;
+  /**
+   * Params는 OMV RPC 파라미터다. 없으면 빈 객체로 보낸다.
+   */
+  params?: { [key: string]: unknown };
+}
+/**
  * LoginRequest는 POST /api/login의 요청 본문이다.
  */
 export interface LoginRequest {
@@ -231,6 +243,22 @@ export const ErrUnauthorized = "unauthorized";
  */
 export const ErrBadRequest = "bad_request";
 /**
+ * ErrRPCForbidden는 허용 목록에 없거나 현재 단계가 허용하지 않는 OMV RPC다.
+ */
+export const ErrRPCForbidden = "rpc_forbidden";
+/**
+ * ErrAdminRequired, ErrPluginMissing은 RPC를 선언한 애드온을 이 사용자가 쓸 수 없는 이유다.
+ */
+export const ErrAdminRequired = ReasonAdminRequired;
+/**
+ * 오류 코드. ErrorResponse.Code에 들어간다.
+ */
+export const ErrPluginMissing = ReasonPluginMissing;
+/**
+ * ErrOMVError는 중계한 OMV RPC가 실패했다는 뜻이다(OMV의 오류 메시지는 넘기지 않는다).
+ */
+export const ErrOMVError = "omv_error";
+/**
  * ErrorResponse는 2xx가 아닌 상태 코드와 함께 반환된다.
  */
 export interface ErrorResponse {
@@ -238,7 +266,7 @@ export interface ErrorResponse {
   /**
    * Code는 화면에서 분기할 때 쓰는 오류 종류다. 없을 수 있다.
    */
-  code?: 'invalid_credentials' | 'rate_limited' | 'challenge_failed' | 'challenge_expired' | 'omv_unavailable' | 'unauthorized' | 'bad_request';
+  code?: 'invalid_credentials' | 'rate_limited' | 'challenge_failed' | 'challenge_expired' | 'omv_unavailable' | 'unauthorized' | 'bad_request' | 'rpc_forbidden' | 'admin_required' | 'plugin_missing' | 'omv_error';
   /**
    * RetryAfterSeconds는 rate_limited일 때 다시 시도할 수 있기까지 남은 초다.
    */

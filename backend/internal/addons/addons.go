@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"regexp"
 	"slices"
+	"strings"
 
 	"omv-desktop-dashboard/backend/internal/api"
 )
@@ -138,6 +139,10 @@ func validate(a Addon) error {
 	for _, method := range slices.Concat(m.RPC.Read, m.RPC.Write) {
 		if !methodPattern.MatchString(method) {
 			return fmt.Errorf("addon %q: invalid rpc method %q (want Service.method)", m.ID, method)
+		}
+		// 로그인·로그아웃 같은 Session 서비스는 백엔드만 부른다.
+		if strings.HasPrefix(method, "Session.") {
+			return fmt.Errorf("addon %q: rpc %s is reserved for the backend", m.ID, method)
 		}
 		if seen[method] {
 			return fmt.Errorf("addon %q: rpc %s declared twice", m.ID, method)

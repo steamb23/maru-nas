@@ -68,6 +68,7 @@ func TestNewRegistryRejectsInvalid(t *testing.T) {
 		})},
 		"bad method": {addon("a", func(a *Addon) { a.Manifest.RPC.Read = []string{"Smart getList"} })},
 		"no method":  {addon("a", func(a *Addon) { a.Manifest.RPC.Read = []string{"Smart"} })},
+		"session":    {addon("a", func(a *Addon) { a.Manifest.RPC.Read = []string{"Session.login"} })},
 		"method twice": {addon("a", func(a *Addon) {
 			a.Manifest.RPC.Read = []string{"Smart.getList"}
 			a.Manifest.RPC.Write = []string{"Smart.getList"}

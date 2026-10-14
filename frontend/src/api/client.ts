@@ -13,6 +13,10 @@ const ERROR_CODES: readonly ErrorCode[] = [
   'omv_unavailable',
   'unauthorized',
   'bad_request',
+  'rpc_forbidden',
+  'admin_required',
+  'plugin_missing',
+  'omv_error',
 ]
 
 export class ApiError extends Error {

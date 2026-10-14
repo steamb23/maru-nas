@@ -55,7 +55,7 @@
 
 ### RPC 허용 목록과 단계 규칙
 
-- 백엔드의 OMV RPC 중계(`/desk/rpc`와 provider의 내부 호출)는 등록된 manifest의 `rpc.read`·`rpc.write`에 있는 메서드만 통과시킨다
+- 백엔드의 OMV RPC 중계(`/desk/api/rpc`와 provider의 내부 호출)는 등록된 manifest의 `rpc.read`·`rpc.write`에 있는 메서드만 통과시킨다
 - 쓰기 RPC 허용 여부는 백엔드 한 곳(상수)에서 정한다. 3단계에서는 꺼 둔다
 - 테스트로 "모든 내장 애드온의 `rpc.write`가 비어 있다"를 확인한다. 이 테스트는 4단계에서 바꾼다
 - 역할 검사는 OMV가 최종적으로 한다. 백엔드는 `requires.admin`으로 불필요한 호출을 미리 막을 뿐이다

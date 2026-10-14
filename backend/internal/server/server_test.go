@@ -68,8 +68,10 @@ type envOptions struct {
 	omvTimeoutOff bool
 	brokenOMV     bool
 	omvOverride   OMV
-	addons        *addons.Registry
-	plugins       PluginDetector
+	// wrapOMV가 있으면 실제 클라이언트를 감싼다(호출 기록 등).
+	wrapOMV func(OMV) OMV
+	addons  *addons.Registry
+	plugins PluginDetector
 }
 
 func newEnv(t *testing.T, o envOptions) *env {
@@ -99,6 +101,9 @@ func newEnv(t *testing.T, o envOptions) *env {
 	var client OMV = omv.NewClient(ts.URL, "omvdesk-test/1")
 	if o.omvOverride != nil {
 		client = o.omvOverride
+	}
+	if o.wrapOMV != nil {
+		client = o.wrapOMV(client)
 	}
 
 	logs := &bytes.Buffer{}
