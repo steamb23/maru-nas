@@ -73,7 +73,7 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 | `make lint` | `gofmt -l`, `go vet`, oxlint, `tsc -b` |
 | `make test` | `go test ./...`, `vitest run` |
 | `make check` | lint + test |
-| `make types` | Go 구조체에서 TS 타입 다시 생성. `internal/api`를 바꾸면 반드시 실행하고 생성물도 함께 커밋한다 |
+| `make types` | Go 구조체에서 TS 다시 생성: `internal/api` → `src/api/types.gen.ts`, 내장 애드온 manifest → `src/addons/manifests.gen.ts`. 둘 중 하나라도 바꾸면 반드시 실행하고 생성물도 함께 커밋한다(manifest 생성물은 Go 테스트가 검사) |
 
 개별 실행: `cd backend && go test ./internal/addons/sysinfo -run TestParseMemInfo`, `cd frontend && npx vitest run src/icons`
 

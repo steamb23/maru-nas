@@ -8,9 +8,10 @@ dev:
 dev-fake:
 	./scripts/dev.sh --fake
 
-# Go 구조체(backend/internal/api)에서 frontend/src/api/types.gen.ts 생성
+# Go 구조체에서 TS 생성: backend/internal/api → frontend/src/api/types.gen.ts,
+# 내장 애드온 manifest → frontend/src/addons/manifests.gen.ts
 types:
-	cd backend && go tool tygo generate
+	cd backend && go tool tygo generate && go run ./cmd/genaddons
 
 # 프론트엔드를 빌드해 실행 파일에 포함한 bin/omvdesk 생성
 build: build-frontend build-backend
@@ -27,8 +28,10 @@ lint:
 	npm --prefix frontend run lint
 	npm --prefix frontend run typecheck
 
+# -count=1: 테스트 캐시는 backend 모듈 밖 파일(frontend/src/addons/manifests.gen.ts) 변경을
+# 추적하지 않으므로 생성물 검사가 캐시로 통과하지 않게 매번 실행한다.
 test:
-	cd backend && go test ./...
+	cd backend && go test -count=1 ./...
 	npm --prefix frontend test
 
 check: lint test
