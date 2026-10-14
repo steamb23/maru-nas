@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { type DecodeFrame, type PhrasePlan, decodeFrame, planPhrases, textCenterY } from './decode'
+import {
+  type DecodeFrame,
+  MAX_PHRASE_LENGTH,
+  PHRASES,
+  type PhrasePlan,
+  decodeFrame,
+  planPhrases,
+  textCenterY,
+} from './decode'
 
 // 0, 0.1, ..., 0.9를 반복하는 결정적 rng
 function seqRng(): () => number {
@@ -12,6 +20,15 @@ const end = (p: PhrasePlan) => p.resolvedAt
 const HOLD_MS = 3500
 const GAP_MS = 1000
 const duration = (p: PhrasePlan) => p.resolvedAt + HOLD_MS + GAP_MS
+
+describe('PHRASES', () => {
+  it('한 줄에 들어가는 길이의 ASCII 문구다', () => {
+    for (const p of PHRASES) {
+      expect(p.length, p).toBeLessThanOrEqual(MAX_PHRASE_LENGTH)
+      expect(p, p).toMatch(/^[\x20-\x7e]+$/)
+    }
+  })
+})
 
 describe('planPhrases', () => {
   it('공백은 바로 확정하고, 나머지는 앞 글자부터 대략 순서대로 확정한다', () => {

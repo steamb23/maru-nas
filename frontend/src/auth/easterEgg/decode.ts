@@ -4,7 +4,38 @@
 import type { Rect } from '../../windows/geometry'
 import type { EggEffect, Rng } from './effects'
 
-export const PHRASES = ['Wake up, sysadmin...', 'The NAS has you...', 'Follow the white LED.']
+// 영화 매트릭스(1999) 첫 장면의 메시지로 시작해, 갈수록 sysadmin 드립과 다른 작품 인용으로 선을 넘는다.
+// 좁은 화면에서도 한 줄에 들어가도록 MAX_PHRASE_LENGTH 이하의 ASCII만 쓴다(decode.test.ts가 검사).
+export const PHRASES = [
+  'Wake up, sysadmin...',
+  'The Matrix has you...',
+  'Follow the white LED.',
+  'Knock, knock, sysadmin.',
+  'There is no spoon. Only RAID.',
+  'RAID is not a backup, Mr. Anderson.',
+  'Take the blue pill: reboot and forget.',
+  'Take the red pill: read the logs.',
+  'Deja vu? Probably a cron job.',
+  "The Oracle says: it's DNS.",
+  "It's always DNS.",
+  'I know kung fu. And chmod.',
+  'Free your mind. Then your disk space.',
+  'Dodge this: apt full-upgrade.',
+  'The spoon was a symlink.',
+  'Neo, your uptime is over 9000.',
+  'There is no cloud. Only my NAS.',
+  "I'm running out of movie quotes.",
+  'Seriously. Just log in.',
+  '...are you still there?',
+  // 스타크래프트 이스터에그의 중국식 레몬 닭고기 레시피(원문 그대로)
+  'CHINESE LEMON CHICKEN',
+  '1 pound sliced chicken brst.',
+  '1 tsp corn starch.',
+  '3 tbsp soy sauce(dark).',
+  '1 sliced lemon.',
+]
+
+export const MAX_PHRASE_LENGTH = 40
 
 // 첫 글자가 확정되기 전 뒤섞이기만 하는 시간
 const LEAD_MS = 400
