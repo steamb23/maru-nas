@@ -3,7 +3,7 @@
 //
 // 연출 중에만 마운트하고, 해제하면 페이드아웃 뒤 언마운트해 캔버스 버퍼를 돌려준다.
 // 오버레이는 포커스를 받지 않는다. 배경을 누른 포인터 입력은 오버레이가 받아 사라지는 동안에도 흡수하고,
-// 키 입력은 그대로 포커스된 입력란으로 간다. 카드는 오버레이 위에 있어 평소처럼 쓸 수 있다.
+// 카드는 오버레이 위에 있어 연출 중에도 평소처럼 쓸 수 있다.
 import { type MouseEvent, type RefObject, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { Rect } from '../../windows/geometry'
 import { EGG_FADE_IN_MS, EGG_FADE_OUT_MS, EGG_FPS } from './config'
