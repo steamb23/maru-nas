@@ -46,7 +46,7 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 - **백엔드**: Go 표준 라이브러리만(`backend/`). 런타임 외부 의존성 없음
 - **프론트엔드**: TypeScript + Vite + React(`frontend/`), 창 상태는 Zustand 단일 저장소(`windows[]`). 린트 oxlint, 테스트 Vitest(DOM 환경 없이 순수 함수·저장소만)
 - **타입 공유**: tygo로 `backend/internal/api` → `frontend/src/api/types.gen.ts`. 생성물은 커밋하며 직접 수정하지 않는다
-- **현지화**: `en`, `ko`. 화면 문구(aria-label·title 포함)는 모두 `t()`를 거치고, 새 키는 `en.json`과 `ko.json`에 함께 넣는다
+- **현지화**: `en`, `ko`. 화면 문구(aria-label·title 포함)는 모두 `t()`를 거치고, 새 키는 `en.json`과 `ko.json`에 함께 넣는다. 로그인 대기 이스터에그 문구는 현지화 제외(영어 고정)
 - **아이콘**: Colloid 테마 하나만, 리졸버 `getIcon(name)`으로 freedesktop 이름을 써서 가져온다
 
 ## 애드온과 위젯 (3단계)
@@ -84,7 +84,7 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 3단계는 세부 단계(3-1 → 3-2 → 3-3) 순서로 진행하고, 완료 표시도 세부 단계로 적는다(예: **3-1단계**). "바로 다음 단계"는 다음 세부 단계를 뜻한다.
 
 1. 데스크톱 셸 + 시스템 정보 창(`/proc`의 CPU·RAM·가동 시간을 2초마다 갱신). 완료
-2. 로그인: OMV 위임 로그인, 세션 복원·만료, 로그인 시도 제한. 작업표시줄 시계·프로필 메뉴와 현지화(ko·en)도 이 무렵 추가했다. 완료
+2. 로그인: OMV 위임 로그인, 세션 복원·만료, 로그인 시도 제한. 작업표시줄 시계·프로필 메뉴와 현지화(ko·en)도 이 무렵 추가했다. 로그인 대기 이스터에그(`frontend/src/auth/easterEgg/`)는 단계와 무관하게 사용자 요청으로 추가한 예외다. 완료
 3. 애드온과 위젯(읽기 전용): 세 세부 단계 모두 시스템 상태를 바꾸는 코드(쓰기 RPC 포함) 금지
    - 3-1. 애드온 구현: 애드온 계약(manifest, provider, RPC 허용 목록)과 capability 감지(`/api/capabilities`)를 만든다
      - 기존 시스템 정보 창을 첫 내장 애드온(창 보기)으로 옮겨 계약을 검증한다
