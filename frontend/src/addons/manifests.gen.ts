@@ -63,8 +63,8 @@ export const MANIFESTS = {
           "rows": 2
         },
         "maxSize": {
-          "cols": 5,
-          "rows": 5
+          "cols": 4,
+          "rows": 4
         }
       }
     },

@@ -16,7 +16,7 @@ var Manifest = api.Manifest{
 	Title: "apps.storage",
 	Icon:  "drive-harddisk",
 	Views: api.AddonViews{
-		// 크기는 브라우저 실측으로 정한다. 내용을 바꾸면 다시 잰다.
+		// 크기는 브라우저 실측으로 정했다(위젯 2×2에 3줄, 창은 넘치면 스크롤). 내용을 바꾸면 다시 잰다.
 		Window: &api.WindowView{
 			DefaultSize: api.Size{Width: 560, Height: 400},
 			MinSize:     &api.Size{Width: 360, Height: 240},
@@ -24,7 +24,7 @@ var Manifest = api.Manifest{
 		Widget: &api.WidgetView{
 			DefaultSize: api.GridSize{Cols: 3, Rows: 2},
 			MinSize:     &api.GridSize{Cols: 2, Rows: 2},
-			MaxSize:     &api.GridSize{Cols: 5, Rows: 5},
+			MaxSize:     &api.GridSize{Cols: 4, Rows: 4},
 		},
 	},
 }
