@@ -1,7 +1,10 @@
 // 로그인 화면과 서버 연결 끊김 화면. 인증은 백엔드가 OMV에 위임한다.
 import { type FormEvent, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { useLanguage } from '../i18n'
 import { IconImage } from '../icons/IconImage'
 import { enterLogin } from '../shell/screenTransition'
+import { formatUnit } from '../sysinfo/format'
 import { type LoginError, loginErrorMessage } from './messages'
 import { useAuthStore } from './store'
 
@@ -30,6 +33,8 @@ function useCountdown(): [remaining: number, lock: (seconds: number) => void] {
 }
 
 export function LoginScreen() {
+  const { t } = useTranslation()
+  const lang = useLanguage()
   const status = useAuthStore((s) => s.status)
   const challenge = useAuthStore((s) => s.challenge)
   const notice = useAuthStore((s) => s.notice)
@@ -103,7 +108,9 @@ export function LoginScreen() {
   }
 
   const locked = remaining > 0
-  const errorText = error && (locked ? `${error.message} (${remaining}초)` : error.message)
+  const message = error && t(error.key, error.params)
+  const errorText =
+    message && (locked ? t('login.withCountdown', { message, remaining: formatUnit(remaining, 'second', lang) }) : message)
 
   return (
     <div className="desktop auth-screen">
@@ -112,12 +119,12 @@ export function LoginScreen() {
           <IconImage name="avatar-default-symbolic" size={40} />
         </div>
         <h1 id="login-title" className="login-title">
-          OMV 데스크톱
+          {t('app.title')}
         </h1>
 
         {notice === 'expired' && !error && (
           <p className="login-notice" role="status">
-            세션이 만료되었습니다. 다시 로그인하세요.
+            {t('login.sessionExpired')}
           </p>
         )}
         {errorText && (
@@ -129,12 +136,12 @@ export function LoginScreen() {
         {inChallenge ? (
           <form className="login-form" onSubmit={onVerify}>
             {redirectOnly ? (
-              <p className="login-hint">이 계정의 2차 인증은 OpenMediaVault 화면에서 진행해야 합니다.</p>
+              <p className="login-hint">{t('login.twoFactorRedirect')}</p>
             ) : (
               <>
-                <p className="login-hint">2차 인증 코드를 입력하세요.</p>
+                <p className="login-hint">{t('login.twoFactorPrompt')}</p>
                 <label className="login-field">
-                  <span>인증 코드</span>
+                  <span>{t('login.code')}</span>
                   <input
                     ref={codeRef}
                     name="code"
@@ -147,18 +154,18 @@ export function LoginScreen() {
                   />
                 </label>
                 <button type="submit" className="login-submit" disabled={busy || locked || code.trim() === ''}>
-                  {busy ? '확인 중…' : '확인'}
+                  {busy ? t('login.verifying') : t('login.verify')}
                 </button>
               </>
             )}
             <button type="button" className="login-secondary" onClick={onCancel} disabled={busy}>
-              처음으로
+              {t('login.startOver')}
             </button>
           </form>
         ) : (
           <form className="login-form" onSubmit={onLogin}>
             <label className="login-field">
-              <span>사용자 이름</span>
+              <span>{t('login.username')}</span>
               <input
                 name="username"
                 autoComplete="username"
@@ -172,7 +179,7 @@ export function LoginScreen() {
               />
             </label>
             <label className="login-field">
-              <span>비밀번호</span>
+              <span>{t('login.password')}</span>
               <input
                 ref={passwordRef}
                 name="password"
@@ -189,11 +196,11 @@ export function LoginScreen() {
               className="login-submit"
               disabled={busy || locked || username.trim() === '' || password === ''}
             >
-              {busy ? '로그인 중…' : '로그인'}
+              {busy ? t('login.signingIn') : t('login.signIn')}
             </button>
           </form>
         )}
-        <p className="login-footnote">OpenMediaVault 계정으로 로그인합니다.</p>
+        <p className="login-footnote">{t('login.footnote')}</p>
       </main>
     </div>
   )
@@ -201,6 +208,7 @@ export function LoginScreen() {
 
 // OfflineScreen은 앱을 시작할 때 백엔드에 연결할 수 없으면 보여 준다. 주기적으로 다시 시도한다.
 export function OfflineScreen() {
+  const { t } = useTranslation()
   useEffect(() => {
     const id = window.setInterval(() => void restore(), OFFLINE_RETRY_MS)
     return () => window.clearInterval(id)
@@ -210,11 +218,11 @@ export function OfflineScreen() {
     <div className="desktop auth-screen">
       <main className="login-card" aria-labelledby="offline-title">
         <h1 id="offline-title" className="login-title">
-          연결 끊김
+          {t('offline.title')}
         </h1>
-        <p className="login-hint">대시보드 서버에 연결할 수 없습니다. 잠시 후 다시 연결합니다.</p>
+        <p className="login-hint">{t('offline.message')}</p>
         <button type="button" className="login-submit" onClick={() => void restore()}>
-          지금 다시 연결
+          {t('offline.retry')}
         </button>
       </main>
     </div>

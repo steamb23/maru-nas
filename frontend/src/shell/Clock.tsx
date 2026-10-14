@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
+import { useLanguage } from '../i18n'
 import { formatClockDate, formatClockTime, msUntilNextMinute } from './clock'
 
 // Clock은 작업표시줄의 현재 시각(시:분)이다. 분이 바뀌는 순간에 맞춰 갱신하고, 툴팁에 날짜를 보여 준다.
 // 탭이 백그라운드에 있다가 돌아오면 타이머가 늦을 수 있어 화면에 보일 때 바로 다시 맞춘다.
 export function Clock() {
+  const lang = useLanguage()
   const [now, setNow] = useState(() => new Date())
 
   useEffect(() => {
@@ -20,8 +22,8 @@ export function Clock() {
   }, [])
 
   return (
-    <time className="taskbar-clock" dateTime={now.toISOString()} title={formatClockDate(now)}>
-      {formatClockTime(now)}
+    <time className="taskbar-clock" dateTime={now.toISOString()} title={formatClockDate(now, lang)}>
+      {formatClockTime(now, lang)}
     </time>
   )
 }

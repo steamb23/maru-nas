@@ -10,7 +10,6 @@ import { DEFAULT_TILE_SPLIT, type TileSide, type TileZone, splitForTiling, tileP
 export interface WindowState {
   id: string
   appId: AppId
-  title: string
   // x, y, width, height는 최대화·타일링·최소화 중에도 보존되어 복원 시 그대로 쓰인다.
   x: number
   y: number
@@ -113,7 +112,6 @@ export const useWindowStore = create<WindowStore>()((set, get) => {
       const win: WindowState = {
         id,
         appId,
-        title: app.title,
         ...pos,
         ...app.defaultSize,
         z: s.nextZ,

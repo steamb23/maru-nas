@@ -1,0 +1,69 @@
+{
+  "app": {
+    "title": "OMV Desktop"
+  },
+  "login": {
+    "sessionExpired": "Your session has expired. Please sign in again.",
+    "twoFactorRedirect": "Two-factor authentication for this account must be completed in OpenMediaVault.",
+    "twoFactorPrompt": "Enter your two-factor authentication code.",
+    "code": "Authentication code",
+    "verify": "Verify",
+    "verifying": "Verifying…",
+    "startOver": "Start over",
+    "username": "Username",
+    "password": "Password",
+    "signIn": "Sign in",
+    "signingIn": "Signing in…",
+    "footnote": "Sign in with your OpenMediaVault account.",
+    "withCountdown": "{{message}} ({{remaining}})",
+    "error": {
+      "network": "Cannot reach the server. Check your network connection.",
+      "invalidCredentials": "Incorrect username or password.",
+      "rateLimited": "Too many sign-in attempts. Please try again later.",
+      "challengeFailed": "Incorrect authentication code.",
+      "challengeExpired": "Authentication timed out. Please sign in again.",
+      "omvUnavailable": "Cannot connect to OpenMediaVault.",
+      "badRequest": "Enter your username and password.",
+      "unauthorized": "You are not signed in. Please sign in again.",
+      "httpStatus": "Could not sign in (HTTP {{status}})."
+    }
+  },
+  "offline": {
+    "title": "Disconnected",
+    "message": "Cannot reach the dashboard server. Reconnecting shortly.",
+    "retry": "Reconnect now"
+  },
+  "desktop": {
+    "label": "Desktop"
+  },
+  "window": {
+    "minimize": "Minimize",
+    "maximize": "Maximize",
+    "restore": "Restore",
+    "close": "Close",
+    "placeholder": "Coming soon"
+  },
+  "taskbar": {
+    "label": "Taskbar"
+  },
+  "profile": {
+    "menu": "User menu ({{username}})",
+    "roleAdmin": "Administrator",
+    "roleUser": "User",
+    "logout": "Sign out"
+  },
+  "apps": {
+    "systemInfo": "System Information",
+    "files": "Files",
+    "storage": "Storage"
+  },
+  "sysinfo": {
+    "disconnected": "Disconnected — reconnecting…",
+    "cpu": "CPU",
+    "memory": "Memory",
+    "uptime": "Uptime"
+  },
+  "language": {
+    "label": "Language"
+  }
+}

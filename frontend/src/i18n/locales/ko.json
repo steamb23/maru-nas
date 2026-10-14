@@ -1,0 +1,69 @@
+{
+  "app": {
+    "title": "OMV 데스크톱"
+  },
+  "login": {
+    "sessionExpired": "세션이 만료되었습니다. 다시 로그인하세요.",
+    "twoFactorRedirect": "이 계정의 2차 인증은 OpenMediaVault 화면에서 진행해야 합니다.",
+    "twoFactorPrompt": "2차 인증 코드를 입력하세요.",
+    "code": "인증 코드",
+    "verify": "확인",
+    "verifying": "확인 중…",
+    "startOver": "처음으로",
+    "username": "사용자 이름",
+    "password": "비밀번호",
+    "signIn": "로그인",
+    "signingIn": "로그인 중…",
+    "footnote": "OpenMediaVault 계정으로 로그인합니다.",
+    "withCountdown": "{{message}} ({{remaining}})",
+    "error": {
+      "network": "서버에 연결할 수 없습니다. 네트워크 상태를 확인하세요.",
+      "invalidCredentials": "사용자 이름 또는 비밀번호가 올바르지 않습니다.",
+      "rateLimited": "로그인 시도가 너무 많습니다. 잠시 후 다시 시도하세요.",
+      "challengeFailed": "인증 코드가 올바르지 않습니다.",
+      "challengeExpired": "인증 시간이 지났습니다. 다시 로그인하세요.",
+      "omvUnavailable": "OpenMediaVault에 연결할 수 없습니다.",
+      "badRequest": "사용자 이름과 비밀번호를 입력하세요.",
+      "unauthorized": "로그인되어 있지 않습니다. 다시 로그인하세요.",
+      "httpStatus": "로그인하지 못했습니다 (HTTP {{status}})."
+    }
+  },
+  "offline": {
+    "title": "연결 끊김",
+    "message": "대시보드 서버에 연결할 수 없습니다. 잠시 후 다시 연결합니다.",
+    "retry": "지금 다시 연결"
+  },
+  "desktop": {
+    "label": "바탕화면"
+  },
+  "window": {
+    "minimize": "최소화",
+    "maximize": "최대화",
+    "restore": "이전 크기로",
+    "close": "닫기",
+    "placeholder": "준비 중"
+  },
+  "taskbar": {
+    "label": "작업표시줄"
+  },
+  "profile": {
+    "menu": "사용자 메뉴 ({{username}})",
+    "roleAdmin": "관리자",
+    "roleUser": "사용자",
+    "logout": "로그아웃"
+  },
+  "apps": {
+    "systemInfo": "시스템 정보",
+    "files": "파일",
+    "storage": "저장소"
+  },
+  "sysinfo": {
+    "disconnected": "연결 끊김 — 다시 연결하는 중…",
+    "cpu": "CPU",
+    "memory": "메모리",
+    "uptime": "가동 시간"
+  },
+  "language": {
+    "label": "언어"
+  }
+}

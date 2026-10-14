@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next'
+import { useLanguage } from '../i18n'
 import { formatBytes, formatPercent, formatUptime, percentOf } from './format'
 import { useSystemInfo } from './useSystemInfo'
 
@@ -13,12 +15,13 @@ interface MeterProps {
 }
 
 function Meter({ label, percent, detail }: MeterProps) {
+  const lang = useLanguage()
   return (
     <div className="sysinfo-row">
       <dt>{label}</dt>
       <dd>
         <div className="sysinfo-value">
-          <span>{percent === null ? '—' : formatPercent(percent)}</span>
+          <span>{percent === null ? '—' : formatPercent(percent, lang)}</span>
           {detail && <span className="sysinfo-detail">{detail}</span>}
         </div>
         <div className="sysinfo-bar" aria-hidden="true">
@@ -30,6 +33,8 @@ function Meter({ label, percent, detail }: MeterProps) {
 }
 
 export function SystemInfoWindow({ active }: Props) {
+  const { t } = useTranslation()
+  const lang = useLanguage()
   const { data, status } = useSystemInfo(active)
   const mem = data?.memory
 
@@ -37,19 +42,19 @@ export function SystemInfoWindow({ active }: Props) {
     <div className="sysinfo">
       {status === 'disconnected' && (
         <p className="sysinfo-banner" role="status">
-          연결 끊김 — 다시 연결하는 중…
+          {t('sysinfo.disconnected')}
         </p>
       )}
       <dl className={status === 'disconnected' ? 'sysinfo-list stale' : 'sysinfo-list'}>
-        <Meter label="CPU" percent={data ? data.cpu.usagePercent : null} />
+        <Meter label={t('sysinfo.cpu')} percent={data ? data.cpu.usagePercent : null} />
         <Meter
-          label="메모리"
+          label={t('sysinfo.memory')}
           percent={mem ? percentOf(mem.usedBytes, mem.totalBytes) : null}
-          detail={mem ? `${formatBytes(mem.usedBytes)} / ${formatBytes(mem.totalBytes)}` : undefined}
+          detail={mem ? `${formatBytes(mem.usedBytes, lang)} / ${formatBytes(mem.totalBytes, lang)}` : undefined}
         />
         <div className="sysinfo-row">
-          <dt>가동 시간</dt>
-          <dd className="sysinfo-value">{data ? formatUptime(data.uptimeSeconds) : '—'}</dd>
+          <dt>{t('sysinfo.uptime')}</dt>
+          <dd className="sysinfo-value">{data ? formatUptime(data.uptimeSeconds, lang) : '—'}</dd>
         </div>
       </dl>
     </div>

@@ -2,19 +2,23 @@ import { describe, expect, it } from 'vitest'
 import { type ProfileMenuItem, PROFILE_MENU_ITEMS, groupItems, nextIndex, visibleItems } from './profileMenu'
 
 const items: ProfileMenuItem[] = [
-  { id: 'logout', label: 'a', icon: 'folder', group: 'g1' },
-  { id: 'logout', label: 'b', icon: 'folder', group: 'g1', requires: 'admin' },
-  { id: 'logout', label: 'c', icon: 'folder', group: 'g2' },
+  { id: 'logout', labelKey: 'apps.files', icon: 'folder', group: 'g1' },
+  { id: 'logout', labelKey: 'apps.storage', icon: 'folder', group: 'g1', requires: 'admin' },
+  { id: 'logout', labelKey: 'apps.systemInfo', icon: 'folder', group: 'g2' },
 ]
 
 describe('profileMenu', () => {
   it('관리자 전용 항목은 관리자에게만 보인다', () => {
-    expect(visibleItems(items, { username: 'u', admin: false }).map((i) => i.label)).toEqual(['a', 'c'])
-    expect(visibleItems(items, { username: 'a', admin: true }).map((i) => i.label)).toEqual(['a', 'b', 'c'])
+    expect(visibleItems(items, { username: 'u', admin: false }).map((i) => i.labelKey)).toEqual(['apps.files', 'apps.systemInfo'])
+    expect(visibleItems(items, { username: 'a', admin: true }).map((i) => i.labelKey)).toEqual([
+      'apps.files',
+      'apps.storage',
+      'apps.systemInfo',
+    ])
   })
 
   it('이어진 같은 group끼리 묶는다', () => {
-    expect(groupItems(items).map((g) => g.map((i) => i.label))).toEqual([['a', 'b'], ['c']])
+    expect(groupItems(items).map((g) => g.map((i) => i.labelKey))).toEqual([['apps.files', 'apps.storage'], ['apps.systemInfo']])
     expect(groupItems([])).toEqual([])
   })
 

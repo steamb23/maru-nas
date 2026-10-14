@@ -1,4 +1,5 @@
 // 데스크톱에서 열 수 있는 앱 목록. 바탕화면 아이콘은 이 순서대로 놓인다.
+import type { ParseKeys } from 'i18next'
 import type { IconName } from '../icons/resolver'
 import type { Size } from './geometry'
 
@@ -6,7 +7,8 @@ import type { Size } from './geometry'
 export type AppKind = 'system-info' | 'placeholder'
 
 export interface AppDef {
-  title: string
+  // 창 제목의 번역 키. 창 상태에는 제목을 복사하지 않고 그릴 때 번역한다(언어를 바꾸면 바로 바뀌게).
+  titleKey: ParseKeys
   icon: IconName
   kind: AppKind
   defaultSize: Size
@@ -17,7 +19,7 @@ export interface AppDef {
 
 export const APPS = {
   'system-info': {
-    title: '시스템 정보',
+    titleKey: 'apps.systemInfo',
     icon: 'utilities-system-monitor',
     kind: 'system-info',
     defaultSize: { width: 420, height: 360 },
@@ -27,13 +29,13 @@ export const APPS = {
     minSize: { width: 320, height: 270 },
   },
   files: {
-    title: '파일',
+    titleKey: 'apps.files',
     icon: 'folder',
     kind: 'placeholder',
     defaultSize: { width: 640, height: 420 },
   },
   storage: {
-    title: '저장소',
+    titleKey: 'apps.storage',
     icon: 'drive-harddisk',
     kind: 'placeholder',
     defaultSize: { width: 560, height: 400 },

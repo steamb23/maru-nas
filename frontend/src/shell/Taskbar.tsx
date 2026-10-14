@@ -1,5 +1,6 @@
 import { type PointerEvent, type TransitionEvent, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
+import { useTranslation } from 'react-i18next'
 import { IconImage } from '../icons/IconImage'
 import { getApp } from '../windows/apps'
 import { type WindowState, selectActiveId, useWindowStore } from '../windows/store'
@@ -78,6 +79,7 @@ const sameIds = (a: readonly string[], b: readonly WindowState[]) =>
   a.length === b.length && a.every((id, i) => id === b[i].id)
 
 export function Taskbar() {
+  const { t } = useTranslation()
   const windows = useWindowStore((s) => s.windows)
   const activeId = useWindowStore(selectActiveId)
   const listRef = useRef<HTMLUListElement>(null)
@@ -243,7 +245,7 @@ export function Taskbar() {
 
   return (
     <div className="taskbar-dock">
-      <nav className="taskbar" aria-label="작업표시줄">
+      <nav className="taskbar" aria-label={t('taskbar.label')}>
         <ul ref={listRef} className="taskbar-items">
           {renderIds.map((id) => {
             const ghost = leaving.get(id)
@@ -255,7 +257,7 @@ export function Taskbar() {
                 <li key={id} className="leaving" data-task-id={id} inert>
                   <button type="button" className="task">
                     <IconImage name={getApp(ghost.appId).icon} size={20} />
-                    <span className="task-title">{ghost.title}</span>
+                    <span className="task-title">{t(getApp(ghost.appId).titleKey)}</span>
                   </button>
                 </li>
               )
@@ -295,7 +297,7 @@ export function Taskbar() {
                   }}
                 >
                   <IconImage name={getApp(w.appId).icon} size={20} />
-                  <span className="task-title">{w.title}</span>
+                  <span className="task-title">{t(getApp(w.appId).titleKey)}</span>
                 </button>
               </li>
             )

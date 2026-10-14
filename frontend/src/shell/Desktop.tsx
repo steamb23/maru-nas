@@ -1,5 +1,6 @@
 // 데스크톱 셸: 바탕화면 아이콘, 창 레이어, 작업표시줄.
 import { useLayoutEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useShallow } from 'zustand/react/shallow'
 import { APP_IDS } from '../windows/apps'
 import type { Size } from '../windows/geometry'
@@ -15,6 +16,7 @@ import { useClosingWindows } from './useClosingWindows'
 const closingSnapshot = (win: WindowState, prev: WindowStore): ClosingWindow => ({ win, tileSplit: prev.tileSplit })
 
 export function Desktop() {
+  const { t } = useTranslation()
   const rootRef = useRef<HTMLDivElement>(null)
   const areaRef = useRef<HTMLDivElement>(null)
   // 데스크톱 영역(작업표시줄 제외) 크기. 창 위치 제한의 기준이다.
@@ -51,7 +53,7 @@ export function Desktop() {
   return (
     <div className="desktop" ref={rootRef}>
       <div className="desktop-area" ref={areaRef}>
-        <ul className="desktop-icons" aria-label="바탕화면">
+        <ul className="desktop-icons" aria-label={t('desktop.label')}>
           {APP_IDS.map((appId) => (
             <li key={appId}>
               <DesktopIcon appId={appId} bounds={bounds} />

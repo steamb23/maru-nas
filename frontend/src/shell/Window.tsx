@@ -1,4 +1,5 @@
 import { type PointerEvent, useCallback, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { IconImage } from '../icons/IconImage'
 import { SystemInfoWindow } from '../sysinfo/SystemInfoWindow'
 import { getApp } from '../windows/apps'
@@ -51,6 +52,7 @@ const { focus, close, minimize, toggleMaximize, tile, detachAt, moveTo } = useWi
 const fromButton = (e: { target: EventTarget }) => e.target instanceof Element && e.target.closest('button') !== null
 
 export function Window({ id, bounds, closingState, onClosed }: Props) {
+  const { t } = useTranslation()
   const stored = useWindowStore((s) => s.windows.find((w) => w.id === id))
   const win = stored ?? closingState?.win
   const closing = stored === undefined && closingState !== undefined
@@ -75,6 +77,8 @@ export function Window({ id, bounds, closingState, onClosed }: Props) {
 
   if (!win) return null
   const app = getApp(win.appId)
+  const title = t(app.titleKey)
+  const maximizeLabel = win.maximized ? t('window.restore') : t('window.maximize')
   const layout = layoutOf(win)
 
   const onPointerDown = (e: PointerEvent<HTMLElement>) => {
@@ -161,7 +165,7 @@ export function Window({ id, bounds, closingState, onClosed }: Props) {
         className={classes}
         style={style}
         hidden={anim.hidden}
-        aria-label={win.title}
+        aria-label={title}
         aria-hidden={closing || undefined}
         onPointerDownCapture={() => focus(id)}
       >
@@ -177,21 +181,25 @@ export function Window({ id, bounds, closingState, onClosed }: Props) {
           }}
         >
           <IconImage name={app.icon} size={20} />
-          <h2 className="titlebar-title">{win.title}</h2>
+          <h2 className="titlebar-title">{title}</h2>
           <div className="titlebar-buttons">
-            <button type="button" className="win-btn" aria-label="최소화" title="최소화" onClick={() => minimize(id)}>
+            <button type="button" className="win-btn" aria-label={t('window.minimize')}
+              title={t('window.minimize')}
+              onClick={() => minimize(id)}>
               <IconImage name="window-minimize-symbolic" size={16} />
             </button>
             <button
               type="button"
               className="win-btn"
-              aria-label={win.maximized ? '이전 크기로' : '최대화'}
-              title={win.maximized ? '이전 크기로' : '최대화'}
+              aria-label={maximizeLabel}
+              title={maximizeLabel}
               onClick={onToggleMaximize}
             >
               <IconImage name={win.maximized ? 'window-restore-symbolic' : 'window-maximize-symbolic'} size={16} />
             </button>
-            <button type="button" className="win-btn close" aria-label="닫기" title="닫기" onClick={() => close(id)}>
+            <button type="button" className="win-btn close" aria-label={t('window.close')}
+              title={t('window.close')}
+              onClick={() => close(id)}>
               <IconImage name="window-close-symbolic" size={16} />
             </button>
           </div>

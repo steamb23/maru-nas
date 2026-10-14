@@ -1,5 +1,6 @@
 // 작업표시줄 오른쪽 끝의 프로필 버튼과 메뉴.
 import { type KeyboardEvent, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { SessionInfo } from '../api/types.gen'
 import { useAuthStore } from '../auth/store'
 import { IconImage } from '../icons/IconImage'
@@ -33,6 +34,7 @@ export function ProfileAvatar({ size }: { user: SessionInfo; size: number }) {
 }
 
 export function ProfileMenu() {
+  const { t } = useTranslation()
   const user = useAuthStore((s) => s.user)
   const [open, setOpen] = useState(false)
   // 닫기 애니메이션 중이면 true. 그동안 메뉴를 그려 두되 클릭·포커스는 받지 않는다.
@@ -122,7 +124,7 @@ export function ProfileMenu() {
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={open ? menuId : undefined}
-        aria-label={`사용자 메뉴 (${user.username})`}
+        aria-label={t('profile.menu', { username: user.username })}
         title={user.username}
         onClick={() => (open ? hide() : show())}
       >
@@ -141,7 +143,7 @@ export function ProfileMenu() {
             <ProfileAvatar user={user} size={36} />
             <div className="profile-menu-user">
               <span className="profile-menu-name">{user.username}</span>
-              <span className="profile-menu-role">{user.admin ? '관리자' : '사용자'}</span>
+              <span className="profile-menu-role">{user.admin ? t('profile.roleAdmin') : t('profile.roleUser')}</span>
             </div>
           </div>
           {groups.map((group) => (
@@ -158,7 +160,7 @@ export function ProfileMenu() {
                   }}
                 >
                   <IconImage name={item.icon} size={16} />
-                  <span>{item.label}</span>
+                  <span>{t(item.labelKey)}</span>
                 </button>
               ))}
             </div>

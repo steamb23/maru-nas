@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatBytes, formatPercent, formatUptime, percentOf } from './format'
+import { formatBytes, formatPercent, formatUnit, formatUptime, percentOf } from './format'
 
 describe('formatBytes', () => {
   it.each([
@@ -10,27 +10,43 @@ describe('formatBytes', () => {
     [16 * 1024 ** 3, '16.0 GiB'],
     [5.25 * 1024 ** 4, '5.3 TiB'],
   ])('%d → %s', (bytes, want) => {
-    expect(formatBytes(bytes)).toBe(want)
+    expect(formatBytes(bytes, 'ko')).toBe(want)
+    expect(formatBytes(bytes, 'en')).toBe(want)
+  })
+
+  it('소수 구분자는 locale을 따른다', () => {
+    expect(formatBytes(1536, 'de')).toBe('1,5 KiB')
   })
 })
 
 describe('formatUptime', () => {
   it.each([
-    [0, '0분'],
-    [59, '0분'],
-    [60 * 12, '12분'],
-    [3600 * 4 + 60 * 12, '4시간 12분'],
-    [86400 * 3 + 60 * 12, '3일 0시간 12분'],
-    [86400 * 3 + 3600 * 4 + 60 * 12 + 30.5, '3일 4시간 12분'],
-  ])('%d초 → %s', (sec, want) => {
-    expect(formatUptime(sec)).toBe(want)
+    [0, '0분', '0 minutes'],
+    [59, '0분', '0 minutes'],
+    [60, '1분', '1 minute'],
+    [60 * 12, '12분', '12 minutes'],
+    [3600 + 60, '1시간 1분', '1 hour 1 minute'],
+    [3600 * 4 + 60 * 12, '4시간 12분', '4 hours 12 minutes'],
+    [86400 * 3 + 60 * 12, '3일 0시간 12분', '3 days 0 hours 12 minutes'],
+    [86400 * 3 + 3600 * 4 + 60 * 12 + 30.5, '3일 4시간 12분', '3 days 4 hours 12 minutes'],
+  ])('%d초 → %s / %s', (sec, ko, en) => {
+    expect(formatUptime(sec, 'ko')).toBe(ko)
+    expect(formatUptime(sec, 'en')).toBe(en)
+  })
+})
+
+describe('formatUnit', () => {
+  it('복수형을 locale에 맞춘다', () => {
+    expect(formatUnit(30, 'second', 'ko')).toBe('30초')
+    expect(formatUnit(1, 'second', 'en')).toBe('1 second')
+    expect(formatUnit(30, 'second', 'en')).toBe('30 seconds')
   })
 })
 
 describe('formatPercent / percentOf', () => {
   it('소수점 한 자리로 표시한다', () => {
-    expect(formatPercent(21)).toBe('21.0%')
-    expect(formatPercent(3.14159)).toBe('3.1%')
+    expect(formatPercent(21, 'ko')).toBe('21.0%')
+    expect(formatPercent(3.14159, 'en')).toBe('3.1%')
   })
 
   it('비율을 0~100으로 계산하고 total이 0이면 0', () => {

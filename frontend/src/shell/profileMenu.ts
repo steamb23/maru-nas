@@ -3,6 +3,7 @@
 // 항목을 추가하려면 PROFILE_MENU_ITEMS에 한 줄을 넣고 ProfileMenu.tsx의 actions에 동작을 넣는다
 // (ProfileMenuItemId에 추가하면 동작을 빠뜨렸을 때 타입 오류가 난다). 나중에 개인 설정, 정보,
 // 재시작·종료(admin) 같은 항목이 들어갈 자리다. 같은 group끼리 묶고 group 사이에 구분선을 그린다.
+import type { ParseKeys } from 'i18next'
 import type { SessionInfo } from '../api/types.gen'
 import type { IconName } from '../icons/resolver'
 
@@ -10,7 +11,7 @@ export type ProfileMenuItemId = 'logout'
 
 export interface ProfileMenuItem {
   id: ProfileMenuItemId
-  label: string
+  labelKey: ParseKeys
   icon: IconName
   group: string
   // admin이면 관리자에게만 보인다.
@@ -18,7 +19,7 @@ export interface ProfileMenuItem {
 }
 
 export const PROFILE_MENU_ITEMS: readonly ProfileMenuItem[] = [
-  { id: 'logout', label: '로그아웃', icon: 'system-log-out-symbolic', group: 'session' },
+  { id: 'logout', labelKey: 'profile.logout', icon: 'system-log-out-symbolic', group: 'session' },
 ]
 
 // visibleItems는 사용자 권한으로 볼 수 있는 항목만 남긴다.
