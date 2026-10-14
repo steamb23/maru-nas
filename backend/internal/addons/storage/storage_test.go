@@ -47,7 +47,8 @@ func TestSelectFilesystems(t *testing.T) {
 	want := []string{
 		"/",
 		"/boot/efi",
-		"/export/media", // /dev/sda1의 가장 짧은 마운트 경로
+		// /dev/sda1은 처음 나온 마운트(뒤의 /export/media 등은 bind mount)
+		"/srv/dev-disk-by-uuid-00000000-0000-4000-8000-000000000001",
 		"/srv/dev-disk-by-uuid-00000000-0000-4000-8000-000000000002",
 		"/srv/mergerfs/pool",
 		"/srv/my vault",
@@ -104,7 +105,7 @@ func TestStorage(t *testing.T) {
 	if root.Label != "system" || root.TotalBytes != 100*gib || root.UsedBytes != 40*gib || root.AvailableBytes != 55*gib {
 		t.Errorf("root %+v", root)
 	}
-	if got := byPoint["/export/media"].Label; got != "my data" {
+	if got := byPoint["/srv/dev-disk-by-uuid-00000000-0000-4000-8000-000000000001"].Label; got != "my data" {
 		t.Errorf("sda1 label %q", got)
 	}
 	if got := byPoint["/srv/my vault"].Label; got != "vault" {

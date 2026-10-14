@@ -68,7 +68,8 @@ var skipTypes = []string{"squashfs", "iso9660", "udf", "erofs"}
 //   - 장치가 /dev/로 시작하거나 mergerfs·zfs 풀이어야 한다. overlay, tmpfs, proc, 네트워크
 //     파일시스템(nfs, cifs)은 뺀다. 네트워크 파일시스템은 statfs가 오래 걸릴 수 있다
 //   - zfs는 최상위 데이터셋만(같은 풀 공간을 나눠 쓰므로)
-//   - 같은 장치가 여러 곳에 마운트되어 있으면(bind mount, 컨테이너) 마운트 경로가 가장 짧은 것 하나만
+//   - 같은 장치가 여러 곳에 마운트되어 있으면(bind mount, 컨테이너) 처음 나온 것 하나만.
+//     /proc/mounts는 마운트한 순서이므로 원래 마운트가 bind mount보다 앞에 있다
 //
 // 결과는 마운트 경로 순서다.
 func SelectFilesystems(mounts []Mount) []Mount {
@@ -88,7 +89,7 @@ func SelectFilesystems(mounts []Mount) []Mount {
 			continue
 		}
 		key := m.Type + "\x00" + m.Device
-		if prev, ok := byDevice[key]; ok && !shorter(m.MountPoint, prev.MountPoint) {
+		if _, ok := byDevice[key]; ok {
 			continue
 		}
 		byDevice[key] = m
@@ -99,13 +100,6 @@ func SelectFilesystems(mounts []Mount) []Mount {
 	}
 	slices.SortFunc(out, func(a, b Mount) int { return strings.Compare(a.MountPoint, b.MountPoint) })
 	return out
-}
-
-func shorter(a, b string) bool {
-	if len(a) != len(b) {
-		return len(a) < len(b)
-	}
-	return a < b
 }
 
 // decodeLabel은 udev가 /dev/disk/by-label 이름에 쓰는 \xHH 이스케이프를 푼다.
