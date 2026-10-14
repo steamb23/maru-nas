@@ -13,18 +13,20 @@
 
 ### manifest
 
-애드온마다 하나씩 둔다. Go 코드 곳곳에 흩어 두지 않고 직렬화할 수 있는 데이터 구조로 정의한다. 런타임 선언형 애드온이 생기더라도 같은 구조를 그대로 읽을 수 있게 하려는 것이다.
+애드온마다 하나씩 둔다. Go 코드 곳곳에 흩어 두지 않고 직렬화할 수 있는 데이터 구조(`api.Manifest`)로 정의한다. 런타임 선언형 애드온이 생기더라도 같은 구조를 그대로 읽을 수 있게 하려는 것이다.
 
 | 필드 | 내용 |
 |---|---|
 | `id` | 고유 이름(`storage`, `containers` 등). 창·위젯 종류 식별자와 같다 |
-| `title`, `icon` | 창 제목·위젯 이름, freedesktop 아이콘 이름(리졸버로 해석) |
-| `views.window` | 창 보기. 기본·최소 크기(픽셀). 지금의 `AppDef`에 있는 값 |
+| `title`, `icon` | 창 제목·위젯 이름의 번역 키(`en.json`), freedesktop 아이콘 이름(리졸버로 해석). 없는 키·아이콘은 tsc가 잡는다 |
+| `views.window` | 창 보기. 기본(`defaultSize`)·최소(`minSize`) 크기(픽셀) |
 | `views.widget` | 위젯 보기. 기본·최소 크기(그리드 칸). 3-2단계에서 추가한다 |
-| `requires.plugins` | 필요한 OMV 플러그인 패키지 이름. 비어 있으면 플러그인 없이 동작한다 |
+| `requires.plugins` | 필요한 OMV 플러그인 패키지 이름. 비어 있으면 플러그인 없이 동작한다. `internal/addons`의 `knownPlugins` 표에 있는 이름만 쓸 수 있다 |
 | `requires.admin` | admin만 쓸 수 있는지 여부 |
 | `rpc.read` | 호출하는 읽기 전용 OMV RPC (`Service.method`) |
 | `rpc.write` | 호출하는 상태 변경 OMV RPC. 4단계 전에는 비어 있어야 한다 |
+
+레지스트리(`addons.NewRegistry`)는 등록할 때 manifest를 검사한다: id 형식(소문자·숫자·`-`)과 중복, 보기 1개 이상, 크기, `Service.method` 형식, 같은 메서드를 읽기와 쓰기로 함께 선언하지 않기, `Session.*` 금지(로그인·로그아웃은 백엔드만 부른다), provider 1개 이상.
 
 한 애드온 안에서도 출처마다 조건이 다를 수 있다(예: 온도는 hwmon은 누구나, SMART 디스크 온도는 admin). 그래서 `requires`는 "창·위젯을 쓸 수 있는 최소 조건"이고, provider별 조건은 provider가 따로 선언한다.
 
@@ -37,7 +39,7 @@
 - 애드온은 provider를 우선순위대로 갖는다
   - 쓸 수 있는 것 중 첫 번째를 쓰거나, 항목에 따라 결과를 합친다
   - 합칠 때는 같은 센서·장치가 중복되지 않게 한다
-- 직접 읽기 provider는 `fs.FS`를 주입받는다. 지금의 `sysinfo.Reader`와 같은 방식이다
+- 직접 읽기 provider는 `fs.FS`를 주입받는다. `internal/addons/sysinfo`의 `Reader`(provider 이름 `proc`)와 같은 방식이다
 - OMV RPC provider는 RPC 클라이언트 인터페이스를 주입받는다. 테스트에서는 가짜 클라이언트를 넣는다
 
 ### capability 감지
@@ -45,20 +47,39 @@
 - 플러그인 설치 여부
   - `/usr/share/openmediavault/engined/rpc/<name>.inc` 파일이 있는지와 `/var/lib/dpkg/status`의 패키지 상태로 판단한다. 둘 다 root 없이 읽힌다
   - 백엔드 시작 시 확인하고, 로그인할 때와 일정 주기마다 다시 확인한다. 실행 중에 플러그인을 설치하거나 지운 경우를 반영하기 위해서다
+  - 구현은 `addons.Detector`다. 결과를 5분 보관하고, 지난 뒤 처음 묻는 요청에서 다시 확인한다(백그라운드 고루틴 없음). 읽지 못하면 직전 결과를 유지한다
+  - `.inc` 파일 이름은 패키지마다 `knownPlugins` 표에 둔다. 표에 넣을 때 `dpkg -S`로 소속을 확인한다
 - 세션 역할: 로그인 응답의 `permissions.role`에서 얻은 admin 여부
-- `/api/capabilities`는 두 정보를 합쳐 애드온과 provider별로 다음 값을 돌려준다
-  - `available`
-  - `reason`: `plugin_missing`, `admin_required` 등
-  - `sources`: 쓸 수 있는 provider 이름 목록
-- 프론트는 이 결과대로 아이콘·위젯을 숨기거나, 창·위젯 안에 "플러그인 필요", "관리자 전용"으로 안내한다
+- `/api/capabilities`는 두 정보를 합쳐 애드온마다 다음 값을 돌려준다. 함께 `plugins`(감지한 알려진 플러그인 목록)도 준다
+  - `available`: manifest의 `requires`를 만족하고, 쓸 수 있는 provider가 하나 이상 있다
+  - `reason`: `admin_required`, `plugin_missing`. 관리자 조건을 먼저 본다(일반 사용자에게 플러그인 설치 안내는 쓸모없다)
+  - `sources`: 쓸 수 있는 provider 이름 목록(우선순위 순서)
+- 프론트(`src/addons/capabilities.ts`)는 로그인한 동안 5분마다 가져온다. 관리자 전용은 아이콘을 숨기고, 플러그인 없음은 아이콘을 둔 채 창 안에 안내한다(`AddonUnavailable`). 아직 받지 못했거나 요청이 실패하면 모두 그린다. 실제 차단은 백엔드가 한다
 - 실제 호출이 OMV에서 `RPC service '...' not found.`(HTTP 404)로 실패하면 provider를 쓸 수 없는 상태로 바꾼다. 이 경로는 마지막 안전장치일 뿐, 감지의 기본 수단이 아니다
 
 ### RPC 허용 목록과 단계 규칙
 
-- 백엔드의 OMV RPC 중계(`/desk/api/rpc`와 provider의 내부 호출)는 등록된 manifest의 `rpc.read`·`rpc.write`에 있는 메서드만 통과시킨다
-- 쓰기 RPC 허용 여부는 백엔드 한 곳(상수)에서 정한다. 3단계에서는 꺼 둔다
+- 백엔드의 OMV RPC 중계(`/desk/api/rpc`와 provider의 내부 호출)는 등록된 manifest의 `rpc.read`·`rpc.write`에 있는 메서드만 통과시킨다(`Registry.Classify`, 대소문자까지 정확히 일치)
+- 쓰기 RPC 허용 여부는 백엔드 한 곳(상수 `addons.WritesEnabled`)에서 정한다. 3단계에서는 꺼 둔다
 - 테스트로 "모든 내장 애드온의 `rpc.write`가 비어 있다"를 확인한다. 이 테스트는 4단계에서 바꾼다
 - 역할 검사는 OMV가 최종적으로 한다. 백엔드는 `requires.admin`으로 불필요한 호출을 미리 막을 뿐이다
+
+### `/api/rpc` 중계
+
+브라우저 경로는 `/desk/api/rpc`. 본문은 `{service, method, params}`(64KB 이하)이고, 성공하면 OMV 응답의 `response` 값을 그대로 돌려준다.
+
+| 상황 | 응답 |
+|---|---|
+| 허용 목록에 없음, 쓰기인데 `WritesEnabled`가 꺼짐 | 403 `rpc_forbidden` (OMV에 보내지 않음) |
+| 메서드를 선언한 애드온을 이 사용자가 쓸 수 없음 | 403 `admin_required` / `plugin_missing` (OMV에 보내지 않음) |
+| OMV 401 | 대시보드 세션을 지우고 401 |
+| OMV 404 (RPC 서비스 없음) | 플러그인 감지를 다시 하도록 표시하고 502 `omv_error` |
+| 그 밖의 OMV 오류, 연결 실패 | 502 `omv_error`. OMV 메시지는 로그에만 남긴다 |
+
+- OMV에는 `updatelastaccess=false`로 호출한다. 창·위젯의 주기 요청이 OMV 세션을 연장하면 안 되기 때문이다
+- params는 다시 직렬화하지 않고 그대로 넘긴다(큰 정수의 정밀도 유지)
+- provider의 내부 RPC 호출은 아직 없다. 3-3에서 첫 RPC provider를 만들 때 같은 허용 목록(`Classify`)과 `updatelastaccess=false`를 거치게 한다
+- 통과 경로(허용된 메서드가 실제 OMV까지 가는 경우)는 Go 테스트(omvfake)로만 검증했다. 3-3의 첫 RPC 애드온에서 실제 OMV로 확인한다
 
 ## 보기: 창과 위젯
 
@@ -84,7 +105,7 @@
 
 ### 시스템 정보
 
-- 3-1단계: 지금의 시스템 정보 창을 첫 내장 애드온(창 보기)으로 옮긴다
+- 3-1단계: 시스템 정보 창을 첫 내장 애드온(창 보기, provider `proc`)으로 옮겼다
 - 3-2단계: CPU 사용률·RAM·가동 시간 요약을 첫 위젯으로 옮긴다
 - 이후(시점 미정): 창 보기를 프로세스 모니터로 확장한다. 프로세스 목록 읽기는 읽기 전용이지만, 프로세스 종료 같은 조작은 4단계 이후다
 
@@ -92,30 +113,37 @@
 
 ### 위치와 등록
 
-- 백엔드: `backend/internal/addons/<id>/`. manifest와 provider, 그리고 필요하면 API 핸들러를 둔다. `internal/addons`의 정적 목록에 등록한다
-- 프론트엔드: `frontend/src/addons/<id>/`. 보기 컴포넌트(창, 위젯)와 데이터 훅을 둔다. 정적 목록에 등록한다
-- 프론트 목록은 지금의 `windows/apps.ts`처럼 `as const` 객체로 둔다. 컴파일 타임 타입(`AppId`)을 유지하기 위해서다
+- 백엔드
+  - `backend/internal/addons`: 계약(`Addon`, `Provider`, `Registry`, `Classify`, `WritesEnabled`), capability 감지·계산, TS 생성
+  - `backend/internal/addons/<id>/`: manifest와 provider, 그리고 필요하면 API 핸들러. 계약 패키지를 import한다
+  - `backend/internal/addons/builtin`: 정적 목록(`builtin.New`). 계약 패키지와 각 애드온이 서로 import하지 않게 따로 둔다
+- 프론트엔드
+  - `frontend/src/addons/<id>/`: 보기 컴포넌트(창, 위젯)와 데이터 훅
+  - `frontend/src/addons/registry.ts`: 애드온 id별 보기 컴포넌트(`ADDON_VIEWS`)
+  - `frontend/src/addons/common/`: 애드온이 함께 쓰는 `poller.ts`, `format.ts`
+  - `windows/apps.ts`는 창 보기가 있는 애드온을 manifest에서 만들고 준비 중 앱과 합친다. 준비 중 앱과 같은 id의 애드온을 만들면 준비 중 앱을 지운다
 - 별도 패키지, 런타임 로딩, Go `plugin` 패키지는 쓰지 않는다
 
-### 3-1단계에서 정할 것
+### manifest 원본과 id 일치 검사 (3-1단계에서 정함)
 
-- manifest를 어디에 둘지
-  - 백엔드와 프론트가 같은 manifest를 읽어야 한다
-  - 후보 1: 애드온 디렉터리의 JSON 파일을 Go는 `go:embed`로, 프론트는 import로 읽는다
-  - 후보 2: Go 구조체를 원본으로 두고 tygo와 생성 스크립트로 프론트 목록을 만든다
-- 백엔드 id 목록과 프론트 id 목록이 어긋나지 않게 하는 검사 방법
+- Go 구조체가 원본이다. `cmd/genaddons`가 `frontend/src/addons/manifests.gen.ts`(`MANIFESTS`, `AddonId`)를 `as const`로 생성하고, `make types`가 tygo와 함께 실행한다
+  - JSON 파일 공유는 쓰지 않았다. `go:embed`는 패키지 밖 파일을 읽을 수 없고, Vite `server.fs.allow`에 backend 경로를 열어야 하며, JSON import는 리터럴 타입이 넓어져 `AddonId`를 얻으려면 결국 생성이 필요하다
+- 백엔드·프론트 id 일치는 두 겹으로 검사한다
+  1. Go 골든 테스트(`builtin`): 커밋된 `manifests.gen.ts`가 생성 결과와 같은지. 실패하면 `make types`를 실행한다. 테스트 캐시는 backend 모듈 밖 파일 변경을 추적하지 않으므로 `make test`는 Go 테스트를 `-count=1`로 실행한다
+  2. tsc: `ADDON_VIEWS`가 `Record<AddonId, …>`라 보기가 빠지거나 없는 id가 있으면 오류가 난다. `title`·`icon`은 `AddonManifest` 타입으로 번역 키·아이콘 이름인지 검사한다
 
 ### 새 애드온 추가 체크리스트
 
 1. 데이터 출처를 정하고 [data-sources.md](data-sources.md)에 추가한다. root가 필요한 정보는 OMV RPC로만 가져온다
 2. RPC 메서드 이름과 역할은 추측하지 않는다. `/usr/share/openmediavault/engined/rpc/*.inc`에서 확인한다
 3. manifest의 `requires`와 `rpc.read`를 채운다. `rpc.write`는 현재 단계가 허용할 때만 채운다
+   - 새 플러그인이 필요하면 `knownPlugins`에 패키지와 `.inc` 파일을 추가한다(`dpkg -S`로 확인)
 4. provider를 만든다
    - 입력부(`fs.FS`, RPC 클라이언트)를 주입받게 한다
    - `testdata/`에 합성한 픽스처로 테스트한다. 식별 정보(시리얼, MAC, IP, 호스트 이름, 사용자 이름)는 가짜 값으로 바꾼다
-5. 응답 구조체를 `internal/api`에 추가하고 `make types`를 실행한다
-6. 프론트 보기 컴포넌트(창, 위젯)를 만든다
-   - capability가 없을 때의 안내와 "연결 끊김" 상태를 처리한다
+5. `builtin.New`에 애드온을 등록하고, 응답 구조체를 `internal/api`에 추가한 뒤 `make types`를 실행한다(`types.gen.ts`, `manifests.gen.ts`)
+6. 프론트 보기 컴포넌트(창, 위젯)를 만들어 `addons/registry.ts`에 등록한다. 같은 id의 준비 중 앱이 있으면 지운다
+   - capability가 없을 때의 안내는 창 레벨(`AddonUnavailable`)이 처리한다. 보기 컴포넌트는 "연결 끊김" 상태를 처리한다
    - 주기 요청은 `poller.ts` 방식을 따른다. 위젯은 로그인한 동안 계속 떠 있으므로 갱신 주기를 창보다 길게 잡는 것을 검토한다
 7. 아이콘은 리졸버 매핑 테이블에 추가한다
 8. `make check`, `make build`

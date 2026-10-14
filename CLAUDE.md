@@ -56,7 +56,8 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 - **애드온 = manifest + provider + 보기(창, 위젯)**. 시스템 정보를 포함한 모든 기능을 같은 계약으로 만든다. 보기는 창과 바탕화면 위젯 중 하나 이상이며, 둘은 같은 provider·API를 쓰고 화면만 다르다
 - **위젯은 창 시스템과 분리한다**. 바탕화면 위 별도 레이어에 그리드 칸 단위로 붙이고, 창 저장소·창 컴포넌트에 위젯용 분기를 넣지 않는다. 공유는 provider, `/api/*`, `poller.ts`, 공통 훅까지만 한다
 - `/desk/api/rpc` 중계는 manifest 허용 목록(read·write 구분)에 있는 메서드만 통과시키고, 현재 단계가 허용하지 않는 write는 백엔드가 거부한다
-- 내장 애드온만 정적 목록으로 둔다(백엔드 `internal/addons/<id>/`, 프론트 `src/addons/<id>/`). 컴파일 타임 타입(`AppId`)을 유지하고, 별도 패키지·런타임 로딩·Go `plugin`은 쓰지 않는다
+- 내장 애드온만 정적 목록으로 둔다(백엔드 `internal/addons/<id>/` + `internal/addons/builtin`, 프론트 `src/addons/<id>/` + `src/addons/registry.ts`). 컴파일 타임 타입(`AppId`)을 유지하고, 별도 패키지·런타임 로딩·Go `plugin`은 쓰지 않는다
+- manifest 원본은 Go 구조체이고 프론트 목록(`manifests.gen.ts`)은 `make types`로 생성한다. 백엔드·프론트 id 일치는 Go 골든 테스트와 tsc(`Record<AddonId, …>`)가 검사한다
 - 플러그인 설치 여부는 `/usr/share/openmediavault/engined/rpc/<name>.inc`와 `/var/lib/dpkg/status`로 감지해 `/api/capabilities`로 내려준다
 - provider는 권한이 필요 없는 직접 읽기(`/proc`, `/sys`)를 1차로, OMV RPC를 보강으로 쓰고 응답에 출처를 담는다
 - 컨테이너는 compose 플러그인(omv-extras) RPC로 가져오며 Docker 런타임 기준으로 검증한다. Podman 모드는 미검증으로 표시한다
@@ -71,7 +72,7 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 | `make dev-fake` | `make dev`와 같지만 가짜 OMV(`127.0.0.1:8091`)를 함께 띄워 연결한다. `FAKEOMV_TIMEOUT=1m make dev-fake`처럼 세션 timeout을 분 단위로 바꿀 수 있다 |
 | `make build` | 프론트 빌드 → `backend/internal/web/static/dist/` → `bin/omvdesk` 단일 실행 파일 |
 | `make lint` | `gofmt -l`, `go vet`, oxlint, `tsc -b` |
-| `make test` | `go test ./...`, `vitest run` |
+| `make test` | `go test -count=1 ./...`(모듈 밖 생성물 검사가 캐시로 통과하지 않게), `vitest run` |
 | `make check` | lint + test |
 | `make types` | Go 구조체에서 TS 다시 생성: `internal/api` → `src/api/types.gen.ts`, 내장 애드온 manifest → `src/addons/manifests.gen.ts`. 둘 중 하나라도 바꾸면 반드시 실행하고 생성물도 함께 커밋한다(manifest 생성물은 Go 테스트가 검사) |
 
@@ -79,14 +80,14 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 
 ## 개발 단계
 
-마지막 완료 단계: **2단계**
+마지막 완료 단계: **3-1단계**
 
 3단계는 세부 단계(3-1 → 3-2 → 3-3) 순서로 진행하고, 완료 표시도 세부 단계로 적는다(예: **3-1단계**). "바로 다음 단계"는 다음 세부 단계를 뜻한다.
 
 1. 데스크톱 셸 + 시스템 정보 창(`/proc`의 CPU·RAM·가동 시간을 2초마다 갱신). 완료
 2. 로그인: OMV 위임 로그인, 세션 복원·만료, 로그인 시도 제한. 작업표시줄 시계·프로필 메뉴와 현지화(ko·en)도 이 무렵 추가했다. 로그인 대기 이스터에그(`frontend/src/auth/easterEgg/`)는 단계와 무관하게 사용자 요청으로 추가한 예외다. 완료
 3. 애드온과 위젯(읽기 전용): 세 세부 단계 모두 시스템 상태를 바꾸는 코드(쓰기 RPC 포함) 금지
-   - 3-1. 애드온 구현: 애드온 계약(manifest, provider, RPC 허용 목록)과 capability 감지(`/api/capabilities`)를 만든다
+   - 3-1. 애드온 구현: 애드온 계약(manifest, provider, RPC 허용 목록)과 capability 감지(`/api/capabilities`)를 만든다. 완료
      - 기존 시스템 정보 창을 첫 내장 애드온(창 보기)으로 옮겨 계약을 검증한다
      - 위젯 레이어와 새 기능 애드온은 만들지 않는다
    - 3-2. 위젯 시스템 구현: 바탕화면 위젯 레이어(그리드 배치, 추가·제거·이동·크기 조절, 배치 저장)와 manifest의 위젯 보기 선언을 만든다
@@ -132,6 +133,8 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 - 코드 주석은 한국어로 쓴다. 식별자·로그·에러 메시지는 영어를 유지한다
 
 ## 나중에 확인할 것
+
+- `/api/rpc` 중계의 통과 경로를 실제 OMV로 확인한다(3-3의 첫 RPC 애드온에서). 지금은 Go 테스트(omvfake)로만 검증했다
 
 - 같은 출처에서 OMV workbench를 iframe 창으로 띄울 수 있는지
 - 같은 탭 iframe은 sessionStorage를 공유하므로, 대시보드 로그인 후 OMV 창도 로그인 상태로 보이게 할 수 있는지. OMV 내부 저장 키(`username`, `permissions`)에 의존하는 실험이라 OMV 업데이트 시 깨질 수 있다. 실험 브랜치에서만 다룬다
