@@ -57,7 +57,8 @@
     "files": "Files",
     "storage": "Storage",
     "network": "Network",
-    "temperature": "Temperature"
+    "temperature": "Temperature",
+    "containers": "Containers"
   },
   "sysinfo": {
     "disconnected": "Disconnected — reconnecting…",
@@ -111,5 +112,29 @@
     "cpu": "CPU",
     "sensor": "Sensor {{n}}",
     "checkedAt": "Checked {{time}}"
+  },
+  "containers": {
+    "empty": "No containers.",
+    "running_one": "{{count}} running",
+    "running_other": "{{count}} running",
+    "stopped_one": "{{count}} stopped",
+    "stopped_other": "{{count}} stopped",
+    "unknownRuntime": "Unknown runtime",
+    "podmanUnverified": "Podman mode has not been verified with this dashboard. Some information may be wrong.",
+    "state": {
+      "running": "Running",
+      "paused": "Paused",
+      "restarting": "Restarting",
+      "exited": "Stopped",
+      "created": "Created",
+      "dead": "Dead",
+      "removing": "Removing",
+      "unknown": "Unknown"
+    },
+    "health": {
+      "healthy": "Healthy",
+      "unhealthy": "Unhealthy",
+      "starting": "Starting"
+    }
   }
 }

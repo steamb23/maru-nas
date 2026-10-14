@@ -3,6 +3,8 @@
 // tsc 오류가 난다. 컴포넌트를 import하므로 node 테스트 대상 모듈(windows/apps.ts 등)에서는 import하지 않는다.
 import type { ComponentType } from 'react'
 import { type AddonId, MANIFESTS } from './manifests.gen'
+import { ContainersWidget } from './containers/ContainersWidget'
+import { ContainersWindow } from './containers/ContainersWindow'
 import { NetworkWidget } from './network/NetworkWidget'
 import { NetworkWindow } from './network/NetworkWindow'
 import { StorageWidget } from './storage/StorageWidget'
@@ -24,4 +26,5 @@ export const ADDON_VIEWS: { [K in AddonId]: AddonViews<K> } = {
   storage: { Window: StorageWindow, Widget: StorageWidget },
   network: { Window: NetworkWindow, Widget: NetworkWidget },
   temperature: { Window: TemperatureWindow, Widget: TemperatureWidget },
+  containers: { Window: ContainersWindow, Widget: ContainersWidget },
 }

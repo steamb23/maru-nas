@@ -3,6 +3,7 @@ package builtin
 
 import (
 	"omv-desktop-dashboard/backend/internal/addons"
+	"omv-desktop-dashboard/backend/internal/addons/containers"
 	"omv-desktop-dashboard/backend/internal/addons/network"
 	"omv-desktop-dashboard/backend/internal/addons/storage"
 	"omv-desktop-dashboard/backend/internal/addons/sysinfo"
@@ -30,6 +31,7 @@ func New(d Deps) *addons.Registry {
 		storage.New(d.Storage),
 		network.New(d.Network),
 		temperature.New(d.Hwmon),
+		containers.New(),
 	)
 	if err != nil {
 		panic(err)

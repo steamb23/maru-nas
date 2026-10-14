@@ -16,6 +16,7 @@ import windowMaximize from '@colloid/actions/symbolic/window-maximize-symbolic.s
 import windowMinimize from '@colloid/actions/symbolic/window-minimize-symbolic.svg?url'
 import windowRestore from '@colloid/actions/symbolic/window-restore-symbolic.svg?url'
 import preferencesSystemNetworkEthernet from '@colloid/apps/scalable/preferences-system-network-ethernet.svg?url'
+import preferencesVirtualizationContainer from '@colloid/apps/scalable/preferences-virtualization-container.svg?url'
 import thermalMonitor from '@colloid/apps/scalable/thermal-monitor.svg?url'
 import utilitiesSystemMonitor from '@colloid/apps/scalable/utilities-system-monitor.svg?url'
 import preferencesDesktopLocale from '@colloid/categories/symbolic/preferences-desktop-locale-symbolic.svg?url'
@@ -49,6 +50,7 @@ const ICONS = {
   'utilities-system-monitor': { url: utilitiesSystemMonitor, kind: 'color' },
   'preferences-system-network-ethernet': { url: preferencesSystemNetworkEthernet, kind: 'color' },
   'thermal-monitor': { url: thermalMonitor, kind: 'color' },
+  'preferences-virtualization-container': { url: preferencesVirtualizationContainer, kind: 'color' },
   'drive-harddisk': { url: driveHarddisk, kind: 'color' },
   folder: { url: folder, kind: 'color' },
 } as const satisfies Record<string, Icon>

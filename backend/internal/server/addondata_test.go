@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"omv-desktop-dashboard/backend/internal/addons"
+	"omv-desktop-dashboard/backend/internal/addons/containers"
 	"omv-desktop-dashboard/backend/internal/api"
 	"omv-desktop-dashboard/backend/internal/omv/omvfake"
 )
@@ -178,5 +179,18 @@ func TestAddonDataOMVErrors(t *testing.T) {
 	wantCode(t, b.do(http.MethodGet, "/api/addons/swallow", nil), http.StatusUnauthorized, api.ErrUnauthorized)
 	if e.store.Len() != 0 {
 		t.Error("dashboard session not deleted")
+	}
+}
+
+// 실제 내장 애드온(containers)이 가짜 OMV까지 provider 내부 RPC로 가는 경로.
+func TestAddonDataBuiltinContainers(t *testing.T) {
+	e, _, _ := newDataEnv(t, containers.New())
+	b := e.browser()
+	wantStatus(t, b.login("user", "user"), http.StatusOK)
+	r := b.do(http.MethodGet, "/api/addons/containers", nil)
+	wantStatus(t, r, http.StatusOK)
+	got := decode[api.ContainersResponse](t, r)
+	if got.Runtime != "docker" || len(got.Containers) != len(omvfake.DefaultPluginData().Containers) {
+		t.Errorf("got %+v", got)
 	}
 }

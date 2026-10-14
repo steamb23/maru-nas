@@ -141,6 +141,47 @@ export const MANIFESTS = {
       ]
     }
   },
+  "containers": {
+    "id": "containers",
+    "title": "apps.containers",
+    "icon": "preferences-virtualization-container",
+    "views": {
+      "window": {
+        "defaultSize": {
+          "width": 520,
+          "height": 440
+        },
+        "minSize": {
+          "width": 360,
+          "height": 240
+        }
+      },
+      "widget": {
+        "defaultSize": {
+          "cols": 3,
+          "rows": 2
+        },
+        "minSize": {
+          "cols": 2,
+          "rows": 1
+        },
+        "maxSize": {
+          "cols": 4,
+          "rows": 5
+        }
+      }
+    },
+    "requires": {
+      "plugins": [
+        "openmediavault-compose"
+      ]
+    },
+    "rpc": {
+      "read": [
+        "Compose.getContainers"
+      ]
+    }
+  },
 } as const satisfies Record<string, AddonManifest>
 
 export type AddonId = keyof typeof MANIFESTS
