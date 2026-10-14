@@ -181,9 +181,9 @@
     "attention_other": "{{count}} issues",
     "state": {
       "running": "Running",
-      "stopped": "Enabled · Stopped",
+      "stopped": "Still stopped",
       "disabled": "Disabled",
-      "disabledRunning": "Disabled · Running"
+      "disabledRunning": "Still running"
     },
     "action": {
       "enable": "Enable",

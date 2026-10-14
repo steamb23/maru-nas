@@ -255,7 +255,7 @@
 #### 서비스 (`services`, 4-3단계)
 
 - 상태: `Services.getStatus`(관리자). `IServiceStatus`를 구현한 OMV 모듈마다 `{name, title, enabled, running}`이다. `name`은 대개 모듈 이름(`ssh`, `samba`, `nfs`, `rsyncd`)이지만 compose 플러그인처럼 다른 값(`Docker`)을 쓰는 모듈도 있다. `title`은 OMV가 번역한 문구라 표시에만 쓴다. 참거짓을 숫자·문자열로 주는 플러그인이 있을 수 있어 느슨하게 읽는다
-- 상태 점: 켜짐+실행 ok, 켜짐+멈춤 위험, 꺼짐+실행 주의(설정과 다름), 꺼짐 idle. 위젯과 창 모두 문제 있는 것부터 보여 준다
+- 상태 점과 문구: 켜짐+실행 ok "실행 중", 켜짐+정지 위험 "아직 정지 중", 꺼짐+실행 주의 "아직 실행 중"(설정과 실제가 다름), 꺼짐 idle "꺼짐". 위젯과 창 모두 문제 있는 것부터 보여 준다
 - 켜기·끄기는 어댑터 표(`adapters`)에 있는 서비스만 한다: SSH(`SSH.get`/`set`), SMB/CIFS(`SMB.getSettings`/`setSettings`), NFS, Rsync 서버(`Rsyncd`). 응답의 `toggleable`로 알려 주고, 창은 나머지 서비스에 "OMV에서 설정" 안내를 둔다
 - 흐름(`toggle`): `Config.isDirty`가 참이면 409 `config_dirty`로 거절(사용자가 workbench에서 적용하지 않은 변경을 대신 배포하지 않기 위해) → get, 이미 원하는 값이면 성공 → get 결과에서 set 스키마 속성만 골라 `enable`만 바꿔 set → `Config.applyChangesBg({modules: [], force: false})` → `WaitBg`. 시간 제한 3분
   - set 스키마(`datamodels/rpc.<svc>.json`)는 속성이 모두 필수다. get은 다른 속성도 줄 수 있으므로(NFS의 `shares`) 그대로 넘기지 않는다

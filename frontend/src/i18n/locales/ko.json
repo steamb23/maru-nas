@@ -181,9 +181,9 @@
     "attention_other": "주의 {{count}}",
     "state": {
       "running": "실행 중",
-      "stopped": "켜짐 · 멈춤",
+      "stopped": "아직 정지 중",
       "disabled": "꺼짐",
-      "disabledRunning": "꺼짐 · 실행 중"
+      "disabledRunning": "아직 실행 중"
     },
     "action": {
       "enable": "켜기",
