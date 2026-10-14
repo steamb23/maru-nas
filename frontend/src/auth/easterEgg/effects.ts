@@ -31,7 +31,7 @@ export interface EggEffectModule {
 export type EffectLoader = () => Promise<EggEffectModule>
 
 // 무작위로 고를 효과 목록
-export const EFFECTS: readonly EffectLoader[] = [() => import('./decode')]
+export const EFFECTS: readonly EffectLoader[] = [() => import('./decode'), () => import('./bootLog')]
 
 // pickEffect는 목록에서 하나를 고른다. 비어 있으면 undefined.
 export function pickEffect<T>(list: readonly T[], rng: Rng): T | undefined {
