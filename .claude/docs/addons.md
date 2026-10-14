@@ -60,7 +60,7 @@
 
 ### RPC 허용 목록과 단계 규칙
 
-- 백엔드의 OMV RPC 호출(`/desk/api/rpc` 중계, provider의 내부 호출, 조작)은 등록된 manifest의 `rpc.read`·`rpc.write`에 있는 메서드만 통과시킨다(`Registry.Classify`, 대소문자까지 정확히 일치)
+- 백엔드의 OMV RPC 호출(`/api/rpc` 중계, provider의 내부 호출, 조작)은 등록된 manifest의 `rpc.read`·`rpc.write`에 있는 메서드만 통과시킨다(`Registry.Classify`, 대소문자까지 정확히 일치)
 - 쓰기 RPC 허용 여부는 백엔드 한 곳(상수 `addons.WritesEnabled`)에서 정한다. 3단계에서는 꺼 두었고 4단계에서 켰다
 - 켜져 있어도 **쓰기는 조작으로만** 부른다. `/api/rpc` 중계와 `Fetch`는 쓰기를 거부한다. `Compose.doContainerCommand`처럼 파라미터를 검사하지 않고 셸 명령을 만드는 OMV 메서드가 있어서, 쓰기 파라미터는 브라우저가 아니라 애드온 Go 코드가 만들어야 한다
 - 테스트(`builtin`)로 "쓰기를 선언한 내장 애드온은 조작이 있다"를 확인한다
@@ -68,7 +68,7 @@
 
 ### `/api/rpc` 중계
 
-브라우저 경로는 `/desk/api/rpc`. 본문은 `{service, method, params}`(64KB 이하)이고, 성공하면 OMV 응답의 `response` 값을 그대로 돌려준다.
+브라우저 경로는 `/api/rpc`. 본문은 `{service, method, params}`(64KB 이하)이고, 성공하면 OMV 응답의 `response` 값을 그대로 돌려준다.
 
 | 상황 | 응답 |
 |---|---|

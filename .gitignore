@@ -1,5 +1,6 @@
 # 개인 환경 정보
 CLAUDE.local.md
+*.local.md
 .claude/settings.local.json
 *.local
 .env.local

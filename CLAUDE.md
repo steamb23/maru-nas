@@ -29,15 +29,15 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 
 ## 아키텍처
 
-- **배포**: OMV와 같은 출처(same origin)로 서빙한다. 앞단의 Caddy가 HTTPS를 처리하고, 같은 도메인에서 `/desk/*`는 이 백엔드로, 나머지는 OMV로 리버스 프록시한다. OMV의 nginx 설정은 건드리지 않는다
-  - 도메인 등 개인 환경 정보는 `CLAUDE.local.md`(커밋 안 함)에 둔다. 커밋되는 파일에 도메인·IP를 하드코딩하지 않는다
-  - 같은 출처 구성은 OMV 화면을 iframe으로 띄우는 실험을 위해 유지한다. 인증과는 무관하다
+- **배포**: 앞단 리버스 프록시(Caddy 등)가 HTTPS를 처리하고 대시보드를 둘 호스트·경로를 정한다(예: 별도 서브도메인 루트, 또는 OMV와 같은 도메인의 경로 접두사). 프론트는 상대 경로(`base: './'`)로 빌드하므로 경로 접두사에 묶이지 않고, 백엔드 라우트는 대시보드 루트(`/api/*`) 기준이다. OMV의 nginx 설정은 건드리지 않는다
+  - 도메인 등 개인 환경 정보는 `*.local.md`(커밋 안 함)에 둔다. 커밋되는 파일에 도메인·IP를 하드코딩하지 않는다
+  - OMV 화면을 iframe으로 띄우는 실험은 OMV와 같은 출처(같은 도메인의 경로 접두사)에 둘 때만 가능하다. 인증과는 무관하다
 - **실행**: systemd 서비스로 Go 실행 파일 하나를 전용 일반 사용자로 실행한다. 프론트엔드는 `go:embed`로 포함하고, 127.0.0.1에만 바인딩한다
   - Docker는 쓰지 않는다(호스트 `/proc`, `/sys`, 네트워크를 직접 봐야 하므로)
   - systemd 유닛과 Caddy 설정 예시는 `deploy/`에 작성만 하고, 설치는 사용자가 한다
 - **백엔드는 얇은 API 서버**다. 역할은 (1) 현황 읽기: `/proc`·`/sys` 직접 읽기, root가 필요한 정보는 OMV RPC, (2) 설정 변경 요청을 OMV `rpc.php`로 전달, (3) 대시보드 사용자 설정(위젯 배치 등) 저장, 세 가지뿐이다
   - (3)은 대시보드 자신의 상태만 다룬다. 상태 디렉터리(`-state-dir`, systemd `StateDirectory=`)의 사용자별 JSON 파일이며 OMV 설정·시스템 파일과 무관하다(`internal/prefs`)
-- **OMV RPC는 항상 백엔드가 중계한다**: 브라우저 → `/desk/api/rpc` → 백엔드 → OMV `rpc.php`. 브라우저가 `rpc.php`를 직접 호출하지 않는다
+- **OMV RPC는 항상 백엔드가 중계한다**: 브라우저 → `/api/rpc` → 백엔드 → OMV `rpc.php`. 브라우저가 `rpc.php`를 직접 호출하지 않는다
   - 백엔드는 대시보드 세션마다 OMV 세션을 메모리에 보관하고, 항상 같은 주소(127.0.0.1)와 고정 User-Agent로 OMV를 호출한다
   - 브라우저의 쿠키를 OMV에 그대로 전달하지 않는다. OMV는 User-Agent가 다르면 세션을 파기하므로 사용자를 로그아웃시키게 된다
 - **인증**: 자체 로그인 화면에서 백엔드가 OMV `Session.login`(필요하면 `Session.verify`)으로 위임하고, 대시보드 자체 세션 쿠키를 발급한다. 세션 만료는 OMV timeout 기준 브라우저 타이머로 처리한다. 상세는 `.claude/rules/auth-omv.md`
@@ -57,7 +57,7 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 - **애드온 = manifest + provider + 보기(창, 위젯)**. 시스템 정보를 포함한 모든 기능을 같은 계약으로 만든다. 보기는 창과 바탕화면 위젯 중 하나 이상이며, 둘은 같은 provider·API를 쓰고 화면만 다르다
 - **위젯은 창 시스템과 분리한다**. 바탕화면 위 별도 레이어에 그리드 칸 단위로 붙이고, 창 저장소·창 컴포넌트에 위젯용 분기를 넣지 않는다. 공유는 provider, `/api/*`, `poller.ts`, 공통 훅까지만 한다
   - 그리드는 오른쪽 위 기준이고, 배치는 백엔드에 사용자별로 저장한다(`/api/preferences`). 추가·제거는 컨텍스트 메뉴(`shell/contextMenu.ts`)로 한다. 상세는 `.claude/docs/addons.md`의 "위젯 시스템"
-- `/desk/api/rpc` 중계는 manifest 허용 목록의 read 메서드만 통과시킨다. write는 애드온 조작(`POST /api/addons/{id}/actions/{action}`)으로만 부르며, 조작이 대상을 검사하고 OMV 파라미터를 직접 만든다
+- `/api/rpc` 중계는 manifest 허용 목록의 read 메서드만 통과시킨다. write는 애드온 조작(`POST /api/addons/{id}/actions/{action}`)으로만 부르며, 조작이 대상을 검사하고 OMV 파라미터를 직접 만든다
 - 내장 애드온만 정적 목록으로 둔다(백엔드 `internal/addons/<id>/` + `internal/addons/builtin`, 프론트 `src/addons/<id>/` + `src/addons/registry.ts`). 컴파일 타임 타입(`AppId`)을 유지하고, 별도 패키지·런타임 로딩·Go `plugin`은 쓰지 않는다
 - manifest 원본은 Go 구조체이고 프론트 목록(`manifests.gen.ts`)은 `make types`로 생성한다. 백엔드·프론트 id 일치는 Go 골든 테스트와 tsc(`Record<AddonId, …>`)가 검사한다
 - 플러그인 설치 여부는 `/usr/share/openmediavault/engined/rpc/<name>.inc`와 `/var/lib/dpkg/status`로 감지해 `/api/capabilities`로 내려준다
@@ -70,7 +70,7 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 
 | 명령 | 내용 |
 |---|---|
-| `make dev` | 개발 서버. 백엔드 `127.0.0.1:8090`(`go run`) + Vite `0.0.0.0:5173`. 접속은 `http://<NAS-IP>:5173/desk/`. Ctrl+C로 둘 다 종료. 실제 OMV에 연결하므로 `frontend/.env.local`에 `ONMARU_OMV_URL`(이 NAS의 OMV 주소)을 둔다 |
+| `make dev` | 개발 서버. 백엔드 `127.0.0.1:8090`(`go run`) + Vite `0.0.0.0:5173`. 접속은 `http://<NAS-IP>:5173/`. Ctrl+C로 둘 다 종료. 실제 OMV에 연결하므로 `frontend/.env.local`에 `ONMARU_OMV_URL`(이 NAS의 OMV 주소)을 둔다 |
 | `make dev-fake` | `make dev`와 같지만 가짜 OMV(`127.0.0.1:8091`)를 함께 띄워 연결한다. `FAKEOMV_TIMEOUT=1m make dev-fake`처럼 세션 timeout을 분 단위로 바꿀 수 있다 |
 | `make build` | 프론트 빌드 → `backend/internal/web/static/dist/` → `bin/onmaru` 단일 실행 파일 |
 | `make lint` | `gofmt -l`, `go vet`, oxlint, `tsc -b` |
@@ -114,7 +114,7 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 
 1. **Go 테스트**: 가짜 OMV(`internal/omv/omvfake`)를 `httptest`로 띄워 실제 클라이언트·핸들러와 연결한다. 상세는 `.claude/rules/backend.md`
 2. **Vitest**: 저장소·클라이언트·순수 함수
-3. **브라우저(Playwright)**: `make dev-fake`로 띄우고 `http://<NAS-IP>:5173/desk/`에 가짜 계정으로 로그인해 확인한다. 만료 확인은 `FAKEOMV_TIMEOUT=1m make dev-fake`
+3. **브라우저(Playwright)**: `make dev-fake`로 띄우고 `http://<NAS-IP>:5173/`에 가짜 계정으로 로그인해 확인한다. 만료 확인은 `FAKEOMV_TIMEOUT=1m make dev-fake`
    - 사용자가 `make dev`(실제 OMV 연결)를 띄워 두었을 수 있다. 로그인하기 전에 백엔드 로그의 `omv:` 주소가 가짜 OMV(`127.0.0.1:8091`)인지 확인한다. `scripts/dev.sh`는 개발 서버 포트가 이미 쓰이고 있으면 시작하지 않는다
    - 탭을 여러 개 열면 뒤쪽 탭에 마우스 입력이 전달되지 않을 수 있다. 다른 탭 확인이 끝나면 닫거나 브라우저를 새로 연다
 4. **실제 OMV**: 사용자가 `make dev`로 직접 확인한다. Claude는 단계마다 확인 체크리스트를 제시한다

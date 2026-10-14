@@ -237,7 +237,7 @@ func TestLoginAndSession(t *testing.T) {
 	}
 
 	ck := b.cookies[SessionCookie]
-	if ck == nil || !ck.HttpOnly || ck.SameSite != http.SameSiteStrictMode || ck.Path != "/desk" || ck.Secure {
+	if ck == nil || !ck.HttpOnly || ck.SameSite != http.SameSiteStrictMode || ck.Path != "/" || ck.Secure {
 		t.Fatalf("session cookie %+v", ck)
 	}
 

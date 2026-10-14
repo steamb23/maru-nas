@@ -1,7 +1,7 @@
 // Package server는 HTTP 라우트와 핸들러를 연결한다.
 //
-// 라우트는 대시보드 루트(/api/...)에 둔다. 외부 접두사 /desk는
-// 리버스 프록시(개발: Vite, 운영: Caddy)가 제거한다.
+// 라우트는 대시보드 루트(/api/...)에 둔다. 대시보드를 경로 접두사 아래에 둘 때는
+// 리버스 프록시가 접두사를 제거한다.
 package server
 
 import (
@@ -66,7 +66,7 @@ type Config struct {
 	// Sessions, Limiter가 nil이면 새로 만든다.
 	Sessions *auth.Store
 	Limiter  *auth.Limiter
-	// CookiePath는 브라우저가 보는 대시보드 경로다(리버스 프록시가 떼기 전). 기본 /desk.
+	// CookiePath는 브라우저가 보는 대시보드 경로다(리버스 프록시가 떼기 전). 기본 /.
 	CookiePath string
 	// CheckInterval마다 요청 처리 중에 OMV 세션이 살아 있는지 확인한다. 기본 60초.
 	// 예상 만료 시각이 지났으면 주기와 상관없이 확인한다.
@@ -93,7 +93,7 @@ func New(cfg Config) http.Handler {
 		cfg.Limiter = auth.NewLimiter()
 	}
 	if cfg.CookiePath == "" {
-		cfg.CookiePath = "/desk"
+		cfg.CookiePath = "/"
 	}
 	if cfg.CheckInterval == 0 {
 		cfg.CheckInterval = 60 * time.Second

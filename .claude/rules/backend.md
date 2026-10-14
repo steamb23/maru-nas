@@ -10,7 +10,7 @@ paths:
 - 대시보드 사용자 설정(위젯 배치 등)은 `internal/prefs`가 상태 디렉터리(`-state-dir`, `ONMARU_STATE_DIR`, 없으면 systemd의 `STATE_DIRECTORY`)에 사용자별 JSON으로 저장한다. 비우면 메모리에만 둔다. 대시보드 자신의 상태만 두며 OMV 설정이나 시스템 파일은 쓰지 않는다. `make dev`는 `.dev-state/real`, `make dev-fake`는 `.dev-state/fake`를 쓴다(커밋 안 함)
   - 설정 변경 API는 부분별로 둔다(`PUT /api/preferences/widgets`). 나중에 다른 설정이 생겨도 서로 덮어쓰지 않게 한다
 - `cmd/fakeomv`와 `internal/omv/omvfake`는 개발·테스트용이다. 운영 바이너리(`cmd/onmaru`)에서 import하지 않는다
-- `/api/*` 경로는 대시보드 루트 기준이다. `/desk` 접두사는 리버스 프록시(Vite·Caddy)가 제거한다. 쿠키 Path는 `-cookie-path`(기본 `/desk`)
+- `/api/*` 경로는 대시보드 루트 기준이다. 대시보드를 경로 접두사 아래에 두면 리버스 프록시가 접두사를 제거한다. 쿠키 Path는 `-cookie-path`(기본 `/`)
 - `internal/web/static/`에는 `.gitkeep`만 커밋한다. `dist/`는 빌드 결과다
 - `internal/api`는 TS 타입 생성의 원본이다. 바꾸면 `make types`를 실행하고 `frontend/src/api/types.gen.ts`도 함께 커밋한다
 - 주기 요청·세션 확인으로 부르는 OMV RPC는 `options.updatelastaccess=false`로 호출해 OMV 세션을 연장하지 않는다. 세션 연장은 로그인과 사용자 활동 신호만 한다(`auth-omv.md`의 "세션 만료")

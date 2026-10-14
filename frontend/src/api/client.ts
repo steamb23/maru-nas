@@ -13,7 +13,7 @@ import type {
 } from './types.gen'
 import { isArrayOf, isNum, isObj, isOptional, isStr } from './guards'
 
-// BASE_URL은 Vite base 설정값('/desk/')이다.
+// BASE_URL은 Vite base 설정값이다. 개발 서버는 '/', 빌드는 './'(문서 URL 기준 상대 경로)다.
 const API_BASE = `${import.meta.env.BASE_URL}api`
 
 export type ErrorCode = NonNullable<ErrorResponse['code']>

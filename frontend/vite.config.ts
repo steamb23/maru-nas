@@ -15,8 +15,9 @@ export default defineConfig(({ mode }) => {
   const backend = env.ONMARU_LISTEN || '127.0.0.1:8090'
 
   return {
-    // 운영 환경에서는 Caddy가 /desk/* 를 백엔드로 넘기며 /desk 접두사를 제거한다.
-    base: '/desk/',
+    // 상대 경로로 빌드해 어떤 경로 접두사 아래에서도 동작하게 한다. 대시보드를 둘 호스트·경로는
+    // 리버스 프록시가 정한다(접두사 아래에 둘 때는 프록시가 접두사를 떼고 넘긴다).
+    base: './',
     plugins: [react()],
     resolve: {
       alias: {
@@ -32,11 +33,9 @@ export default defineConfig(({ mode }) => {
       // 저장소 루트 전체를 허용하면 CLAUDE.local.md 등이 LAN에 노출된다.
       fs: { allow: [fromHere('.'), fromHere('../vendor/icons')] },
       proxy: {
-        // 백엔드는 /api/* 에 마운트되어 있으므로 /desk 접두사를 떼고 넘긴다.
         // xfwd: 브라우저 IP를 X-Forwarded-For로 넘긴다(로그인 제한·OMV 인증 로그용).
-        '/desk/api': {
+        '/api': {
           target: `http://${backend}`,
-          rewrite: (path) => path.replace(/^\/desk/, ''),
           xfwd: true,
         },
       },

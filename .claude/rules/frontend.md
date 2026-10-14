@@ -5,7 +5,7 @@ paths:
 
 # 프론트엔드 공통
 
-- Vite `base`는 `/desk/`. 개발 서버는 `/desk/api/*`를 `/desk`를 뗀 뒤 백엔드로 프록시한다
+- Vite `base`는 상대 경로 `./`다. 자산과 API(`${BASE_URL}api`)를 문서 URL 기준으로 찾으므로 어떤 경로 접두사 아래에서도 동작한다. 절대 경로(`/...`)로 자산·API를 참조하지 않는다. 개발 서버는 `/`에서 서빙하고 `/api/*`를 백엔드로 프록시한다
 - `server.fs.allow`는 `frontend/`와 `vendor/icons/`만 허용한다. 개발 서버가 LAN에 열려 있으므로 저장소 루트 전체를 허용하지 않는다
 - 개인 환경 값(`DEV_HOST`, `DEV_ALLOWED_HOSTS`, `ONMARU_LISTEN`, `ONMARU_OMV_URL`)은 커밋하지 않는 `frontend/.env.local`에 둔다
 - `src/api/types.gen.ts`, `src/addons/manifests.gen.ts`는 생성물이다. 직접 수정하지 말고 `make types`로 다시 만든다

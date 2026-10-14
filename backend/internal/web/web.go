@@ -16,7 +16,7 @@ import (
 var staticFS embed.FS
 
 // Handler는 포함된 프론트엔드를 서빙한다. 경로는 대시보드 루트 기준이며,
-// /desk 접두사는 리버스 프록시가 제거한다.
+// 경로 접두사가 있으면 리버스 프록시가 제거한다.
 func Handler() http.Handler {
 	dist, err := fs.Sub(staticFS, "static/dist")
 	if err != nil {

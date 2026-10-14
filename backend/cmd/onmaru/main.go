@@ -34,7 +34,7 @@ func main() {
 		"수신 주소 (루프백만 허용, 환경 변수 ONMARU_LISTEN)")
 	omvURL := flag.String("omv-url", cmp.Or(os.Getenv("ONMARU_OMV_URL"), "http://127.0.0.1"),
 		"OMV 웹 UI 주소 (루프백만 허용, 환경 변수 ONMARU_OMV_URL)")
-	cookiePath := flag.String("cookie-path", cmp.Or(os.Getenv("ONMARU_COOKIE_PATH"), "/desk"),
+	cookiePath := flag.String("cookie-path", cmp.Or(os.Getenv("ONMARU_COOKIE_PATH"), "/"),
 		"브라우저가 보는 대시보드 경로 (세션 쿠키 Path, 환경 변수 ONMARU_COOKIE_PATH)")
 	// systemd의 StateDirectory=를 쓰면 STATE_DIRECTORY가 설정된다.
 	stateDir := flag.String("state-dir", cmp.Or(os.Getenv("ONMARU_STATE_DIR"), os.Getenv("STATE_DIRECTORY")),
