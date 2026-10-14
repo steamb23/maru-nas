@@ -412,8 +412,8 @@ export interface SmartDisk {
    */
   celsius?: number /* float64 */;
   /**
-   * Status는 OverallStatus의 요약이다. good: 정상, warning: 과거에 문제가 있었거나 불량 섹터,
-   * failing: 지금 기준치를 넘었거나 불량 섹터가 많거나 상태 확인 실패.
+   * Status는 OverallStatus의 요약이다(OMV workbench의 색 구분과 같다). good: 정상, warning: 불량 섹터가
+   * 조금 있음, failing: 기준치를 지금 또는 과거에 넘었거나 불량 섹터가 많음, unknown: 상태 확인 실패 등.
    */
   status: 'good' | 'warning' | 'failing' | 'unknown';
   /**

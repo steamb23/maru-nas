@@ -57,14 +57,16 @@ func number(raw json.RawMessage) float64 {
 	return f
 }
 
-// Summarize는 OMV의 SMART 평가(SmartInformation::SMART_ASSESSMENT_*)를 세 단계로 줄인다.
+// Summarize는 OMV의 SMART 평가(SmartInformation::SMART_ASSESSMENT_*)를 줄인다. 색 구분은 OMV
+// workbench의 SMART 상태 위젯(dashboard.d/smart_status.yaml)을 따른다: BAD_SECTOR만 경고,
+// BAD_ATTRIBUTE_NOW·BAD_ATTRIBUTE_IN_THE_PAST·BAD_SECTOR_MANY는 오류, BAD_STATUS는 알 수 없음(회색).
 func Summarize(overall string) string {
 	switch overall {
 	case "GOOD":
 		return api.SmartGood
-	case "BAD_ATTRIBUTE_IN_THE_PAST", "BAD_SECTOR":
+	case "BAD_SECTOR":
 		return api.SmartWarning
-	case "BAD_ATTRIBUTE_NOW", "BAD_SECTOR_MANY", "BAD_STATUS":
+	case "BAD_ATTRIBUTE_NOW", "BAD_ATTRIBUTE_IN_THE_PAST", "BAD_SECTOR_MANY":
 		return api.SmartFailing
 	}
 	return api.SmartUnknown

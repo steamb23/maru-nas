@@ -202,7 +202,8 @@
   - 결과가 가장 최근 기준 시각 이전이다. 기준 시각은 `-smart-refresh-at`(`OMVDESK_SMART_REFRESH_AT`, 기본 `00:00`, 서버 로컬 시간). 매일 첫 접속 때 건강 상태를 한 번 확인하는 용도다
   - 새로고침(`?refresh=1`)이고 마지막으로 가져온 지 1분이 지났다. 응답의 `refreshInSeconds`로 남은 시간을 알려 주고, 창은 그동안 버튼을 막는다
 - 동시 요청은 OMV 호출 하나로 합친다. 실패하면 1분 동안 다시 부르지 않고, 보관한 결과가 있으면 그것을 준다
-- `overallstatus`를 good(GOOD), warning(BAD_ATTRIBUTE_IN_THE_PAST, BAD_SECTOR), failing(BAD_ATTRIBUTE_NOW, BAD_SECTOR_MANY, BAD_STATUS)으로 줄이고 원래 값도 준다. 시리얼 번호·WWN은 브라우저에 넘기지 않는다
+- 파라미터는 OMV workbench의 SMART 대시보드 위젯과 같은 `{start: 0, limit: -1}`이다
+- `overallstatus`는 workbench의 색 구분을 따라 good(GOOD), warning(BAD_SECTOR), failing(BAD_ATTRIBUTE_NOW, BAD_ATTRIBUTE_IN_THE_PAST, BAD_SECTOR_MANY), unknown(BAD_STATUS 등)으로 줄이고 원래 값도 준다. 시리얼 번호·WWN은 브라우저에 넘기지 않는다
 - 위젯은 10분마다 백엔드에 묻지만 백엔드는 기준 시각을 넘긴 경우에만 OMV를 부른다
 
 ### 시스템 정보

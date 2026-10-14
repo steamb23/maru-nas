@@ -130,7 +130,8 @@ func (c *Cache) fetch(ctx context.Context, rpc addons.RPCCaller, done chan struc
 	// 브라우저가 요청을 취소해도 기다리는 다른 요청을 위해 끝까지 가져온다.
 	fctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), fetchTimeout)
 	defer cancel()
-	raw, err := rpc.Call(fctx, "Smart", "getList", map[string]any{"start": 0, "limit": nil})
+	// OMV workbench의 SMART 대시보드 위젯과 같은 파라미터(limit -1은 전체)다.
+	raw, err := rpc.Call(fctx, "Smart", "getList", map[string]any{"start": 0, "limit": -1})
 	var disks []api.SmartDisk
 	if err == nil {
 		disks, err = ParseList(json.RawMessage(raw))

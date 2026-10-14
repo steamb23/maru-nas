@@ -53,9 +53,9 @@ func TestParseList(t *testing.T) {
 
 func TestSummarize(t *testing.T) {
 	for in, want := range map[string]string{
-		"GOOD": api.SmartGood, "BAD_ATTRIBUTE_IN_THE_PAST": api.SmartWarning, "BAD_SECTOR": api.SmartWarning,
-		"BAD_ATTRIBUTE_NOW": api.SmartFailing, "BAD_SECTOR_MANY": api.SmartFailing, "BAD_STATUS": api.SmartFailing,
-		"": api.SmartUnknown,
+		"GOOD": api.SmartGood, "BAD_SECTOR": api.SmartWarning,
+		"BAD_ATTRIBUTE_NOW": api.SmartFailing, "BAD_ATTRIBUTE_IN_THE_PAST": api.SmartFailing,
+		"BAD_SECTOR_MANY": api.SmartFailing, "BAD_STATUS": api.SmartUnknown, "": api.SmartUnknown,
 	} {
 		if got := Summarize(in); got != want {
 			t.Errorf("%q → %q, want %q", in, got, want)
@@ -75,7 +75,7 @@ func (f *fakeRPC) Call(_ context.Context, service, method string, params any) (j
 	if service != "Smart" || method != "getList" {
 		return nil, errors.New("unexpected method")
 	}
-	if p, _ := json.Marshal(params); string(p) != `{"limit":null,"start":0}` {
+	if p, _ := json.Marshal(params); string(p) != `{"limit":-1,"start":0}` {
 		return nil, errors.New("bad params " + string(p))
 	}
 	if f.block != nil {
