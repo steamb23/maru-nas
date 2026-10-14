@@ -7,6 +7,7 @@ import { APP_IDS } from '../windows/apps'
 import type { Size } from '../windows/geometry'
 import { type WindowState, type WindowStore, stableOrder, useWindowStore } from '../windows/store'
 import { ContextMenu } from './ContextMenu'
+import { DialogOutlet } from './DialogOutlet'
 import { DesktopIcon } from './DesktopIcon'
 import { Taskbar } from './Taskbar'
 import { TileDivider } from './TileDivider'
@@ -20,6 +21,8 @@ import { useContextMenuTrigger } from './useContextMenuTrigger'
 
 // 닫힌 창은 마지막 상태와 그때의 타일 그룹 비율로 그린다.
 const closingSnapshot = (win: WindowState, prev: WindowStore): ClosingWindow => ({ win, tileSplit: prev.tileSplit })
+
+const DESKTOP_SCOPE = { kind: 'desktop' } as const
 
 export function Desktop() {
   const { t } = useTranslation()
@@ -90,6 +93,7 @@ export function Desktop() {
         <Taskbar inert={blocked} />
         <ContextMenu />
         <div className="modal-host modal-host-desktop" ref={setModalHost} />
+        <DialogOutlet scope={DESKTOP_SCOPE} />
       </div>
     </DesktopModalContext>
   )

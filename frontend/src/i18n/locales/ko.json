@@ -199,6 +199,10 @@
     },
     "toggleHint": "켜기·끄기는 SSH, SMB/CIFS, NFS, RSync 서버만 지원합니다. 다른 서비스는 OpenMediaVault에서 설정하세요."
   },
+  "dialog": {
+    "ok": "확인",
+    "cancel": "취소"
+  },
   "actions": {
     "cancel": "취소",
     "working": "처리 중…",

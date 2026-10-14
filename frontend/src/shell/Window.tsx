@@ -9,6 +9,7 @@ import { type AppId, getApp, isAddonApp } from '../windows/apps'
 import { type Point, type Rect, type Size, clampPosition, restoreGrab } from '../windows/geometry'
 import { type WindowState, selectActiveId, useWindowStore } from '../windows/store'
 import { type TileZone, layoutOf, tileRect, tileZoneAt } from '../windows/tiling'
+import { DialogOutlet } from './DialogOutlet'
 import { PlaceholderWindow } from './PlaceholderWindow'
 import { ResizeHandles } from './ResizeHandles'
 import { TilePreview } from './TilePreview'
@@ -98,6 +99,7 @@ export function Window({ id, bounds, closingState, onClosed }: Props) {
   // 창 범위 모달. 열려 있으면 창 본문만 막고 제목 표시줄·크기 조절은 그대로 둔다.
   const { setHost: setModalHost, layer: baseLayer, blocked } = useModalHost()
   const modalLayer = useMemo<WindowModalLayer>(() => ({ ...baseLayer, windowId: id }), [baseLayer, id])
+  const dialogScope = useMemo(() => ({ kind: 'window', windowId: id }) as const, [id])
   const anim = useWindowAnimation(
     sectionRef,
     id,
@@ -285,6 +287,7 @@ export function Window({ id, bounds, closingState, onClosed }: Props) {
             <WindowBody appId={win.appId} notice={notice} active={!win.minimized && !closing && pageVisible} />
           </div>
           <div className="modal-host modal-host-window" ref={setModalHost} />
+          <DialogOutlet scope={dialogScope} />
         </WindowModalContext>
         {layout === 'free' && <ResizeHandles id={id} rect={win} bounds={bounds} minSize={app.minSize} />}
         {win.tile && <TileResizeHandle side={win.tile} bounds={bounds} />}

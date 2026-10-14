@@ -3,6 +3,7 @@
 // - 창 범위: 창 본문(.window-body)만 막는다. 제목 표시줄(끌기·최소화·닫기)과 크기 조절, 다른 창은 쓸 수 있다
 // - 데스크톱 범위: 창·위젯·아이콘·작업표시줄을 모두 막는다
 // 틀(범위·차단·포커스·애니메이션·쌓임)만 여기서 다루고, 내용·단추·모양은 쓰는 쪽이 정한다.
+// 명령형으로 여는 방법은 dialogs.ts, 확인·알림 같은 기본 형태는 dialogPresets.tsx에 있다.
 import {
   type CSSProperties,
   type KeyboardEvent,
@@ -38,7 +39,7 @@ export interface ModalSize {
   maxHeight?: number | string
 }
 
-// ModalOptions는 열림 상태와 내용을 뺀 모양·동작 설정이다.
+// ModalOptions는 열림 상태와 내용을 뺀 모양·동작 설정이다. 명령형 대화상자(dialogs.ts)도 같은 설정을 받는다.
 export interface ModalOptions {
   // 기본: 창 보기 안에서는 그 창, 밖에서는 데스크톱
   scope?: ModalScope

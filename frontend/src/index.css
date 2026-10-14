@@ -1746,6 +1746,15 @@ button {
   background: light-dark(#b9271d, #dd4a3f);
 }
 
+.addon-button.primary {
+  background: var(--accent);
+  color: #fff;
+}
+
+.addon-button.primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 85%, #000);
+}
+
 /* ---- 애드온 공통: 행 조작 ---- */
 
 .row-actions {

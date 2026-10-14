@@ -199,6 +199,10 @@
     },
     "toggleHint": "Only SSH, SMB/CIFS, NFS and the RSync server can be turned on or off here. Configure other services in OpenMediaVault."
   },
+  "dialog": {
+    "ok": "OK",
+    "cancel": "Cancel"
+  },
   "actions": {
     "cancel": "Cancel",
     "working": "Working…",
