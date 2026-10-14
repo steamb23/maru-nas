@@ -27,6 +27,54 @@ type MemoryInfo struct {
 	AvailableBytes uint64 `json:"availableBytes"`
 }
 
+// Manifest는 애드온 하나의 선언이다. 백엔드 정적 목록(internal/addons/builtin)이 원본이며,
+// 프론트 목록(frontend/src/addons/manifests.gen.ts)은 여기서 생성한다.
+type Manifest struct {
+	// ID는 고유 이름이다. 창·위젯 종류 식별자와 같다. 소문자, 숫자, '-'만 쓴다.
+	ID string `json:"id"`
+	// Title은 창 제목·위젯 이름의 번역 키다(프론트 en.json의 키).
+	Title string `json:"title"`
+	// Icon은 freedesktop 아이콘 이름이다. 프론트 리졸버가 해석한다.
+	Icon     string       `json:"icon"`
+	Views    AddonViews   `json:"views"`
+	Requires Requirements `json:"requires"`
+	RPC      RPCMethods   `json:"rpc"`
+}
+
+// AddonViews는 애드온의 보기 목록이다. 하나 이상 있어야 한다.
+type AddonViews struct {
+	Window *WindowView `json:"window,omitempty"`
+}
+
+// WindowView는 창 보기의 크기(픽셀)다.
+type WindowView struct {
+	DefaultSize Size `json:"defaultSize"`
+	// MinSize는 크기 조절로 줄일 수 있는 최소 크기다. 없으면 프론트의 공통 하한을 쓴다.
+	MinSize *Size `json:"minSize,omitempty"`
+}
+
+// Size는 픽셀 단위 크기다.
+type Size struct {
+	Width  int `json:"width"`
+	Height int `json:"height"`
+}
+
+// Requirements는 애드온이나 provider를 쓰는 데 필요한 조건이다.
+type Requirements struct {
+	// Plugins는 필요한 OMV 플러그인 패키지 이름이다(예: openmediavault-compose).
+	Plugins []string `json:"plugins,omitempty"`
+	// Admin은 OMV 관리자만 쓸 수 있는지다.
+	Admin bool `json:"admin,omitempty"`
+}
+
+// RPCMethods는 애드온이 호출하는 OMV RPC 메서드(Service.method)다.
+// 백엔드의 OMV RPC 중계는 등록된 애드온이 선언한 메서드만 통과시킨다.
+type RPCMethods struct {
+	Read []string `json:"read,omitempty"`
+	// Write는 상태를 바꾸는 메서드다. 쓰기 허용 여부는 addons.WritesEnabled가 정한다.
+	Write []string `json:"write,omitempty"`
+}
+
 // LoginRequest는 POST /api/login의 요청 본문이다.
 type LoginRequest struct {
 	Username string `json:"username"`

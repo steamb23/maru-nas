@@ -15,9 +15,9 @@ import (
 	"syscall"
 	"time"
 
+	"omv-desktop-dashboard/backend/internal/addons/sysinfo"
 	"omv-desktop-dashboard/backend/internal/omv"
 	"omv-desktop-dashboard/backend/internal/server"
-	"omv-desktop-dashboard/backend/internal/sysinfo"
 	"omv-desktop-dashboard/backend/internal/web"
 )
 

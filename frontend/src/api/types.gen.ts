@@ -41,6 +41,74 @@ export interface MemoryInfo {
   availableBytes: number /* uint64 */;
 }
 /**
+ * Manifest는 애드온 하나의 선언이다. 백엔드 정적 목록(internal/addons/builtin)이 원본이며,
+ * 프론트 목록(frontend/src/addons/manifests.gen.ts)은 여기서 생성한다.
+ */
+export interface Manifest {
+  /**
+   * ID는 고유 이름이다. 창·위젯 종류 식별자와 같다. 소문자, 숫자, '-'만 쓴다.
+   */
+  id: string;
+  /**
+   * Title은 창 제목·위젯 이름의 번역 키다(프론트 en.json의 키).
+   */
+  title: string;
+  /**
+   * Icon은 freedesktop 아이콘 이름이다. 프론트 리졸버가 해석한다.
+   */
+  icon: string;
+  views: AddonViews;
+  requires: Requirements;
+  rpc: RPCMethods;
+}
+/**
+ * AddonViews는 애드온의 보기 목록이다. 하나 이상 있어야 한다.
+ */
+export interface AddonViews {
+  window?: WindowView;
+}
+/**
+ * WindowView는 창 보기의 크기(픽셀)다.
+ */
+export interface WindowView {
+  defaultSize: Size;
+  /**
+   * MinSize는 크기 조절로 줄일 수 있는 최소 크기다. 없으면 프론트의 공통 하한을 쓴다.
+   */
+  minSize?: Size;
+}
+/**
+ * Size는 픽셀 단위 크기다.
+ */
+export interface Size {
+  width: number /* int */;
+  height: number /* int */;
+}
+/**
+ * Requirements는 애드온이나 provider를 쓰는 데 필요한 조건이다.
+ */
+export interface Requirements {
+  /**
+   * Plugins는 필요한 OMV 플러그인 패키지 이름이다(예: openmediavault-compose).
+   */
+  plugins?: string[];
+  /**
+   * Admin은 OMV 관리자만 쓸 수 있는지다.
+   */
+  admin?: boolean;
+}
+/**
+ * RPCMethods는 애드온이 호출하는 OMV RPC 메서드(Service.method)다.
+ * 백엔드의 OMV RPC 중계는 등록된 애드온이 선언한 메서드만 통과시킨다.
+ */
+export interface RPCMethods {
+  read?: string[];
+  /**
+   * Write는 상태를 바꾸는 메서드다. 쓰기 허용 여부는 addons.WritesEnabled가 정한다.
+   */
+  write?: string[];
+}
+/**
  * LoginRequest는 POST /api/login의 요청 본문이다.
  */
 export interface LoginRequest {
