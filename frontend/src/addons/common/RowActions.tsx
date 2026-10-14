@@ -1,5 +1,5 @@
 // 애드온 창의 행 조작: 행 버튼, 인라인 확인, 우클릭 메뉴로 연 확인 대화상자.
-import { type KeyboardEvent, useEffect, useId, useLayoutEffect, useRef } from 'react'
+import { type KeyboardEvent, useId, useLayoutEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { ParseKeys } from 'i18next'
 import { IconImage } from '../../icons/IconImage'
@@ -18,6 +18,18 @@ const ERROR_KEYS: Partial<Record<ActionErrorCode, ParseKeys>> = {
   omv_unavailable: 'actions.error.omv_error',
 }
 
+// focusOnOpen은 열 때 el에 포커스하고, 닫은 뒤 포커스가 갈 곳을 잃었으면(사라진 요소에 있었으면) 열기 전 요소로
+// 돌려주는 정리 함수를 반환한다. 닫는 렌더가 끝난 뒤 확인하도록 마이크로태스크로 미룬다.
+function focusOnOpen(el: HTMLElement | null): () => void {
+  const prev = document.activeElement instanceof HTMLElement ? document.activeElement : null
+  el?.focus()
+  return () =>
+    queueMicrotask(() => {
+      const lost = !document.activeElement || document.activeElement === document.body
+      if (lost && prev?.isConnected) prev.focus()
+    })
+}
+
 function errorKey(code: ActionErrorCode): ParseKeys {
   return ERROR_KEYS[code] ?? 'actions.error.unknown'
 }
@@ -27,10 +39,12 @@ interface RowProps {
   target: string
   // 지금 상태에서 쓸 수 있는 조작
   specs: readonly ActionSpec[]
+  // 버튼 이름·확인·오류 문구에 쓰는 대상 이름
+  label: string
 }
 
 // RowActionButtons는 행 끝의 조작 버튼이다. 진행 중이면 버튼 대신 진행 문구를 보여 준다.
-export function RowActionButtons({ ctl, target, specs }: RowProps) {
+export function RowActionButtons({ ctl, target, specs, label }: RowProps) {
   const { t } = useTranslation()
   const st = ctl.state.targets[target]
   if (st?.kind === 'running' || st?.kind === 'settling') {
@@ -51,7 +65,7 @@ export function RowActionButtons({ ctl, target, specs }: RowProps) {
           type="button"
           className={`row-action-button${confirming && ctl.state.confirm?.action === spec.action ? ' pressed' : ''}`}
           title={t(spec.labelKey)}
-          aria-label={t(spec.labelKey)}
+          aria-label={t('actions.rowLabel', { action: t(spec.labelKey), name: label })}
           onClick={() => ctl.request(target, spec.action, 'inline')}
         >
           <IconImage name={spec.icon} size={16} />
@@ -61,21 +75,15 @@ export function RowActionButtons({ ctl, target, specs }: RowProps) {
   )
 }
 
-interface PanelProps extends RowProps {
-  // 확인·오류 문구에 쓰는 대상 이름
-  label: string
-}
-
 // RowActionPanel은 행 아래 줄에 인라인 확인이나 실패 문구를 그린다. 둘 다 없으면 그리지 않는다.
-export function RowActionPanel({ ctl, target, specs, label }: PanelProps) {
+export function RowActionPanel({ ctl, target, specs, label }: RowProps) {
   const { t } = useTranslation()
   const confirm = ctl.state.confirm
   const spec = confirm?.target === target && confirm.via === 'inline' ? specs.find((s) => s.action === confirm.action) : undefined
   const cancelRef = useRef<HTMLButtonElement>(null)
   const shown = spec !== undefined
-  useEffect(() => {
-    if (shown) cancelRef.current?.focus()
-  }, [shown])
+  // 열 때 취소에 포커스하고, 닫힐 때 포커스가 갈 곳을 잃었으면 연 버튼으로 돌려준다.
+  useLayoutEffect(() => (shown ? focusOnOpen(cancelRef.current) : undefined), [shown])
 
   if (spec) {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -137,12 +145,7 @@ export function ActionConfirmDialog({ ctl, lookup }: DialogProps) {
   const open = spec !== undefined
 
   // 열 때 취소에 포커스하고, 닫으면 열기 전 포커스로 돌려준다.
-  useLayoutEffect(() => {
-    if (!open) return
-    const prev = document.activeElement instanceof HTMLElement ? document.activeElement : null
-    cancelRef.current?.focus()
-    return () => prev?.focus()
-  }, [open])
+  useLayoutEffect(() => (open ? focusOnOpen(cancelRef.current) : undefined), [open])
 
   if (!spec || !found) return null
 

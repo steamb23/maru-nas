@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Container } from '../../api/types.gen'
-import { containerTone, countContainers, isContainersResponse, sortByAttention } from './containers'
+import { containerActions, containerTone, countContainers, isContainersResponse, sortByAttention } from './containers'
+import { needsConfirm } from '../common/actionSpec'
 
 const c = (name: string, state: Container['state'], health?: Container['health']): Container => ({
   name,
@@ -51,4 +52,26 @@ it('sortByAttention은 문제 → 실행 → 정지 순서다', () => {
 it('countContainers', () => {
   const list = [c('a', 'running'), c('b', 'running', 'unhealthy'), c('c', 'exited'), c('d', 'paused')]
   expect(countContainers(list)).toEqual({ running: 2, stopped: 2, attention: 1 })
+})
+
+describe('containerActions', () => {
+  it.each([
+    ['running', ['stop', 'restart']],
+    ['paused', ['stop', 'restart']],
+    ['restarting', ['stop', 'restart']],
+    ['exited', ['start']],
+    ['created', ['start']],
+    ['dead', ['start']],
+    ['removing', []],
+    ['unknown', []],
+  ] as const)('%s → %j', (state, actions) => {
+    expect(containerActions(c('a', state))).toEqual(actions)
+  })
+
+  it('정지·재시작만 확인을 거친다(manifest)', () => {
+    expect(needsConfirm('containers', 'start')).toBe(false)
+    expect(needsConfirm('containers', 'stop')).toBe(true)
+    expect(needsConfirm('containers', 'restart')).toBe(true)
+    expect(needsConfirm('system-info', 'stop')).toBe(false)
+  })
 })

@@ -1538,8 +1538,9 @@ button {
 
 .ctr-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
+  gap: 6px 10px;
   padding: 8px 4px;
   border-bottom: 1px solid var(--window-border);
 }
@@ -1558,6 +1559,12 @@ button {
   font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* 버튼 수(1~2개)와 상관없이 상태 열이 같은 자리에 오게 버튼 두 개 너비를 잡는다. */
+.ctr-row .row-actions,
+.ctr-row .row-actions-progress {
+  min-width: 58px;
 }
 
 .ctr-state {
@@ -1638,6 +1645,7 @@ button {
 .row-actions {
   display: flex;
   flex: none;
+  justify-content: flex-end;
   gap: 2px;
 }
 

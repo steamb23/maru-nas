@@ -140,6 +140,17 @@
       "healthy": "정상",
       "unhealthy": "비정상",
       "starting": "확인 중"
+    },
+    "action": {
+      "start": "시작",
+      "stop": "정지",
+      "restart": "재시작",
+      "starting": "시작 중…",
+      "stopping": "정지 중…",
+      "restarting": "재시작 중…",
+      "confirmStart": "{{name}}을(를) 시작할까요?",
+      "confirmStop": "{{name}}을(를) 정지할까요? 다시 시작할 때까지 이 컨테이너의 서비스를 쓸 수 없습니다.",
+      "confirmRestart": "{{name}}을(를) 재시작할까요? 이 컨테이너의 서비스가 잠시 끊깁니다."
     }
   },
   "smart": {
@@ -165,6 +176,7 @@
     "cancel": "취소",
     "working": "처리 중…",
     "dismiss": "닫기",
+    "rowLabel": "{{name}} {{action}}",
     "failedPrefix": "{{action}} 실패:",
     "error": {
       "action_busy": "이 항목의 다른 작업이 아직 진행 중입니다.",

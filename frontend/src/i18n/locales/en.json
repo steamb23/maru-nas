@@ -140,6 +140,17 @@
       "healthy": "Healthy",
       "unhealthy": "Unhealthy",
       "starting": "Starting"
+    },
+    "action": {
+      "start": "Start",
+      "stop": "Stop",
+      "restart": "Restart",
+      "starting": "Starting…",
+      "stopping": "Stopping…",
+      "restarting": "Restarting…",
+      "confirmStart": "Start {{name}}?",
+      "confirmStop": "Stop {{name}}? Services running in this container will be unavailable until it is started again.",
+      "confirmRestart": "Restart {{name}}? Services running in this container will be briefly interrupted."
     }
   },
   "smart": {
@@ -165,6 +176,7 @@
     "cancel": "Cancel",
     "working": "Working…",
     "dismiss": "Dismiss",
+    "rowLabel": "{{action}} {{name}}",
     "failedPrefix": "{{action}} failed:",
     "error": {
       "action_busy": "Another operation on this item is still in progress.",

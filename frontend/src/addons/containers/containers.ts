@@ -2,6 +2,7 @@
 import { hasAddonSources } from '../../api/client'
 import { isArrayOf, isObj, isOneOf, isOptional, isStr } from '../../api/guards'
 import type { Container, ContainersResponse } from '../../api/types.gen'
+import type { ActionSpec, AddonActionName } from '../common/actionSpec'
 
 const STATES = ['running', 'paused', 'restarting', 'exited', 'created', 'dead', 'removing', 'unknown'] as const
 const HEALTHS = ['healthy', 'unhealthy', 'starting'] as const
@@ -64,4 +65,49 @@ export function countContainers(list: readonly Container[]): ContainerCounts {
     if (tone === 'warn' || tone === 'crit') attention++
   }
   return { running, stopped: list.length - running, attention }
+}
+
+export type ContainerAction = AddonActionName<'containers'>
+
+// CONTAINER_ACTIONS는 조작마다 화면에 그리는 방법이다. 확인 여부는 manifest가 정한다(정지·재시작).
+export const CONTAINER_ACTIONS: Record<ContainerAction, ActionSpec<ContainerAction>> = {
+  start: {
+    action: 'start',
+    icon: 'media-playback-start-symbolic',
+    labelKey: 'containers.action.start',
+    runningKey: 'containers.action.starting',
+    confirmKey: 'containers.action.confirmStart',
+  },
+  stop: {
+    action: 'stop',
+    icon: 'media-playback-stop-symbolic',
+    labelKey: 'containers.action.stop',
+    runningKey: 'containers.action.stopping',
+    confirmKey: 'containers.action.confirmStop',
+    danger: true,
+  },
+  restart: {
+    action: 'restart',
+    icon: 'view-refresh-symbolic',
+    labelKey: 'containers.action.restart',
+    runningKey: 'containers.action.restarting',
+    confirmKey: 'containers.action.confirmRestart',
+  },
+}
+
+// containerActions는 컨테이너의 지금 상태에서 쓸 수 있는 조작이다. 실행 중(일시 정지·다시 시작 중 포함)이면
+// 정지·재시작, 멈춰 있으면 시작이다. 삭제 중이거나 알 수 없는 상태에서는 조작하지 않는다.
+export function containerActions(c: Container): ContainerAction[] {
+  switch (c.state) {
+    case 'running':
+    case 'paused':
+    case 'restarting':
+      return ['stop', 'restart']
+    case 'exited':
+    case 'created':
+    case 'dead':
+      return ['start']
+    default:
+      return []
+  }
 }
