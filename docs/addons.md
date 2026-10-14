@@ -20,13 +20,13 @@
 | `id` | 고유 이름(`storage`, `containers` 등). 창·위젯 종류 식별자와 같다 |
 | `title`, `icon` | 창 제목·위젯 이름의 번역 키(`en.json`), freedesktop 아이콘 이름(리졸버로 해석). 없는 키·아이콘은 tsc가 잡는다 |
 | `views.window` | 창 보기. 기본(`defaultSize`)·최소(`minSize`) 크기(픽셀) |
-| `views.widget` | 위젯 보기. 기본·최소 크기(그리드 칸). 3-2단계에서 추가한다 |
+| `views.widget` | 위젯 보기. 기본(`defaultSize`)·최소(`minSize`)·최대(`maxSize`) 크기(그리드 칸, `cols`·`rows`). 최소·최대가 없으면 그 방향으로는 기본 크기에 고정된다. 한 변은 1~12칸(`addons.MaxWidgetSpan`) |
 | `requires.plugins` | 필요한 OMV 플러그인 패키지 이름. 비어 있으면 플러그인 없이 동작한다. `internal/addons`의 `knownPlugins` 표에 있는 이름만 쓸 수 있다 |
 | `requires.admin` | admin만 쓸 수 있는지 여부 |
 | `rpc.read` | 호출하는 읽기 전용 OMV RPC (`Service.method`) |
 | `rpc.write` | 호출하는 상태 변경 OMV RPC. 4단계 전에는 비어 있어야 한다 |
 
-레지스트리(`addons.NewRegistry`)는 등록할 때 manifest를 검사한다: id 형식(소문자·숫자·`-`)과 중복, 보기 1개 이상, 크기, `Service.method` 형식, 같은 메서드를 읽기와 쓰기로 함께 선언하지 않기, `Session.*` 금지(로그인·로그아웃은 백엔드만 부른다), provider 1개 이상.
+레지스트리(`addons.NewRegistry`)는 등록할 때 manifest를 검사한다: id 형식(소문자·숫자·`-`)과 중복, 보기 1개 이상(창 또는 위젯), 크기(위젯은 최소 ≤ 기본 ≤ 최대), `Service.method` 형식, 같은 메서드를 읽기와 쓰기로 함께 선언하지 않기, `Session.*` 금지(로그인·로그아웃은 백엔드만 부른다), provider 1개 이상.
 
 한 애드온 안에서도 출처마다 조건이 다를 수 있다(예: 온도는 hwmon은 누구나, SMART 디스크 온도는 admin). 그래서 `requires`는 "창·위젯을 쓸 수 있는 최소 조건"이고, provider별 조건은 provider가 따로 선언한다.
 

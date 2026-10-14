@@ -120,7 +120,7 @@ func validate(a Addon) error {
 	if m.Title == "" || m.Icon == "" {
 		return fmt.Errorf("addon %q: title and icon are required", m.ID)
 	}
-	if m.Views.Window == nil {
+	if m.Views.Window == nil && m.Views.Widget == nil {
 		return fmt.Errorf("addon %q: at least one view is required", m.ID)
 	}
 	if w := m.Views.Window; w != nil {
@@ -130,6 +130,11 @@ func validate(a Addon) error {
 		if mn := w.MinSize; mn != nil && (mn.Width <= 0 || mn.Height <= 0 ||
 			mn.Width > w.DefaultSize.Width || mn.Height > w.DefaultSize.Height) {
 			return fmt.Errorf("addon %q: window min size must be positive and not exceed the default size", m.ID)
+		}
+	}
+	if w := m.Views.Widget; w != nil {
+		if err := validateWidget(w); err != nil {
+			return fmt.Errorf("addon %q: %w", m.ID, err)
 		}
 	}
 	if err := validateRequires(m.Requires); err != nil {
@@ -161,6 +166,26 @@ func validate(a Addon) error {
 		if err := validateRequires(p.Requires()); err != nil {
 			return fmt.Errorf("addon %q: provider %q: %w", m.ID, p.Name(), err)
 		}
+	}
+	return nil
+}
+
+// MaxWidgetSpan은 위젯 한 변의 최대 칸 수다.
+const MaxWidgetSpan = 12
+
+// validateWidget은 위젯 크기가 1~MaxWidgetSpan 칸이고 최소 ≤ 기본 ≤ 최대인지 확인한다.
+func validateWidget(w *api.WidgetView) error {
+	inRange := func(s api.GridSize) bool {
+		return s.Cols >= 1 && s.Rows >= 1 && s.Cols <= MaxWidgetSpan && s.Rows <= MaxWidgetSpan
+	}
+	if !inRange(w.DefaultSize) {
+		return fmt.Errorf("widget default size must be 1..%d cells", MaxWidgetSpan)
+	}
+	if mn := w.MinSize; mn != nil && (!inRange(*mn) || mn.Cols > w.DefaultSize.Cols || mn.Rows > w.DefaultSize.Rows) {
+		return fmt.Errorf("widget min size must be 1..%d cells and not exceed the default size", MaxWidgetSpan)
+	}
+	if mx := w.MaxSize; mx != nil && (!inRange(*mx) || mx.Cols < w.DefaultSize.Cols || mx.Rows < w.DefaultSize.Rows) {
+		return fmt.Errorf("widget max size must be 1..%d cells and not be below the default size", MaxWidgetSpan)
 	}
 	return nil
 }

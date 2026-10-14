@@ -66,6 +66,7 @@ export interface Manifest {
  */
 export interface AddonViews {
   window?: WindowView;
+  widget?: WidgetView;
 }
 /**
  * WindowView는 창 보기의 크기(픽셀)다.
@@ -83,6 +84,24 @@ export interface WindowView {
 export interface Size {
   width: number /* int */;
   height: number /* int */;
+}
+/**
+ * WidgetView는 바탕화면 위젯 보기의 크기(그리드 칸)다.
+ */
+export interface WidgetView {
+  defaultSize: GridSize;
+  /**
+   * MinSize, MaxSize는 크기 조절 범위다. 없으면 기본 크기로 고정된다.
+   */
+  minSize?: GridSize;
+  maxSize?: GridSize;
+}
+/**
+ * GridSize는 바탕화면 위젯 그리드의 칸 단위 크기다.
+ */
+export interface GridSize {
+  cols: number /* int */;
+  rows: number /* int */;
 }
 /**
  * Requirements는 애드온이나 provider를 쓰는 데 필요한 조건이다.

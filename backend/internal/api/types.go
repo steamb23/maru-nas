@@ -46,6 +46,7 @@ type Manifest struct {
 // AddonViews는 애드온의 보기 목록이다. 하나 이상 있어야 한다.
 type AddonViews struct {
 	Window *WindowView `json:"window,omitempty"`
+	Widget *WidgetView `json:"widget,omitempty"`
 }
 
 // WindowView는 창 보기의 크기(픽셀)다.
@@ -59,6 +60,20 @@ type WindowView struct {
 type Size struct {
 	Width  int `json:"width"`
 	Height int `json:"height"`
+}
+
+// WidgetView는 바탕화면 위젯 보기의 크기(그리드 칸)다.
+type WidgetView struct {
+	DefaultSize GridSize `json:"defaultSize"`
+	// MinSize, MaxSize는 크기 조절 범위다. 없으면 기본 크기로 고정된다.
+	MinSize *GridSize `json:"minSize,omitempty"`
+	MaxSize *GridSize `json:"maxSize,omitempty"`
+}
+
+// GridSize는 바탕화면 위젯 그리드의 칸 단위 크기다.
+type GridSize struct {
+	Cols int `json:"cols"`
+	Rows int `json:"rows"`
 }
 
 // Requirements는 애드온이나 provider를 쓰는 데 필요한 조건이다.

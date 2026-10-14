@@ -21,6 +21,12 @@ var Manifest = api.Manifest{
 			// 창 내용을 바꾸면 다시 잰다.
 			MinSize: &api.Size{Width: 320, Height: 270},
 		},
+		// CPU·RAM·가동 시간 요약. 위젯 내용을 바꾸면 브라우저에서 다시 잰다.
+		Widget: &api.WidgetView{
+			DefaultSize: api.GridSize{Cols: 3, Rows: 2},
+			MinSize:     &api.GridSize{Cols: 2, Rows: 2},
+			MaxSize:     &api.GridSize{Cols: 4, Rows: 3},
+		},
 	},
 }
 

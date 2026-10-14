@@ -19,6 +19,20 @@ export const MANIFESTS = {
           "width": 320,
           "height": 270
         }
+      },
+      "widget": {
+        "defaultSize": {
+          "cols": 3,
+          "rows": 2
+        },
+        "minSize": {
+          "cols": 2,
+          "rows": 2
+        },
+        "maxSize": {
+          "cols": 4,
+          "rows": 3
+        }
       }
     },
     "requires": {},

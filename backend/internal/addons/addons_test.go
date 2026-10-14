@@ -52,6 +52,30 @@ func TestNewRegistryKeepsOrder(t *testing.T) {
 	}
 }
 
+func TestNewRegistryAcceptsViews(t *testing.T) {
+	widget := &api.WidgetView{
+		DefaultSize: api.GridSize{Cols: 3, Rows: 2},
+		MinSize:     &api.GridSize{Cols: 2, Rows: 2},
+		MaxSize:     &api.GridSize{Cols: MaxWidgetSpan, Rows: MaxWidgetSpan},
+	}
+	cases := map[string]Addon{
+		"window only": addon("a", nil),
+		"widget only": addon("a", func(a *Addon) {
+			a.Manifest.Views.Window = nil
+			a.Manifest.Views.Widget = widget
+		}),
+		"window and widget": addon("a", func(a *Addon) { a.Manifest.Views.Widget = widget }),
+		"fixed widget": addon("a", func(a *Addon) {
+			a.Manifest.Views.Widget = &api.WidgetView{DefaultSize: api.GridSize{Cols: 1, Rows: 1}}
+		}),
+	}
+	for name, a := range cases {
+		if _, err := NewRegistry(a); err != nil {
+			t.Errorf("%s: %v", name, err)
+		}
+	}
+}
+
 func TestNewRegistryRejectsInvalid(t *testing.T) {
 	cases := map[string][]Addon{
 		"duplicate id": {addon("a", nil), addon("a", nil)},
@@ -65,6 +89,30 @@ func TestNewRegistryRejectsInvalid(t *testing.T) {
 		})},
 		"min over default": {addon("a", func(a *Addon) {
 			a.Manifest.Views.Window.MinSize = &api.Size{Width: 500, Height: 100}
+		})},
+		"zero widget size": {addon("a", func(a *Addon) {
+			a.Manifest.Views.Widget = &api.WidgetView{}
+		})},
+		"widget too large": {addon("a", func(a *Addon) {
+			a.Manifest.Views.Widget = &api.WidgetView{DefaultSize: api.GridSize{Cols: MaxWidgetSpan + 1, Rows: 1}}
+		})},
+		"widget min over default": {addon("a", func(a *Addon) {
+			a.Manifest.Views.Widget = &api.WidgetView{
+				DefaultSize: api.GridSize{Cols: 2, Rows: 2},
+				MinSize:     &api.GridSize{Cols: 3, Rows: 1},
+			}
+		})},
+		"widget max below default": {addon("a", func(a *Addon) {
+			a.Manifest.Views.Widget = &api.WidgetView{
+				DefaultSize: api.GridSize{Cols: 2, Rows: 2},
+				MaxSize:     &api.GridSize{Cols: 3, Rows: 1},
+			}
+		})},
+		"widget max too large": {addon("a", func(a *Addon) {
+			a.Manifest.Views.Widget = &api.WidgetView{
+				DefaultSize: api.GridSize{Cols: 2, Rows: 2},
+				MaxSize:     &api.GridSize{Cols: 2, Rows: MaxWidgetSpan + 1},
+			}
 		})},
 		"bad method": {addon("a", func(a *Addon) { a.Manifest.RPC.Read = []string{"Smart getList"} })},
 		"no method":  {addon("a", func(a *Addon) { a.Manifest.RPC.Read = []string{"Smart"} })},
