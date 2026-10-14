@@ -13,7 +13,9 @@ import { PlaceholderWindow } from './PlaceholderWindow'
 import { ResizeHandles } from './ResizeHandles'
 import { TilePreview } from './TilePreview'
 import { TileResizeHandle } from './TileResizeHandle'
+import { useContextMenuTrigger } from './useContextMenuTrigger'
 import { useWindowAnimation } from './useWindowAnimation'
+import { titlebarMenuItems } from './windowMenu'
 
 // ClosingWindow는 저장소에서 지워진(닫힌) 창의 마지막 상태와, 그때의 타일 그룹 비율이다.
 export interface ClosingWindow {
@@ -51,7 +53,8 @@ interface Drag {
 // 최대화되지 않게 하고, 최대화·타일 창도 이 거리를 넘겨야 떼어 낸다.
 const DRAG_THRESHOLD = 4
 
-const { focus, close, minimize, toggleMaximize, tile, detachAt, moveTo } = useWindowStore.getState()
+const { focus, close, closeMany, minimize, raiseGroup, restore, toggleMaximize, tile, detachAt, moveTo } =
+  useWindowStore.getState()
 
 // 버튼 위에서 시작한 포인터 동작은 드래그·더블클릭으로 다루지 않는다.
 const fromButton = (e: { target: EventTarget }) => e.target instanceof Element && e.target.closest('button') !== null
@@ -99,6 +102,26 @@ export function Window({ id, bounds, closingState, onClosed }: Props) {
     closing,
     handleClosed,
   )
+  // 제목 표시줄 우클릭 메뉴. 제목 표시줄 버튼 위에서는 열지 않는다(길게 누르면 버튼이 눌리지 않게).
+  // 창을 끄는 중이면 열지 않는다(터치로 길게 누르는 사이 끌기가 시작된 경우 포함).
+  const menu = useContextMenuTrigger({
+    items: () => {
+      const cur = useWindowStore.getState().windows.find((w) => w.id === id)
+      if (!cur || drag.current?.moved) return []
+      return titlebarMenuItems(cur, {
+        closeMany,
+        minimize,
+        raiseGroup,
+        restore,
+        // 제목 표시줄 버튼처럼 바뀌기 전 위치에서 애니메이션한다.
+        toggleMaximize: (target) => {
+          anim.captureFrom()
+          toggleMaximize(target)
+        },
+      })
+    },
+    accept: (e) => !fromButton(e),
+  })
 
   if (!win) return null
   const app = getApp(win.appId)
@@ -106,7 +129,9 @@ export function Window({ id, bounds, closingState, onClosed }: Props) {
   const maximizeLabel = win.maximized ? t('window.restore') : t('window.maximize')
   const layout = layoutOf(win)
 
+  // 포인터 처리기는 메뉴 처리기(길게 누르기)를 먼저 부른다.
   const onPointerDown = (e: PointerEvent<HTMLElement>) => {
+    menu.handlers.onPointerDown(e)
     if (e.button !== 0 || fromButton(e)) return
     const start = { x: e.clientX, y: e.clientY }
     if (layout !== 'free') {
@@ -121,9 +146,12 @@ export function Window({ id, bounds, closingState, onClosed }: Props) {
     e.currentTarget.setPointerCapture(e.pointerId)
   }
   const onPointerMove = (e: PointerEvent<HTMLElement>) => {
+    menu.handlers.onPointerMove(e)
     const d = drag.current
     if (!d || d.pointerId !== e.pointerId) return
     if (!d.moved) {
+      // 길게 눌러 메뉴를 연 누름은 끌기로 이어 가지 않는다.
+      if (menu.openedByPress()) return
       if (Math.hypot(e.clientX - d.start.x, e.clientY - d.start.y) < DRAG_THRESHOLD) return
       d.moved = true
     }
@@ -163,6 +191,7 @@ export function Window({ id, bounds, closingState, onClosed }: Props) {
   }
   // 놓았을 때 타일링 영역 안이면 그 자리에 배치한다.
   const onPointerUp = (e: PointerEvent<HTMLElement>) => {
+    menu.handlers.onPointerUp(e)
     const d = drag.current
     if (!d || d.pointerId !== e.pointerId) return
     endDrag(d)
@@ -173,6 +202,7 @@ export function Window({ id, bounds, closingState, onClosed }: Props) {
   }
   // 취소되면 배치하지 않고 옮긴 위치만 반영한다. pointerup 뒤에 오는 lostpointercapture는 이미 끝난 드래그라 무시된다.
   const cancelDrag = (e: PointerEvent<HTMLElement>) => {
+    menu.handlers.onPointerCancel(e)
     const d = drag.current
     if (d?.pointerId !== e.pointerId) return
     endDrag(d)
@@ -217,6 +247,7 @@ export function Window({ id, bounds, closingState, onClosed }: Props) {
           onPointerUp={onPointerUp}
           onPointerCancel={cancelDrag}
           onLostPointerCapture={cancelDrag}
+          onContextMenu={menu.handlers.onContextMenu}
           onDoubleClick={(e) => {
             if (!fromButton(e)) onToggleMaximize()
           }}

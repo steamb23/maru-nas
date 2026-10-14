@@ -8,11 +8,11 @@ import { Clock } from './Clock'
 import { ProfileMenu } from './ProfileMenu'
 import { TASK_ENTER_MS, TASK_LEAVE_MS, withLeaving } from './taskbarAnim'
 import { type DragLayout, type Slot, dragLayout } from './taskbarDrag'
-import { type TaskMenuActions, taskMenuItems } from './taskbarMenu'
 import { useContextMenuTrigger } from './useContextMenuTrigger'
 import { useClosingWindows } from './useClosingWindows'
 import { animationsEnabled, captureWindowLayout } from './useWindowAnimation'
 import { EASING } from './windowAnim'
+import { type WindowMenuActions, taskMenuItems } from './windowMenu'
 
 const { closeMany, minimize, raiseGroup, reorder, restore, toggleMaximize } = useWindowStore.getState()
 
@@ -28,7 +28,7 @@ function onTaskClick(w: WindowState, active: boolean) {
 }
 
 // 버튼 우클릭 메뉴의 동작. 최대화는 제목 표시줄 버튼처럼 바뀌기 전 위치에서 애니메이션한다.
-const taskMenuActions: TaskMenuActions = {
+const taskMenuActions: WindowMenuActions = {
   closeMany,
   minimize,
   raiseGroup,
