@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Service } from '../../api/types.gen'
-import { countServices, isServicesResponse, serviceState, serviceTone, sortByAttention } from './services'
+import { needsConfirm } from '../common/actionSpec'
+import { countServices, isServicesResponse, serviceActions, serviceState, serviceTone, sortByAttention } from './services'
 
 const s = (name: string, enabled: boolean, running: boolean, title = name.toUpperCase()): Service => ({
   name,
@@ -37,5 +38,21 @@ describe('sortByAttention, countServices', () => {
     const list = [s('nfs', false, false), s('ssh', true, true), s('fail2ban', true, false), s('smb', true, true)]
     expect(sortByAttention(list).map((x) => x.name)).toEqual(['fail2ban', 'smb', 'ssh', 'nfs'])
     expect(countServices(list)).toEqual({ running: 2, attention: 1 })
+  })
+})
+
+describe('serviceActions', () => {
+  it('켜고 끌 수 있는 서비스만 조작이 있다', () => {
+    expect(serviceActions(s('fail2ban', true, false))).toEqual([])
+    const on = { ...s('ssh', true, true), toggleable: true }
+    expect(serviceActions(on).map((a) => [a.action, a.confirmKey])).toEqual([['disable', 'services.action.confirmDisableSsh']])
+    // 켜져 있는데 멈춘 서비스도 끄기다.
+    expect(serviceActions({ ...on, running: false }).map((a) => a.action)).toEqual(['disable'])
+    expect(serviceActions({ ...s('nfs', false, false), toggleable: true }).map((a) => a.action)).toEqual(['enable'])
+  })
+
+  it('끄기만 확인을 거친다(manifest)', () => {
+    expect(needsConfirm('services', 'enable')).toBe(false)
+    expect(needsConfirm('services', 'disable')).toBe(true)
   })
 })

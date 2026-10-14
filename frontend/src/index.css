@@ -1571,6 +1571,16 @@ button {
   white-space: nowrap;
 }
 
+/* 서비스 행은 버튼이 하나뿐이다. 켜고 끌 수 없는 행도 같은 너비를 비워 상태 열을 맞춘다. */
+.svc-row .row-actions {
+  min-width: 28px;
+}
+
+/* .addon-hint의 음수 위 여백은 바로 위 요소에 붙이는 설명용이다. 목록 아래에서는 띄운다. */
+.svc-hint {
+  margin: 0;
+}
+
 /* 버튼 수(1~2개)와 상관없이 상태 열이 같은 자리에 오게 버튼 두 개 너비를 잡는다. */
 .ctr-row .row-actions,
 .ctr-row .row-actions-progress {

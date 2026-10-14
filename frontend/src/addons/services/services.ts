@@ -1,7 +1,9 @@
 // OMV 서비스 응답 검사와 표시 계산. DOM에 의존하지 않아 node 환경에서 테스트한다.
 import { hasAddonSources } from '../../api/client'
 import { isArrayOf, isObj, isStr } from '../../api/guards'
+import type { ParseKeys } from 'i18next'
 import type { Service, ServicesResponse } from '../../api/types.gen'
+import type { ActionSpec, AddonActionName } from '../common/actionSpec'
 
 function isService(v: unknown): v is Service {
   return (
@@ -60,4 +62,41 @@ export function countServices(list: readonly Service[]): ServiceCounts {
     if (tone === 'warn' || tone === 'crit') attention++
   }
   return { running, attention }
+}
+
+export type ServiceAction = AddonActionName<'services'>
+
+// 끌 때 무엇이 끊기는지 알려 주는 확인 문구. 표에 없는 서비스는 일반 문구를 쓴다.
+const DISABLE_CONFIRM: Record<string, ParseKeys> = {
+  ssh: 'services.action.confirmDisableSsh',
+  samba: 'services.action.confirmDisableSamba',
+  nfs: 'services.action.confirmDisableNfs',
+  rsyncd: 'services.action.confirmDisableRsyncd',
+}
+
+// serviceActions는 서비스의 지금 설정에서 쓸 수 있는 조작이다. 켜고 끌 수 없는 서비스는 없다.
+// 켜져 있으면(멈춰 있어도) 끄기, 꺼져 있으면 켜기다.
+export function serviceActions(s: Service): ActionSpec<ServiceAction>[] {
+  if (!s.toggleable) return []
+  if (s.enabled) {
+    return [
+      {
+        action: 'disable',
+        icon: 'media-playback-stop-symbolic',
+        labelKey: 'services.action.disable',
+        runningKey: 'services.action.disabling',
+        confirmKey: DISABLE_CONFIRM[s.name] ?? 'services.action.confirmDisable',
+        danger: true,
+      },
+    ]
+  }
+  return [
+    {
+      action: 'enable',
+      icon: 'media-playback-start-symbolic',
+      labelKey: 'services.action.enable',
+      runningKey: 'services.action.enabling',
+      confirmKey: 'services.action.confirmEnable',
+    },
+  ]
 }

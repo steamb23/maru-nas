@@ -184,7 +184,20 @@
       "stopped": "Enabled · Stopped",
       "disabled": "Disabled",
       "disabledRunning": "Disabled · Running"
-    }
+    },
+    "action": {
+      "enable": "Enable",
+      "disable": "Disable",
+      "enabling": "Enabling…",
+      "disabling": "Disabling…",
+      "confirmEnable": "Enable {{name}}?",
+      "confirmDisable": "Disable {{name}}? OpenMediaVault applies the change right away.",
+      "confirmDisableSsh": "Disable {{name}}? Current SSH sessions may be disconnected, and you will not be able to sign in over SSH until it is enabled again.",
+      "confirmDisableSamba": "Disable {{name}}? Clients using shared folders over SMB will be disconnected.",
+      "confirmDisableNfs": "Disable {{name}}? Clients using NFS exports will be disconnected.",
+      "confirmDisableRsyncd": "Disable {{name}}? Backups and syncs that connect to this rsync server will fail."
+    },
+    "toggleHint": "Only SSH, SMB/CIFS, NFS and the RSync server can be turned on or off here. Configure other services in OpenMediaVault."
   },
   "actions": {
     "cancel": "Cancel",

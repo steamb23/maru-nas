@@ -184,7 +184,20 @@
       "stopped": "켜짐 · 멈춤",
       "disabled": "꺼짐",
       "disabledRunning": "꺼짐 · 실행 중"
-    }
+    },
+    "action": {
+      "enable": "켜기",
+      "disable": "끄기",
+      "enabling": "켜는 중…",
+      "disabling": "끄는 중…",
+      "confirmEnable": "{{name}}을(를) 켤까요?",
+      "confirmDisable": "{{name}}을(를) 끌까요? OpenMediaVault에 바로 적용됩니다.",
+      "confirmDisableSsh": "{{name}}을(를) 끌까요? 지금 연결된 SSH 세션이 끊길 수 있고, 다시 켤 때까지 SSH로 접속할 수 없습니다.",
+      "confirmDisableSamba": "{{name}}을(를) 끌까요? SMB로 공유 폴더를 쓰는 클라이언트의 연결이 끊깁니다.",
+      "confirmDisableNfs": "{{name}}을(를) 끌까요? NFS 공유를 쓰는 클라이언트의 연결이 끊깁니다.",
+      "confirmDisableRsyncd": "{{name}}을(를) 끌까요? 이 rsync 서버로 하는 백업·동기화가 실패합니다."
+    },
+    "toggleHint": "켜기·끄기는 SSH, SMB/CIFS, NFS, RSync 서버만 지원합니다. 다른 서비스는 OpenMediaVault에서 설정하세요."
   },
   "actions": {
     "cancel": "취소",
