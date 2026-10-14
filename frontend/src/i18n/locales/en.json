@@ -44,7 +44,10 @@
     "placeholder": "Coming soon"
   },
   "taskbar": {
-    "label": "Taskbar"
+    "label": "Taskbar",
+    "closeOthers": "Close others",
+    "closeRight": "Close to the right",
+    "closeAll": "Close all"
   },
   "profile": {
     "menu": "User menu ({{username}})",

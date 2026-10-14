@@ -144,6 +144,23 @@ describe('close', () => {
   })
 })
 
+describe('closeMany', () => {
+  it('여러 창을 한 번에 닫고 남은 창의 순서는 유지한다', () => {
+    const a = store().open('system-info', bounds)
+    const b = store().open('files', bounds)
+    const c = store().open('storage', bounds)
+    store().closeMany([a, c])
+    expect(store().windows.map((w) => w.id)).toEqual([b])
+  })
+
+  it('없는 id만 넘기면 상태를 바꾸지 않는다', () => {
+    store().open('system-info', bounds)
+    const before = store().windows
+    store().closeMany(['nope'])
+    expect(store().windows).toBe(before)
+  })
+})
+
 describe('resize', () => {
   it('위치와 크기를 함께 바꾼다', () => {
     const a = store().open('system-info', bounds)

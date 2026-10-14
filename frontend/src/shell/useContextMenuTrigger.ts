@@ -13,8 +13,8 @@ interface TriggerEvent {
 }
 
 export interface ContextMenuTriggerOptions {
-  // 메뉴를 열 때 항목을 만든다. 비어 있으면 열지 않는다.
-  items: () => readonly ContextMenuItem[]
+  // 메뉴를 열 때 항목을 만든다. el은 처리기를 붙인 요소(입력을 받은 요소)다. 비어 있으면 열지 않는다.
+  items: (el: HTMLElement) => readonly ContextMenuItem[]
   // 이 요소에서 시작한 입력만 받을지. 없으면 모두 받는다(자식 요소의 입력 포함).
   accept?: (e: TriggerEvent) => boolean
 }
@@ -45,8 +45,8 @@ export function useContextMenuTrigger(opts: ContextMenuTriggerOptions): ContextM
   const opened = useRef(false)
 
   const accepts = (e: TriggerEvent) => optsRef.current.accept?.(e) ?? true
-  const open = (x: number, y: number, viaKeyboard: boolean) =>
-    useContextMenuStore.getState().openAt({ x, y }, optsRef.current.items(), viaKeyboard)
+  const open = (el: HTMLElement, x: number, y: number, viaKeyboard: boolean) =>
+    useContextMenuStore.getState().openAt({ x, y }, optsRef.current.items(el), viaKeyboard)
   const cancelTimer = () => {
     if (timer.current !== null) clearTimeout(timer.current)
     timer.current = null
@@ -70,26 +70,26 @@ export function useContextMenuTrigger(opts: ContextMenuTriggerOptions): ContextM
           if (opened.current) return
           opened.current = true
         }
-        open(e.clientX, e.clientY, false)
+        open(e.currentTarget, e.clientX, e.clientY, false)
       },
       onKeyDown: (e) => {
         if (!isContextMenuKey(e.key, e.shiftKey) || !accepts(e)) return
         e.preventDefault()
         e.stopPropagation()
         const r = e.currentTarget.getBoundingClientRect()
-        open(r.x + 16, r.y + 16, true)
+        open(e.currentTarget, r.x + 16, r.y + 16, true)
       },
       onPointerDown: (e) => {
         if (e.button !== 0 || !accepts(e)) return
         cancelTimer()
         opened.current = false
-        const { pointerId, clientX: x, clientY: y } = e
+        const { pointerId, clientX: x, clientY: y, currentTarget: el } = e
         down.current = { pointerId, x, y }
         if (e.pointerType !== 'touch') return
         timer.current = setTimeout(() => {
           timer.current = null
           opened.current = true
-          open(x, y, false)
+          open(el, x, y, false)
         }, LONG_PRESS_MS)
       },
       onPointerMove: (e) => {

@@ -35,6 +35,8 @@ interface WindowActions {
   // open은 앱 창을 연다. 이미 열려 있으면 복원하고 맨 앞으로 가져온다. 창 id를 반환한다.
   open: (appId: AppId, bounds: Size) => string
   close: (id: string) => void
+  // closeMany는 여러 창을 한 번에 닫는다. 없는 id는 무시한다.
+  closeMany: (ids: readonly string[]) => void
   focus: (id: string) => void
   minimize: (id: string) => void
   // restore는 최소화를 풀고 맨 앞으로 가져온다. 최대화 여부는 바꾸지 않는다.
@@ -124,6 +126,13 @@ export const useWindowStore = create<WindowStore>()((set, get) => {
     },
 
     close: (id) => set((s) => ({ windows: s.windows.filter((w) => w.id !== id) })),
+
+    closeMany: (ids) =>
+      set((s) => {
+        const drop = new Set(ids)
+        const windows = s.windows.filter((w) => !drop.has(w.id))
+        return windows.length === s.windows.length ? s : { windows }
+      }),
 
     focus: (id) => update(id, (w, s) => raise(w, s)),
 

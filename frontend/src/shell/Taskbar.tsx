@@ -8,11 +8,13 @@ import { Clock } from './Clock'
 import { ProfileMenu } from './ProfileMenu'
 import { TASK_ENTER_MS, TASK_LEAVE_MS, withLeaving } from './taskbarAnim'
 import { type DragLayout, type Slot, dragLayout } from './taskbarDrag'
+import { taskMenuItems } from './taskbarMenu'
+import { useContextMenuTrigger } from './useContextMenuTrigger'
 import { useClosingWindows } from './useClosingWindows'
 import { animationsEnabled } from './useWindowAnimation'
 import { EASING } from './windowAnim'
 
-const { minimize, raiseGroup, reorder } = useWindowStore.getState()
+const { closeMany, minimize, raiseGroup, reorder } = useWindowStore.getState()
 
 // 이 거리 이상 가로로 끌어야 드래그로 본다. 그보다 짧으면 클릭이다.
 const DRAG_THRESHOLD = 4
@@ -100,6 +102,14 @@ export function Taskbar() {
   // 드래그를 놓은 직후 버튼에 들어오는 click을 무시한다.
   const suppressClick = useRef(false)
   const settleTimer = useRef<number | undefined>(undefined)
+  // 버튼 우클릭 메뉴. 대상 창은 입력을 받은 버튼의 data-window-id다.
+  // 끌거나 놓은 버튼이 제자리로 가는 동안에는 열지 않는다(터치로 길게 누르는 사이 끌기가 시작된 경우 포함).
+  const dragging = () => press.current !== null && press.current.phase !== 'press'
+  const menu = useContextMenuTrigger({
+    items: (el) =>
+      dragging() ? [] : taskMenuItems(useWindowStore.getState().windows, el.dataset.windowId ?? '', closeMany),
+    accept: () => !dragging(),
+  })
 
   const reset = () => {
     window.clearTimeout(settleTimer.current)
@@ -176,7 +186,9 @@ export function Taskbar() {
     }
   }, [leaving, onLeft])
 
+  // 포인터 처리기는 메뉴 처리기(길게 누르기)를 먼저 부른다.
   const onPointerDown = (e: PointerEvent<HTMLButtonElement>, w: WindowState, index: number) => {
+    menu.handlers.onPointerDown(e)
     suppressClick.current = false
     if (e.button !== 0 || press.current) return
     press.current = {
@@ -195,10 +207,13 @@ export function Taskbar() {
   }
 
   const onPointerMove = (e: PointerEvent<HTMLButtonElement>) => {
+    menu.handlers.onPointerMove(e)
     const p = press.current
     if (!p || p.pointerId !== e.pointerId || p.phase === 'settle') return
     const dx = e.clientX - p.startX
     if (p.phase === 'press') {
+      // 길게 눌러 메뉴를 연 누름은 끌기로 이어 가지 않는다.
+      if (menu.openedByPress()) return
       const list = listRef.current
       if (Math.abs(dx) < DRAG_THRESHOLD || !list) return
       // 드래그를 시작할 때 한 번만 잰다. 이후로는 transform만 바뀌어 배치가 그대로다.
@@ -217,11 +232,13 @@ export function Taskbar() {
   }
 
   const onPointerUp = (e: PointerEvent<HTMLButtonElement>) => {
+    menu.handlers.onPointerUp(e)
     const p = press.current
     if (!p || p.pointerId !== e.pointerId) return
     if (p.phase === 'press') {
-      // 임계 거리를 넘지 않았으면 그냥 클릭이다.
+      // 임계 거리를 넘지 않았으면 그냥 클릭이다. 길게 눌러 메뉴를 연 누름은 클릭으로 보지 않는다.
       press.current = null
+      if (menu.openedByPress()) suppressClick.current = true
     } else if (p.phase === 'drag') {
       suppressClick.current = true
       settle(p, true)
@@ -231,6 +248,7 @@ export function Taskbar() {
   // 포인터를 잃으면(취소 등) 순서를 바꾸지 않고 원래 자리로 돌려보낸다.
   // 놓은 뒤에도 lostpointercapture가 오는데, 그때는 이미 settle 단계라 무시된다.
   const onPointerLost = (e: PointerEvent<HTMLButtonElement>) => {
+    menu.handlers.onPointerCancel(e)
     const p = press.current
     if (!p || p.pointerId !== e.pointerId) return
     if (p.phase === 'press') press.current = null
@@ -286,6 +304,8 @@ export function Taskbar() {
                   className={classes}
                   aria-pressed={active}
                   data-window-id={w.id}
+                  onContextMenu={menu.handlers.onContextMenu}
+                  onKeyDown={menu.handlers.onKeyDown}
                   onPointerDown={(e) => onPointerDown(e, w, i)}
                   onPointerMove={onPointerMove}
                   onPointerUp={onPointerUp}
