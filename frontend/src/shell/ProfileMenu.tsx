@@ -3,8 +3,17 @@ import { type KeyboardEvent, useEffect, useId, useLayoutEffect, useRef, useState
 import { useTranslation } from 'react-i18next'
 import type { SessionInfo } from '../api/types.gen'
 import { useAuthStore } from '../auth/store'
+import { setLanguage, useLanguage } from '../i18n'
+import { SUPPORTED_LANGUAGES, languageName } from '../i18n/languages'
 import { IconImage } from '../icons/IconImage'
-import { PROFILE_MENU_ITEMS, type ProfileMenuItemId, groupItems, nextIndex, visibleItems } from './profileMenu'
+import {
+  PROFILE_MENU_ITEMS,
+  type ProfileMenuActionId,
+  groupItems,
+  nextIndex,
+  submenuKey,
+  visibleItems,
+} from './profileMenu'
 import { animationsEnabled } from './useWindowAnimation'
 import { CLOSE_EASING, EASING } from './windowAnim'
 
@@ -18,9 +27,20 @@ const MENU_OPEN_FROM: Keyframe = { opacity: 0, transform: 'translateY(8px) scale
 const MENU_CLOSE_TO: Keyframe = { opacity: 0, transform: 'translateY(4px) scale(0.98)' }
 const MENU_SHOWN: Keyframe = { opacity: 1, transform: 'none' }
 
-// 메뉴 항목 동작. profileMenu.ts의 항목 id마다 하나씩 둔다.
-const actions: Record<ProfileMenuItemId, () => void> = {
+// 메뉴 항목 동작. profileMenu.ts의 action 항목 id마다 하나씩 둔다.
+const actions: Record<ProfileMenuActionId, () => void> = {
   logout: () => void logout(),
+}
+
+// moveFocus는 화살표·Home·End 키로 root 안의 selector 항목 사이에서 포커스를 옮긴다. 옮겼으면 true.
+function moveFocus(root: HTMLElement | null, selector: string, e: KeyboardEvent<HTMLElement>): boolean {
+  const items = Array.from(root?.querySelectorAll<HTMLButtonElement>(selector) ?? [])
+  const current = items.indexOf(document.activeElement as HTMLButtonElement)
+  const next = nextIndex(current, items.length, e.key)
+  if (next === current) return false
+  e.preventDefault()
+  items[next]?.focus()
+  return true
 }
 
 // ProfileAvatar는 사용자 아바타다. 지금은 기본 아이콘만 그린다.
@@ -35,22 +55,33 @@ export function ProfileAvatar({ size }: { user: SessionInfo; size: number }) {
 
 export function ProfileMenu() {
   const { t } = useTranslation()
+  const lang = useLanguage()
   const user = useAuthStore((s) => s.user)
   const [open, setOpen] = useState(false)
+  // 언어 하위 메뉴가 열려 있으면 true.
+  const [subOpen, setSubOpen] = useState(false)
   // 닫기 애니메이션 중이면 true. 그동안 메뉴를 그려 두되 클릭·포커스는 받지 않는다.
   const [closing, setClosing] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
   const menuId = useId()
+  const subId = useId()
+  const subRef = useRef<HTMLDivElement>(null)
+  const subButtonRef = useRef<HTMLButtonElement>(null)
 
   const show = () => {
     setOpen(true)
     setClosing(false)
+    setSubOpen(false)
   }
   const hide = () => {
     setOpen(false)
     setClosing(animationsEnabled())
+  }
+  const closeSub = () => {
+    setSubOpen(false)
+    subButtonRef.current?.focus()
   }
   const close = (focusButton: boolean) => {
     hide()
@@ -93,6 +124,15 @@ export function ProfileMenu() {
     if (open) menuRef.current?.querySelector<HTMLButtonElement>('[role="menuitem"]')?.focus()
   }, [open])
 
+  // 하위 메뉴는 메뉴와 같은 모양으로 떠오르며 열리고, 선택된 언어에 포커스한다.
+  // 하위 메뉴만 닫을 때는 바로 사라지고, 메뉴 전체를 닫을 때는 메뉴 안에 있으므로 메뉴와 함께 사라진다.
+  useLayoutEffect(() => {
+    const el = subRef.current
+    if (!subOpen || !el) return
+    el.querySelector<HTMLButtonElement>('[aria-checked="true"]')?.focus()
+    if (animationsEnabled()) el.animate([MENU_OPEN_FROM, MENU_SHOWN], { duration: MENU_OPEN_MS, easing: EASING })
+  }, [subOpen])
+
   if (!user) return null
   const groups = groupItems(visibleItems(PROFILE_MENU_ITEMS, user))
 
@@ -106,13 +146,25 @@ export function ProfileMenu() {
       hide()
       return
     }
-    const items = Array.from(menuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]') ?? [])
-    const current = items.indexOf(document.activeElement as HTMLButtonElement)
-    const next = nextIndex(current, items.length, e.key)
-    if (next !== current) {
+    if (document.activeElement === subButtonRef.current && submenuKey(e.key, false) === 'open') {
       e.preventDefault()
-      items[next]?.focus()
+      setSubOpen(true)
+      return
     }
+    // 메뉴의 다른 항목으로 옮기면 하위 메뉴를 닫는다.
+    if (moveFocus(menuRef.current, '[role="menuitem"]', e)) setSubOpen(false)
+  }
+
+  // 하위 메뉴의 키 입력은 메뉴까지 올리지 않는다. Tab만 메뉴로 올려 메뉴 전체를 닫는다.
+  const onSubKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'Tab') return
+    e.stopPropagation()
+    if (submenuKey(e.key, true) === 'close') {
+      e.preventDefault()
+      closeSub()
+      return
+    }
+    moveFocus(subRef.current, '[role="menuitemradio"]', e)
   }
 
   return (
@@ -148,21 +200,71 @@ export function ProfileMenu() {
           </div>
           {groups.map((group) => (
             <div key={group[0].group} className="profile-menu-group" role="group">
-              {group.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  role="menuitem"
-                  className="profile-menu-item"
-                  onClick={() => {
-                    close(true)
-                    actions[item.id]()
-                  }}
-                >
-                  <IconImage name={item.icon} size={16} />
-                  <span>{t(item.labelKey)}</span>
-                </button>
-              ))}
+              {group.map((item) =>
+                item.kind === 'action' ? (
+                  <button
+                    key={item.id}
+                    type="button"
+                    role="menuitem"
+                    className="profile-menu-item"
+                    onClick={() => {
+                      close(true)
+                      actions[item.id]()
+                    }}
+                  >
+                    <IconImage name={item.icon} size={16} />
+                    <span>{t(item.labelKey)}</span>
+                  </button>
+                ) : (
+                  <div key={item.id} className="profile-submenu-anchor">
+                    <button
+                      ref={subButtonRef}
+                      type="button"
+                      role="menuitem"
+                      className="profile-menu-item"
+                      aria-haspopup="menu"
+                      aria-expanded={subOpen}
+                      aria-controls={subOpen ? subId : undefined}
+                      onClick={() => setSubOpen((v) => !v)}
+                    >
+                      <IconImage name="pan-start-symbolic" size={16} className="profile-menu-chevron" />
+                      <IconImage name={item.icon} size={16} />
+                      <span>{t(item.labelKey)}</span>
+                      <span className="profile-menu-value">{languageName(lang)}</span>
+                    </button>
+                    {subOpen && (
+                      <div
+                        id={subId}
+                        ref={subRef}
+                        className="profile-menu profile-submenu"
+                        role="menu"
+                        aria-label={t(item.labelKey)}
+                        onKeyDown={onSubKeyDown}
+                      >
+                        {SUPPORTED_LANGUAGES.map((code) => (
+                          <button
+                            key={code}
+                            type="button"
+                            role="menuitemradio"
+                            aria-checked={code === lang}
+                            lang={code}
+                            className="profile-menu-item"
+                            onClick={() => {
+                              close(true)
+                              setLanguage(code)
+                            }}
+                          >
+                            <span className="profile-menu-check">
+                              {code === lang && <IconImage name="object-select-symbolic" size={16} />}
+                            </span>
+                            <span>{languageName(code)}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ),
+              )}
             </div>
           ))}
         </div>

@@ -67,7 +67,7 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
   - `src/shell/windowAnim.ts`: 창 열기·닫기·최대화·타일링·최소화 애니메이션 설정값과 FLIP 위치 계산(DOM 없음). 재생은 `useWindowAnimation.ts`(Web Animations API, transform·opacity만). 켜기/끄기는 `WINDOW_ANIMATIONS` 상수이며 설정 기능이 생기면 그쪽으로 옮긴다
     - 닫기: 저장소(`close`)에서는 창이 바로 지워져 작업표시줄·포커스는 즉시 바뀐다. `Desktop`이 `useClosingWindows`(저장소 구독)로 지워진 창의 마지막 상태와 타일 비율(`ClosingWindow`)을 받아 두고, 닫기 애니메이션이 끝나 `onClosed`가 불릴 때까지 그 상태로 그린다(`stableOrder`의 `keep`). 닫히는 창은 클릭을 받지 않고 창 내용의 주기 요청도 바로 멈춘다
   - `src/shell/screenAnim.ts`: 로그인 화면 ↔ 데스크톱 전환 애니메이션 설정값(DOM 없음). 로그인은 로그인 카드가 커지며 흐려져 사라진 뒤 데스크톱 내용이 커지며 또렷해지고, 로그아웃·세션 만료는 반대로 줄어든다. 배경(`.desktop`)은 그대로 두고 내용(`.login-card`, `.desktop-area`·`.taskbar`)만 움직인다. 재생은 `screenTransition.ts`이며, 나가는 애니메이션은 auth 저장소가 화면을 바꾸기 전에 `beforeScreenChange` 훅(`leaveScreen`)으로 재생하고, 들어오는 애니메이션은 각 화면이 처음 그려질 때 재생한다
-  - `src/shell/Taskbar.tsx` 오른쪽 트레이: `[시계][프로필]` 순서이며 프로필 버튼이 오른쪽 끝에 고정된다. 시계는 `Clock.tsx`(서식·갱신 시점 계산은 `clock.ts`). 프로필 메뉴는 `ProfileMenu.tsx`이고 항목은 `profileMenu.ts`의 `PROFILE_MENU_ITEMS`에 데이터로 둔다(`requires: 'admin'`으로 권한별로 거름). 항목을 추가하면 `ProfileMenu.tsx`의 `actions`에 동작도 넣는다. 아바타 그리기는 `ProfileAvatar` 한 곳에 모은다
+  - `src/shell/Taskbar.tsx` 오른쪽 트레이: `[시계][프로필]` 순서이며 프로필 버튼이 오른쪽 끝에 고정된다. 시계는 `Clock.tsx`(서식·갱신 시점 계산은 `clock.ts`). 프로필 메뉴는 `ProfileMenu.tsx`이고 항목은 `profileMenu.ts`의 `PROFILE_MENU_ITEMS`에 데이터로 둔다(`requires: 'admin'`으로 권한별로 거름). 항목은 `action`(누르면 동작)과 `submenu`(하위 메뉴, 지금은 언어 선택) 두 종류다. action 항목을 추가하면 `ProfileMenu.tsx`의 `actions`에 동작도 넣는다. 아바타 그리기는 `ProfileAvatar` 한 곳에 모은다
   - `src/auth/`: 로그인 상태 저장소(`store.ts`, `createAuthStore`로 API·화면 전환 훅 주입. 로그아웃·만료로 떠나는 동안은 상태를 `loggedIn`으로 두고 다시 들어온 만료·로그아웃은 무시한다), 로그인·연결 끊김 화면(`LoginScreen.tsx`), 오류 문구(`messages.ts`), 세션 유지·만료 판단(`sessionKeeper.ts`의 순수 함수 `decide`, 실행은 `useSessionKeeper.ts`). API 클라이언트는 401을 받으면 `setUnauthorizedHandler`로 등록한 `expire()`를 부른다(로그인 관련 요청 제외)
   - `src/sysinfo/`: 시스템 정보 창. 주기 요청은 `poller.ts`(응답 후 다음 요청 예약, 중첩 없음)
   - `src/icons/`: 리졸버와 `IconImage`(컬러는 `<img>`, symbolic은 `mask-image`)
@@ -78,7 +78,7 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
   - 저장소·데이터에는 문구가 아니라 키·코드를 둔다(`apps.ts`의 `titleKey`, `profileMenu.ts`의 `labelKey`, `auth/messages.ts`의 `LoginError.key`). 그래야 언어를 바꿀 때 이미 그려진 창 제목·오류도 바로 바뀐다
   - 숫자·날짜·시간 단위는 번역 키 대신 `Intl`로 표시하고(`sysinfo/format.ts`, `shell/clock.ts`), locale은 인자로 받는다. 컴포넌트는 `useLanguage()`로 현재 언어를 얻어 넘긴다
   - `src/i18n/index.ts`(초기화, `setLanguage`, `useLanguage`)는 document·localStorage를 만지므로 컴포넌트와 `main.tsx`에서만 import한다. node 테스트 대상 모듈은 `languages.ts`(지원 목록, `pickLanguage`, `languageName`)와 `i18next`의 타입만 import한다
-  - 언어 선택: 저장값(localStorage `omvdesk.language`) → `navigator.languages` → 영어. 로그인 상태가 아닌 브라우저별 편의 설정이라 localStorage에 둔다.
+  - 언어 선택: 저장값(localStorage `omvdesk.language`) → `navigator.languages` → 영어. 로그인 상태가 아닌 브라우저별 편의 설정이라 localStorage에 둔다. 바꾸는 곳은 로그인·연결 끊김 화면의 `shell/LanguageSelect.tsx`와 프로필 메뉴의 언어 하위 메뉴. 언어 이름은 번역하지 않고 `Intl.DisplayNames`로 그 언어 자신의 이름을 쓴다
   - 언어 추가: `locales/<code>.json`을 만들고 `languages.ts`의 `SUPPORTED_LANGUAGES`와 `index.ts`의 `resources`에 등록한다. 일부만 번역해도 된다(빠진 키는 영어). 언어가 많아지면 정적 번들 대신 동적 `import()` + `addResourceBundle`로 지연 로딩한다
 - **아이콘**: Colloid를 git submodule(shallow)로 `vendor/icons/colloid/`에 둔다. 리졸버는 `frontend/src/icons/resolver.ts`이며, 매핑 테이블에 `?url` import로 한 줄씩 추가한 아이콘만 번들에 들어간다(디렉터리 glob 금지)
 
@@ -173,7 +173,7 @@ OMV 공식 저장소 소스(2026-10 기준)에서 확인한 내용이다. OMV �
    - 대시보드 세션 쿠키 발급, 앱 시작 시 세션 복원, 세션 없는 `/api/*` 요청은 401, OMV가 401을 반환하면 세션 삭제 후 로그인 화면
    - 로그인 시도 제한·실패 지연, 세션별 역할(admin 여부)을 보관해 프론트에 알림
    - 새 위젯·창, 시스템 상태를 바꾸는 코드는 만들지 않는다(작업표시줄 시계와 프로필 메뉴(로그아웃만)는 사용자 요청으로 2단계에 포함)
-   - 현지화(ko·en)는 사용자 요청으로 2단계와 3단계 사이에 넣었다
+   - 현지화(ko·en, 로그인 화면·프로필 메뉴의 언어 선택)는 사용자 요청으로 2단계와 3단계 사이에 넣었다
    - 완료 기준: 잘못된 비밀번호는 오류 표시와 지연 / 새로고침·새 탭에서도 로그인 유지 / 로그아웃 후 `/api/system`이 401 / OMV 세션 만료 시 로그인 화면으로 이동 / 비밀번호·세션 ID가 로그에 남지 않음
 3. 애드온 기반 읽기 전용 위젯: "애드온과 데이터 출처" 섹션의 애드온 계약과 capability 감지를 먼저 만든 뒤, 디스크 용량, SMART, 온도, 네트워크, 컨테이너 목록을 내장 애드온으로 구현한다
    - 현재 설치된 플러그인 기준으로 먼저 구현한다. 컨테이너는 Docker 런타임 기준으로 검증한다

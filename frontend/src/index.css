@@ -623,6 +623,42 @@ button {
   outline: none;
 }
 
+/* 언어 하위 메뉴. 프로필 메뉴가 화면 오른쪽 끝에 있으므로 메뉴 왼쪽에, 항목의 아래 변에 맞춰 연다. */
+.profile-submenu-anchor {
+  position: relative;
+}
+
+.profile-menu.profile-submenu {
+  right: calc(100% + 12px);
+  bottom: -6px;
+  min-width: 160px;
+}
+
+.profile-menu-item[aria-expanded='true'] {
+  background: var(--hover-bg);
+}
+
+.profile-menu-chevron {
+  margin-left: -4px;
+  margin-right: -6px;
+  color: var(--text-muted);
+}
+
+.profile-menu-value {
+  margin-left: auto;
+  padding-left: 12px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.profile-menu-check {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+}
+
 /* ---- 로그인 화면 ---- */
 
 .auth-screen {
@@ -747,6 +783,41 @@ button {
   margin: 4px 0 0;
   font-size: 12px;
   color: var(--text-muted);
+}
+
+/* 로그인·연결 끊김 카드 맨 아래의 언어 선택 상자. 카드 안에 두어 화면 전환 애니메이션을 함께 받는다. */
+.language-select {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-left: 8px;
+  border-radius: 6px;
+  color: var(--text-muted);
+}
+
+.language-select:hover,
+.language-select:focus-within {
+  background: var(--hover-bg);
+}
+
+.language-select select {
+  padding: 4px 6px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.language-select select:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.language-select option {
+  background: var(--window-bg);
+  color: var(--text);
 }
 
 /* ---- 시스템 정보 창 ---- */

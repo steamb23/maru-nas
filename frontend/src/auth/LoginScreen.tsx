@@ -3,6 +3,7 @@ import { type FormEvent, useEffect, useLayoutEffect, useRef, useState } from 're
 import { useTranslation } from 'react-i18next'
 import { useLanguage } from '../i18n'
 import { IconImage } from '../icons/IconImage'
+import { LanguageSelect } from '../shell/LanguageSelect'
 import { enterLogin } from '../shell/screenTransition'
 import { formatUnit } from '../sysinfo/format'
 import { type LoginError, loginErrorMessage } from './messages'
@@ -201,6 +202,7 @@ export function LoginScreen() {
           </form>
         )}
         <p className="login-footnote">{t('login.footnote')}</p>
+        <LanguageSelect />
       </main>
     </div>
   )
@@ -224,6 +226,7 @@ export function OfflineScreen() {
         <button type="button" className="login-submit" onClick={() => void restore()}>
           {t('offline.retry')}
         </button>
+        <LanguageSelect />
       </main>
     </div>
   )
