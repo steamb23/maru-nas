@@ -8,13 +8,13 @@ import { Clock } from './Clock'
 import { ProfileMenu } from './ProfileMenu'
 import { TASK_ENTER_MS, TASK_LEAVE_MS, withLeaving } from './taskbarAnim'
 import { type DragLayout, type Slot, dragLayout } from './taskbarDrag'
-import { taskMenuItems } from './taskbarMenu'
+import { type TaskMenuActions, taskMenuItems } from './taskbarMenu'
 import { useContextMenuTrigger } from './useContextMenuTrigger'
 import { useClosingWindows } from './useClosingWindows'
-import { animationsEnabled } from './useWindowAnimation'
+import { animationsEnabled, captureWindowLayout } from './useWindowAnimation'
 import { EASING } from './windowAnim'
 
-const { closeMany, minimize, raiseGroup, reorder } = useWindowStore.getState()
+const { closeMany, minimize, raiseGroup, reorder, restore, toggleMaximize } = useWindowStore.getState()
 
 // 이 거리 이상 가로로 끌어야 드래그로 본다. 그보다 짧으면 클릭이다.
 const DRAG_THRESHOLD = 4
@@ -25,6 +25,17 @@ const SETTLE_MS = 200
 function onTaskClick(w: WindowState, active: boolean) {
   if (active && !w.minimized) minimize(w.id)
   else raiseGroup(w.id)
+}
+
+// 버튼 우클릭 메뉴의 동작. 최대화는 제목 표시줄 버튼처럼 바뀌기 전 위치에서 애니메이션한다.
+const taskMenuActions: TaskMenuActions = {
+  closeMany,
+  minimize,
+  restore,
+  toggleMaximize: (id) => {
+    captureWindowLayout(id)
+    toggleMaximize(id)
+  },
 }
 
 // Press는 버튼을 누른 순간부터 드래그가 끝날 때까지의 포인터 정보다.
@@ -107,7 +118,7 @@ export function Taskbar() {
   const dragging = () => press.current !== null && press.current.phase !== 'press'
   const menu = useContextMenuTrigger({
     items: (el) =>
-      dragging() ? [] : taskMenuItems(useWindowStore.getState().windows, el.dataset.windowId ?? '', closeMany),
+      dragging() ? [] : taskMenuItems(useWindowStore.getState().windows, el.dataset.windowId ?? '', taskMenuActions),
     accept: () => !dragging(),
   })
 

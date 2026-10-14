@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { WindowState } from '../windows/store'
 import type { ContextMenuAction } from './contextMenu'
-import { taskMenuItems } from './taskbarMenu'
+import { type TaskMenuActions, taskMenuItems } from './taskbarMenu'
 
 const win = (id: string): WindowState => ({
   id,
@@ -18,19 +18,45 @@ const win = (id: string): WindowState => ({
 
 const windows = ['a', 'b', 'c', 'd'].map(win)
 
-// selectItem은 메뉴 항목 하나를 누른 결과로 닫히는 id 목록과 그 항목을 돌려준다.
+// selectItem은 메뉴 항목 하나를 누른 결과로 닫히는 id 목록, 불린 동작 순서, 그 항목을 돌려준다.
 function selectItem(ws: readonly WindowState[], id: string, item: string) {
   let closed: readonly string[] | null = null
-  const items = taskMenuItems(ws, id, (ids) => {
-    closed = ids
-  })
+  const calls: string[] = []
+  const actions: TaskMenuActions = {
+    closeMany: (ids) => {
+      closed = ids
+    },
+    minimize: (w) => calls.push(`minimize ${w}`),
+    restore: (w) => calls.push(`restore ${w}`),
+    toggleMaximize: (w) => calls.push(`toggleMaximize ${w}`),
+  }
+  const items = taskMenuItems(ws, id, actions)
   const action = items.find((i): i is ContextMenuAction => i.kind === 'action' && i.id === item)
   if (!action) throw new Error(`item ${item} not found`)
   action.onSelect()
-  return { closed, action }
+  return { closed, calls, action }
 }
 
 describe('taskMenuItems', () => {
+  it('최소화는 그 창을 최소화하고, 이미 최소화된 창이면 비활성이다', () => {
+    expect(selectItem(windows, 'b', 'minimize').calls).toEqual(['minimize b'])
+    expect(selectItem([{ ...win('a'), minimized: true }], 'a', 'minimize').action.disabled).toBe(true)
+  })
+
+  it('최대화는 최대화를 바꾸고, 최대화된 창이면 이전 크기로 표시한다', () => {
+    const r = selectItem(windows, 'b', 'maximize')
+    expect(r.calls).toEqual(['toggleMaximize b'])
+    expect(r.action.labelKey).toBe('window.maximize')
+    expect(selectItem([{ ...win('a'), maximized: true }], 'a', 'maximize').action.labelKey).toBe('window.restore')
+  })
+
+  it('최소화된 창을 최대화하면 복원도 함께 한다', () => {
+    expect(selectItem([{ ...win('a'), minimized: true }], 'a', 'maximize').calls).toEqual([
+      'toggleMaximize a',
+      'restore a',
+    ])
+  })
+
   it('닫기는 그 창만 닫는다', () => {
     expect(selectItem(windows, 'b', 'close').closed).toEqual(['b'])
   })
@@ -57,6 +83,9 @@ describe('taskMenuItems', () => {
   })
 
   it('없는 창이면 항목이 없다', () => {
-    expect(taskMenuItems(windows, 'x', () => {})).toEqual([])
+    const noop = () => {}
+    expect(taskMenuItems(windows, 'x', { closeMany: noop, minimize: noop, restore: noop, toggleMaximize: noop })).toEqual(
+      [],
+    )
   })
 })

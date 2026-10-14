@@ -57,6 +57,14 @@ export interface WindowAnimation {
   captureFrom: () => void
 }
 
+// 창 id → captureFrom. 창 밖(작업표시줄 메뉴)에서 배치를 바꿀 때 captureWindowLayout으로 부른다.
+const layoutCapturers = new Map<string, () => void>()
+
+// captureWindowLayout은 창 id의 captureFrom을 부른다. 그려지지 않은 창이면 아무것도 하지 않는다.
+export function captureWindowLayout(id: string) {
+  layoutCapturers.get(id)?.()
+}
+
 export function useWindowAnimation(
   ref: RefObject<HTMLElement | null>,
   id: string,
@@ -92,10 +100,18 @@ export function useWindowAnimation(
     return a
   }
 
+  // 숨겨진(최소화된) 창은 잴 위치가 없다. 복원과 함께 배치가 바뀌면 복원 애니메이션이 새 배치로 재생된다.
   const captureFrom = useCallback(() => {
     const el = ref.current
-    if (el && animationsEnabled()) layoutFrom.current = rectOf(el)
+    if (el && !el.hidden && animationsEnabled()) layoutFrom.current = rectOf(el)
   }, [ref])
+
+  useLayoutEffect(() => {
+    layoutCapturers.set(id, captureFrom)
+    return () => {
+      if (layoutCapturers.get(id) === captureFrom) layoutCapturers.delete(id)
+    }
+  }, [id, captureFrom])
 
   // 처음 그려질 때 커지며 나타난다. minimized는 처음 값만 본다.
   const openedMinimized = useRef(minimized)
