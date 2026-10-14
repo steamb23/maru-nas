@@ -55,7 +55,8 @@
   "apps": {
     "systemInfo": "System Information",
     "files": "Files",
-    "storage": "Storage"
+    "storage": "Storage",
+    "network": "Network"
   },
   "sysinfo": {
     "disconnected": "Disconnected — reconnecting…",
@@ -92,5 +93,16 @@
   "addonWindow": {
     "disconnected": "Disconnected — reconnecting…",
     "partial": "Some information could not be loaded."
+  },
+  "network": {
+    "empty": "No network interfaces found.",
+    "rx": "Download",
+    "tx": "Upload",
+    "up": "Connected",
+    "down": "Disconnected",
+    "totals": "Received {{rx}} · Sent {{tx}}",
+    "errors": "Errors {{errors}} · Dropped {{dropped}}",
+    "virtual_one": "{{count}} virtual interface",
+    "virtual_other": "{{count}} virtual interfaces"
   }
 }

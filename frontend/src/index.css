@@ -1389,3 +1389,52 @@ button {
 .level-crit {
   color: light-dark(#c5221f, #ff8a80);
 }
+
+/* ---- 네트워크 ---- */
+
+.net-rates {
+  display: flex;
+  gap: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.net-rates > span {
+  overflow: hidden;
+  flex: 1 1 0;
+  min-width: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.net-rates-large {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.net-rates-large strong {
+  color: var(--text);
+  font-size: 15px;
+}
+
+.widget-detail-line {
+  color: var(--text-muted);
+}
+
+.addon-details > summary {
+  margin-bottom: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+/* 좁은 위젯에서는 받기·보내기를 한 줄씩 둔다. */
+.net-rates.stacked {
+  flex-direction: column;
+  gap: 4px;
+  line-height: 20px;
+}
+
+.net-rates.stacked > span {
+  flex: none;
+}

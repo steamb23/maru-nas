@@ -54,3 +54,14 @@ export function formatPercent(percent: number, locale: string): string {
 export function percentOf(part: number, total: number): number {
   return total > 0 ? Math.min(100, Math.max(0, (part / total) * 100)) : 0
 }
+
+// formatRate는 초당 바이트를 1024 단위로 표시한다. 예: 1.2 MiB/s
+export function formatRate(bytesPerSecond: number, locale: string): string {
+  return `${formatBytes(bytesPerSecond, locale)}/s`
+}
+
+// formatLinkSpeed는 링크 속도(Mbps)를 표시한다. 1000 이상은 Gbps로 바꾼다. 예: 2.5 Gbps, 100 Mbps
+export function formatLinkSpeed(mbps: number, locale: string): string {
+  const n = new Intl.NumberFormat(locale, { maximumFractionDigits: 1 })
+  return mbps >= 1000 ? `${n.format(mbps / 1000)} Gbps` : `${n.format(mbps)} Mbps`
+}

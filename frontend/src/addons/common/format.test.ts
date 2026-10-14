@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatBytes, formatPercent, formatUnit, formatUptime, percentOf } from './format'
+import { formatBytes, formatLinkSpeed, formatPercent, formatRate, formatUnit, formatUptime, percentOf } from './format'
 
 describe('formatBytes', () => {
   it.each([
@@ -59,5 +59,16 @@ describe('formatPercent / percentOf', () => {
     expect(percentOf(25, 100)).toBe(25)
     expect(percentOf(5, 0)).toBe(0)
     expect(percentOf(200, 100)).toBe(100)
+  })
+})
+
+describe('formatRate, formatLinkSpeed', () => {
+  it('초당 바이트에 /s를 붙인다', () => {
+    expect(formatRate(1536, 'en')).toBe('1.5 KiB/s')
+  })
+  it('링크 속도는 1000 이상이면 Gbps', () => {
+    expect(formatLinkSpeed(2500, 'en')).toBe('2.5 Gbps')
+    expect(formatLinkSpeed(1000, 'en')).toBe('1 Gbps')
+    expect(formatLinkSpeed(100, 'en')).toBe('100 Mbps')
   })
 })

@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { useLanguage } from '../../i18n'
 import { formatBytes, formatPercent } from '../common/format'
 import { UsageBar } from '../common/UsageBar'
-import { widgetCapacity } from '../common/widgetRows'
+import { fitList, widgetCapacity } from '../common/widgetRows'
 import type { WidgetViewProps } from '../types'
 import { fsName, usedPercent, widgetFilesystems } from './storage'
 import { STORAGE_WIDGET_POLL_INTERVAL_MS, useStorage } from './useStorage'
@@ -19,8 +19,7 @@ export function StorageWidget({ active, size }: WidgetViewProps) {
   const { data, status } = useStorage(active, STORAGE_WIDGET_POLL_INTERVAL_MS)
   const list = data ? widgetFilesystems(data.filesystems) : []
   const capacity = widgetCapacity(size.rows, ITEM_HEIGHT, ITEM_GAP)
-  const shown = list.length > capacity ? list.slice(0, capacity - 1) : list
-  const hidden = list.length - shown.length
+  const { shown, hidden } = fitList(list, capacity)
   const wide = size.cols >= 3
 
   return (

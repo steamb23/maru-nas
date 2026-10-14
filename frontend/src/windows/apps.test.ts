@@ -35,6 +35,9 @@ describe('애드온 앱', () => {
   })
 
   it('애드온 앱이 앞에, 준비 중 앱이 뒤에 놓인다', () => {
-    expect(APP_IDS).toEqual(['system-info', 'storage', 'files'])
+    const windowAddons = Object.values(MANIFESTS)
+      .filter((m) => 'window' in m.views)
+      .map((m) => m.id)
+    expect(APP_IDS).toEqual([...windowAddons, 'files'])
   })
 })

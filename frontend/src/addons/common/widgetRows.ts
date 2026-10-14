@@ -16,3 +16,10 @@ export function widgetBodyHeight(rows: number): number {
 export function widgetCapacity(rows: number, itemHeight: number, gap: number): number {
   return Math.max(1, Math.floor((widgetBodyHeight(rows) + gap) / (itemHeight + gap)))
 }
+
+// fitList는 capacity줄에 들어갈 항목과 나머지 개수다. 다 들어가지 않으면 마지막 줄을 "외 N개"에
+// 내주되, 항목은 적어도 하나 보여 준다.
+export function fitList<T>(list: readonly T[], capacity: number): { shown: T[]; hidden: number } {
+  const shown = list.length > capacity ? list.slice(0, Math.max(1, capacity - 1)) : [...list]
+  return { shown, hidden: list.length - shown.length }
+}

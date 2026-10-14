@@ -15,6 +15,7 @@ import windowClose from '@colloid/actions/symbolic/window-close-symbolic.svg?url
 import windowMaximize from '@colloid/actions/symbolic/window-maximize-symbolic.svg?url'
 import windowMinimize from '@colloid/actions/symbolic/window-minimize-symbolic.svg?url'
 import windowRestore from '@colloid/actions/symbolic/window-restore-symbolic.svg?url'
+import preferencesSystemNetworkEthernet from '@colloid/apps/scalable/preferences-system-network-ethernet.svg?url'
 import utilitiesSystemMonitor from '@colloid/apps/scalable/utilities-system-monitor.svg?url'
 import preferencesDesktopLocale from '@colloid/categories/symbolic/preferences-desktop-locale-symbolic.svg?url'
 import driveHarddisk from '@colloid/devices/scalable/drive-harddisk.svg?url'
@@ -45,6 +46,7 @@ const ICONS = {
   'preferences-desktop-locale-symbolic': { url: preferencesDesktopLocale, kind: 'symbolic' },
   'avatar-default-symbolic': { url: avatarDefault, kind: 'symbolic' },
   'utilities-system-monitor': { url: utilitiesSystemMonitor, kind: 'color' },
+  'preferences-system-network-ethernet': { url: preferencesSystemNetworkEthernet, kind: 'color' },
   'drive-harddisk': { url: driveHarddisk, kind: 'color' },
   folder: { url: folder, kind: 'color' },
 } as const satisfies Record<string, Icon>

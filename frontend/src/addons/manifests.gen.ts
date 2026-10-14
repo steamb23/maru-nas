@@ -71,6 +71,39 @@ export const MANIFESTS = {
     "requires": {},
     "rpc": {}
   },
+  "network": {
+    "id": "network",
+    "title": "apps.network",
+    "icon": "preferences-system-network-ethernet",
+    "views": {
+      "window": {
+        "defaultSize": {
+          "width": 520,
+          "height": 400
+        },
+        "minSize": {
+          "width": 360,
+          "height": 240
+        }
+      },
+      "widget": {
+        "defaultSize": {
+          "cols": 3,
+          "rows": 2
+        },
+        "minSize": {
+          "cols": 2,
+          "rows": 2
+        },
+        "maxSize": {
+          "cols": 4,
+          "rows": 4
+        }
+      }
+    },
+    "requires": {},
+    "rpc": {}
+  },
 } as const satisfies Record<string, AddonManifest>
 
 export type AddonId = keyof typeof MANIFESTS
