@@ -18,6 +18,7 @@ import (
 	"omv-desktop-dashboard/backend/internal/auth"
 	"omv-desktop-dashboard/backend/internal/omv"
 	"omv-desktop-dashboard/backend/internal/omv/omvfake"
+	"omv-desktop-dashboard/backend/internal/prefs"
 )
 
 type fakeSource struct {
@@ -72,6 +73,7 @@ type envOptions struct {
 	wrapOMV func(OMV) OMV
 	addons  *addons.Registry
 	plugins PluginDetector
+	prefs   prefs.Store
 }
 
 func newEnv(t *testing.T, o envOptions) *env {
@@ -119,6 +121,7 @@ func newEnv(t *testing.T, o envOptions) *env {
 		Limiter:       lim,
 		Addons:        o.addons,
 		Plugins:       o.plugins,
+		Prefs:         o.prefs,
 		CheckInterval: o.interval,
 		FailDelay:     o.failDelay,
 		Now:           clk.Now,
@@ -145,7 +148,7 @@ func (b *browser) do(method, path string, body any) *httptest.ResponseRecorder {
 		rd = bytes.NewReader(buf)
 	}
 	req := httptest.NewRequest(method, path, rd)
-	if method == http.MethodPost {
+	if method == http.MethodPost || method == http.MethodPut {
 		req.Header.Set("Content-Type", "application/json")
 	}
 	for k, v := range b.header {

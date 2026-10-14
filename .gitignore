@@ -13,6 +13,9 @@ node_modules/
 /backend/internal/web/static/dist/
 /frontend/dist/
 
+# 개발 서버 상태(사용자 설정)
+/.dev-state/
+
 # 로그·도구
 *.log
 .vscode/*

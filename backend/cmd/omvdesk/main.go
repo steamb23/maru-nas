@@ -21,6 +21,7 @@ import (
 	"omv-desktop-dashboard/backend/internal/addons/builtin"
 	"omv-desktop-dashboard/backend/internal/addons/sysinfo"
 	"omv-desktop-dashboard/backend/internal/omv"
+	"omv-desktop-dashboard/backend/internal/prefs"
 	"omv-desktop-dashboard/backend/internal/server"
 	"omv-desktop-dashboard/backend/internal/web"
 )
@@ -35,6 +36,9 @@ func main() {
 		"OMV 웹 UI 주소 (루프백만 허용, 환경 변수 OMVDESK_OMV_URL)")
 	cookiePath := flag.String("cookie-path", cmp.Or(os.Getenv("OMVDESK_COOKIE_PATH"), "/desk"),
 		"브라우저가 보는 대시보드 경로 (세션 쿠키 Path, 환경 변수 OMVDESK_COOKIE_PATH)")
+	// systemd의 StateDirectory=를 쓰면 STATE_DIRECTORY가 설정된다.
+	stateDir := flag.String("state-dir", cmp.Or(os.Getenv("OMVDESK_STATE_DIR"), os.Getenv("STATE_DIRECTORY")),
+		"사용자 설정(위젯 배치 등)을 저장할 디렉터리. 비우면 메모리에만 둔다 (환경 변수 OMVDESK_STATE_DIR, STATE_DIRECTORY)")
 	flag.Parse()
 
 	if err := checkLoopback(*listen); err != nil {
@@ -42,6 +46,19 @@ func main() {
 	}
 	if err := checkOMVURL(*omvURL); err != nil {
 		log.Fatal(err)
+	}
+
+	var store prefs.Store
+	if *stateDir == "" {
+		log.Printf("no state directory: preferences will not persist across restarts")
+		store = prefs.NewMemoryStore()
+	} else {
+		fs, err := prefs.NewFileStore(*stateDir)
+		if err != nil {
+			log.Fatalf("state directory: %v", err)
+		}
+		log.Printf("state directory: %s", *stateDir)
+		store = fs
 	}
 
 	sys := sysinfo.NewReader()
@@ -57,6 +74,7 @@ func main() {
 			OMV:        omv.NewClient(*omvURL, userAgent),
 			Addons:     builtin.New(builtin.Deps{System: sys}),
 			Plugins:    plugins,
+			Prefs:      store,
 			CookiePath: *cookiePath,
 		}),
 		ReadHeaderTimeout: 10 * time.Second,

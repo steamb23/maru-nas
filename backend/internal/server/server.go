@@ -15,6 +15,7 @@ import (
 	"omv-desktop-dashboard/backend/internal/api"
 	"omv-desktop-dashboard/backend/internal/auth"
 	"omv-desktop-dashboard/backend/internal/omv"
+	"omv-desktop-dashboard/backend/internal/prefs"
 )
 
 // SystemSource는 시스템 통계를 제공한다. *sysinfo.Reader가 구현한다.
@@ -59,6 +60,8 @@ type Config struct {
 	Addons *addons.Registry
 	// Plugins가 nil이면 아무 플러그인도 설치되지 않은 것으로 본다.
 	Plugins PluginDetector
+	// Prefs는 사용자 설정 저장소다. nil이면 메모리에 둔다(재시작하면 사라진다).
+	Prefs prefs.Store
 
 	// Sessions, Limiter가 nil이면 새로 만든다.
 	Sessions *auth.Store
@@ -105,6 +108,9 @@ func New(cfg Config) http.Handler {
 	if cfg.Plugins == nil {
 		cfg.Plugins = noPlugins{}
 	}
+	if cfg.Prefs == nil {
+		cfg.Prefs = prefs.NewMemoryStore()
+	}
 	h := &handler{cfg}
 
 	mux := http.NewServeMux()
@@ -119,6 +125,8 @@ func New(cfg Config) http.Handler {
 	mux.HandleFunc("GET /api/system", h.requireSession(h.system))
 	mux.HandleFunc("GET /api/capabilities", h.requireSession(h.capabilities))
 	mux.HandleFunc("POST /api/rpc", h.requireSession(h.rpc))
+	mux.HandleFunc("GET /api/preferences", h.requireSession(h.preferences))
+	mux.HandleFunc("PUT /api/preferences/widgets", h.requireSession(h.setWidgets))
 	mux.HandleFunc("/api/", func(w http.ResponseWriter, _ *http.Request) {
 		writeJSON(w, http.StatusNotFound, api.ErrorResponse{Error: "not found"})
 	})

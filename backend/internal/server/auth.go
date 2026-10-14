@@ -313,7 +313,7 @@ func clientIP(r *http.Request) string {
 	return r.RemoteAddr
 }
 
-// requireJSON은 POST 요청의 Content-Type이 application/json인지 확인한다.
+// requireJSON은 본문이 있는 요청(POST, PUT)의 Content-Type이 application/json인지 확인한다.
 // SameSite=Strict 쿠키와 함께 쓰는 CSRF 보조 장치다(다른 출처의 폼은 이 형식으로 보낼 수 없다).
 func requireJSON(w http.ResponseWriter, r *http.Request) bool {
 	mt, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
@@ -325,10 +325,15 @@ func requireJSON(w http.ResponseWriter, r *http.Request) bool {
 }
 
 func decodeJSON(w http.ResponseWriter, r *http.Request, v any) bool {
+	return decodeJSONLimit(w, r, v, maxBodyBytes)
+}
+
+// decodeJSONLimit은 limit 바이트까지의 JSON 본문을 v로 읽는다. 실패하면 오류 응답을 쓰고 false를 반환한다.
+func decodeJSONLimit(w http.ResponseWriter, r *http.Request, v any, limit int64) bool {
 	if !requireJSON(w, r) {
 		return false
 	}
-	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxBodyBytes)).Decode(v); err != nil {
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, limit)).Decode(v); err != nil {
 		writeError(w, http.StatusBadRequest, api.ErrBadRequest, "invalid request body")
 		return false
 	}

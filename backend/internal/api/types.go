@@ -126,6 +126,31 @@ type RPCRequest struct {
 	Params json.RawMessage `json:"params,omitempty" tstype:"{ [key: string]: unknown }"`
 }
 
+// Preferences는 GET /api/preferences의 응답이며 로그인한 사용자의 대시보드 설정이다.
+// 백엔드 상태 디렉터리에 사용자별로 저장되어 로그아웃해도 남는다.
+type Preferences struct {
+	// Widgets는 바탕화면 위젯 배치다. 한 번도 저장하지 않았으면 없다(프론트가 기본 배치를 쓴다).
+	Widgets *[]WidgetPlacement `json:"widgets,omitempty"`
+}
+
+// WidgetPlacement는 바탕화면 위젯 하나의 자리다. 그리드는 오른쪽 위를 기준으로 하므로
+// 화면 크기가 달라도 위젯끼리 겹치는지는 이 값만으로 정해진다.
+type WidgetPlacement struct {
+	// Addon은 위젯 보기가 있는 애드온 id다. 애드온마다 위젯은 하나다.
+	Addon string `json:"addon"`
+	// Right는 그리드 오른쪽 끝에서 위젯 오른쪽 끝까지의 칸 수다.
+	Right int `json:"right"`
+	// Top은 그리드 위쪽 끝에서 위젯 위쪽 끝까지의 칸 수다.
+	Top  int `json:"top"`
+	Cols int `json:"cols"`
+	Rows int `json:"rows"`
+}
+
+// WidgetsRequest는 PUT /api/preferences/widgets의 요청 본문이다. 위젯 배치 전체를 바꾼다.
+type WidgetsRequest struct {
+	Widgets []WidgetPlacement `json:"widgets"`
+}
+
 // LoginRequest는 POST /api/login의 요청 본문이다.
 type LoginRequest struct {
 	Username string `json:"username"`
