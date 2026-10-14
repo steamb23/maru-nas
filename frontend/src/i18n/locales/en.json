@@ -54,7 +54,8 @@
     "menu": "User menu ({{username}})",
     "roleAdmin": "Administrator",
     "roleUser": "User",
-    "logout": "Sign out"
+    "logout": "Sign out",
+    "logoutConfirm": "Sign out? All open windows will be closed."
   },
   "apps": {
     "systemInfo": "System Information",

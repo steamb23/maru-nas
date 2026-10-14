@@ -6,6 +6,7 @@ import { useAuthStore } from '../auth/store'
 import { setLanguage, useLanguage } from '../i18n'
 import { SUPPORTED_LANGUAGES, languageName } from '../i18n/languages'
 import { IconImage } from '../icons/IconImage'
+import { useDialogs } from './dialogPresets'
 import {
   PROFILE_MENU_ITEMS,
   type ProfileMenuActionId,
@@ -21,11 +22,6 @@ import { CLOSE_EASING, EASING } from './windowAnim'
 const { logout } = useAuthStore.getState()
 
 // 메뉴는 프로필 버튼 쪽(오른쪽 아래, index.css의 transform-origin)에서 나타나고 사라진다(menuAnim.ts).
-
-// 메뉴 항목 동작. profileMenu.ts의 action 항목 id마다 하나씩 둔다.
-const actions: Record<ProfileMenuActionId, () => void> = {
-  logout: () => void logout(),
-}
 
 // ProfileAvatar는 사용자 아바타다. 지금은 기본 아이콘만 그린다.
 // 나중에 개인 설정에서 이미지·이니셜로 바꿀 수 있도록 아바타 그리기는 여기에만 둔다.
@@ -55,6 +51,20 @@ export function ProfileMenu() {
   const subId = useId()
   const subRef = useRef<HTMLDivElement>(null)
   const subButtonRef = useRef<HTMLButtonElement>(null)
+  const dialogs = useDialogs({ scope: 'desktop' })
+
+  // 메뉴 항목 동작. profileMenu.ts의 action 항목 id마다 하나씩 둔다.
+  const actions: Record<ProfileMenuActionId, () => void> = {
+    // 로그아웃하면 열린 창이 모두 닫히므로 데스크톱 범위 모달로 한 번 묻는다.
+    logout: async () => {
+      const ok = await dialogs.confirm({
+        title: t('profile.logout'),
+        message: t('profile.logoutConfirm'),
+        confirmLabel: t('profile.logout'),
+      })
+      if (ok) void logout()
+    },
+  }
 
   const show = () => {
     setOpen(true)

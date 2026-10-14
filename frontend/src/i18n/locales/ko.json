@@ -54,7 +54,8 @@
     "menu": "사용자 메뉴 ({{username}})",
     "roleAdmin": "관리자",
     "roleUser": "사용자",
-    "logout": "로그아웃"
+    "logout": "로그아웃",
+    "logoutConfirm": "로그아웃할까요? 열려 있는 창은 모두 닫힙니다."
   },
   "apps": {
     "systemInfo": "시스템 정보",
