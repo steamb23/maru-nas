@@ -2,14 +2,14 @@
 package builtin
 
 import (
-	"omv-desktop-dashboard/backend/internal/addons"
-	"omv-desktop-dashboard/backend/internal/addons/containers"
-	"omv-desktop-dashboard/backend/internal/addons/network"
-	"omv-desktop-dashboard/backend/internal/addons/services"
-	"omv-desktop-dashboard/backend/internal/addons/smart"
-	"omv-desktop-dashboard/backend/internal/addons/storage"
-	"omv-desktop-dashboard/backend/internal/addons/sysinfo"
-	"omv-desktop-dashboard/backend/internal/addons/temperature"
+	"onmaru/backend/internal/addons"
+	"onmaru/backend/internal/addons/containers"
+	"onmaru/backend/internal/addons/network"
+	"onmaru/backend/internal/addons/services"
+	"onmaru/backend/internal/addons/smart"
+	"onmaru/backend/internal/addons/storage"
+	"onmaru/backend/internal/addons/sysinfo"
+	"onmaru/backend/internal/addons/temperature"
 )
 
 // Deps는 내장 애드온의 provider가 쓰는 입력이다.

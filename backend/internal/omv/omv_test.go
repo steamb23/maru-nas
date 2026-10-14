@@ -9,11 +9,11 @@ import (
 	"testing"
 	"time"
 
-	"omv-desktop-dashboard/backend/internal/omv"
-	"omv-desktop-dashboard/backend/internal/omv/omvfake"
+	"onmaru/backend/internal/omv"
+	"onmaru/backend/internal/omv/omvfake"
 )
 
-const testUA = "omvdesk-test/1"
+const testUA = "onmaru-test/1"
 
 // clock은 테스트에서 시각을 직접 옮기는 시계다.
 type clock struct {

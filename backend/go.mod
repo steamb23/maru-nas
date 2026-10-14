@@ -1,4 +1,4 @@
-module omv-desktop-dashboard/backend
+module onmaru/backend
 
 go 1.27.1
 

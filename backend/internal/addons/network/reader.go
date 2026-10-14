@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"omv-desktop-dashboard/backend/internal/api"
+	"onmaru/backend/internal/api"
 )
 
 // Reader는 네트워크 인터페이스 상태와 누적 카운터를 읽는 provider다(이름 proc).

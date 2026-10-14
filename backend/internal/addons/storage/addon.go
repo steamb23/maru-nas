@@ -3,8 +3,8 @@ package storage
 import (
 	"context"
 
-	"omv-desktop-dashboard/backend/internal/addons"
-	"omv-desktop-dashboard/backend/internal/api"
+	"onmaru/backend/internal/addons"
+	"onmaru/backend/internal/api"
 )
 
 // ID는 디스크 용량 애드온의 id다.

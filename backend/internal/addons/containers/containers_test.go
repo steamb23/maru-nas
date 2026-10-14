@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"testing"
 
-	"omv-desktop-dashboard/backend/internal/addons"
+	"onmaru/backend/internal/addons"
 )
 
 func TestParseStatus(t *testing.T) {

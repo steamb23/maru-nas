@@ -2,7 +2,7 @@
 //
 // `make dev-fake`가 백엔드를 이 서버에 연결해, 실제 OMV 계정 없이 로그인 화면과
 // 세션 만료를 브라우저에서 확인할 수 있게 한다. 계정은 모두 가짜 값이며 운영
-// 바이너리(bin/omvdesk)에는 포함되지 않는다.
+// 바이너리(bin/onmaru)에는 포함되지 않는다.
 package main
 
 import (
@@ -15,7 +15,7 @@ import (
 	"os"
 	"time"
 
-	"omv-desktop-dashboard/backend/internal/omv/omvfake"
+	"onmaru/backend/internal/omv/omvfake"
 )
 
 func main() {

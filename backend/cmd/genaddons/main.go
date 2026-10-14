@@ -6,7 +6,7 @@ import (
 	"log"
 	"os"
 
-	"omv-desktop-dashboard/backend/internal/addons/builtin"
+	"onmaru/backend/internal/addons/builtin"
 )
 
 func main() {

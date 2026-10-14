@@ -6,10 +6,10 @@ import (
 	"log"
 	"net/http"
 
-	"omv-desktop-dashboard/backend/internal/addons"
-	"omv-desktop-dashboard/backend/internal/api"
-	"omv-desktop-dashboard/backend/internal/auth"
-	"omv-desktop-dashboard/backend/internal/omv"
+	"onmaru/backend/internal/addons"
+	"onmaru/backend/internal/api"
+	"onmaru/backend/internal/auth"
+	"onmaru/backend/internal/omv"
 )
 
 // maxRPCBodyBytes는 /api/rpc 요청 본문의 최대 크기다.

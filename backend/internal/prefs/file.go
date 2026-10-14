@@ -11,7 +11,7 @@ import (
 	"strings"
 	"sync"
 
-	"omv-desktop-dashboard/backend/internal/api"
+	"onmaru/backend/internal/api"
 )
 
 // fileVersion은 사용자 설정 파일 형식의 버전이다. 형식을 바꾸면 올리고 읽을 때 변환한다.

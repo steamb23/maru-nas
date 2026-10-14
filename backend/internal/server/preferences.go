@@ -4,8 +4,8 @@ import (
 	"log"
 	"net/http"
 
-	"omv-desktop-dashboard/backend/internal/api"
-	"omv-desktop-dashboard/backend/internal/auth"
+	"onmaru/backend/internal/api"
+	"onmaru/backend/internal/auth"
 )
 
 // maxPreferencesBodyBytes는 PUT /api/preferences/* 본문의 상한이다. 위젯 64개도 넉넉히 들어간다.

@@ -9,12 +9,12 @@ import (
 	"testing"
 	"time"
 
-	"omv-desktop-dashboard/backend/internal/addons"
-	"omv-desktop-dashboard/backend/internal/addons/containers"
-	"omv-desktop-dashboard/backend/internal/addons/services"
-	"omv-desktop-dashboard/backend/internal/addons/smart"
-	"omv-desktop-dashboard/backend/internal/api"
-	"omv-desktop-dashboard/backend/internal/omv/omvfake"
+	"onmaru/backend/internal/addons"
+	"onmaru/backend/internal/addons/containers"
+	"onmaru/backend/internal/addons/services"
+	"onmaru/backend/internal/addons/smart"
+	"onmaru/backend/internal/api"
+	"onmaru/backend/internal/omv/omvfake"
 )
 
 // dataAddon은 Fetch가 있는 테스트용 애드온이다.

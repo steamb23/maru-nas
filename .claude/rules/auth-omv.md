@@ -31,7 +31,7 @@ OMV 공식 저장소 소스(2026-10 기준)에서 확인한 내용이다. OMV �
 ## 인증 설계
 
 - 로그인 화면은 자체 디자인하고, 인증은 백엔드가 `Session.login`(필요하면 `Session.verify`)을 호출해 위임한다. 계정·비밀번호를 따로 저장하지 않는다
-- 로그인 성공 시 대시보드 자체 세션 쿠키(`omvdesk_session`, HttpOnly, SameSite=Strict, Path `/desk`)를 발급한다. 2차 인증 대기 중에는 `omvdesk_pending`. Secure는 HTTPS로 들어온 요청(`X-Forwarded-Proto: https`)에만 붙인다(평문 HTTP 개발 서버에서는 브라우저가 Secure 쿠키를 저장하지 않으므로). 세션 저장소는 메모리이며 백엔드 재시작 시 모두 재로그인한다
+- 로그인 성공 시 대시보드 자체 세션 쿠키(`onmaru_session`, HttpOnly, SameSite=Strict, Path `/desk`)를 발급한다. 2차 인증 대기 중에는 `onmaru_pending`. Secure는 HTTPS로 들어온 요청(`X-Forwarded-Proto: https`)에만 붙인다(평문 HTTP 개발 서버에서는 브라우저가 Secure 쿠키를 저장하지 않으므로). 세션 저장소는 메모리이며 백엔드 재시작 시 모두 재로그인한다
 - 백엔드의 OMV 클라이언트는 세션 ID를 쿠키가 아닌 `X-OpenMediaVault-SessionID` 헤더로 보내고, 응답 `Set-Cookie`로 바뀐 ID를 갱신한다
 - `/api/*`는 대시보드 세션이 없으면 401을 반환한다(`/api/health`, 로그인 라우트 제외). 본문이 있는 요청(POST, PUT)은 `Content-Type: application/json`만 받는다(CSRF 보조 장치)
 - 로그인 상태를 localStorage·sessionStorage에 저장하지 않는다. 앱 시작 시 `/api/session`으로 상태를 복원한다(workbench처럼 탭마다 로그인하지 않게 하기 위함)

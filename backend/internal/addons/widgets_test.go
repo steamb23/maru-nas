@@ -3,7 +3,7 @@ package addons
 import (
 	"testing"
 
-	"omv-desktop-dashboard/backend/internal/api"
+	"onmaru/backend/internal/api"
 )
 
 func widgetRegistry(t *testing.T) *Registry {

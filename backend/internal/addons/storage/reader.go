@@ -8,7 +8,7 @@ import (
 	"strings"
 	"syscall"
 
-	"omv-desktop-dashboard/backend/internal/api"
+	"onmaru/backend/internal/api"
 )
 
 // Usage는 statfs 결과(바이트)다.

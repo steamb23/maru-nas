@@ -9,7 +9,7 @@ import (
 	"slices"
 	"sync"
 
-	"omv-desktop-dashboard/backend/internal/api"
+	"onmaru/backend/internal/api"
 )
 
 // Store는 사용자 설정 저장소다. 여러 고루틴에서 함께 써도 된다.

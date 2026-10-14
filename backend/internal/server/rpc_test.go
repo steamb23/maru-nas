@@ -8,9 +8,9 @@ import (
 	"sync"
 	"testing"
 
-	"omv-desktop-dashboard/backend/internal/api"
-	"omv-desktop-dashboard/backend/internal/omv"
-	"omv-desktop-dashboard/backend/internal/omv/omvfake"
+	"onmaru/backend/internal/api"
+	"onmaru/backend/internal/omv"
+	"onmaru/backend/internal/omv/omvfake"
 )
 
 // recordingOMV는 실제 클라이언트로 넘기면서 Call 요청을 기록한다.

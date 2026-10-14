@@ -7,7 +7,7 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"omv-desktop-dashboard/backend/internal/api"
+	"onmaru/backend/internal/api"
 )
 
 func readMounts(t *testing.T) []Mount {

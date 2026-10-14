@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"omv-desktop-dashboard/backend/internal/api"
+	"onmaru/backend/internal/api"
 )
 
 const sampleList = `{"total": 3, "data": [

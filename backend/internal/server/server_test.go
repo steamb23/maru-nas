@@ -13,12 +13,12 @@ import (
 	"testing"
 	"time"
 
-	"omv-desktop-dashboard/backend/internal/addons"
-	"omv-desktop-dashboard/backend/internal/api"
-	"omv-desktop-dashboard/backend/internal/auth"
-	"omv-desktop-dashboard/backend/internal/omv"
-	"omv-desktop-dashboard/backend/internal/omv/omvfake"
-	"omv-desktop-dashboard/backend/internal/prefs"
+	"onmaru/backend/internal/addons"
+	"onmaru/backend/internal/api"
+	"onmaru/backend/internal/auth"
+	"onmaru/backend/internal/omv"
+	"onmaru/backend/internal/omv/omvfake"
+	"onmaru/backend/internal/prefs"
 )
 
 type fakeSource struct {
@@ -100,7 +100,7 @@ func newEnv(t *testing.T, o envOptions) *env {
 	store.Now = clk.Now
 	lim := auth.NewLimiter()
 	lim.Now = clk.Now
-	var client OMV = omv.NewClient(ts.URL, "omvdesk-test/1")
+	var client OMV = omv.NewClient(ts.URL, "onmaru-test/1")
 	if o.omvOverride != nil {
 		client = o.omvOverride
 	}

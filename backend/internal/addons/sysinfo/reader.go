@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"omv-desktop-dashboard/backend/internal/api"
+	"onmaru/backend/internal/api"
 )
 
 const (

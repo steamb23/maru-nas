@@ -1,6 +1,6 @@
-# OMV 데스크톱 대시보드
+# 온마루 (Onmaru)
 
-<!-- 프로젝트 이름이 정해지면 위 제목을 바꿔주세요. HTML 주석은 Claude 컨텍스트에서 제외되므로 메모용으로 써도 됩니다. -->
+> A suspiciously normal desktop-like dashboard for openmediavault.
 
 OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표시줄·아이콘이 있는 데스크톱형 웹 대시보드.
 
@@ -70,9 +70,9 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 
 | 명령 | 내용 |
 |---|---|
-| `make dev` | 개발 서버. 백엔드 `127.0.0.1:8090`(`go run`) + Vite `0.0.0.0:5173`. 접속은 `http://<NAS-IP>:5173/desk/`. Ctrl+C로 둘 다 종료. 실제 OMV에 연결하므로 `frontend/.env.local`에 `OMVDESK_OMV_URL`(이 NAS의 OMV 주소)을 둔다 |
+| `make dev` | 개발 서버. 백엔드 `127.0.0.1:8090`(`go run`) + Vite `0.0.0.0:5173`. 접속은 `http://<NAS-IP>:5173/desk/`. Ctrl+C로 둘 다 종료. 실제 OMV에 연결하므로 `frontend/.env.local`에 `ONMARU_OMV_URL`(이 NAS의 OMV 주소)을 둔다 |
 | `make dev-fake` | `make dev`와 같지만 가짜 OMV(`127.0.0.1:8091`)를 함께 띄워 연결한다. `FAKEOMV_TIMEOUT=1m make dev-fake`처럼 세션 timeout을 분 단위로 바꿀 수 있다 |
-| `make build` | 프론트 빌드 → `backend/internal/web/static/dist/` → `bin/omvdesk` 단일 실행 파일 |
+| `make build` | 프론트 빌드 → `backend/internal/web/static/dist/` → `bin/onmaru` 단일 실행 파일 |
 | `make lint` | `gofmt -l`, `go vet`, oxlint, `tsc -b` |
 | `make test` | `go test -count=1 ./...`(모듈 밖 생성물 검사가 캐시로 통과하지 않게), `vitest run` |
 | `make check` | lint + test |

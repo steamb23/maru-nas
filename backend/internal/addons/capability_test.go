@@ -10,7 +10,7 @@ import (
 	"testing/fstest"
 	"time"
 
-	"omv-desktop-dashboard/backend/internal/api"
+	"onmaru/backend/internal/api"
 )
 
 func TestParseInstalledPackages(t *testing.T) {

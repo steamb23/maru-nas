@@ -8,9 +8,9 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"omv-desktop-dashboard/backend/internal/addons"
-	"omv-desktop-dashboard/backend/internal/addons/smart"
-	"omv-desktop-dashboard/backend/internal/api"
+	"onmaru/backend/internal/addons"
+	"onmaru/backend/internal/addons/smart"
+	"onmaru/backend/internal/api"
 )
 
 func file(s string) *fstest.MapFile { return &fstest.MapFile{Data: []byte(s + "\n")} }

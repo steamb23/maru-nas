@@ -3,7 +3,7 @@ package addons
 import (
 	"fmt"
 
-	"omv-desktop-dashboard/backend/internal/api"
+	"onmaru/backend/internal/api"
 )
 
 const (

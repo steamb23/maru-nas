@@ -12,16 +12,16 @@ import (
 	"strings"
 	"time"
 
-	"omv-desktop-dashboard/backend/internal/api"
-	"omv-desktop-dashboard/backend/internal/auth"
-	"omv-desktop-dashboard/backend/internal/omv"
+	"onmaru/backend/internal/api"
+	"onmaru/backend/internal/auth"
+	"onmaru/backend/internal/omv"
 )
 
 const (
 	// SessionCookie는 대시보드 세션 쿠키 이름이다.
-	SessionCookie = "omvdesk_session"
+	SessionCookie = "onmaru_session"
 	// PendingCookie는 2차 인증 대기 쿠키 이름이다.
-	PendingCookie = "omvdesk_pending"
+	PendingCookie = "onmaru_pending"
 	// maxBodyBytes는 인증 요청 본문의 최대 크기다.
 	maxBodyBytes = 4 << 10
 )

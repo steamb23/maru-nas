@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"omv-desktop-dashboard/backend/internal/addons"
-	"omv-desktop-dashboard/backend/internal/api"
+	"onmaru/backend/internal/addons"
+	"onmaru/backend/internal/api"
 )
 
 // ID는 서비스 애드온의 id다.

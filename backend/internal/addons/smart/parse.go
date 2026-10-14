@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"omv-desktop-dashboard/backend/internal/api"
+	"onmaru/backend/internal/api"
 )
 
 // listResponse는 Smart.getList 응답이다(rpc.common.getlist 형식의 {total, data}).

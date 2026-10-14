@@ -7,9 +7,9 @@ import (
 	"net/http"
 	"sync"
 
-	"omv-desktop-dashboard/backend/internal/addons"
-	"omv-desktop-dashboard/backend/internal/api"
-	"omv-desktop-dashboard/backend/internal/auth"
+	"onmaru/backend/internal/addons"
+	"onmaru/backend/internal/api"
+	"onmaru/backend/internal/auth"
 )
 
 // maxActionBodyBytes는 조작 요청 본문의 최대 크기다.

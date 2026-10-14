@@ -1,4 +1,4 @@
-// omvdesk는 OMV 데스크톱 대시보드의 백엔드다.
+// onmaru는 온마루(Onmaru) 대시보드의 백엔드다.
 package main
 
 import (
@@ -17,30 +17,30 @@ import (
 	"syscall"
 	"time"
 
-	"omv-desktop-dashboard/backend/internal/addons"
-	"omv-desktop-dashboard/backend/internal/addons/builtin"
-	"omv-desktop-dashboard/backend/internal/addons/smart"
-	"omv-desktop-dashboard/backend/internal/omv"
-	"omv-desktop-dashboard/backend/internal/prefs"
-	"omv-desktop-dashboard/backend/internal/server"
-	"omv-desktop-dashboard/backend/internal/web"
+	"onmaru/backend/internal/addons"
+	"onmaru/backend/internal/addons/builtin"
+	"onmaru/backend/internal/addons/smart"
+	"onmaru/backend/internal/omv"
+	"onmaru/backend/internal/prefs"
+	"onmaru/backend/internal/server"
+	"onmaru/backend/internal/web"
 )
 
 // userAgent는 OMV를 호출할 때 쓰는 고정 User-Agent다. OMV는 세션을 User-Agent에 묶는다.
-const userAgent = "omvdesk/0.2"
+const userAgent = "onmaru/0.2"
 
 func main() {
-	listen := flag.String("listen", cmp.Or(os.Getenv("OMVDESK_LISTEN"), "127.0.0.1:8090"),
-		"수신 주소 (루프백만 허용, 환경 변수 OMVDESK_LISTEN)")
-	omvURL := flag.String("omv-url", cmp.Or(os.Getenv("OMVDESK_OMV_URL"), "http://127.0.0.1"),
-		"OMV 웹 UI 주소 (루프백만 허용, 환경 변수 OMVDESK_OMV_URL)")
-	cookiePath := flag.String("cookie-path", cmp.Or(os.Getenv("OMVDESK_COOKIE_PATH"), "/desk"),
-		"브라우저가 보는 대시보드 경로 (세션 쿠키 Path, 환경 변수 OMVDESK_COOKIE_PATH)")
+	listen := flag.String("listen", cmp.Or(os.Getenv("ONMARU_LISTEN"), "127.0.0.1:8090"),
+		"수신 주소 (루프백만 허용, 환경 변수 ONMARU_LISTEN)")
+	omvURL := flag.String("omv-url", cmp.Or(os.Getenv("ONMARU_OMV_URL"), "http://127.0.0.1"),
+		"OMV 웹 UI 주소 (루프백만 허용, 환경 변수 ONMARU_OMV_URL)")
+	cookiePath := flag.String("cookie-path", cmp.Or(os.Getenv("ONMARU_COOKIE_PATH"), "/desk"),
+		"브라우저가 보는 대시보드 경로 (세션 쿠키 Path, 환경 변수 ONMARU_COOKIE_PATH)")
 	// systemd의 StateDirectory=를 쓰면 STATE_DIRECTORY가 설정된다.
-	stateDir := flag.String("state-dir", cmp.Or(os.Getenv("OMVDESK_STATE_DIR"), os.Getenv("STATE_DIRECTORY")),
-		"사용자 설정(위젯 배치 등)을 저장할 디렉터리. 비우면 메모리에만 둔다 (환경 변수 OMVDESK_STATE_DIR, STATE_DIRECTORY)")
-	smartAt := flag.String("smart-refresh-at", cmp.Or(os.Getenv("OMVDESK_SMART_REFRESH_AT"), "00:00"),
-		"SMART 정보를 하루 한 번 다시 가져오는 기준 시각 HH:MM, 서버 로컬 시간 (환경 변수 OMVDESK_SMART_REFRESH_AT)")
+	stateDir := flag.String("state-dir", cmp.Or(os.Getenv("ONMARU_STATE_DIR"), os.Getenv("STATE_DIRECTORY")),
+		"사용자 설정(위젯 배치 등)을 저장할 디렉터리. 비우면 메모리에만 둔다 (환경 변수 ONMARU_STATE_DIR, STATE_DIRECTORY)")
+	smartAt := flag.String("smart-refresh-at", cmp.Or(os.Getenv("ONMARU_SMART_REFRESH_AT"), "00:00"),
+		"SMART 정보를 하루 한 번 다시 가져오는 기준 시각 HH:MM, 서버 로컬 시간 (환경 변수 ONMARU_SMART_REFRESH_AT)")
 	flag.Parse()
 
 	if err := checkLoopback(*listen); err != nil {

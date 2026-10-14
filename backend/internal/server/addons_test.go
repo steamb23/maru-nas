@@ -6,8 +6,8 @@ import (
 	"sync"
 	"testing"
 
-	"omv-desktop-dashboard/backend/internal/addons"
-	"omv-desktop-dashboard/backend/internal/api"
+	"onmaru/backend/internal/addons"
+	"onmaru/backend/internal/api"
 )
 
 type testProvider struct {

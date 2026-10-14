@@ -9,9 +9,9 @@ import (
 	"regexp"
 	"time"
 
-	"omv-desktop-dashboard/backend/internal/addons"
-	"omv-desktop-dashboard/backend/internal/addons/smart"
-	"omv-desktop-dashboard/backend/internal/api"
+	"onmaru/backend/internal/addons"
+	"onmaru/backend/internal/addons/smart"
+	"onmaru/backend/internal/api"
 )
 
 // ID는 온도 애드온의 id다.

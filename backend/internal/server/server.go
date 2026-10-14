@@ -11,11 +11,11 @@ import (
 	"net/http"
 	"time"
 
-	"omv-desktop-dashboard/backend/internal/addons"
-	"omv-desktop-dashboard/backend/internal/api"
-	"omv-desktop-dashboard/backend/internal/auth"
-	"omv-desktop-dashboard/backend/internal/omv"
-	"omv-desktop-dashboard/backend/internal/prefs"
+	"onmaru/backend/internal/addons"
+	"onmaru/backend/internal/api"
+	"onmaru/backend/internal/auth"
+	"onmaru/backend/internal/omv"
+	"onmaru/backend/internal/prefs"
 )
 
 // SystemSource는 시스템 통계를 제공한다. *sysinfo.Reader가 구현한다.

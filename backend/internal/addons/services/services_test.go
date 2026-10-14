@@ -9,8 +9,8 @@ import (
 	"sort"
 	"testing"
 
-	"omv-desktop-dashboard/backend/internal/addons"
-	"omv-desktop-dashboard/backend/internal/api"
+	"onmaru/backend/internal/addons"
+	"onmaru/backend/internal/api"
 )
 
 func TestParseStatus(t *testing.T) {

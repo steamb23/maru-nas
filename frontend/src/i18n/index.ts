@@ -9,7 +9,7 @@ import { FALLBACK_LANGUAGE, type Language, SUPPORTED_LANGUAGES, isLanguage, pick
 import en from './locales/en.json'
 import ko from './locales/ko.json'
 
-const STORAGE_KEY = 'omvdesk.language'
+const STORAGE_KEY = 'onmaru.language'
 
 const resources = {
   en: { translation: en },

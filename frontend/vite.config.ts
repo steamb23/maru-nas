@@ -10,9 +10,9 @@ export default defineConfig(({ mode }) => {
   // 개인 환경 값은 커밋하지 않는 frontend/.env.local에 둔다.
   //   DEV_HOST            개발 서버 바인딩 주소 (기본: 모든 인터페이스)
   //   DEV_ALLOWED_HOSTS   IP가 아닌 호스트 이름으로 접속할 때 허용할 이름 (쉼표 구분)
-  //   OMVDESK_LISTEN      백엔드 주소 (기본: 127.0.0.1:8090)
+  //   ONMARU_LISTEN      백엔드 주소 (기본: 127.0.0.1:8090)
   const env = { ...loadEnv(mode, fromHere('.'), ''), ...process.env }
-  const backend = env.OMVDESK_LISTEN || '127.0.0.1:8090'
+  const backend = env.ONMARU_LISTEN || '127.0.0.1:8090'
 
   return {
     // 운영 환경에서는 Caddy가 /desk/* 를 백엔드로 넘기며 /desk 접두사를 제거한다.

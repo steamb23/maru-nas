@@ -15,7 +15,7 @@ import (
 	"strings"
 	"time"
 
-	"omv-desktop-dashboard/backend/internal/api"
+	"onmaru/backend/internal/api"
 )
 
 // WritesEnabled는 상태를 바꾸는 OMV RPC(manifest의 rpc.write)를 부를 수 있는지다.

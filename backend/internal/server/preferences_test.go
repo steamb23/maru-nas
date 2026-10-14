@@ -7,9 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"omv-desktop-dashboard/backend/internal/addons"
-	"omv-desktop-dashboard/backend/internal/api"
-	"omv-desktop-dashboard/backend/internal/prefs"
+	"onmaru/backend/internal/addons"
+	"onmaru/backend/internal/api"
+	"onmaru/backend/internal/prefs"
 )
 
 // widgetAddon은 위젯 보기가 있는 테스트용 애드온이다(크기 2×2~4×3, 기본 3×2).

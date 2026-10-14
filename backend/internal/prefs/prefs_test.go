@@ -7,7 +7,7 @@ import (
 	"slices"
 	"testing"
 
-	"omv-desktop-dashboard/backend/internal/api"
+	"onmaru/backend/internal/api"
 )
 
 var sample = []api.WidgetPlacement{
