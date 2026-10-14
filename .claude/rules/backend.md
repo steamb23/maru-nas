@@ -6,7 +6,10 @@ paths:
 # 백엔드 (Go)
 
 - 표준 라이브러리(`net/http`)만 쓴다. 런타임 외부 의존성을 두지 않는다. tygo는 go.mod의 `tool` 지시어로 고정한 빌드 도구다
-- 주소 플래그는 루프백만 허용한다: `-listen`(`ONMARU_LISTEN`, 기본 `127.0.0.1:8090`), `-omv-url`(`ONMARU_OMV_URL`, 기본 `http://127.0.0.1`). 루프백이 아닌 값은 거부하는 동작을 유지한다
+- `-listen`(`ONMARU_LISTEN`, 기본 `127.0.0.1:8090`)은 루프백 TCP 주소 또는 `unix:/절대/경로`를 받는다. 루프백이 아닌 TCP 주소는 `-allow-non-loopback`(`ONMARU_ALLOW_NON_LOOPBACK`)을 명시했을 때만 허용하고 시작 시 경고를 남긴다. 기본값이 거부인 동작을 유지한다
+  - Unix 소켓은 권한 `0660`으로 만들고, 남은 소켓 파일은 지우되 소켓이 아닌 파일이나 사용 중인 소켓은 건드리지 않는다(`cmd/onmaru` `listenOn`)
+  - 프록시를 거치지 않은 요청은 `X-Forwarded-*`를 위조할 수 있다. 루프백·소켓 수신은 이 헤더를 믿을 근거이므로 다른 경로를 기본으로 열지 않는다
+- `-omv-url`(`ONMARU_OMV_URL`, 기본 `http://127.0.0.1`)은 루프백만 허용한다(OMV 세션 ID가 네트워크로 나가지 않게). 이 제한은 완화하지 않는다
 - 대시보드 사용자 설정(위젯 배치 등)은 `internal/prefs`가 상태 디렉터리(`-state-dir`, `ONMARU_STATE_DIR`, 없으면 systemd의 `STATE_DIRECTORY`)에 사용자별 JSON으로 저장한다. 비우면 메모리에만 둔다. 대시보드 자신의 상태만 두며 OMV 설정이나 시스템 파일은 쓰지 않는다. `make dev`는 `.dev-state/real`, `make dev-fake`는 `.dev-state/fake`를 쓴다(커밋 안 함)
   - 설정 변경 API는 부분별로 둔다(`PUT /api/preferences/widgets`). 나중에 다른 설정이 생겨도 서로 덮어쓰지 않게 한다
 - `cmd/fakeomv`와 `internal/omv/omvfake`는 개발·테스트용이다. 운영 바이너리(`cmd/onmaru`)에서 import하지 않는다

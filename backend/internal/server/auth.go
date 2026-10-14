@@ -300,6 +300,8 @@ func isHTTPS(r *http.Request) bool {
 
 // clientIP는 브라우저 IP다. 앞단 프록시가 붙인 X-Forwarded-For의 마지막 항목을 쓴다.
 // 앞쪽 항목은 브라우저가 임의로 보낼 수 있으므로 믿지 않는다.
+// 알 수 없으면 빈 문자열이다(Unix 소켓으로 들어온 요청은 RemoteAddr가 IP가 아니다).
+// 빈 값끼리는 로그인 시도 제한에서 같은 IP로 취급된다.
 func clientIP(r *http.Request) string {
 	if xff := r.Header.Values("X-Forwarded-For"); len(xff) > 0 {
 		parts := strings.Split(xff[len(xff)-1], ",")
@@ -307,10 +309,14 @@ func clientIP(r *http.Request) string {
 			return ip.String()
 		}
 	}
-	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
-		return host
+	host := r.RemoteAddr
+	if h, _, err := net.SplitHostPort(host); err == nil {
+		host = h
 	}
-	return r.RemoteAddr
+	if ip := net.ParseIP(host); ip != nil {
+		return ip.String()
+	}
+	return ""
 }
 
 // requireJSON은 본문이 있는 요청(POST, PUT)의 Content-Type이 application/json인지 확인한다.

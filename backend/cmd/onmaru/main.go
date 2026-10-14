@@ -6,6 +6,8 @@ import (
 	"context"
 	"errors"
 	"flag"
+	"fmt"
+	"io/fs"
 	"log"
 	"maps"
 	"net"
@@ -13,7 +15,10 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"slices"
+	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -31,7 +36,9 @@ const userAgent = "onmaru/0.2"
 
 func main() {
 	listen := flag.String("listen", cmp.Or(os.Getenv("ONMARU_LISTEN"), "127.0.0.1:8090"),
-		"수신 주소 (루프백만 허용, 환경 변수 ONMARU_LISTEN)")
+		"수신 주소. host:port(기본은 루프백만 허용) 또는 unix:/절대/경로.sock (환경 변수 ONMARU_LISTEN)")
+	allowNonLoopback := flag.Bool("allow-non-loopback", envBool("ONMARU_ALLOW_NON_LOOPBACK"),
+		"루프백이 아닌 TCP 주소(0.0.0.0 등)에서도 수신한다. 위험: 리버스 프록시를 거치지 않은 접속을 받는다 (환경 변수 ONMARU_ALLOW_NON_LOOPBACK)")
 	omvURL := flag.String("omv-url", cmp.Or(os.Getenv("ONMARU_OMV_URL"), "http://127.0.0.1"),
 		"OMV 웹 UI 주소 (루프백만 허용, 환경 변수 ONMARU_OMV_URL)")
 	cookiePath := flag.String("cookie-path", cmp.Or(os.Getenv("ONMARU_COOKIE_PATH"), "/"),
@@ -43,8 +50,14 @@ func main() {
 		"SMART 정보를 하루 한 번 다시 가져오는 기준 시각 HH:MM, 서버 로컬 시간 (환경 변수 ONMARU_SMART_REFRESH_AT)")
 	flag.Parse()
 
-	if err := checkLoopback(*listen); err != nil {
+	network, address, err := parseListen(*listen, *allowNonLoopback)
+	if err != nil {
 		log.Fatal(err)
+	}
+	if _, _, err := parseListen(*listen, false); err != nil {
+		log.Printf("WARNING: listening on non-loopback address %s. Requests can bypass the reverse proxy: "+
+			"traffic is plain HTTP and X-Forwarded-For/X-Forwarded-Proto can be forged by any client "+
+			"(login rate limit, OMV auth log, cookie Secure flag)", address)
 	}
 	if err := checkOMVURL(*omvURL); err != nil {
 		log.Fatal(err)
@@ -55,12 +68,12 @@ func main() {
 		log.Printf("no state directory: preferences will not persist across restarts")
 		store = prefs.NewMemoryStore()
 	} else {
-		fs, err := prefs.NewFileStore(*stateDir)
+		fileStore, err := prefs.NewFileStore(*stateDir)
 		if err != nil {
 			log.Fatalf("state directory: %v", err)
 		}
 		log.Printf("state directory: %s", *stateDir)
-		store = fs
+		store = fileStore
 	}
 
 	deps := builtin.HostDeps()
@@ -74,7 +87,6 @@ func main() {
 	log.Printf("detected omv plugins: %v", slices.Sorted(maps.Keys(plugins.Plugins())))
 
 	srv := &http.Server{
-		Addr: *listen,
 		Handler: server.New(server.Config{
 			System:     deps.System,
 			Static:     web.Handler(),
@@ -96,24 +108,86 @@ func main() {
 		srv.Shutdown(shutdownCtx)
 	}()
 
-	log.Printf("listening on http://%s (omv: %s)", *listen, *omvURL)
-	if err := srv.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
+	ln, err := listenOn(network, address)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("listening on %s:%s (omv: %s)", network, address, *omvURL)
+	if err := srv.Serve(ln); !errors.Is(err, http.ErrServerClosed) {
 		log.Fatal(err)
 	}
 }
 
-// checkLoopback은 루프백 IP가 아닌 수신 주소를 거부한다.
-// 백엔드는 로컬 리버스 프록시를 통해서만 접근할 수 있어야 한다.
-func checkLoopback(addr string) error {
+// unixPrefix는 -listen 값에서 Unix 소켓 경로를 나타내는 접두사다.
+const unixPrefix = "unix:"
+
+// parseListen은 -listen 값을 net.Listen 인자로 바꾼다.
+// 백엔드는 로컬 리버스 프록시를 통해서만 접근하는 것이 기본이므로, allowNonLoopback이 아니면
+// 루프백 IP가 아닌 TCP 주소를 거부한다. Unix 소켓은 파일 권한으로 접근을 제한한다.
+func parseListen(addr string, allowNonLoopback bool) (network, address string, err error) {
+	if path, ok := strings.CutPrefix(addr, unixPrefix); ok {
+		if !filepath.IsAbs(path) {
+			return "", "", errors.New("unix socket path must be absolute (e.g. unix:/run/onmaru/onmaru.sock), got " + addr)
+		}
+		return "unix", path, nil
+	}
 	host, _, err := net.SplitHostPort(addr)
 	if err != nil {
-		return err
+		return "", "", err
 	}
-	ip := net.ParseIP(host)
-	if ip == nil || !ip.IsLoopback() {
-		return errors.New("listen address must be a loopback IP (e.g. 127.0.0.1:8090), got " + addr)
+	if !allowNonLoopback {
+		if ip := net.ParseIP(host); ip == nil || !ip.IsLoopback() {
+			return "", "", errors.New("listen address must be a loopback IP (e.g. 127.0.0.1:8090) or unix:/path, got " +
+				addr + " (use -allow-non-loopback to listen on other addresses)")
+		}
 	}
-	return nil
+	return "tcp", addr, nil
+}
+
+// listenOn은 수신을 시작한다. Unix 소켓이면 이전 실행이 남긴 소켓 파일을 지우고
+// 권한을 0660(소유자·그룹만 접속)으로 둔다. 종료할 때 소켓 파일은 리스너가 지운다.
+func listenOn(network, address string) (net.Listener, error) {
+	if network != "unix" {
+		return net.Listen(network, address)
+	}
+	if fi, err := os.Lstat(address); err == nil {
+		// 소켓이 아닌 파일은 경로 실수일 수 있으므로 지우지 않는다.
+		if fi.Mode().Type() != fs.ModeSocket {
+			return nil, fmt.Errorf("%s exists and is not a socket", address)
+		}
+		// 다른 인스턴스가 쓰고 있는 소켓은 빼앗지 않는다.
+		if c, err := net.Dial("unix", address); err == nil {
+			c.Close()
+			return nil, fmt.Errorf("%s is in use by another process", address)
+		}
+		if err := os.Remove(address); err != nil {
+			return nil, err
+		}
+	} else if !errors.Is(err, fs.ErrNotExist) {
+		return nil, err
+	}
+	ln, err := net.Listen("unix", address)
+	if err != nil {
+		return nil, err
+	}
+	if err := os.Chmod(address, 0o660); err != nil {
+		ln.Close()
+		return nil, err
+	}
+	return ln, nil
+}
+
+// envBool은 불리언 환경 변수를 읽는다. 비어 있으면 false이고, 해석할 수 없으면 종료한다.
+func envBool(key string) bool {
+	v := os.Getenv(key)
+	if v == "" {
+		return false
+	}
+	b, err := strconv.ParseBool(v)
+	if err != nil {
+		log.Fatalf("%s: invalid boolean %q", key, v)
+	}
+	return b
 }
 
 // checkOMVURL은 OMV 주소가 루프백 호스트의 http(s) URL인지 확인한다.
