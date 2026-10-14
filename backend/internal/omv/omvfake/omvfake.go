@@ -71,6 +71,8 @@ type Call struct {
 	SessionID string
 	// Touch는 이 호출이 마지막 접근 시각을 갱신하도록 요청했는지다.
 	Touch bool
+	// Params는 받은 RPC 파라미터 원문이다.
+	Params json.RawMessage
 }
 
 // Server는 가짜 rpc.php다. http.Handler를 구현한다.
@@ -229,6 +231,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		ForwardedFor: r.Header.Get("X-Forwarded-For"),
 		SessionID:    req.id,
 		Touch:        touch,
+		Params:       body.Params,
 	})
 
 	result, rerr := s.handle(req, body, touch)

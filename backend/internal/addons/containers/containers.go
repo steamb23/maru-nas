@@ -6,8 +6,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"slices"
 	"strings"
+	"time"
 
 	"omv-desktop-dashboard/backend/internal/addons"
 	"omv-desktop-dashboard/backend/internal/api"
@@ -21,7 +23,8 @@ const Source = "omv-compose"
 
 const composePlugin = "openmediavault-compose"
 
-// Manifest는 컨테이너 애드온의 선언이다. Compose.getContainers는 모든 사용자가 부를 수 있다.
+// Manifest는 컨테이너 애드온의 선언이다. Compose.getContainers는 모든 사용자가 부를 수 있고,
+// 시작·정지·재시작(Compose.doContainerCommand, Exec.isRunning)은 관리자만 한다.
 var Manifest = api.Manifest{
 	ID:    ID,
 	Title: "apps.containers",
@@ -39,8 +42,20 @@ var Manifest = api.Manifest{
 		},
 	},
 	Requires: api.Requirements{Plugins: []string{composePlugin}},
-	RPC:      api.RPCMethods{Read: []string{"Compose.getContainers"}},
+	RPC: api.RPCMethods{
+		Read:  []string{"Compose.getContainers", "Exec.isRunning"},
+		Write: []string{"Compose.doContainerCommand"},
+	},
+	Actions: []api.ActionDecl{
+		{Name: "start", Admin: true},
+		{Name: "stop", Admin: true, Confirm: true},
+		{Name: "restart", Admin: true, Confirm: true},
+	},
 }
+
+// actionTimeout은 조작 하나를 기다리는 시간이다. docker stop은 컨테이너의 종료 유예 시간(기본 10초,
+// compose의 stop_grace_period로 늘릴 수 있음)만큼 걸린다.
+const actionTimeout = 2 * time.Minute
 
 type compose struct{}
 
@@ -61,6 +76,47 @@ func New() addons.Addon {
 			}
 			return ParseContainers(raw)
 		},
+		Actions: map[string]addons.Action{
+			"start":   {Timeout: actionTimeout, Run: command("start")},
+			"stop":    {Timeout: actionTimeout, Run: command("stop")},
+			"restart": {Timeout: actionTimeout, Run: command("restart")},
+		},
+	}
+}
+
+// namePattern은 docker 컨테이너 이름 형식이다(docker의 [a-zA-Z0-9][a-zA-Z0-9_.-]).
+// '-'로 시작하는 값(옵션으로 읽힘), 공백·셸 특수문자를 막는다.
+var namePattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$`)
+
+// command는 docker <cmd> <컨테이너 이름>을 실행하는 조작이다.
+//
+// Compose.doContainerCommand는 파라미터를 검사하지 않고 "docker command command2 id"를 이스케이프 없이
+// 셸에서 실행한다(compose.inc, OMV\System\Process::getCommandLine). 그래서 command는 고정값만 쓰고,
+// id는 형식을 검사한 뒤 지금 목록에 있는 이름인지까지 확인한다. command2는 workbench처럼 빈 문자열로
+// 보낸다(빠지면 PHP 경고). 명령은 OMV 백그라운드 작업으로 돌므로 끝날 때까지 기다린다.
+func command(cmd string) func(context.Context, addons.ActionRequest) error {
+	return func(ctx context.Context, req addons.ActionRequest) error {
+		name := req.Target
+		if !namePattern.MatchString(name) {
+			return addons.ErrInvalidTarget
+		}
+		raw, err := req.RPC.Call(ctx, "Compose", "getContainers", nil)
+		if err != nil {
+			return err
+		}
+		list, err := ParseContainers(raw)
+		if err != nil {
+			return err
+		}
+		if !slices.ContainsFunc(list.Containers, func(c api.Container) bool { return c.Name == name }) {
+			return addons.ErrInvalidTarget
+		}
+		var filename string
+		params := map[string]string{"command": cmd, "command2": "", "id": name}
+		if err := addons.CallInto(ctx, req.RPC, "Compose", "doContainerCommand", params, &filename); err != nil {
+			return err
+		}
+		return addons.WaitBg(ctx, req.RPC, filename, addons.BgPollInterval)
 	}
 }
 

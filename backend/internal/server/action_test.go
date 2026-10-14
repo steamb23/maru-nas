@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"omv-desktop-dashboard/backend/internal/addons"
+	"omv-desktop-dashboard/backend/internal/addons/containers"
 	"omv-desktop-dashboard/backend/internal/api"
 )
 
@@ -180,4 +181,37 @@ func TestActionOMVSessionExpired(t *testing.T) {
 	if e.store.Len() != 0 {
 		t.Error("dashboard session not deleted")
 	}
+}
+
+// 실제 내장 애드온(containers)의 조작이 가짜 OMV까지 가는 경로.
+func TestActionBuiltinContainers(t *testing.T) {
+	e, _, _ := newDataEnv(t, containers.New())
+	e.fake.SetBgPolls(0)
+	admin := e.browser()
+	wantStatus(t, admin.login("admin", "admin"), http.StatusOK)
+
+	wantStatus(t, act(admin, "containers", "stop", "web"), http.StatusNoContent)
+	var params string
+	for _, c := range e.fake.Calls() {
+		if c.Method == "doContainerCommand" {
+			params = string(c.Params)
+		}
+	}
+	if params != `{"command":"stop","command2":"","id":"web"}` {
+		t.Errorf("params %s", params)
+	}
+	r := admin.do(http.MethodGet, "/api/addons/containers", nil)
+	wantStatus(t, r, http.StatusOK)
+	for _, c := range decode[api.ContainersResponse](t, r).Containers {
+		if c.Name == "web" && c.State != "exited" {
+			t.Errorf("web state %s after stop", c.State)
+		}
+	}
+
+	wantCode(t, act(admin, "containers", "start", "broken"), http.StatusBadGateway, api.ErrActionFailed)
+	wantCode(t, act(admin, "containers", "restart", "web; reboot"), http.StatusBadRequest, api.ErrBadRequest)
+
+	user := e.browser()
+	wantStatus(t, user.login("user", "user"), http.StatusOK)
+	wantCode(t, act(user, "containers", "start", "web"), http.StatusForbidden, api.ErrAdminRequired)
 }

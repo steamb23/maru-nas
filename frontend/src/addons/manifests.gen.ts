@@ -178,9 +178,29 @@ export const MANIFESTS = {
     },
     "rpc": {
       "read": [
-        "Compose.getContainers"
+        "Compose.getContainers",
+        "Exec.isRunning"
+      ],
+      "write": [
+        "Compose.doContainerCommand"
       ]
-    }
+    },
+    "actions": [
+      {
+        "name": "start",
+        "admin": true
+      },
+      {
+        "name": "stop",
+        "admin": true,
+        "confirm": true
+      },
+      {
+        "name": "restart",
+        "admin": true,
+        "confirm": true
+      }
+    ]
   },
   "smart": {
     "id": "smart",

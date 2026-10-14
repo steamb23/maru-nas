@@ -12,6 +12,9 @@ import (
 //   - Compose.getContainers (모두): engined/rpc/compose.inc(openmediavault-compose).
 //     첫 행은 런타임 행(name Docker/Podman, status는 번역된 문구), 나머지는 docker container ls
 //   - CpuTemp.get (모두): engined/rpc/cputemp.inc(openmediavault-cputemp). {cputemp: 숫자}
+//   - Compose.doContainerCommand (admin): docker <command> <command2> <id>를 백그라운드 작업으로 돌리고
+//     상태 파일 이름을 돌려준다. 실제 OMV처럼 파라미터를 검사하지 않는다. 작업이 끝나면(Exec.isRunning)
+//     start·restart는 실행 중, stop은 정지로 바꾼다. 없는 컨테이너나 FailContainers는 실패한다
 //
 // 역할이 모자라면 OMV의 validateMethodContext처럼 403 "Invalid context role."을 돌려준다.
 // 값은 모두 가짜다(모델명, 장치, 시리얼, 이미지 이름).
@@ -52,6 +55,8 @@ type PluginData struct {
 	RuntimeStatus string
 	Containers    []Container
 	CPUTemp       float64
+	// FailContainers는 doContainerCommand가 실패하는 컨테이너 이름이다.
+	FailContainers []string
 	// Missing은 설치되지 않은 것처럼 404("RPC service ... not found.")를 돌려줄 서비스다.
 	Missing []string
 }
@@ -75,8 +80,10 @@ func DefaultPluginData() PluginData {
 			{Image: "example/worker:latest", Name: "worker", Status: "Up 5 minutes (unhealthy)"},
 			{Image: "example/backup:latest", Name: "backup", Status: "Exited (0) 5 hours ago"},
 			{Image: "example/init:latest", Name: "init", Status: "Created"},
+			{Image: "example/broken:latest", Name: "broken", Status: "Exited (1) 2 hours ago"},
 		},
-		CPUTemp: 47,
+		CPUTemp:        47,
+		FailContainers: []string{"broken"},
 	}
 }
 
@@ -139,6 +146,37 @@ func (s *Server) handlePlugin(sess *session, service, method string, params json
 		return append(rows, d.Containers...), nil, true
 	case "CpuTemp.get":
 		return map[string]any{"cputemp": d.CPUTemp}, nil, true
+	case "Compose.doContainerCommand":
+		if e := adminOnly(); e != nil {
+			return nil, e, true
+		}
+		return s.containerCommand(params), nil, true
 	}
 	return nil, nil, false
+}
+
+// containerCommand는 doContainerCommand의 백그라운드 작업을 등록한다. s.mu를 쥔 채로 부른다.
+func (s *Server) containerCommand(params json.RawMessage) string {
+	var p struct {
+		Command string `json:"command"`
+		ID      string `json:"id"`
+	}
+	json.Unmarshal(params, &p)
+	i := slices.IndexFunc(s.plugin.Containers, func(c Container) bool { return c.Name == p.ID })
+	status := map[string]string{
+		"start":   "Up Less than a second",
+		"restart": "Up Less than a second",
+		"stop":    "Exited (0) Less than a second ago",
+	}[p.Command]
+	if i < 0 || status == "" || slices.Contains(s.plugin.FailContainers, p.ID) {
+		return s.startBg("docker "+p.Command+" "+p.ID+": Error response from daemon: fake failure", nil)
+	}
+	return s.startBg("", func() {
+		// SetPluginData가 넘긴 슬라이스를 바꾸지 않게 복사한다. 그사이 목록이 바뀌었을 수 있으므로 다시 찾는다.
+		list := slices.Clone(s.plugin.Containers)
+		if j := slices.IndexFunc(list, func(c Container) bool { return c.Name == p.ID }); j >= 0 {
+			list[j].Status = status
+		}
+		s.plugin.Containers = list
+	})
 }
