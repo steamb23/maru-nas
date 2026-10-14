@@ -1,7 +1,7 @@
 // 애드온 조작(시작·정지 등)의 화면 상태. DOM에 의존하지 않아 node 환경에서 테스트한다.
 //
-// 대상(컨테이너 이름 등)마다 진행 상태를 두고, 확인은 한 번에 하나만 연다. 행 버튼으로 연 확인은
-// 그 행 안에(inline), 우클릭 메뉴로 연 확인은 창 범위 대화상자(dialog)로 보여 준다.
+// 대상(컨테이너 이름 등)마다 진행 상태를 두고, 확인은 한 번에 하나만 연다. 확인은 행 버튼·우클릭 메뉴 어디서
+// 열든 창 범위 모달(ActionConfirmDialog)로 보여 준다.
 import type { ErrorCode } from '../../api/client'
 
 // TargetState는 대상 하나의 상태다.
@@ -19,7 +19,6 @@ export type ActionErrorCode = ErrorCode | 'unknown'
 export interface PendingConfirm {
   target: string
   action: string
-  via: 'inline' | 'dialog'
 }
 
 export interface ActionState {

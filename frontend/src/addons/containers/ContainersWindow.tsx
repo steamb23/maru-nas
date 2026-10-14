@@ -33,7 +33,7 @@ export function ContainersWindow({ active }: WindowViewProps) {
       const c = admin ? find(el.dataset.target ?? '') : undefined
       if (!c) return []
       return actionMenuItems(ctl.state, c.name, specsFor(c), {
-        select: (spec) => ctl.request(c.name, spec.action, 'dialog'),
+        select: (spec) => ctl.request(c.name, spec.action),
       })
     },
   })

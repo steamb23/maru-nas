@@ -29,7 +29,7 @@ export function ServicesWindow({ active }: WindowViewProps) {
       const s = find(el.dataset.target ?? '')
       if (!s) return []
       return actionMenuItems(ctl.state, s.name, serviceActions(s), {
-        select: (spec) => ctl.request(s.name, spec.action, 'dialog'),
+        select: (spec) => ctl.request(s.name, spec.action),
       })
     },
   })

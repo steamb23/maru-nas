@@ -43,9 +43,9 @@ describe('actionState', () => {
   })
 
   it('opens one confirmation at a time', () => {
-    let s = askConfirm(INITIAL_ACTION_STATE, { target: 'web', action: 'stop', via: 'inline' })
-    s = askConfirm(s, { target: 'db', action: 'restart', via: 'dialog' })
-    expect(s.confirm).toEqual({ target: 'db', action: 'restart', via: 'dialog' })
+    let s = askConfirm(INITIAL_ACTION_STATE, { target: 'web', action: 'stop' })
+    s = askConfirm(s, { target: 'db', action: 'restart' })
+    expect(s.confirm).toEqual({ target: 'db', action: 'restart' })
     expect(cancelConfirm(s).confirm).toBeNull()
 
     // 확인한 대상을 시작하면 확인을 닫고, 다른 대상의 확인은 남긴다.
@@ -55,6 +55,6 @@ describe('actionState', () => {
 
   it('does not confirm a busy target', () => {
     const s = start(INITIAL_ACTION_STATE, 'web', 'stop')
-    expect(askConfirm(s, { target: 'web', action: 'restart', via: 'inline' })).toBe(s)
+    expect(askConfirm(s, { target: 'web', action: 'restart' })).toBe(s)
   })
 })

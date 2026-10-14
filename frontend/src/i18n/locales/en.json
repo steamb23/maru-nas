@@ -204,7 +204,6 @@
     "cancel": "Cancel"
   },
   "actions": {
-    "cancel": "Cancel",
     "working": "Working…",
     "dismiss": "Dismiss",
     "rowLabel": "{{action}} {{name}}",

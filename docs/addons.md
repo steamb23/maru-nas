@@ -128,9 +128,8 @@
   - 상태: `actionState.ts`(대상별 running → settling → 해제 또는 error, 확인은 한 번에 하나). 성공한 대상은 다음 현황 응답(`settle`)까지 잠가 둔다
   - 실행: `useAddonActions(id, onDone)`. manifest의 `confirm`이면 확인을 열고, 아니면 바로 실행한다. 성공·실패 모두 `onDone`(보통 `refresh`)을 부른다
   - 화면: `RowActions.tsx`
-    - 행 버튼(`RowActionButtons`) → 행 아래 인라인 확인(`RowActionPanel`, 취소에 포커스)
-    - 우클릭 메뉴(`actionMenuItems`) → 확인 대화상자(`ActionConfirmDialog`). `.window` 기준 절대 위치로 제목 표시줄 아래만 덮어 그 창만 막는다. 포커스를 가두고 Esc는 취소다
-    - 실패는 행 아래에 오류 코드별 문구로 보여 준다
+    - 행 버튼(`RowActionButtons`)과 우클릭 메뉴(`actionMenuItems`) 모두 같은 확인 모달(`ActionConfirmDialog`)을 연다. 창 범위 `Modal`이라 그 창 본문만 막고, 취소에 포커스하며 Esc·배경 누르기는 취소다. 확인 중인 행 버튼은 눌린 모양으로 둔다
+    - 실패는 행 아래(`RowActionPanel`)에 오류 코드별 문구로 보여 준다
   - 조작 버튼은 관리자에게만 보여 준다. 위젯에서는 조작하지 않는다(위젯은 끌어서 옮기는 요소라 잘못 누르기 쉽다)
 
 ## 보기: 창과 위젯

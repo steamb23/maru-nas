@@ -5,7 +5,6 @@ import {
   type ActionErrorCode,
   type ActionState,
   INITIAL_ACTION_STATE,
-  type PendingConfirm,
   askConfirm,
   cancelConfirm,
   dismiss,
@@ -18,8 +17,8 @@ import { needsConfirm } from './actionSpec'
 
 export interface AddonActions {
   state: ActionState
-  // request는 조작을 고른다. manifest가 확인을 요구하면 via 방식으로 확인을 열고, 아니면 바로 실행한다.
-  request: (target: string, action: string, via: PendingConfirm['via']) => void
+  // request는 조작을 고른다. manifest가 확인을 요구하면 확인을 열고, 아니면 바로 실행한다.
+  request: (target: string, action: string) => void
   // confirm은 열린 확인의 조작을 실행한다.
   confirm: () => void
   cancel: () => void
@@ -77,8 +76,8 @@ export function useAddonActions(id: AddonId, onDone: () => void): AddonActions {
   )
 
   const request = useCallback(
-    (target: string, action: string, via: PendingConfirm['via']) => {
-      if (needsConfirm(id, action)) update((s) => askConfirm(s, { target, action, via }))
+    (target: string, action: string) => {
+      if (needsConfirm(id, action)) update((s) => askConfirm(s, { target, action }))
       else run(target, action)
     },
     [id, run, update],

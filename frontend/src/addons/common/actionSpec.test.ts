@@ -13,9 +13,9 @@ const specs: ActionSpec[] = [
   {
     action: 'restart',
     icon: 'view-refresh-symbolic',
-    labelKey: 'actions.cancel',
-    runningKey: 'actions.cancel',
-    confirmKey: 'actions.cancel',
+    labelKey: 'actions.dismiss',
+    runningKey: 'actions.dismiss',
+    confirmKey: 'actions.dismiss',
   },
 ]
 

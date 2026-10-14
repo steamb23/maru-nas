@@ -204,7 +204,6 @@
     "cancel": "취소"
   },
   "actions": {
-    "cancel": "취소",
     "working": "처리 중…",
     "dismiss": "닫기",
     "rowLabel": "{{name}} {{action}}",
