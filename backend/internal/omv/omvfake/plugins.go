@@ -12,6 +12,8 @@ import (
 //   - Compose.getContainers (모두): engined/rpc/compose.inc(openmediavault-compose).
 //     첫 행은 런타임 행(name Docker/Podman, status는 번역된 문구), 나머지는 docker container ls
 //   - CpuTemp.get (모두): engined/rpc/cputemp.inc(openmediavault-cputemp). {cputemp: 숫자}
+//   - Services.getStatus (admin): engined/rpc/services.inc. IServiceStatus 모듈마다 {name, title, enabled, running},
+//     {total, data}. title은 OMV가 번역한 문구다
 //   - Compose.doContainerCommand (admin): docker <command> <command2> <id>를 백그라운드 작업으로 돌리고
 //     상태 파일 이름을 돌려준다. 실제 OMV처럼 파라미터를 검사하지 않는다. 작업이 끝나면(Exec.isRunning)
 //     start·restart는 실행 중, stop은 정지로 바꾼다. 없는 컨테이너나 FailContainers는 실패한다
@@ -47,6 +49,14 @@ type Container struct {
 	Status string `json:"status"`
 }
 
+// ServiceStatus는 Services.getStatus의 data 한 행이다.
+type ServiceStatus struct {
+	Name    string `json:"name"`
+	Title   string `json:"title"`
+	Enabled bool   `json:"enabled"`
+	Running bool   `json:"running"`
+}
+
 // PluginData는 가짜 OMV가 돌려주는 코어·플러그인 RPC 값이다. SetPluginData로 바꾼다.
 type PluginData struct {
 	Smart []SmartDevice
@@ -55,6 +65,7 @@ type PluginData struct {
 	RuntimeStatus string
 	Containers    []Container
 	CPUTemp       float64
+	Services      []ServiceStatus
 	// FailContainers는 doContainerCommand가 실패하는 컨테이너 이름이다.
 	FailContainers []string
 	// Missing은 설치되지 않은 것처럼 404("RPC service ... not found.")를 돌려줄 서비스다.
@@ -81,6 +92,14 @@ func DefaultPluginData() PluginData {
 			{Image: "example/backup:latest", Name: "backup", Status: "Exited (0) 5 hours ago"},
 			{Image: "example/init:latest", Name: "init", Status: "Created"},
 			{Image: "example/broken:latest", Name: "broken", Status: "Exited (1) 2 hours ago"},
+		},
+		Services: []ServiceStatus{
+			{Name: "ssh", Title: "SSH", Enabled: true, Running: true},
+			{Name: "samba", Title: "SMB/CIFS", Enabled: true, Running: true},
+			{Name: "nfs", Title: "NFS", Enabled: false, Running: false},
+			{Name: "rsyncd", Title: "RSync server", Enabled: false, Running: false},
+			{Name: "fail2ban", Title: "fail2ban", Enabled: true, Running: false},
+			{Name: "Docker", Title: "Docker", Enabled: true, Running: true},
 		},
 		CPUTemp:        47,
 		FailContainers: []string{"broken"},
@@ -146,6 +165,15 @@ func (s *Server) handlePlugin(sess *session, service, method string, params json
 		return append(rows, d.Containers...), nil, true
 	case "CpuTemp.get":
 		return map[string]any{"cputemp": d.CPUTemp}, nil, true
+	case "Services.getStatus":
+		if e := adminOnly(); e != nil {
+			return nil, e, true
+		}
+		data := slices.Clone(d.Services)
+		if data == nil {
+			data = []ServiceStatus{}
+		}
+		return map[string]any{"total": len(data), "data": data}, nil, true
 	case "Compose.doContainerCommand":
 		if e := adminOnly(); e != nil {
 			return nil, e, true

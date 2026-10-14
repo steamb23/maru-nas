@@ -271,6 +271,27 @@ type Container struct {
 	Status string `json:"status"`
 }
 
+// ServicesResponse는 GET /api/addons/services의 응답이다.
+type ServicesResponse struct {
+	AddonSources `tstype:",extends"`
+	// Services는 이름 순서다.
+	Services []Service `json:"services"`
+}
+
+// Service는 OMV 서비스 하나의 상태다(Services.getStatus의 한 행).
+type Service struct {
+	// Name은 OMV 모듈 이름(ssh, samba, nfs 등)이다. 조작 대상으로 쓴다.
+	Name string `json:"name"`
+	// Title은 OMV가 번역한 이름이다. OMV 언어 설정에 따라 바뀌므로 표시에만 쓴다.
+	Title string `json:"title"`
+	// Enabled는 OMV 설정에서 서비스를 켰는지다.
+	Enabled bool `json:"enabled"`
+	// Running은 systemd 유닛이 실행 중인지다.
+	Running bool `json:"running"`
+	// Toggleable은 대시보드에서 켜고 끌 수 있는지다. 아니면 OMV에서 설정한다.
+	Toggleable bool `json:"toggleable"`
+}
+
 // SmartResponse는 GET /api/addons/smart의 응답이다.
 //
 // OMV의 Smart.getList는 디스크마다 smartctl을 실행해 대기 중인 디스크를 깨우므로, 백엔드가 결과를

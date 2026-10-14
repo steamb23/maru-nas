@@ -397,6 +397,40 @@ export interface Container {
   status: string;
 }
 /**
+ * ServicesResponse는 GET /api/addons/services의 응답이다.
+ */
+export interface ServicesResponse extends AddonSources {
+  /**
+   * Services는 이름 순서다.
+   */
+  services: Service[];
+}
+/**
+ * Service는 OMV 서비스 하나의 상태다(Services.getStatus의 한 행).
+ */
+export interface Service {
+  /**
+   * Name은 OMV 모듈 이름(ssh, samba, nfs 등)이다. 조작 대상으로 쓴다.
+   */
+  name: string;
+  /**
+   * Title은 OMV가 번역한 이름이다. OMV 언어 설정에 따라 바뀌므로 표시에만 쓴다.
+   */
+  title: string;
+  /**
+   * Enabled는 OMV 설정에서 서비스를 켰는지다.
+   */
+  enabled: boolean;
+  /**
+   * Running은 systemd 유닛이 실행 중인지다.
+   */
+  running: boolean;
+  /**
+   * Toggleable은 대시보드에서 켜고 끌 수 있는지다. 아니면 OMV에서 설정한다.
+   */
+  toggleable: boolean;
+}
+/**
  * SmartResponse는 GET /api/addons/smart의 응답이다.
  * OMV의 Smart.getList는 디스크마다 smartctl을 실행해 대기 중인 디스크를 깨우므로, 백엔드가 결과를
  * 모든 세션에서 함께 쓰도록 보관한다. 하루 한 번(기준 시각 이후 첫 요청) 또는 새로고침 때만 다시 가져온다.

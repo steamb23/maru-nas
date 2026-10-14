@@ -11,6 +11,7 @@ import (
 
 	"omv-desktop-dashboard/backend/internal/addons"
 	"omv-desktop-dashboard/backend/internal/addons/containers"
+	"omv-desktop-dashboard/backend/internal/addons/services"
 	"omv-desktop-dashboard/backend/internal/addons/smart"
 	"omv-desktop-dashboard/backend/internal/api"
 	"omv-desktop-dashboard/backend/internal/omv/omvfake"
@@ -242,4 +243,20 @@ func TestAddonDataBuiltinSmart(t *testing.T) {
 	if n := smartCalls(); n != 2 {
 		t.Errorf("smart calls = %d, want 2", n)
 	}
+}
+
+// 서비스 상태는 관리자만 본다.
+func TestAddonDataBuiltinServices(t *testing.T) {
+	e, _, _ := newDataEnv(t, services.New())
+	admin := e.browser()
+	wantStatus(t, admin.login("admin", "admin"), http.StatusOK)
+	r := admin.do(http.MethodGet, "/api/addons/services", nil)
+	wantStatus(t, r, http.StatusOK)
+	if got := decode[api.ServicesResponse](t, r); len(got.Services) != len(omvfake.DefaultPluginData().Services) {
+		t.Errorf("got %+v", got)
+	}
+
+	user := e.browser()
+	wantStatus(t, user.login("user", "user"), http.StatusOK)
+	wantCode(t, user.do(http.MethodGet, "/api/addons/services", nil), http.StatusForbidden, api.ErrAdminRequired)
 }
