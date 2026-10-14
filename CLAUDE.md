@@ -82,7 +82,7 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 
 ## 개발 단계
 
-마지막 완료 단계: **4-1단계**
+마지막 완료 단계: **4-2단계**
 
 3·4단계는 세부 단계(3-1 → 3-2 → 3-3, 4-1 → 4-2 → 4-3) 순서로 진행하고, 완료 표시도 세부 단계로 적는다(예: **3-1단계**). "바로 다음 단계"는 다음 세부 단계를 뜻한다.
 
@@ -101,7 +101,7 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
    - 시스템 정보 창은 위젯으로 요약을 옮긴 뒤 나중에 프로세스 모니터로 확장한다(시점 미정, 사용자가 정한다). 프로세스 목록 읽기는 읽기 전용이지만 프로세스 종료 같은 조작은 4단계 이후다
 4. 간단한 조작: 컨테이너 시작·정지, 서비스 켜기·끄기를 OMV RPC로. 쓰기 RPC는 애드온 조작으로만 부른다(`docs/addons.md`의 "조작"). 실제 OMV로 호출해 보는 것은 사용자가 한다
    - 4-1. 조작 계약: manifest `actions`, `POST /api/addons/{id}/actions/{action}`, 백그라운드 작업 대기(`WaitBg`), 프론트 공통 조작 UI(행 버튼·인라인 확인·우클릭 메뉴·확인 대화상자). 완료
-   - 4-2. 컨테이너 시작·정지·재시작(`Compose.doContainerCommand`, 관리자)
+   - 4-2. 컨테이너 시작·정지·재시작(`Compose.doContainerCommand`, 관리자). 완료
    - 4-3. OMV 서비스 애드온(`services`, 관리자): 상태 위젯·창, 핵심 서비스(SSH, SMB/CIFS, NFS, Rsync 서버)의 켜기·끄기(설정의 `enable` 변경 + `Config.applyChangesBg`). OMV에 적용하지 않은 변경이 있으면 거부한다
 5. 파일 탐색기 창: 공유 폴더 둘러보기(우선 읽기 전용)
 6. "심층 설정" 연결: 각 창에서 해당 OMV 페이지로 이동
@@ -141,6 +141,7 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 
 - provider 내부 RPC 경로(`GET /api/addons/{id}` → OMV)를 실제 OMV로 확인한다: 컨테이너(`Compose.getContainers`), SMART(`Smart.getList`, 관리자), cputemp(hwmon에 CPU 센서가 없을 때만). 지금은 Go 테스트(omvfake)로만 검증했다. `/api/rpc` 중계 통과 경로도 아직 실제 OMV로 확인하지 않았다
 - Podman 모드의 컨테이너 목록(미검증 표시 중)
+- 4단계 조작을 실제 OMV로 확인한다(사용자가 `make dev`로). 컨테이너: `Compose.doContainerCommand` → `Exec.isRunning` 흐름, 실패한 docker 명령이 `Exec.isRunning` 예외로 오는지. 지금은 omvfake로만 검증했다
 
 - 같은 출처에서 OMV workbench를 iframe 창으로 띄울 수 있는지
 - 같은 탭 iframe은 sessionStorage를 공유하므로, 대시보드 로그인 후 OMV 창도 로그인 상태로 보이게 할 수 있는지. OMV 내부 저장 키(`username`, `permissions`)에 의존하는 실험이라 OMV 업데이트 시 깨질 수 있다. 실험 브랜치에서만 다룬다

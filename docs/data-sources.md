@@ -41,6 +41,14 @@
 - SMART: `Smart.getList`(admin)를 하루 한 번·새로고침 때만. 백그라운드 버전 `getListBg`는 쓰지 않았다(백엔드 캐시가 같은 역할)
 - 컨테이너: `Compose.getContainers`(모두)
 
+### 4단계 조작에서 쓴 출처
+
+- 컨테이너 시작·정지·재시작: `Compose.doContainerCommand`(admin, `{command, command2, id}`)
+  - 파라미터 스키마 검사가 없다(같은 일을 하는 `doDockerCmd`는 `cmd`가 `inspect`·`logs`·`restart` enum이다). `docker <command> <command2> <id>`를 `OMV\System\Process`로 만드는데 인자를 이스케이프하지 않고 공백으로 이어 셸에서 실행한다. 그래서 브라우저 값을 그대로 넘기면 임의 명령 실행이 된다. 백엔드는 `command`를 고정값으로, `id`를 형식 검사와 목록 확인을 거친 컨테이너 이름으로만 보낸다
+  - workbench의 컨테이너 화면은 `restart`·`inspect`·`logs`만 쓰고(`command2`는 빈 문자열), 시작·정지는 compose 서비스 화면(`doServiceCommand`)에 있다. `docker start`·`stop`도 같은 메서드로 동작한다
+  - `execBgProc`로 돌기 때문에 바로 상태 파일 이름(문자열)을 돌려준다. 끝났는지와 실패는 `Exec.isRunning`(admin)으로 확인한다. docker 명령이 0이 아닌 값으로 끝나면 `Exec.isRunning`이 예외를 던진다
+  - Podman 모드에서는 같은 명령을 `DOCKER_HOST`를 바꿔 실행한다(미검증)
+
 ## 호환 후보 플러그인
 
 "설치"는 이 NAS에 설치되어 있는지를 뜻한다. 3단계는 설치된 플러그인을 먼저 구현한다.

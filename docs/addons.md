@@ -230,7 +230,9 @@
 - `Compose.getContainers`(모든 사용자). 첫 행은 런타임 행이며 번역되지 않는 `name`으로 Docker·Podman만 판단하고, 번역된 `status`는 표시에만 쓴다
 - 나머지 행의 상태 문구(docker CLI, 영어)에서 상태(running, paused, restarting, exited, created, dead, removing)와 헬스체크 결과를 읽는다. 원문도 함께 준다
 - 위젯과 창 모두 문제 있는 컨테이너(dead, restarting, unhealthy, 헬스체크 대기)를 먼저 보여 준다. Podman이면 창에 미검증 안내를 띄운다
-- 시작·정지 같은 조작은 4단계다
+- 조작(4-2단계): `start`, `stop`(확인), `restart`(확인), 모두 관리자. `Compose.doContainerCommand`가 파라미터를 검사하지 않고 셸 명령을 만들므로(`data-sources.md`의 "4단계 조작에서 쓴 출처") 명령은 고정값, 이름은 docker 형식(`^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$`)과 지금 `getContainers` 목록에 있는지를 확인한 뒤 보낸다. 시간 제한은 2분(`docker stop`의 종료 유예 시간)
+  - 창: 실행 중·일시 정지·다시 시작 중이면 정지·재시작, 정지·생성됨·dead면 시작. 삭제 중·알 수 없음은 조작 없음(`containerActions`). 버튼 칸은 두 개 너비로 고정해 상태 열을 맞춘다
+  - 위젯에는 조작이 없다
 
 #### 디스크 건강 (`smart`)
 
