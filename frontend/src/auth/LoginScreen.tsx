@@ -59,7 +59,7 @@ export function LoginScreen() {
   const inChallenge = status === 'challenge' && challenge !== null
   const redirectOnly = inChallenge && !!challenge.redirectUrl
   // 대기 이스터에그는 일반 로그인 폼에서만 나온다(2차 인증 중, 로그인 요청 중에는 끔).
-  const idle = useIdle(easterEggEnabled() && !inChallenge && !busy, IDLE_DELAY_MS)
+  const idleSince = useIdle(easterEggEnabled() && !inChallenge && !busy, IDLE_DELAY_MS)
 
   useEffect(() => {
     if (inChallenge) codeRef.current?.focus()
@@ -209,7 +209,7 @@ export function LoginScreen() {
         <p className="login-footnote">{t('login.footnote')}</p>
         <LanguageSelect />
       </main>
-      <EasterEgg active={idle} avoid={cardRef} />
+      <EasterEgg since={idleSince} avoid={cardRef} />
     </div>
   )
 }

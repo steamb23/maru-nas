@@ -6,14 +6,14 @@ function count(fps: number, hz: number, seconds: number): number {
   const gate = createFrameGate(fps)
   let drawn = 0
   for (let i = 0; i <= hz * seconds; i++) {
-    if (gate.tick((i * 1000) / hz) !== null) drawn++
+    if (gate.tick((i * 1000) / hz)) drawn++
   }
   return drawn
 }
 
 describe('createFrameGate', () => {
-  it('첫 프레임은 경과 0으로 그린다', () => {
-    expect(createFrameGate(30).tick(1234)).toBe(0)
+  it('첫 프레임은 그린다', () => {
+    expect(createFrameGate(30).tick(1234)).toBe(true)
   })
 
   it('60Hz·144Hz 화면에서 30fps를 지킨다', () => {
@@ -32,11 +32,11 @@ describe('createFrameGate', () => {
     expect(count(30, 24, 10)).toBe(241)
   })
 
-  it('오래 멈췄다 돌아오면 경과 시간을 자르고 다시 일정하게 그린다', () => {
-    const gate = createFrameGate(30, 100)
+  it('오래 멈췄다 돌아오면 바로 그리고 다시 일정하게 그린다', () => {
+    const gate = createFrameGate(30)
     gate.tick(0)
-    expect(gate.tick(5000)).toBe(100)
-    expect(gate.tick(5016)).toBeNull()
-    expect(gate.tick(5033)).toBe(33)
+    expect(gate.tick(5000)).toBe(true)
+    expect(gate.tick(5016)).toBe(false)
+    expect(gate.tick(5033)).toBe(true)
   })
 })

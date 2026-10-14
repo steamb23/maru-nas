@@ -2,6 +2,8 @@
 // 효과 계약은 effects.ts, 설정값은 config.ts.
 //
 // 연출 중에만 마운트하고, 해제하면 페이드아웃 뒤 언마운트해 캔버스 버퍼를 돌려준다.
+// 효과 시간은 연출이 시작된 시각(since)부터 실제로 흐른 시간이다. 탭이 숨겨진 동안 시작했거나 숨겨져 있었으면
+// 돌아왔을 때 페이드인 없이, 그동안 재생된 지점부터 보인다(OMV 매트릭스 효과처럼).
 // 오버레이는 포커스를 받지 않는다. 배경을 누른 포인터 입력은 오버레이가 받아 사라지는 동안에도 흡수하고,
 // 카드는 오버레이 위에 있어 연출 중에도 평소처럼 쓸 수 있다.
 import { type MouseEvent, type RefObject, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
@@ -13,22 +15,34 @@ import { createFrameGate } from './frameGate'
 // mousedown의 기본 동작(포커스 이동)을 막아 입력란의 포커스를 유지한다.
 const keepFocus = (e: MouseEvent) => e.preventDefault()
 
+// 이보다 늦게 마운트되면(숨겨진 탭에서 늦게 확인한 경우 등) 이미 재생 중이던 것으로 보고 페이드인하지 않는다.
+const LATE_MOUNT_MS = 1000
+
 interface EasterEggProps {
-  active: boolean
+  // 연출이 시작된 시각(performance.now 기준). null이면 연출하지 않는다.
+  since: number | null
   // 효과가 피해서 그릴 로그인 카드
   avoid: RefObject<HTMLElement | null>
 }
 
-// EasterEgg는 active인 동안 오버레이를 보여 준다. active가 false가 되면 사라지는 애니메이션이 끝난 뒤 언마운트한다.
-export function EasterEgg({ active, avoid }: EasterEggProps) {
-  const [mounted, setMounted] = useState(false)
-  const onLeft = useCallback(() => setMounted(false), [])
-  if (active && !mounted) setMounted(true)
-  if (!mounted) return null
-  return <Overlay leaving={!active} onLeft={onLeft} avoid={avoid} />
+// EasterEgg는 since가 있는 동안 오버레이를 보여 준다. null이 되면 사라지는 애니메이션이 끝난 뒤 언마운트한다.
+export function EasterEgg({ since, avoid }: EasterEggProps) {
+  // 사라지는 동안에도 마지막 시작 시각으로 그린다.
+  const [shown, setShown] = useState<number | null>(null)
+  const onLeft = useCallback(() => setShown(null), [])
+  if (since !== null && since !== shown) setShown(since)
+  if (shown === null) return null
+  return <Overlay key={shown} since={shown} leaving={since === null} onLeft={onLeft} avoid={avoid} />
 }
 
-function Overlay({ leaving, onLeft, avoid }: { leaving: boolean; onLeft: () => void; avoid: EasterEggProps['avoid'] }) {
+interface OverlayProps {
+  since: number
+  leaving: boolean
+  onLeft: () => void
+  avoid: EasterEggProps['avoid']
+}
+
+function Overlay({ since, leaving, onLeft, avoid }: OverlayProps) {
   const rootRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const firstRef = useRef(true)
@@ -44,13 +58,15 @@ function Overlay({ leaving, onLeft, avoid }: { leaving: boolean; onLeft: () => v
     }
     const first = firstRef.current
     firstRef.current = false
+    // 이미 재생 중이던 연출이면 페이드인 없이 바로 보인다.
+    if (first && !leaving && (document.hidden || performance.now() - since > LATE_MOUNT_MS)) return
     const from = first ? 0 : Number(getComputedStyle(el).opacity)
     el.getAnimations().forEach((a) => a.cancel())
     const to = leaving ? 0 : 1
     const duration = (leaving ? EGG_FADE_OUT_MS : EGG_FADE_IN_MS) * Math.abs(to - from)
     const anim = el.animate([{ opacity: from }, { opacity: to }], { duration, easing: 'ease-out', fill: 'forwards' })
     if (leaving) anim.onfinish = onLeft
-  }, [leaving, onLeft])
+  }, [leaving, onLeft, since])
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -93,17 +109,14 @@ function Overlay({ leaving, onLeft, avoid }: { leaving: boolean; onLeft: () => v
       })
       .catch((err: unknown) => console.warn('easter egg effect failed to load', err))
 
-    // 효과를 내려받은 뒤부터 시간이 흐른다. 탭이 숨겨지면 rAF가 멈추고 useIdle이 연출을 끈다.
+    // 탭이 숨겨진 동안은 rAF가 멈춰 그리지 않지만, 시간은 since부터 계속 흐른다.
     const gate = createFrameGate(EGG_FPS)
-    let time = 0
     let raf = 0
     const frame = (now: number) => {
       raf = requestAnimationFrame(frame)
-      const step = gate.tick(now)
-      if (step === null || !effect) return
-      time += step
+      if (!gate.tick(now) || !effect) return
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-      effect.draw(ctx, time)
+      effect.draw(ctx, Math.max(0, now - since))
     }
     raf = requestAnimationFrame(frame)
 
@@ -115,7 +128,7 @@ function Overlay({ leaving, onLeft, avoid }: { leaving: boolean; onLeft: () => v
       canvas.width = 0
       canvas.height = 0
     }
-  }, [avoid])
+  }, [avoid, since])
 
   return (
     <div ref={rootRef} className="easter-egg" aria-hidden="true" onMouseDown={keepFocus}>

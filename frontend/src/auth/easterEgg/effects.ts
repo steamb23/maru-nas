@@ -19,7 +19,8 @@ export type Rng = () => number
 export interface EggEffect {
   // resize는 처음과 화면 크기·로그인 카드 크기가 바뀔 때 불린다. avoid는 캔버스 좌표의 로그인 카드 영역이다(없으면 null).
   resize: (width: number, height: number, avoid: Rect | null) => void
-  // draw는 프레임마다 화면 전체를 다시 그린다. timeMs는 연출이 시작된 뒤 흐른 시간이다(숨김 동안은 흐르지 않음).
+  // draw는 프레임마다 화면 전체를 다시 그린다. timeMs는 연출이 시작된 뒤 실제로 흐른 시간이다.
+  // 탭이 숨겨진 동안에도 흐르므로, 돌아오면 그동안 재생된 것처럼 이어서 그린다.
   // 배경을 어둡게 하는 것은 오버레이(index.css의 .easter-egg)가 하므로, 캔버스는 지운 뒤 투명하게 두고 효과만 그린다.
   draw: (ctx: CanvasRenderingContext2D, timeMs: number) => void
 }
