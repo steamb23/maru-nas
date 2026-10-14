@@ -797,6 +797,8 @@ button {
   display: flex;
   flex-direction: column;
   min-width: 200px;
+  /* 주변 바탕화면 문구(아이콘 이름, 위젯)와 맞춘다. 프로필 메뉴는 기본 크기(14px)를 유지한다. */
+  font-size: 12px;
   max-width: 320px;
   padding: 6px;
   border: 1px solid var(--window-border);
@@ -857,7 +859,7 @@ button {
 .context-menu-detail {
   margin-left: auto;
   padding-left: 16px;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-muted);
 }
 
