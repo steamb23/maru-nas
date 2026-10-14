@@ -12,6 +12,7 @@ import {
   isPreferences,
   login,
   logout,
+  runAddonAction,
   saveWidgets,
   sendActivity,
   setUnauthorizedHandler,
@@ -263,5 +264,21 @@ describe('fetchAddon', () => {
     expect(hasAddonSources({ sources: ['proc'], failedSources: ['omv-smart'] })).toBe(true)
     expect(hasAddonSources({ sources: 'proc' })).toBe(false)
     expect(hasAddonSources({ sources: [], failedSources: [1] })).toBe(false)
+  })
+})
+
+describe('runAddonAction', () => {
+  it('대상을 본문에 담아 조작 경로로 보낸다', async () => {
+    const fn = stubFetch(new Response(null, { status: 204 }))
+    await expect(runAddonAction('containers', 'stop', 'web')).resolves.toBeUndefined()
+    const [url, init] = fn.mock.calls[0]
+    expect(url).toMatch(/\/api\/addons\/containers\/actions\/stop$/)
+    expect(init?.method).toBe('POST')
+    expect(JSON.parse(String(init?.body))).toEqual({ target: 'web' })
+  })
+
+  it('실패하면 오류 코드를 담은 ApiError를 던진다', async () => {
+    stubFetch(Response.json({ error: 'pending changes', code: 'config_dirty' }, { status: 409 }))
+    await expect(runAddonAction('services', 'disable', 'ssh')).rejects.toMatchObject({ status: 409, code: 'config_dirty' })
   })
 })

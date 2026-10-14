@@ -160,5 +160,21 @@
       "failing": "위험",
       "unknown": "알 수 없음"
     }
+  },
+  "actions": {
+    "cancel": "취소",
+    "working": "처리 중…",
+    "dismiss": "닫기",
+    "failedPrefix": "{{action}} 실패:",
+    "error": {
+      "action_busy": "이 항목의 다른 작업이 아직 진행 중입니다.",
+      "action_failed": "OMV가 작업을 끝내지 못했습니다. 자세한 내용은 OMV에서 확인하세요.",
+      "action_timeout": "OMV 응답이 늦습니다. 잠시 후 상태를 다시 확인하세요.",
+      "config_dirty": "OMV에 적용하지 않은 설정 변경이 있습니다. OMV에서 먼저 적용하거나 되돌리세요.",
+      "admin_required": "관리자만 할 수 있습니다.",
+      "plugin_missing": "필요한 OpenMediaVault 플러그인이 설치되어 있지 않습니다.",
+      "omv_error": "OpenMediaVault에 연결할 수 없습니다.",
+      "unknown": "요청이 실패했습니다."
+    }
   }
 }

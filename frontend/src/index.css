@@ -1623,3 +1623,141 @@ button {
   opacity: 0.55;
   cursor: default;
 }
+
+.addon-button.danger {
+  background: light-dark(#d93025, #c5352b);
+  color: #fff;
+}
+
+.addon-button.danger:hover:not(:disabled) {
+  background: light-dark(#b9271d, #dd4a3f);
+}
+
+/* ---- 애드온 공통: 행 조작 ---- */
+
+.row-actions {
+  display: flex;
+  flex: none;
+  gap: 2px;
+}
+
+.row-action-button {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.row-action-button:hover,
+.row-action-button.pressed {
+  background: var(--hover-bg);
+  color: var(--text);
+}
+
+.row-actions-progress {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.row-actions-spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid color-mix(in srgb, var(--text-muted) 35%, transparent);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: row-spin 0.8s linear infinite;
+}
+
+@keyframes row-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .row-actions-spinner {
+    animation-duration: 2.4s;
+  }
+}
+
+/* 인라인 확인과 실패 문구는 행 아래 줄을 차지한다(행 li는 flex-wrap). */
+.row-confirm,
+.row-error {
+  display: flex;
+  flex-basis: 100%;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.row-confirm {
+  background: var(--hover-bg);
+}
+
+.row-confirm-text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.row-error {
+  justify-content: space-between;
+  background: light-dark(#fde8e8, #4a2224);
+  color: light-dark(#b42318, #ffb4ab);
+}
+
+.row-error .row-action-button {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  color: inherit;
+}
+
+/* 확인 대화상자는 창 본문(.window-body)이 아니라 .window를 기준으로 제목 표시줄 아래를 덮는다.
+   그래서 창 본문을 스크롤해도 제자리에 있고, 다른 창은 막지 않는다. */
+.action-dialog-backdrop {
+  position: absolute;
+  inset: var(--titlebar-height) 0 0 0;
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgb(0 0 0 / 0.28);
+}
+
+.action-dialog {
+  width: min(340px, 100%);
+  padding: 16px;
+  border: 1px solid var(--window-border);
+  border-radius: 10px;
+  background: var(--window-bg);
+  box-shadow: 0 6px 24px rgb(0 0 0 / 0.3);
+}
+
+.action-dialog-title {
+  margin: 0 0 8px;
+  font-size: 15px;
+}
+
+.action-dialog-text {
+  margin: 0 0 16px;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.action-dialog-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}

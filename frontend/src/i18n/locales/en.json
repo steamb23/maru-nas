@@ -160,5 +160,21 @@
       "failing": "Failing",
       "unknown": "Unknown"
     }
+  },
+  "actions": {
+    "cancel": "Cancel",
+    "working": "Working…",
+    "dismiss": "Dismiss",
+    "failedPrefix": "{{action}} failed:",
+    "error": {
+      "action_busy": "Another operation on this item is still in progress.",
+      "action_failed": "OMV could not complete the operation. Check the details in OMV.",
+      "action_timeout": "OMV is taking too long to respond. Check the status again in a moment.",
+      "config_dirty": "OMV has pending configuration changes. Apply or revert them in OMV first.",
+      "admin_required": "Only administrators can do this.",
+      "plugin_missing": "The required OpenMediaVault plugin is not installed.",
+      "omv_error": "Could not reach OpenMediaVault.",
+      "unknown": "The request failed."
+    }
   }
 }

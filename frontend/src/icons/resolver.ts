@@ -7,10 +7,13 @@
 import documentOpen from '@colloid/actions/symbolic/document-open-symbolic.svg?url'
 import listAdd from '@colloid/actions/symbolic/list-add-symbolic.svg?url'
 import listRemove from '@colloid/actions/symbolic/list-remove-symbolic.svg?url'
+import mediaPlaybackStart from '@colloid/actions/symbolic/media-playback-start-symbolic.svg?url'
+import mediaPlaybackStop from '@colloid/actions/symbolic/media-playback-stop-symbolic.svg?url'
 import objectSelect from '@colloid/actions/symbolic/object-select-symbolic.svg?url'
 import panEnd from '@colloid/actions/symbolic/pan-end-symbolic.svg?url'
 import panStart from '@colloid/actions/symbolic/pan-start-symbolic.svg?url'
 import systemLogOut from '@colloid/actions/symbolic/system-log-out-symbolic.svg?url'
+import viewRefresh from '@colloid/actions/symbolic/view-refresh-symbolic.svg?url'
 import windowClose from '@colloid/actions/symbolic/window-close-symbolic.svg?url'
 import windowMaximize from '@colloid/actions/symbolic/window-maximize-symbolic.svg?url'
 import windowMinimize from '@colloid/actions/symbolic/window-minimize-symbolic.svg?url'
@@ -46,6 +49,9 @@ const ICONS = {
   'list-add-symbolic': { url: listAdd, kind: 'symbolic' },
   'list-remove-symbolic': { url: listRemove, kind: 'symbolic' },
   'document-open-symbolic': { url: documentOpen, kind: 'symbolic' },
+  'media-playback-start-symbolic': { url: mediaPlaybackStart, kind: 'symbolic' },
+  'media-playback-stop-symbolic': { url: mediaPlaybackStop, kind: 'symbolic' },
+  'view-refresh-symbolic': { url: viewRefresh, kind: 'symbolic' },
   'preferences-desktop-locale-symbolic': { url: preferencesDesktopLocale, kind: 'symbolic' },
   'avatar-default-symbolic': { url: avatarDefault, kind: 'symbolic' },
   'utilities-system-monitor': { url: utilitiesSystemMonitor, kind: 'color' },

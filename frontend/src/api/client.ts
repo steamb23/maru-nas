@@ -1,4 +1,5 @@
 import type {
+  ActionRequest,
   AddonCapability,
   CapabilitiesResponse,
   ChallengeInfo,
@@ -29,6 +30,10 @@ const ERROR_CODES: readonly ErrorCode[] = [
   'admin_required',
   'plugin_missing',
   'omv_error',
+  'action_busy',
+  'action_failed',
+  'action_timeout',
+  'config_dirty',
 ]
 
 export class ApiError extends Error {
@@ -192,6 +197,25 @@ export async function fetchAddon<T>(
     throw new Error(`${path}: unexpected response shape`)
   }
   return data
+}
+
+export interface RunAddonActionOptions {
+  signal?: AbortSignal
+}
+
+// runAddonAction은 애드온 조작 하나를 실행하고 끝날 때까지 기다린다(POST /api/addons/{id}/actions/{action}).
+// 백엔드가 OMV 작업이 끝날 때까지 응답하지 않으므로 오래 걸릴 수 있다. 실패하면 ApiError(code)를 던진다.
+export async function runAddonAction(
+  id: string,
+  action: string,
+  target: string,
+  opts: RunAddonActionOptions = {},
+): Promise<void> {
+  const body: ActionRequest = { target }
+  await request('POST', `/addons/${encodeURIComponent(id)}/actions/${encodeURIComponent(action)}`, {
+    body,
+    signal: opts.signal,
+  })
 }
 
 // hasAddonSources는 애드온 응답에 공통으로 들어 있는 출처 필드를 검사한다.
