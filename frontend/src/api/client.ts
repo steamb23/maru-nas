@@ -1,4 +1,12 @@
-import type { ChallengeInfo, ErrorResponse, LoginResponse, SessionInfo, SystemResponse } from './types.gen'
+import type {
+  AddonCapability,
+  CapabilitiesResponse,
+  ChallengeInfo,
+  ErrorResponse,
+  LoginResponse,
+  SessionInfo,
+  SystemResponse,
+} from './types.gen'
 
 // BASE_URL은 Vite base 설정값('/desk/')이다.
 const API_BASE = `${import.meta.env.BASE_URL}api`
@@ -132,6 +140,38 @@ export function isLoginResponse(v: unknown): v is LoginResponse {
   if (v.status === 'authenticated') return isSessionInfo(v.session)
   if (v.status === 'challengeRequired') return isChallengeInfo(v.challenge)
   return false
+}
+
+const CAPABILITY_REASONS: readonly NonNullable<AddonCapability['reason']>[] = ['plugin_missing', 'admin_required']
+
+function isAddonCapability(v: unknown): v is AddonCapability {
+  return (
+    isObj(v) &&
+    isStr(v.id) &&
+    typeof v.available === 'boolean' &&
+    (v.reason === undefined || CAPABILITY_REASONS.includes(v.reason as NonNullable<AddonCapability['reason']>)) &&
+    Array.isArray(v.sources) &&
+    v.sources.every(isStr)
+  )
+}
+
+export function isCapabilitiesResponse(v: unknown): v is CapabilitiesResponse {
+  return (
+    isObj(v) &&
+    Array.isArray(v.addons) &&
+    v.addons.every(isAddonCapability) &&
+    Array.isArray(v.plugins) &&
+    v.plugins.every(isStr)
+  )
+}
+
+// fetchCapabilities는 플러그인 설치 상태와 사용자 역할로 계산한 애드온별 사용 가능 여부를 가져온다.
+export async function fetchCapabilities(signal?: AbortSignal): Promise<CapabilitiesResponse> {
+  const data = await getJSON('/capabilities', { signal })
+  if (!isCapabilitiesResponse(data)) {
+    throw new Error('/capabilities: unexpected response shape')
+  }
+  return data
 }
 
 export async function fetchSystem(signal?: AbortSignal): Promise<SystemResponse> {

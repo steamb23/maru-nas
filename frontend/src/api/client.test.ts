@@ -1,8 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   ApiError,
+  fetchCapabilities,
   fetchSession,
   fetchSystem,
+  isCapabilitiesResponse,
   isLoginResponse,
   login,
   logout,
@@ -143,5 +145,40 @@ describe('isLoginResponse', () => {
     expect(isLoginResponse({ status: 'challengeRequired', challenge: { kind: 1 } })).toBe(false)
     expect(isLoginResponse({ status: 'other' })).toBe(false)
     expect(isLoginResponse(null)).toBe(false)
+  })
+})
+
+describe('isCapabilitiesResponse', () => {
+  const ok = {
+    addons: [
+      { id: 'system-info', available: true, sources: ['proc'] },
+      { id: 'containers', available: false, reason: 'plugin_missing', sources: [] },
+    ],
+    plugins: ['openmediavault-compose'],
+  }
+
+  it('정상 응답을 받는다', () => {
+    expect(isCapabilitiesResponse(ok)).toBe(true)
+    expect(isCapabilitiesResponse({ addons: [], plugins: [] })).toBe(true)
+  })
+
+  it.each([
+    ['null', null],
+    ['addons 없음', { plugins: [] }],
+    ['plugins 없음', { addons: [] }],
+    ['plugins가 문자열 아님', { addons: [], plugins: [1] }],
+    ['id 없음', { addons: [{ available: true, sources: [] }], plugins: [] }],
+    ['available이 문자열', { addons: [{ id: 'a', available: 'yes', sources: [] }], plugins: [] }],
+    ['모르는 reason', { addons: [{ id: 'a', available: false, reason: 'nope', sources: [] }], plugins: [] }],
+    ['sources 없음', { addons: [{ id: 'a', available: true }], plugins: [] }],
+  ])('%s는 거부한다', (_name, v) => {
+    expect(isCapabilitiesResponse(v)).toBe(false)
+  })
+
+  it('fetchCapabilities는 형식이 다르면 던진다', async () => {
+    stubFetch(Response.json({ addons: 'x' }))
+    await expect(fetchCapabilities()).rejects.toThrow('unexpected response shape')
+    stubFetch(Response.json(ok))
+    await expect(fetchCapabilities()).resolves.toEqual(ok)
   })
 })

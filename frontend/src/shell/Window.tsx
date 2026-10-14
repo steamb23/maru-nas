@@ -1,6 +1,8 @@
 import { type PointerEvent, useCallback, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { IconImage } from '../icons/IconImage'
+import { AddonUnavailable } from '../addons/AddonUnavailable'
+import { appAccess, requiredPlugins, useCapabilitiesStore } from '../addons/capabilities'
 import { ADDON_VIEWS } from '../addons/registry'
 import { getApp, isAddonApp } from '../windows/apps'
 import { type Point, type Rect, type Size, restoreGrab } from '../windows/geometry'
@@ -61,6 +63,8 @@ export function Window({ id, bounds, closingState, onClosed }: Props) {
   // 닫힌 창은 닫을 때의 비율로 그린다(저장소에서 빠져 구독 결과가 null이 되므로).
   const storedSplit = useWindowStore((s) => (s.windows.find((w) => w.id === id)?.tile ? s.tileSplit : null))
   const tileSplit = closing ? closingState.tileSplit : storedSplit
+  // capability가 바뀌어도 이 창의 안내 여부가 그대로면 다시 그리지 않는다.
+  const notice = useCapabilitiesStore((s) => (win ? appAccess(s.caps, win.appId).notice : null))
   const drag = useRef<Drag | null>(null)
   // 끄는 동안 놓으면 들어갈 타일링 영역. 가이드(TilePreview)를 그린다.
   const [zone, setZone] = useState<TileZone | null>(null)
@@ -206,7 +210,13 @@ export function Window({ id, bounds, closingState, onClosed }: Props) {
           </div>
         </header>
         <div className="window-body">
-          {View ? <View active={!win.minimized && !closing} /> : <PlaceholderWindow />}
+          {notice ? (
+            <AddonUnavailable reason={notice} plugins={requiredPlugins(win.appId)} />
+          ) : View ? (
+            <View active={!win.minimized && !closing} />
+          ) : (
+            <PlaceholderWindow />
+          )}
         </div>
         {layout === 'free' && <ResizeHandles id={id} rect={win} bounds={bounds} minSize={app.minSize} />}
         {win.tile && <TileResizeHandle side={win.tile} bounds={bounds} />}

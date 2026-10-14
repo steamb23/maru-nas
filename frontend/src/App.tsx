@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { useCapabilities } from './addons/useCapabilities'
 import { setUnauthorizedHandler } from './api/client'
 import { LoginScreen, OfflineScreen } from './auth/LoginScreen'
 import { useAuthStore } from './auth/store'
@@ -11,6 +12,7 @@ const { restore, expire } = useAuthStore.getState()
 // SignedIn은 로그인한 동안만 그린다. 로그아웃·세션 만료로 언마운트되면 창과 주기 요청도 멈춘다.
 function SignedIn() {
   useSessionKeeper()
+  useCapabilities()
   return <Desktop />
 }
 

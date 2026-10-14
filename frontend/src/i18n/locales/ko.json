@@ -65,5 +65,10 @@
   },
   "language": {
     "label": "언어"
+  },
+  "addons": {
+    "pluginMissing": "이 앱에 필요한 OpenMediaVault 플러그인이 설치되어 있지 않습니다.",
+    "adminRequired": "관리자만 사용할 수 있습니다.",
+    "requiredPlugins": "필요한 플러그인: {{plugins}}"
   }
 }

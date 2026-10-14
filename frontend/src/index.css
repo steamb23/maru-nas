@@ -380,6 +380,16 @@ button {
   color: var(--text-muted);
 }
 
+.addon-unavailable {
+  max-width: 32em;
+  padding: 16px;
+  text-align: center;
+}
+
+.addon-unavailable p {
+  margin: 0.4em 0;
+}
+
 /* ---- 작업표시줄 ---- */
 
 /* 작업표시줄 자리. 패널 바깥의 빈 곳은 클릭이 아래의 창·바탕화면으로 지나가게 한다. */
