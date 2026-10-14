@@ -1,4 +1,4 @@
-// 데스크톱 셸: 바탕화면 아이콘, 창 레이어, 작업표시줄.
+// 데스크톱 셸: 바탕화면 아이콘, 위젯 레이어, 창 레이어, 작업표시줄.
 import { useLayoutEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useShallow } from 'zustand/react/shallow'
@@ -9,6 +9,7 @@ import { type WindowState, type WindowStore, stableOrder, useWindowStore } from 
 import { DesktopIcon } from './DesktopIcon'
 import { Taskbar } from './Taskbar'
 import { TileDivider } from './TileDivider'
+import { WidgetLayer } from './WidgetLayer'
 import { enterDesktop } from './screenTransition'
 import { type ClosingWindow, Window } from './Window'
 import { useClosingWindows } from './useClosingWindows'
@@ -20,6 +21,7 @@ export function Desktop() {
   const { t } = useTranslation()
   const rootRef = useRef<HTMLDivElement>(null)
   const areaRef = useRef<HTMLDivElement>(null)
+  const iconsRef = useRef<HTMLUListElement>(null)
   // 데스크톱 영역(작업표시줄 제외) 크기. 창 위치 제한의 기준이다.
   const [bounds, setBounds] = useState<Size>(() => ({ width: window.innerWidth, height: window.innerHeight }))
   // 창을 옮길 때마다 Desktop 전체가 다시 그려지지 않도록 id 목록만 구독한다.
@@ -56,13 +58,14 @@ export function Desktop() {
   return (
     <div className="desktop" ref={rootRef}>
       <div className="desktop-area" ref={areaRef}>
-        <ul className="desktop-icons" aria-label={t('desktop.label')}>
+        <ul className="desktop-icons" aria-label={t('desktop.label')} ref={iconsRef}>
           {iconIds.map((appId) => (
             <li key={appId}>
               <DesktopIcon appId={appId} bounds={bounds} />
             </li>
           ))}
         </ul>
+        <WidgetLayer bounds={bounds} iconsRef={iconsRef} />
         <TileDivider bounds={bounds} />
         {renderIds.map((id) => (
           <Window key={id} id={id} bounds={bounds} closingState={closing.get(id)} onClosed={onClosed} />

@@ -98,22 +98,78 @@ export function snapCell(pos: { x: number; y: number }, size: GridSize, area: Px
   }
 }
 
-// resizeCells는 오른쪽 아래 모서리를 (dx, dy)픽셀 끌었을 때의 칸 사각형이다. 왼쪽 위 모서리는 그대로다.
-// 크기는 [min, max]와 그리드 안으로 제한한다(이미 그리드 밖에 걸친 위젯을 강제로 줄이지는 않는다).
+// 크기 조절 핸들의 방향. 문자가 끄는 변을 나타낸다(n: 위, s: 아래, e: 오른쪽, w: 왼쪽). 창과 같은 표기다.
+export type ResizeEdge = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw'
+
+export const RESIZE_EDGES: readonly ResizeEdge[] = ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw']
+
+// spanFor는 끈 거리 d(px)만큼 늘거나 줄어든 길이에 가장 가까운 칸 수다. grow가 false면 반대 방향이다.
+const spanFor = (cells: number, d: number, grow: boolean) => Math.round((spanPx(cells) + (grow ? d : -d) + GAP) / PITCH)
+
+// limit은 칸 수를 [min, max]와 bound(그리드 안에 들어가는 최대) 안으로 제한한다.
+// 이미 그리드 밖에 걸친 위젯을 강제로 줄이지는 않는다(지금 크기까지는 허용).
+const limit = (want: number, cur: number, min: number, max: number, bound: number) => {
+  const hi = Math.max(Math.min(max, bound), Math.min(cur, max))
+  return clamp(want, min, Math.max(min, hi))
+}
+
+// resizeCells는 edge 쪽 변을 (dx, dy)픽셀 끌었을 때의 칸 사각형이다. 끄는 변만 움직이고 반대쪽 변은 그대로다.
+// 크기는 [min, max]와 그리드 안으로 제한한다.
 export function resizeCells(
   start: CellRect,
+  edge: ResizeEdge,
   dx: number,
   dy: number,
   min: GridSize,
   max: GridSize,
   grid: GridSize,
 ): CellRect {
-  const want = (cells: number, d: number) => Math.round((spanPx(cells) + d + GAP) / PITCH)
-  // 왼쪽 끝을 고정하므로 넓히면 오른쪽 끝(right)이 줄어든다. right가 0보다 작아지면 그리드 밖이다.
-  const leftFromRight = start.right + start.cols
-  const maxCols = Math.max(Math.min(max.cols, leftFromRight), Math.min(start.cols, max.cols))
-  const maxRows = Math.max(Math.min(max.rows, grid.rows - start.top), Math.min(start.rows, max.rows))
-  const cols = clamp(want(start.cols, dx), min.cols, Math.max(min.cols, maxCols))
-  const rows = clamp(want(start.rows, dy), min.rows, Math.max(min.rows, maxRows))
-  return { right: leftFromRight - cols, top: start.top, cols, rows }
+  let { right, top, cols, rows } = start
+  // 오른쪽 기준 좌표라 오른쪽 변을 오른쪽으로 끌면 right가 줄어든다. 왼쪽 변(right + cols)은 그대로다.
+  if (edge.includes('e')) {
+    const left = start.right + start.cols
+    cols = limit(spanFor(start.cols, dx, true), start.cols, min.cols, max.cols, left)
+    right = left - cols
+  } else if (edge.includes('w')) {
+    cols = limit(spanFor(start.cols, dx, false), start.cols, min.cols, max.cols, grid.cols - start.right)
+  }
+  if (edge.includes('s')) {
+    rows = limit(spanFor(start.rows, dy, true), start.rows, min.rows, max.rows, grid.rows - start.top)
+  } else if (edge.includes('n')) {
+    const bottom = start.top + start.rows
+    rows = limit(spanFor(start.rows, dy, false), start.rows, min.rows, max.rows, bottom)
+    top = bottom - rows
+  }
+  return { right, top, cols, rows }
+}
+
+// resizePx는 끄는 동안 위젯이 포인터를 따라 보일 픽셀 사각형이다. 반대쪽 변을 고정하고 크기를 [min, max]
+// 픽셀과 그리드 영역(bounds) 안으로 제한한다(resizeCells와 같은 규칙). 칸에 맞춘 결과는 resizeCells가 계산한다(가이드).
+export function resizePx(
+  start: PxRect,
+  edge: ResizeEdge,
+  dx: number,
+  dy: number,
+  min: GridSize,
+  max: GridSize,
+  bounds: PxRect,
+): PxRect {
+  // 이미 그리드 밖에 걸친 위젯을 강제로 줄이지는 않는다(지금 크기까지는 허용).
+  const size = (want: number, cur: number, lo: number, hi: number, room: number) =>
+    clamp(want, lo, Math.max(lo, Math.max(Math.min(hi, room), Math.min(cur, hi))))
+  let { x, y, width, height } = start
+  const right = start.x + start.width
+  const bottom = start.y + start.height
+  const [minW, maxW, minH, maxH] = [spanPx(min.cols), spanPx(max.cols), spanPx(min.rows), spanPx(max.rows)]
+  if (edge.includes('e')) width = size(start.width + dx, start.width, minW, maxW, bounds.x + bounds.width - start.x)
+  else if (edge.includes('w')) {
+    width = size(start.width - dx, start.width, minW, maxW, right - bounds.x)
+    x = right - width
+  }
+  if (edge.includes('s')) height = size(start.height + dy, start.height, minH, maxH, bounds.y + bounds.height - start.y)
+  else if (edge.includes('n')) {
+    height = size(start.height - dy, start.height, minH, maxH, bottom - bounds.y)
+    y = bottom - height
+  }
+  return { x, y, width, height }
 }

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { IconImage } from '../icons/IconImage'
 import { AddonUnavailable } from '../addons/AddonUnavailable'
 import { appAccess, requiredPlugins, useCapabilitiesStore } from '../addons/capabilities'
+import { usePageVisible } from '../addons/common/usePageVisible'
 import { ADDON_VIEWS } from '../addons/registry'
 import { getApp, isAddonApp } from '../windows/apps'
 import { type Point, type Rect, type Size, restoreGrab } from '../windows/geometry'
@@ -65,6 +66,8 @@ export function Window({ id, bounds, closingState, onClosed }: Props) {
   const tileSplit = closing ? closingState.tileSplit : storedSplit
   // capability가 바뀌어도 이 창의 안내 여부가 그대로면 다시 그리지 않는다.
   const notice = useCapabilitiesStore((s) => (win ? appAccess(s.caps, win.appId).notice : null))
+  // 탭이 보이지 않으면 창 내용의 주기 요청도 멈춘다.
+  const pageVisible = usePageVisible()
   const drag = useRef<Drag | null>(null)
   // 끄는 동안 놓으면 들어갈 타일링 영역. 가이드(TilePreview)를 그린다.
   const [zone, setZone] = useState<TileZone | null>(null)
@@ -213,7 +216,7 @@ export function Window({ id, bounds, closingState, onClosed }: Props) {
           {notice ? (
             <AddonUnavailable reason={notice} plugins={requiredPlugins(win.appId)} />
           ) : View ? (
-            <View active={!win.minimized && !closing} />
+            <View active={!win.minimized && !closing && pageVisible} />
           ) : (
             <PlaceholderWindow />
           )}

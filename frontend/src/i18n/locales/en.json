@@ -70,5 +70,11 @@
     "pluginMissing": "This app needs an OpenMediaVault plugin that is not installed.",
     "adminRequired": "Only administrators can use this app.",
     "requiredPlugins": "Required plugins: {{plugins}}"
+  },
+  "widgets": {
+    "label": "Widgets",
+    "disconnected": "Disconnected",
+    "pluginMissing": "Plugin required",
+    "adminRequired": "Administrators only"
   }
 }

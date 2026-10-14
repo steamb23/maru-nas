@@ -1,8 +1,7 @@
 // 애드온 manifest의 프론트 타입. 원본은 백엔드 Go 구조체(api.Manifest)이고,
 // 목록(manifests.gen.ts)은 `make types`로 생성한다.
 import type { ParseKeys } from 'i18next'
-import type { ComponentType } from 'react'
-import type { Manifest } from '../api/types.gen'
+import type { GridSize, Manifest } from '../api/types.gen'
 import type { IconName } from '../icons/resolver'
 
 // 생성된 목록은 `as const`라 배열이 readonly 튜플이 된다. 그대로 검사할 수 있게 깊게 readonly로 만든다.
@@ -17,11 +16,13 @@ type DeepReadonly<T> = T extends (infer U)[]
 export type AddonManifest = DeepReadonly<Omit<Manifest, 'title' | 'icon'> & { title: ParseKeys; icon: IconName }>
 
 export interface WindowViewProps {
-  // 창이 최소화되거나 닫히는 중이면 false. 이때는 주기 요청을 멈춘다.
+  // 창이 최소화되거나 닫히는 중이거나 탭이 보이지 않으면 false. 이때는 주기 요청을 멈춘다.
   active: boolean
 }
 
-// AddonViews는 애드온 하나의 보기 컴포넌트다(registry.ts).
-export interface AddonViews {
-  Window: ComponentType<WindowViewProps>
+export interface WidgetViewProps {
+  // 탭이 보이지 않으면 false. 이때는 주기 요청을 멈춘다.
+  active: boolean
+  // 위젯의 지금 크기(칸). 크기에 따라 보여 줄 내용을 고를 때 쓴다.
+  size: GridSize
 }

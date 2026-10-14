@@ -33,6 +33,12 @@ describe('formatUptime', () => {
     expect(formatUptime(sec, 'ko')).toBe(ko)
     expect(formatUptime(sec, 'en')).toBe(en)
   })
+
+  it('narrow는 단위를 짧게 쓴다', () => {
+    const sec = 86400 * 14 + 3600 * 3 + 60 * 31
+    expect(formatUptime(sec, 'en', 'narrow')).toBe('14d 3h 31m')
+    expect(formatUptime(sec, 'ko', 'narrow')).toBe('14일 3시간 31분')
+  })
 })
 
 describe('formatUnit', () => {

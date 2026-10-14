@@ -4,6 +4,7 @@
 import { create } from 'zustand'
 import type { AddonCapability, CapabilitiesResponse } from '../api/types.gen'
 import { type AppId, isAddonApp } from '../windows/apps'
+import type { WidgetAddonId } from '../widgets/catalog'
 import { type AddonId, MANIFESTS } from './manifests.gen'
 import type { AddonManifest } from './types'
 
@@ -22,17 +23,28 @@ const OPEN: AppAccess = { visible: true, notice: null }
 // 관리자 전용(admin_required)은 아이콘을 숨기고, 플러그인 없음(plugin_missing)은 아이콘을 두고
 // 창 안에 안내한다. 이미 열린 창이면 두 경우 모두 창 안에 안내한다.
 export function appAccess(caps: CapabilitiesResponse | null, id: AppId): AppAccess {
-  if (!caps || !isAddonApp(id)) return OPEN
+  return isAddonApp(id) ? addonAccess(caps, id) : OPEN
+}
+
+// widgetAccess는 capability로 위젯을 어떻게 그릴지 정한다. 규칙은 appAccess와 같다.
+// 관리자 전용은 위젯을 그리지 않고(저장 배치에는 남는다), 플러그인 없음은 위젯 안에 안내한다.
+export function widgetAccess(caps: CapabilitiesResponse | null, id: WidgetAddonId): AppAccess {
+  return addonAccess(caps, id)
+}
+
+function addonAccess(caps: CapabilitiesResponse | null, id: AddonId): AppAccess {
+  if (!caps) return OPEN
   const c = caps.addons.find((a) => a.id === id)
   if (!c || c.available) return OPEN
   const reason = c.reason ?? 'plugin_missing'
   return { visible: reason !== 'admin_required', notice: reason }
 }
 
-// requiredPlugins는 앱 manifest가 선언한 OMV 플러그인 패키지 이름이다. 안내 문구에 쓴다.
-export function requiredPlugins(id: AppId): readonly string[] {
-  if (!isAddonApp(id)) return []
-  return (MANIFESTS as Record<AddonId, AddonManifest>)[id].requires.plugins ?? []
+// requiredPlugins는 애드온 manifest가 선언한 OMV 플러그인 패키지 이름이다. 애드온이 아닌 앱은 빈 목록.
+// 안내 문구에 쓴다.
+export function requiredPlugins(id: AppId | AddonId): readonly string[] {
+  if (!Object.hasOwn(MANIFESTS, id)) return []
+  return (MANIFESTS as Record<AddonId, AddonManifest>)[id as AddonId].requires.plugins ?? []
 }
 
 interface CapabilitiesState {

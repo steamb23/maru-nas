@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { cellToPx, gridSize, inGrid, overlaps, reservedCells, resizeCells, snapCell, spanPx } from './grid'
+import { cellToPx, gridSize, inGrid, overlaps, reservedCells, resizeCells, resizePx, snapCell, spanPx } from './grid'
 
 // 1000×600 영역: (1000 - 24 + 8) / 88 = 11열, (600 - 24 + 8) / 88 = 6행
 const area = { width: 1000, height: 600 }
@@ -80,35 +80,82 @@ describe('snapCell', () => {
 describe('resizeCells', () => {
   const min = { cols: 2, rows: 2 }
   const max = { cols: 4, rows: 3 }
-  it('왼쪽 위를 고정하고 칸 단위로 늘린다', () => {
-    expect(resizeCells({ right: 2, top: 0, cols: 3, rows: 2 }, 88, 88, min, max, grid)).toEqual({
-      right: 1,
-      top: 0,
+  const start = { right: 2, top: 1, cols: 3, rows: 2 }
+
+  it('오른쪽 아래(se)는 왼쪽 위를 고정한다', () => {
+    expect(resizeCells(start, 'se', 88, 88, min, max, grid)).toEqual({ right: 1, top: 1, cols: 4, rows: 3 })
+    // 반 칸 넘게 끌어야 바뀐다.
+    expect(resizeCells(start, 'se', 40, -40, min, max, grid)).toMatchObject({ cols: 3, rows: 2 })
+    expect(resizeCells(start, 'se', 50, -50, min, max, grid)).toMatchObject({ cols: 4, rows: 2 })
+  })
+
+  it('왼쪽 위(nw)는 오른쪽 아래를 고정한다', () => {
+    expect(resizeCells(start, 'nw', -88, -88, min, max, grid)).toEqual({ right: 2, top: 0, cols: 4, rows: 3 })
+    expect(resizeCells(start, 'nw', 88, 0, min, max, grid)).toEqual({ right: 2, top: 1, cols: 2, rows: 2 })
+  })
+
+  it('변 핸들은 한 방향만 바꾼다', () => {
+    expect(resizeCells(start, 'w', -88, 999, min, max, grid)).toEqual({ ...start, cols: 4 })
+    expect(resizeCells(start, 'e', 999, 999, min, max, grid)).toEqual({ ...start, right: 1, cols: 4 })
+    expect(resizeCells(start, 'n', 999, -88, min, max, grid)).toEqual({ ...start, top: 0, rows: 3 })
+    expect(resizeCells(start, 's', -999, 88, min, max, grid)).toEqual({ ...start, rows: 3 })
+  })
+
+  it('오른쪽 끝에 붙은 위젯도 왼쪽으로는 넓힐 수 있다', () => {
+    const atEdge = { right: 0, top: 0, cols: 3, rows: 2 }
+    expect(resizeCells(atEdge, 'e', 200, 0, min, max, grid)).toEqual(atEdge)
+    expect(resizeCells(atEdge, 'w', -88, 0, min, max, grid)).toEqual({ ...atEdge, cols: 4 })
+    expect(resizeCells(atEdge, 'sw', -88, 88, min, max, grid)).toEqual({ right: 0, top: 0, cols: 4, rows: 3 })
+  })
+
+  it('최소·최대 크기로 제한한다', () => {
+    expect(resizeCells(start, 'se', -999, -999, min, max, grid)).toEqual({ right: 3, top: 1, cols: 2, rows: 2 })
+    expect(resizeCells(start, 'nw', 999, 999, min, max, grid)).toEqual({ right: 2, top: 1, cols: 2, rows: 2 })
+    expect(resizeCells({ right: 5, top: 0, cols: 3, rows: 2 }, 'sw', -999, 999, min, max, grid)).toMatchObject({
       cols: 4,
       rows: 3,
     })
-    // 반 칸 넘게 끌어야 바뀐다.
-    expect(resizeCells({ right: 2, top: 0, cols: 3, rows: 2 }, 40, -40, min, max, grid)).toMatchObject({ cols: 3, rows: 2 })
-    expect(resizeCells({ right: 2, top: 0, cols: 3, rows: 2 }, 50, -50, min, max, grid)).toMatchObject({ cols: 4, rows: 2 })
   })
-  it('최소·최대 크기로 제한한다', () => {
-    expect(resizeCells({ right: 0, top: 0, cols: 3, rows: 2 }, -999, -999, min, max, grid)).toEqual({
-      right: 1,
-      top: 0,
-      cols: 2,
-      rows: 2,
-    })
-    expect(resizeCells({ right: 5, top: 0, cols: 3, rows: 2 }, 999, 999, min, max, grid)).toMatchObject({ cols: 4, rows: 3 })
-  })
-  it('그리드 오른쪽·아래 끝을 넘지 않는다', () => {
-    expect(resizeCells({ right: 0, top: 0, cols: 3, rows: 2 }, 200, 0, min, max, grid)).toEqual({
-      right: 0,
+
+  it('그리드 가장자리를 넘지 않는다', () => {
+    // 왼쪽 끝(11열)과 위쪽 끝
+    expect(resizeCells({ right: 8, top: 0, cols: 3, rows: 2 }, 'nw', -200, -200, min, max, grid)).toEqual({
+      right: 8,
       top: 0,
       cols: 3,
       rows: 2,
     })
-    expect(resizeCells({ right: 3, top: 5, cols: 3, rows: 1 }, 0, 200, { cols: 1, rows: 1 }, max, grid)).toMatchObject({
+    // 아래쪽 끝(6행)
+    expect(resizeCells({ right: 3, top: 5, cols: 3, rows: 1 }, 's', 0, 200, { cols: 1, rows: 1 }, max, grid)).toMatchObject({
       rows: 1,
+    })
+  })
+})
+
+describe('resizePx', () => {
+  const min = { cols: 2, rows: 2 }
+  const max = { cols: 4, rows: 3 }
+  const start = { x: 500, y: 100, width: 256, height: 168 }
+  const bounds = cellToPx({ right: 0, top: 0, ...grid }, area) // x 28 ~ 988, y 12 ~ 524
+
+  it('반대쪽 변을 고정하고 포인터를 따라간다', () => {
+    expect(resizePx(start, 'se', 30, 20, min, max, bounds)).toEqual({ x: 500, y: 100, width: 286, height: 188 })
+    expect(resizePx(start, 'nw', -30, -20, min, max, bounds)).toEqual({ x: 470, y: 80, width: 286, height: 188 })
+    expect(resizePx(start, 'e', 30, 20, min, max, bounds)).toEqual({ ...start, width: 286 })
+  })
+
+  it('최소·최대 픽셀 크기로 제한한다', () => {
+    expect(resizePx(start, 'w', 500, 0, min, max, bounds)).toEqual({ x: 588, y: 100, width: 168, height: 168 })
+    expect(resizePx(start, 'n', 0, -500, min, max, bounds)).toEqual({ x: 500, y: 12, width: 256, height: 256 })
+  })
+
+  it('그리드 영역 밖으로 늘어나지 않는다', () => {
+    const atRight = { x: 732, y: 12, width: 256, height: 168 }
+    expect(resizePx(atRight, 'e', 200, 0, min, max, bounds)).toEqual(atRight)
+    expect(resizePx(atRight, 'n', 0, -200, min, max, bounds)).toEqual(atRight)
+    expect(resizePx({ x: 30, y: 300, width: 256, height: 168 }, 'w', -200, 0, min, max, bounds)).toMatchObject({
+      x: 28,
+      width: 258,
     })
   })
 })

@@ -16,22 +16,30 @@ export function formatBytes(bytes: number, locale: string): string {
   return `${n.format(v)} ${BYTE_UNITS[i]}`
 }
 
+// UnitDisplay는 단위 표기 길이다. narrow는 위젯처럼 좁은 곳에 쓴다(en "3d", ko "3일").
+export type UnitDisplay = 'long' | 'narrow'
+
 // formatUnit은 수와 단위를 locale에 맞게 표시한다. 예: ko "30초", en "30 seconds"
-export function formatUnit(value: number, unit: 'day' | 'hour' | 'minute' | 'second', locale: string): string {
-  return new Intl.NumberFormat(locale, { style: 'unit', unit, unitDisplay: 'long' }).format(value)
+export function formatUnit(
+  value: number,
+  unit: 'day' | 'hour' | 'minute' | 'second',
+  locale: string,
+  unitDisplay: UnitDisplay = 'long',
+): string {
+  return new Intl.NumberFormat(locale, { style: 'unit', unit, unitDisplay }).format(value)
 }
 
 // formatUptime은 초를 ko "3일 4시간 12분", en "3 days 4 hours 12 minutes" 형태로 바꾼다.
-// 앞쪽의 0인 단위는 생략한다.
-export function formatUptime(seconds: number, locale: string): string {
+// 앞쪽의 0인 단위는 생략한다. unitDisplay가 narrow면 en "3d 4h 12m"처럼 짧게 쓴다.
+export function formatUptime(seconds: number, locale: string, unitDisplay: UnitDisplay = 'long'): string {
   const totalMin = Math.floor(Math.max(0, seconds) / 60)
   const days = Math.floor(totalMin / 1440)
   const hours = Math.floor((totalMin % 1440) / 60)
   const minutes = totalMin % 60
   const parts: string[] = []
-  if (days > 0) parts.push(formatUnit(days, 'day', locale))
-  if (days > 0 || hours > 0) parts.push(formatUnit(hours, 'hour', locale))
-  parts.push(formatUnit(minutes, 'minute', locale))
+  if (days > 0) parts.push(formatUnit(days, 'day', locale, unitDisplay))
+  if (days > 0 || hours > 0) parts.push(formatUnit(hours, 'hour', locale, unitDisplay))
+  parts.push(formatUnit(minutes, 'minute', locale, unitDisplay))
   return new Intl.ListFormat(locale, { type: 'unit', style: 'narrow' }).format(parts)
 }
 

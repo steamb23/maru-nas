@@ -5,15 +5,24 @@ interface Props {
   reason: UnavailableReason
   // 플러그인 없음일 때 보여 줄 필요한 플러그인 패키지 이름
   plugins: readonly string[]
+  // 위젯처럼 좁은 곳에 쓰는 짧은 안내
+  compact?: boolean
 }
 
-// AddonUnavailable은 애드온을 쓸 수 없을 때 창 보기 대신 보여 주는 안내다.
-export function AddonUnavailable({ reason, plugins }: Props) {
+// AddonUnavailable은 애드온을 쓸 수 없을 때 창·위젯 보기 대신 보여 주는 안내다.
+export function AddonUnavailable({ reason, plugins, compact = false }: Props) {
   const { t } = useTranslation()
+  const message = compact
+    ? reason === 'admin_required'
+      ? t('widgets.adminRequired')
+      : t('widgets.pluginMissing')
+    : reason === 'admin_required'
+      ? t('addons.adminRequired')
+      : t('addons.pluginMissing')
   return (
-    <div className="placeholder">
+    <div className={compact ? 'placeholder compact' : 'placeholder'}>
       <div className="addon-unavailable" role="status">
-        <p>{reason === 'admin_required' ? t('addons.adminRequired') : t('addons.pluginMissing')}</p>
+        <p>{message}</p>
         {reason === 'plugin_missing' && plugins.length > 0 && (
           <p className="selectable">{t('addons.requiredPlugins', { plugins: plugins.join(', ') })}</p>
         )}

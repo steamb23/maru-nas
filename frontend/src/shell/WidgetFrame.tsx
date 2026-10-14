@@ -1,0 +1,217 @@
+// 바탕화면 위젯 하나의 틀: 제목, 보기, 끌어서 옮기기, 변·모서리 크기 조절(창과 같은 8방향), 누르면 창 열기.
+// 위젯은 창 시스템과 분리되어 있다. 창 저장소는 누를 때 창을 여는 데만 쓴다.
+import { type KeyboardEvent, useLayoutEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import type { GridSize, WidgetPlacement } from '../api/types.gen'
+import { AddonUnavailable } from '../addons/AddonUnavailable'
+import type { UnavailableReason } from '../addons/capabilities'
+import { usePageVisible } from '../addons/common/usePageVisible'
+import { ADDON_VIEWS } from '../addons/registry'
+import { IconImage } from '../icons/IconImage'
+import { type WidgetAddonId, getWidget } from '../widgets/catalog'
+import {
+  type CellRect,
+  type PxRect,
+  type PxSize,
+  RESIZE_EDGES,
+  type ResizeEdge,
+  cellToPx,
+  resizeCells,
+  resizePx,
+  snapCell,
+} from '../widgets/grid'
+import { canPlace } from '../widgets/layout'
+import { isAddonApp } from '../windows/apps'
+import { useWindowStore } from '../windows/store'
+import { type DragDelta, usePointerDrag } from './usePointerDrag'
+import { animationsEnabled } from './useWindowAnimation'
+import { WidgetPreview } from './WidgetPreview'
+import { DROP_MS, slideKeyframes } from './widgetPreviewAnim'
+import { EASING } from './windowAnim'
+
+interface Props {
+  id: WidgetAddonId
+  // 화면 배치에서의 자리
+  placement: WidgetPlacement
+  area: PxSize
+  grid: GridSize
+  reserved: CellRect | null
+  // 다른 위젯들의 화면 자리. 이 자리들과 겹치는 곳에는 놓을 수 없다.
+  others: readonly CellRect[]
+  notice: UnavailableReason | null
+  plugins: readonly string[]
+  // 옮기거나 크기를 바꾼 자리를 저장한다.
+  onCommit: (edited: WidgetPlacement) => void
+  // 끌거나 크기를 바꾸는 동안 true. 레이어를 창 위로 올린다.
+  onInteract: (active: boolean) => void
+}
+
+type Mode = 'idle' | 'drag' | 'resize'
+
+// 창과 같다(Window.tsx). 이 거리 전에 놓으면 클릭으로 보고 창을 연다.
+const DRAG_THRESHOLD = 4
+
+const sameCell = (a: CellRect | null, b: CellRect | null) =>
+  a === b || (a !== null && b !== null && a.right === b.right && a.top === b.top && a.cols === b.cols && a.rows === b.rows)
+
+// applyPx는 끄는 동안 위젯의 위치·크기를 직접 바꾼다(렌더 없이 포인터를 따라가게).
+function applyPx(el: HTMLElement, r: PxRect) {
+  el.style.left = `${r.x}px`
+  el.style.top = `${r.y}px`
+  el.style.width = `${r.width}px`
+  el.style.height = `${r.height}px`
+}
+
+export function WidgetFrame({ id, placement, area, grid, reserved, others, notice, plugins, onCommit, onInteract }: Props) {
+  const { t } = useTranslation()
+  const def = getWidget(id)
+  const View = ADDON_VIEWS[id].Widget
+  const pageVisible = usePageVisible()
+  const ref = useRef<HTMLElement>(null)
+  const [mode, setMode] = useState<Mode>('idle')
+  // 놓을 자리. 놓을 수 없는 자리면 null(가이드를 그리지 않는다). 놓을 때 바로 쓰려고 ref에도 둔다.
+  const [target, setTarget] = useState<CellRect | null>(null)
+  const targetRef = useRef<CellRect | null>(null)
+  // 끌기를 끝낸 순간 위젯이 보이던 자리. 다음 렌더에서 그 자리부터 제자리로 미끄러지게 한다.
+  const dropFrom = useRef<PxRect | null>(null)
+  const lastDelta = useRef<DragDelta>({ dx: 0, dy: 0 })
+  // 크기 조절 중인 핸들의 방향
+  const resizeEdge = useRef<ResizeEdge>('se')
+
+  const rect = cellToPx(placement, area)
+  const cells: CellRect = { right: placement.right, top: placement.top, cols: placement.cols, rows: placement.rows }
+  const opensWindow = isAddonApp(id)
+  const title = t(def.manifest.title)
+
+  useLayoutEffect(() => {
+    const from = dropFrom.current
+    dropFrom.current = null
+    const el = ref.current
+    if (!from || !el || !animationsEnabled()) return
+    const frames = slideKeyframes(rect, from)
+    if (frames) el.animate(frames, { duration: DROP_MS, easing: EASING })
+  })
+
+  const showTarget = (next: CellRect | null) => {
+    const valid = next && canPlace(next, others, grid, reserved) ? next : null
+    targetRef.current = valid
+    setTarget((prev) => (sameCell(prev, valid) ? prev : valid))
+  }
+
+  const begin = (m: Mode) => {
+    if (mode === m) return
+    setMode(m)
+    onInteract(true)
+  }
+
+  // finish는 끌기·크기 조절을 끝낸다. commit이면 가이드 자리에 놓는다(가이드가 없으면 제자리로 돌아간다).
+  const finish = (commit: boolean) => {
+    const el = ref.current
+    const placed = targetRef.current
+    if (el) {
+      // 위치·크기는 React가 style로 관리하는 값이다. 지우면 값이 바뀌지 않은 쪽은 React가 다시 넣지 않으므로
+      // 지금 자리의 값으로 되돌린다(놓은 자리가 바뀌면 다음 렌더에서 React가 새 값을 넣는다).
+      el.style.transform = ''
+      applyPx(el, rect)
+    }
+    targetRef.current = null
+    setTarget(null)
+    setMode('idle')
+    onInteract(false)
+    if (commit && placed && !sameCell(placed, cells)) onCommit({ addon: id, ...placed })
+  }
+
+  const openWindow = () => {
+    if (opensWindow) useWindowStore.getState().open(id, area)
+  }
+
+  const moveHandlers = usePointerDrag({
+    threshold: DRAG_THRESHOLD,
+    onMove: (d) => {
+      begin('drag')
+      lastDelta.current = d
+      if (ref.current) ref.current.style.transform = `translate(${d.dx}px, ${d.dy}px)`
+      showTarget(snapCell({ x: rect.x + d.dx, y: rect.y + d.dy }, cells, area))
+    },
+    onEnd: (moved, d) => {
+      if (!moved) {
+        openWindow()
+        return
+      }
+      dropFrom.current = { ...rect, x: rect.x + d.dx, y: rect.y + d.dy }
+      finish(true)
+    },
+    onCancel: () => {
+      const d = lastDelta.current
+      dropFrom.current = { ...rect, x: rect.x + d.dx, y: rect.y + d.dy }
+      finish(false)
+    },
+  })
+
+  const resizeHandlers = usePointerDrag({
+    threshold: 0,
+    onStart: (e) => {
+      // 위젯 틀의 끌기가 시작되지 않게 한다. 끄는 동안 텍스트 선택도 막는다.
+      e.stopPropagation()
+      e.preventDefault()
+      resizeEdge.current = (e.currentTarget.dataset.edge as ResizeEdge | undefined) ?? 'se'
+    },
+    onMove: (d) => {
+      begin('resize')
+      const edge = resizeEdge.current
+      // 위젯은 포인터를 따라 픽셀 단위로 늘어나고, 가이드는 칸에 맞춘 크기를 보여 준다.
+      const gridPx = cellToPx({ right: 0, top: 0, ...grid }, area)
+      if (ref.current) applyPx(ref.current, resizePx(rect, edge, d.dx, d.dy, def.minSize, def.maxSize, gridPx))
+      showTarget(resizeCells(cells, edge, d.dx, d.dy, def.minSize, def.maxSize, grid))
+    },
+    onEnd: () => finish(true),
+    onCancel: () => finish(false),
+  })
+
+  const onKeyDown = (e: KeyboardEvent<HTMLElement>) => {
+    if (e.target !== e.currentTarget || (e.key !== 'Enter' && e.key !== ' ')) return
+    e.preventDefault()
+    openWindow()
+  }
+
+  const resizable =
+    def.minSize.cols !== def.maxSize.cols || def.minSize.rows !== def.maxSize.rows
+  const classes = ['widget', mode !== 'idle' && mode, opensWindow && 'opens-window'].filter(Boolean).join(' ')
+
+  return (
+    <>
+      {target && <WidgetPreview rect={cellToPx(target, area)} />}
+      <section
+        ref={ref}
+        className={classes}
+        style={{ left: rect.x, top: rect.y, width: rect.width, height: rect.height }}
+        aria-label={title}
+        tabIndex={0}
+        onKeyDown={onKeyDown}
+        {...moveHandlers}
+      >
+        <header className="widget-title">
+          <IconImage name={def.manifest.icon} size={16} />
+          <h2>{title}</h2>
+        </header>
+        <div className="widget-body">
+          {notice ? (
+            <AddonUnavailable reason={notice} plugins={plugins} compact />
+          ) : (
+            <View active={pageVisible} size={{ cols: placement.cols, rows: placement.rows }} />
+          )}
+        </div>
+        {resizable &&
+          RESIZE_EDGES.map((edge) => (
+            <div
+              key={edge}
+              className={`resize-handle resize-${edge}`}
+              data-edge={edge}
+              aria-hidden="true"
+              {...resizeHandlers}
+            />
+          ))}
+      </section>
+    </>
+  )
+}
