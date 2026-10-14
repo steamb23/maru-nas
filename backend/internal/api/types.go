@@ -226,6 +226,31 @@ type Sensor struct {
 	CritCelsius *float64 `json:"critCelsius,omitempty"`
 }
 
+// ContainersResponse는 GET /api/addons/containers의 응답이다.
+type ContainersResponse struct {
+	AddonSources `tstype:",extends"`
+	// Runtime은 compose 플러그인이 쓰는 컨테이너 런타임이다. 알 수 없으면 비어 있다.
+	// Podman은 같은 RPC로 동작할 것으로 보이지만 검증하지 않았다.
+	Runtime string `json:"runtime" tstype:"'docker' | 'podman' | ''"`
+	// RuntimeStatus는 런타임 서비스 상태를 OMV가 번역한 문구다(running, stopped 등).
+	// OMV 언어 설정에 따라 바뀌므로 비교하지 말고 표시에만 쓴다.
+	RuntimeStatus string `json:"runtimeStatus"`
+	// Containers는 이름 순서다.
+	Containers []Container `json:"containers"`
+}
+
+// Container는 컨테이너 하나다(docker container ls --all의 한 줄).
+type Container struct {
+	Name  string `json:"name"`
+	Image string `json:"image"`
+	// State는 Status에서 읽은 상태다.
+	State string `json:"state" tstype:"'running' | 'paused' | 'restarting' | 'exited' | 'created' | 'dead' | 'removing' | 'unknown'"`
+	// Health는 헬스체크 결과다. 헬스체크가 없으면 없다.
+	Health string `json:"health,omitempty" tstype:"'healthy' | 'unhealthy' | 'starting'"`
+	// Status는 docker가 준 상태 문구 원문이다(Up 3 days (healthy), Exited (0) 2 hours ago 등).
+	Status string `json:"status"`
+}
+
 // Preferences는 GET /api/preferences의 응답이며 로그인한 사용자의 대시보드 설정이다.
 // 백엔드 상태 디렉터리에 사용자별로 저장되어 로그아웃해도 남는다.
 type Preferences struct {
