@@ -109,6 +109,43 @@ export interface RPCMethods {
   write?: string[];
 }
 /**
+ * capability를 쓸 수 없는 이유. AddonCapability.Reason에 들어간다.
+ */
+export const ReasonPluginMissing = "plugin_missing";
+/**
+ * capability를 쓸 수 없는 이유. AddonCapability.Reason에 들어간다.
+ */
+export const ReasonAdminRequired = "admin_required";
+/**
+ * CapabilitiesResponse는 GET /api/capabilities의 응답이다. 플러그인 설치 상태와
+ * 로그인한 사용자의 역할로 계산한다.
+ */
+export interface CapabilitiesResponse {
+  /**
+   * Addons는 등록된 모든 애드온의 capability다(등록 순서).
+   */
+  addons: AddonCapability[];
+  /**
+   * Plugins는 설치된 것으로 감지한, 대시보드가 아는 OMV 플러그인 패키지 이름이다(정렬).
+   */
+  plugins: string[];
+}
+/**
+ * AddonCapability는 애드온 하나를 이 사용자가 쓸 수 있는지다.
+ */
+export interface AddonCapability {
+  id: string;
+  available: boolean;
+  /**
+   * Reason은 쓸 수 없는 이유다. Available이면 없다.
+   */
+  reason?: 'plugin_missing' | 'admin_required';
+  /**
+   * Sources는 쓸 수 있는 provider 이름이다(우선순위 순서).
+   */
+  sources: string[];
+}
+/**
  * LoginRequest는 POST /api/login의 요청 본문이다.
  */
 export interface LoginRequest {

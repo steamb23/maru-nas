@@ -75,6 +75,31 @@ type RPCMethods struct {
 	Write []string `json:"write,omitempty"`
 }
 
+// capability를 쓸 수 없는 이유. AddonCapability.Reason에 들어간다.
+const (
+	ReasonPluginMissing = "plugin_missing"
+	ReasonAdminRequired = "admin_required"
+)
+
+// CapabilitiesResponse는 GET /api/capabilities의 응답이다. 플러그인 설치 상태와
+// 로그인한 사용자의 역할로 계산한다.
+type CapabilitiesResponse struct {
+	// Addons는 등록된 모든 애드온의 capability다(등록 순서).
+	Addons []AddonCapability `json:"addons"`
+	// Plugins는 설치된 것으로 감지한, 대시보드가 아는 OMV 플러그인 패키지 이름이다(정렬).
+	Plugins []string `json:"plugins"`
+}
+
+// AddonCapability는 애드온 하나를 이 사용자가 쓸 수 있는지다.
+type AddonCapability struct {
+	ID        string `json:"id"`
+	Available bool   `json:"available"`
+	// Reason은 쓸 수 없는 이유다. Available이면 없다.
+	Reason string `json:"reason,omitempty" tstype:"'plugin_missing' | 'admin_required'"`
+	// Sources는 쓸 수 있는 provider 이름이다(우선순위 순서).
+	Sources []string `json:"sources"`
+}
+
 // LoginRequest는 POST /api/login의 요청 본문이다.
 type LoginRequest struct {
 	Username string `json:"username"`

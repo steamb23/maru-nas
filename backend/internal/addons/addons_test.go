@@ -76,8 +76,12 @@ func TestNewRegistryRejectsInvalid(t *testing.T) {
 			addon("a", func(a *Addon) { a.Manifest.RPC.Read = []string{"Compose.getContainers"} }),
 			addon("b", func(a *Addon) { a.Manifest.RPC.Write = []string{"Compose.getContainers"} }),
 		},
-		"empty plugin": {addon("a", func(a *Addon) { a.Manifest.Requires.Plugins = []string{""} })},
-		"no provider":  {addon("a", func(a *Addon) { a.Providers = nil })},
+		"empty plugin":   {addon("a", func(a *Addon) { a.Manifest.Requires.Plugins = []string{""} })},
+		"unknown plugin": {addon("a", func(a *Addon) { a.Manifest.Requires.Plugins = []string{"openmediavault-nope"} })},
+		"unknown provider plugin": {addon("a", func(a *Addon) {
+			a.Providers = []Provider{fakeProvider{name: "x", req: api.Requirements{Plugins: []string{"nope"}}}}
+		})},
+		"no provider": {addon("a", func(a *Addon) { a.Providers = nil })},
 		"provider name twice": {addon("a", func(a *Addon) {
 			a.Providers = []Provider{fakeProvider{name: "x"}, fakeProvider{name: "x"}}
 		})},

@@ -7,14 +7,18 @@ import (
 	"errors"
 	"flag"
 	"log"
+	"maps"
 	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"os/signal"
+	"slices"
 	"syscall"
 	"time"
 
+	"omv-desktop-dashboard/backend/internal/addons"
+	"omv-desktop-dashboard/backend/internal/addons/builtin"
 	"omv-desktop-dashboard/backend/internal/addons/sysinfo"
 	"omv-desktop-dashboard/backend/internal/omv"
 	"omv-desktop-dashboard/backend/internal/server"
@@ -40,12 +44,19 @@ func main() {
 		log.Fatal(err)
 	}
 
+	sys := sysinfo.NewReader()
+	plugins := addons.NewDetector()
+	plugins.Refresh()
+	log.Printf("detected omv plugins: %v", slices.Sorted(maps.Keys(plugins.Plugins())))
+
 	srv := &http.Server{
 		Addr: *listen,
 		Handler: server.New(server.Config{
-			System:     sysinfo.NewReader(),
+			System:     sys,
 			Static:     web.Handler(),
 			OMV:        omv.NewClient(*omvURL, userAgent),
+			Addons:     builtin.New(builtin.Deps{System: sys}),
+			Plugins:    plugins,
 			CookiePath: *cookiePath,
 		}),
 		ReadHeaderTimeout: 10 * time.Second,

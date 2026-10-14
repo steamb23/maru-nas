@@ -1,0 +1,30 @@
+Package: openmediavault
+Status: install ok installed
+Priority: optional
+Section: admin
+Maintainer: Example Maintainer <maintainer@example.invalid>
+Version: 8.0.0-1
+Description: synthetic core package
+ A continuation line that mentions
+ Package: openmediavault-fake-in-description
+ Status: install ok installed
+
+Package: openmediavault-compose
+Status: install ok installed
+Version: 8.0.0
+
+Package: openmediavault-cputemp
+Status: deinstall ok config-files
+Version: 8.0.0
+
+Package: openmediavault-kvm
+Status:   install   ok   installed
+Version: 8.0.0
+
+Package: openmediavault-mergerfs
+Status: install ok half-configured
+Version: 8.0.0
+
+Package: openmediavault-bcache
+Status: install ok installed
+Version: 8.0.0

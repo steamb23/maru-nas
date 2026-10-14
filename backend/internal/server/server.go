@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"time"
 
+	"omv-desktop-dashboard/backend/internal/addons"
 	"omv-desktop-dashboard/backend/internal/api"
 	"omv-desktop-dashboard/backend/internal/auth"
 	"omv-desktop-dashboard/backend/internal/omv"
@@ -29,12 +30,33 @@ type OMV interface {
 	Probe(ctx context.Context, sessionID string, touch bool) (omv.SessionState, error)
 }
 
+// PluginDetector는 OMV 플러그인 설치 여부를 알려 준다. *addons.Detector가 구현한다.
+type PluginDetector interface {
+	// Plugins는 설치된 플러그인 패키지 집합이다.
+	Plugins() map[string]bool
+	// Refresh는 바로 다시 확인한다.
+	Refresh()
+	// Invalidate는 다음 Plugins 호출 때 다시 확인하게 한다.
+	Invalidate()
+}
+
+// noPlugins는 아무 플러그인도 설치되지 않은 것으로 보는 PluginDetector다.
+type noPlugins struct{}
+
+func (noPlugins) Plugins() map[string]bool { return map[string]bool{} }
+func (noPlugins) Refresh()                 {}
+func (noPlugins) Invalidate()              {}
+
 // Config는 New의 설정이다. System, Static, OMV는 필수다.
 type Config struct {
 	System SystemSource
 	// Static은 /api/ 밖의 요청을 처리한다(프론트엔드 빌드 결과).
 	Static http.Handler
 	OMV    OMV
+	// Addons는 등록된 애드온이다. nil이면 빈 목록이다.
+	Addons *addons.Registry
+	// Plugins가 nil이면 아무 플러그인도 설치되지 않은 것으로 본다.
+	Plugins PluginDetector
 
 	// Sessions, Limiter가 nil이면 새로 만든다.
 	Sessions *auth.Store
@@ -75,6 +97,12 @@ func New(cfg Config) http.Handler {
 	if cfg.Now == nil {
 		cfg.Now = time.Now
 	}
+	if cfg.Addons == nil {
+		cfg.Addons, _ = addons.NewRegistry()
+	}
+	if cfg.Plugins == nil {
+		cfg.Plugins = noPlugins{}
+	}
 	h := &handler{cfg}
 
 	mux := http.NewServeMux()
@@ -87,6 +115,7 @@ func New(cfg Config) http.Handler {
 	mux.HandleFunc("GET /api/session", h.requireSession(h.session))
 	mux.HandleFunc("POST /api/session/activity", h.requireSession(h.activity))
 	mux.HandleFunc("GET /api/system", h.requireSession(h.system))
+	mux.HandleFunc("GET /api/capabilities", h.requireSession(h.capabilities))
 	mux.HandleFunc("/api/", func(w http.ResponseWriter, _ *http.Request) {
 		writeJSON(w, http.StatusNotFound, api.ErrorResponse{Error: "not found"})
 	})
@@ -102,6 +131,11 @@ func (h *handler) system(w http.ResponseWriter, _ *http.Request, _ auth.Session)
 		return
 	}
 	writeJSON(w, http.StatusOK, info)
+}
+
+// capabilities는 플러그인 설치 상태와 세션 역할로 애드온마다 쓸 수 있는지 알려 준다.
+func (h *handler) capabilities(w http.ResponseWriter, _ *http.Request, s auth.Session) {
+	writeJSON(w, http.StatusOK, h.Addons.Capabilities(h.Plugins.Plugins(), s.Admin))
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) {

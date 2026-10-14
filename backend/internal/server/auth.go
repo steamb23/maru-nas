@@ -146,6 +146,8 @@ func (h *handler) startSession(w http.ResponseWriter, r *http.Request, res omv.L
 	}
 	h.setCookie(w, r, SessionCookie, s.ID, 0)
 	h.clearCookie(w, r, PendingCookie)
+	// 실행 중에 플러그인을 설치하거나 지웠을 수 있으므로 로그인할 때 다시 확인한다.
+	h.Plugins.Refresh()
 	log.Printf("login ok: user=%q ip=%s admin=%t", s.Username, ip, s.Admin)
 	info := h.sessionInfo(s)
 	writeJSON(w, http.StatusOK, api.LoginResponse{Status: api.LoginAuthenticated, Session: &info})

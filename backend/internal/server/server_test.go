@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"omv-desktop-dashboard/backend/internal/addons"
 	"omv-desktop-dashboard/backend/internal/api"
 	"omv-desktop-dashboard/backend/internal/auth"
 	"omv-desktop-dashboard/backend/internal/omv"
@@ -67,6 +68,8 @@ type envOptions struct {
 	omvTimeoutOff bool
 	brokenOMV     bool
 	omvOverride   OMV
+	addons        *addons.Registry
+	plugins       PluginDetector
 }
 
 func newEnv(t *testing.T, o envOptions) *env {
@@ -109,6 +112,8 @@ func newEnv(t *testing.T, o envOptions) *env {
 		OMV:           client,
 		Sessions:      store,
 		Limiter:       lim,
+		Addons:        o.addons,
+		Plugins:       o.plugins,
 		CheckInterval: o.interval,
 		FailDelay:     o.failDelay,
 		Now:           clk.Now,

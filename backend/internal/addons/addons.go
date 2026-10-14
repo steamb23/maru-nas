@@ -162,8 +162,8 @@ func validate(a Addon) error {
 
 func validateRequires(req api.Requirements) error {
 	for _, p := range req.Plugins {
-		if p == "" {
-			return errors.New("empty plugin name")
+		if _, ok := knownPlugins[p]; !ok {
+			return fmt.Errorf("unknown plugin %q (add it to knownPlugins)", p)
 		}
 	}
 	return nil
