@@ -13,6 +13,7 @@
 //   - 인증이 필요한 서비스(Session 밖)는 세션이 없으면 401.
 //   - WebGui.getAutoLogoutSettings는 세션 timeout을 분 단위로 돌려준다(OMV 설정과 같은 단위).
 //   - Smart.getList, Compose.getContainers, CpuTemp.get은 합성 값을 돌려준다(plugins.go).
+//   - Exec.isRunning은 백그라운드 작업이 끝났는지 알려 준다(exec.go).
 //   - 로그인 성공 시 OPENMEDIAVAULT-LOGIN-* 쿠키가 없으면 "새 브라우저 로그인"
 //     메일을 보낸 것으로 센다(LoginMails).
 //
@@ -86,6 +87,9 @@ type Server struct {
 	calls      []Call
 	mails      int
 	plugin     PluginData
+	// bg는 상태 파일 이름 → 백그라운드 작업이다(exec.go).
+	bg      map[string]*bgJob
+	bgPolls int
 }
 
 type session struct {
@@ -119,6 +123,8 @@ func New(users []User, timeout time.Duration) *Server {
 		sessions:   make(map[string]*session),
 		verifyFail: make(map[string]*failure),
 		plugin:     DefaultPluginData(),
+		bg:         make(map[string]*bgJob),
+		bgPolls:    DefaultBgPolls,
 	}
 	for _, u := range users {
 		s.users[u.Name] = u
@@ -285,6 +291,9 @@ func (s *Server) handle(req *request, body rpcBody, touch bool) (any, *rpcError)
 			"sshpubkeys": []string{},
 			"_readonly":  false,
 		}, nil
+	}
+	if body.Service == "Exec" && body.Method == "isRunning" {
+		return s.execIsRunning(req.sess, body.Params)
 	}
 	if res, rerr, ok := s.handlePlugin(req.sess, body.Service, body.Method, body.Params); ok {
 		return res, rerr

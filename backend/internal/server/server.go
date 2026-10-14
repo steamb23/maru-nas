@@ -80,6 +80,8 @@ type Config struct {
 // handler는 라우트가 공유하는 상태다.
 type handler struct {
 	Config
+	// actions는 진행 중인 애드온 조작이다.
+	actions *inflight
 }
 
 // New는 루트 핸들러를 반환한다. /api/ 밖의 요청은 cfg.Static이 처리한다.
@@ -111,7 +113,7 @@ func New(cfg Config) http.Handler {
 	if cfg.Prefs == nil {
 		cfg.Prefs = prefs.NewMemoryStore()
 	}
-	h := &handler{cfg}
+	h := &handler{Config: cfg, actions: newInflight()}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/health", func(w http.ResponseWriter, _ *http.Request) {
@@ -125,6 +127,7 @@ func New(cfg Config) http.Handler {
 	mux.HandleFunc("GET /api/system", h.requireSession(h.system))
 	mux.HandleFunc("GET /api/capabilities", h.requireSession(h.capabilities))
 	mux.HandleFunc("GET /api/addons/{id}", h.requireSession(h.addonData))
+	mux.HandleFunc("POST /api/addons/{id}/actions/{action}", h.requireSession(h.addonAction))
 	mux.HandleFunc("POST /api/rpc", h.requireSession(h.rpc))
 	mux.HandleFunc("GET /api/preferences", h.requireSession(h.preferences))
 	mux.HandleFunc("PUT /api/preferences/widgets", h.requireSession(h.setWidgets))

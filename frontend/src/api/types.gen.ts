@@ -200,6 +200,15 @@ export interface RPCRequest {
   params?: { [key: string]: unknown };
 }
 /**
+ * ActionRequest는 POST /api/addons/{id}/actions/{action}의 요청 본문이다. 성공하면 204다.
+ */
+export interface ActionRequest {
+  /**
+   * Target은 조작 대상이다(컨테이너 이름, 서비스 이름 등). 형식은 애드온이 검사한다.
+   */
+  target: string;
+}
+/**
  * AddonSources는 애드온 데이터 응답(GET /api/addons/{id})에 공통으로 담는 출처 정보다.
  */
 export interface AddonSources {
@@ -586,6 +595,22 @@ export const ErrPluginMissing = ReasonPluginMissing;
  */
 export const ErrOMVError = "omv_error";
 /**
+ * ErrActionBusy는 같은 대상에 진행 중인 조작이 있다는 뜻이다.
+ */
+export const ErrActionBusy = "action_busy";
+/**
+ * ErrActionFailed는 조작을 OMV가 실행했지만 실패했다는 뜻이다(docker 명령 실패, 설정 적용 실패 등).
+ */
+export const ErrActionFailed = "action_failed";
+/**
+ * ErrActionTimeout은 조작이 시간 안에 끝나지 않았다는 뜻이다. OMV 쪽 작업은 계속될 수 있다.
+ */
+export const ErrActionTimeout = "action_timeout";
+/**
+ * ErrConfigDirty는 OMV에 적용하지 않은 설정 변경이 있어 조작을 시작하지 않았다는 뜻이다.
+ */
+export const ErrConfigDirty = "config_dirty";
+/**
  * ErrorResponse는 2xx가 아닌 상태 코드와 함께 반환된다.
  */
 export interface ErrorResponse {
@@ -593,7 +618,7 @@ export interface ErrorResponse {
   /**
    * Code는 화면에서 분기할 때 쓰는 오류 종류다. 없을 수 있다.
    */
-  code?: 'invalid_credentials' | 'rate_limited' | 'challenge_failed' | 'challenge_expired' | 'omv_unavailable' | 'unauthorized' | 'bad_request' | 'rpc_forbidden' | 'admin_required' | 'plugin_missing' | 'omv_error';
+  code?: 'invalid_credentials' | 'rate_limited' | 'challenge_failed' | 'challenge_expired' | 'omv_unavailable' | 'unauthorized' | 'bad_request' | 'rpc_forbidden' | 'admin_required' | 'plugin_missing' | 'omv_error' | 'action_busy' | 'action_failed' | 'action_timeout' | 'config_dirty';
   /**
    * RetryAfterSeconds는 rate_limited일 때 다시 시도할 수 있기까지 남은 초다.
    */
