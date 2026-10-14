@@ -63,6 +63,11 @@ describe('taskMenuItems', () => {
     ])
   })
 
+  it('닫기는 메뉴 맨 아래에 있다(버튼 위로 열리는 메뉴에서 누른 자리 가까이)', () => {
+    const items = taskMenuItems(windows, 'b', { closeMany() {}, minimize() {}, raiseGroup() {}, restore() {}, toggleMaximize() {} })
+    expect(items.at(-1)?.id).toBe('close')
+  })
+
   it('닫기는 그 창만 닫는다', () => {
     expect(selectItem(windows, 'b', 'close').closed).toEqual(['b'])
   })

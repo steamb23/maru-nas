@@ -42,14 +42,6 @@ export function taskMenuItems(windows: readonly WindowState[], id: string, actio
     { kind: 'separator', id: 'sep-window' },
     {
       kind: 'action',
-      id: 'close',
-      labelKey: 'window.close',
-      icon: 'window-close-symbolic',
-      onSelect: () => closeMany([id]),
-    },
-    { kind: 'separator', id: 'sep-close' },
-    {
-      kind: 'action',
       id: 'close-others',
       labelKey: 'taskbar.closeOthers',
       disabled: others.length === 0,
@@ -63,5 +55,14 @@ export function taskMenuItems(windows: readonly WindowState[], id: string, actio
       onSelect: () => closeMany(right),
     },
     { kind: 'action', id: 'close-all', labelKey: 'taskbar.closeAll', onSelect: () => closeMany(all) },
+    // 작업표시줄이 화면 아래에 있어 메뉴는 버튼 위로 열린다. 닫기를 맨 아래에 두어 누른 자리 가까이 오게 한다.
+    { kind: 'separator', id: 'sep-close' },
+    {
+      kind: 'action',
+      id: 'close',
+      labelKey: 'window.close',
+      icon: 'window-close-symbolic',
+      onSelect: () => closeMany([id]),
+    },
   ]
 }
