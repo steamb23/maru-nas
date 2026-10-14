@@ -251,6 +251,42 @@ type Container struct {
 	Status string `json:"status"`
 }
 
+// SmartResponse는 GET /api/addons/smart의 응답이다.
+//
+// OMV의 Smart.getList는 디스크마다 smartctl을 실행해 대기 중인 디스크를 깨우므로, 백엔드가 결과를
+// 모든 세션에서 함께 쓰도록 보관한다. 하루 한 번(기준 시각 이후 첫 요청) 또는 새로고침 때만 다시 가져온다.
+type SmartResponse struct {
+	AddonSources `tstype:",extends"`
+	// CheckedAt은 OMV에서 가져온 시각(RFC 3339)이다.
+	CheckedAt string      `json:"checkedAt"`
+	Disks     []SmartDisk `json:"disks"`
+}
+
+// SMART 상태 요약. SmartDisk.Status에 들어간다.
+const (
+	SmartGood    = "good"
+	SmartWarning = "warning"
+	SmartFailing = "failing"
+	SmartUnknown = "unknown"
+)
+
+// SmartDisk는 SMART를 지원하는 디스크 하나다. 시리얼 번호 등 식별 정보는 넘기지 않는다.
+type SmartDisk struct {
+	// Device는 커널 장치 이름(sda, nvme0n1)이다.
+	Device    string `json:"device"`
+	Model     string `json:"model"`
+	SizeBytes uint64 `json:"sizeBytes"`
+	// Celsius는 SMART로 읽은 온도다. 모르면 없다.
+	Celsius *float64 `json:"celsius,omitempty"`
+	// Status는 OverallStatus의 요약이다. good: 정상, warning: 과거에 문제가 있었거나 불량 섹터,
+	// failing: 지금 기준치를 넘었거나 불량 섹터가 많거나 상태 확인 실패.
+	Status string `json:"status" tstype:"'good' | 'warning' | 'failing' | 'unknown'"`
+	// OverallStatus는 OMV가 준 원래 값이다(GOOD, BAD_ATTRIBUTE_IN_THE_PAST 등).
+	OverallStatus string `json:"overallStatus"`
+	// Monitored는 OMV에서 이 디스크의 SMART 모니터링을 켰는지다.
+	Monitored bool `json:"monitored"`
+}
+
 // Preferences는 GET /api/preferences의 응답이며 로그인한 사용자의 대시보드 설정이다.
 // 백엔드 상태 디렉터리에 사용자별로 저장되어 로그아웃해도 남는다.
 type Preferences struct {
