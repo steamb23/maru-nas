@@ -60,6 +60,8 @@ export function ProfileMenu() {
   const [open, setOpen] = useState(false)
   // 언어 하위 메뉴가 열려 있으면 true.
   const [subOpen, setSubOpen] = useState(false)
+  // 하위 메뉴만 닫는 애니메이션 중이면 true. 메뉴의 closing과 같은 방식이다.
+  const [subClosing, setSubClosing] = useState(false)
   // 닫기 애니메이션 중이면 true. 그동안 메뉴를 그려 두되 클릭·포커스는 받지 않는다.
   const [closing, setClosing] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
@@ -74,13 +76,23 @@ export function ProfileMenu() {
     setOpen(true)
     setClosing(false)
     setSubOpen(false)
+    setSubClosing(false)
   }
   const hide = () => {
     setOpen(false)
     setClosing(animationsEnabled())
   }
-  const closeSub = () => {
+  const showSub = () => {
+    setSubOpen(true)
+    setSubClosing(false)
+  }
+  const hideSub = () => {
+    if (!subOpen) return
     setSubOpen(false)
+    setSubClosing(animationsEnabled())
+  }
+  const closeSub = () => {
+    hideSub()
     subButtonRef.current?.focus()
   }
   const close = (focusButton: boolean) => {
@@ -124,13 +136,27 @@ export function ProfileMenu() {
     if (open) menuRef.current?.querySelector<HTMLButtonElement>('[role="menuitem"]')?.focus()
   }, [open])
 
-  // 하위 메뉴는 메뉴와 같은 모양으로 떠오르며 열리고, 선택된 언어에 포커스한다.
-  // 하위 메뉴만 닫을 때는 바로 사라지고, 메뉴 전체를 닫을 때는 메뉴 안에 있으므로 메뉴와 함께 사라진다.
+  // 하위 메뉴는 메뉴와 같은 모양으로 열리고 닫히며, 열리면 선택된 언어에 포커스한다.
+  // 메뉴 전체를 닫을 때는 하위 메뉴가 메뉴 안에 있으므로 따로 닫지 않고 메뉴와 함께 사라진다.
   useLayoutEffect(() => {
     const el = subRef.current
-    if (!subOpen || !el) return
-    el.querySelector<HTMLButtonElement>('[aria-checked="true"]')?.focus()
-    if (animationsEnabled()) el.animate([MENU_OPEN_FROM, MENU_SHOWN], { duration: MENU_OPEN_MS, easing: EASING })
+    if (!el) return
+    if (subOpen) el.querySelector<HTMLButtonElement>('[aria-checked="true"]')?.focus()
+    if (!animationsEnabled()) return
+    const style = getComputedStyle(el)
+    const from: Keyframe = { opacity: style.opacity, transform: style.transform }
+    const running = el.getAnimations().length > 0
+    el.getAnimations().forEach((a) => a.cancel())
+    if (subOpen) {
+      el.animate([running ? from : MENU_OPEN_FROM, MENU_SHOWN], { duration: MENU_OPEN_MS, easing: EASING })
+    } else {
+      const anim = el.animate([from, MENU_CLOSE_TO], {
+        duration: MENU_CLOSE_MS,
+        easing: CLOSE_EASING,
+        fill: 'forwards',
+      })
+      anim.onfinish = () => setSubClosing(false)
+    }
   }, [subOpen])
 
   if (!user) return null
@@ -148,11 +174,11 @@ export function ProfileMenu() {
     }
     if (document.activeElement === subButtonRef.current && submenuKey(e.key, false) === 'open') {
       e.preventDefault()
-      setSubOpen(true)
+      showSub()
       return
     }
     // 메뉴의 다른 항목으로 옮기면 하위 메뉴를 닫는다.
-    if (moveFocus(menuRef.current, '[role="menuitem"]', e)) setSubOpen(false)
+    if (moveFocus(menuRef.current, '[role="menuitem"]', e)) hideSub()
   }
 
   // 하위 메뉴의 키 입력은 메뉴까지 올리지 않는다. Tab만 메뉴로 올려 메뉴 전체를 닫는다.
@@ -225,19 +251,20 @@ export function ProfileMenu() {
                       aria-haspopup="menu"
                       aria-expanded={subOpen}
                       aria-controls={subOpen ? subId : undefined}
-                      onClick={() => setSubOpen((v) => !v)}
+                      onClick={() => (subOpen ? hideSub() : showSub())}
                     >
                       <IconImage name="pan-start-symbolic" size={16} className="profile-menu-chevron" />
                       <IconImage name={item.icon} size={16} />
                       <span>{t(item.labelKey)}</span>
                       <span className="profile-menu-value">{languageName(lang)}</span>
                     </button>
-                    {subOpen && (
+                    {(subOpen || subClosing) && (
                       <div
                         id={subId}
                         ref={subRef}
-                        className="profile-menu profile-submenu"
+                        className={subClosing ? 'profile-menu profile-submenu closing' : 'profile-menu profile-submenu'}
                         role="menu"
+                        inert={subClosing}
                         aria-label={t(item.labelKey)}
                         onKeyDown={onSubKeyDown}
                       >
