@@ -1,4 +1,4 @@
-// 시스템 정보 표시용 포매터. 숫자와 시간 단위는 Intl로 locale에 맞춰 표시하며, locale은 호출하는 쪽이 넘긴다.
+// 현황 표시용 포매터. 숫자와 시간 단위는 Intl로 locale에 맞춰 표시하며, locale은 호출하는 쪽이 넘긴다.
 
 // 단위 기호는 언어와 상관없이 IEC 이진 단위를 쓴다.
 const BYTE_UNITS = ['B', 'KiB', 'MiB', 'GiB', 'TiB']

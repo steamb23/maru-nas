@@ -1,12 +1,9 @@
 import { useTranslation } from 'react-i18next'
-import { useLanguage } from '../i18n'
-import { formatBytes, formatPercent, formatUptime, percentOf } from './format'
+import { useLanguage } from '../../i18n'
+import type { WindowViewProps } from '../types'
+import { formatBytes, formatPercent, formatUptime, percentOf } from '../common/format'
 import { useSystemInfo } from './useSystemInfo'
 
-interface Props {
-  // 창이 최소화되면 false. 이때는 갱신 요청을 멈춘다.
-  active: boolean
-}
 
 interface MeterProps {
   label: string
@@ -32,7 +29,7 @@ function Meter({ label, percent, detail }: MeterProps) {
   )
 }
 
-export function SystemInfoWindow({ active }: Props) {
+export function SystemInfoWindow({ active }: WindowViewProps) {
   const { t } = useTranslation()
   const lang = useLanguage()
   const { data, status } = useSystemInfo(active)

@@ -1,10 +1,12 @@
-// 데스크톱에서 열 수 있는 앱 목록. 바탕화면 아이콘은 이 순서대로 놓인다.
+// 데스크톱에서 열 수 있는 앱 목록. 바탕화면 아이콘은 이 순서대로 놓인다(창 보기가 있는 애드온, 준비 중 앱).
 import type { ParseKeys } from 'i18next'
+import { type AddonId, MANIFESTS } from '../addons/manifests.gen'
+import type { AddonManifest } from '../addons/types'
 import type { IconName } from '../icons/resolver'
 import type { Size } from './geometry'
 
-// system-info: 시스템 정보 창(실제 데이터). placeholder: "준비 중" 빈 창.
-export type AppKind = 'system-info' | 'placeholder'
+// addon: 내장 애드온의 창 보기(addons/registry.ts). placeholder: "준비 중" 빈 창.
+export type AppKind = 'addon' | 'placeholder'
 
 export interface AppDef {
   // 창 제목의 번역 키. 창 상태에는 제목을 복사하지 않고 그릴 때 번역한다(언어를 바꾸면 바로 바뀌게).
@@ -17,17 +19,13 @@ export interface AppDef {
   minSize?: Size
 }
 
-export const APPS = {
-  'system-info': {
-    titleKey: 'apps.systemInfo',
-    icon: 'utilities-system-monitor',
-    kind: 'system-info',
-    defaultSize: { width: 420, height: 360 },
-    // 평상시 내용이 스크롤 없이 들어가는 높이. Chrome 실측 265px을 10px 단위로 올렸다.
-    // "연결 끊김" 배너(실측 311px 필요)는 예외 상황이므로 최소 크기에서는 스크롤을 허용한다.
-    // 창 내용을 바꾸면 다시 잰다.
-    minSize: { width: 320, height: 270 },
-  },
+// WindowAddonId는 창 보기가 있는 애드온 id다. 위젯만 있는 애드온은 앱 목록에 넣지 않는다.
+export type WindowAddonId = {
+  [K in AddonId]: (typeof MANIFESTS)[K]['views'] extends { window: object } ? K : never
+}[AddonId]
+
+// 아직 애드온이 없는 앱. 애드온을 만들면 여기서 지운다(같은 id를 함께 두지 않는다).
+const PLACEHOLDER_APPS = {
   files: {
     titleKey: 'apps.files',
     icon: 'folder',
@@ -42,10 +40,36 @@ export const APPS = {
   },
 } as const satisfies Record<string, AppDef>
 
-export type AppId = keyof typeof APPS
+export type AppId = WindowAddonId | keyof typeof PLACEHOLDER_APPS
+
+function addonApp(m: AddonManifest): AppDef | null {
+  const win = m.views.window
+  if (!win) return null
+  return {
+    titleKey: m.title,
+    icon: m.icon,
+    kind: 'addon',
+    defaultSize: { ...win.defaultSize },
+    minSize: win.minSize && { ...win.minSize },
+  }
+}
+
+const ADDON_APPS = Object.fromEntries(
+  Object.values(MANIFESTS as Record<AddonId, AddonManifest>).flatMap((m) => {
+    const app = addonApp(m)
+    return app ? [[m.id, app]] : []
+  }),
+) as Record<WindowAddonId, AppDef>
+
+export const APPS: Record<AppId, AppDef> = { ...ADDON_APPS, ...PLACEHOLDER_APPS }
 
 export const APP_IDS = Object.keys(APPS) as AppId[]
 
 export function getApp(id: AppId): AppDef {
   return APPS[id]
+}
+
+// isAddonApp은 id가 애드온의 창 보기인지 확인한다. 보기 컴포넌트는 addons/registry.ts에서 찾는다.
+export function isAddonApp(id: AppId): id is WindowAddonId {
+  return Object.hasOwn(ADDON_APPS, id)
 }

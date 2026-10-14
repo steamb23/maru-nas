@@ -1,8 +1,8 @@
 import { type PointerEvent, useCallback, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { IconImage } from '../icons/IconImage'
-import { SystemInfoWindow } from '../sysinfo/SystemInfoWindow'
-import { getApp } from '../windows/apps'
+import { ADDON_VIEWS } from '../addons/registry'
+import { getApp, isAddonApp } from '../windows/apps'
 import { type Point, type Rect, type Size, restoreGrab } from '../windows/geometry'
 import { type WindowState, selectActiveId, useWindowStore } from '../windows/store'
 import { type TileZone, layoutOf, tileRect, tileZoneAt } from '../windows/tiling'
@@ -77,6 +77,7 @@ export function Window({ id, bounds, closingState, onClosed }: Props) {
 
   if (!win) return null
   const app = getApp(win.appId)
+  const View = isAddonApp(win.appId) ? ADDON_VIEWS[win.appId].Window : null
   const title = t(app.titleKey)
   const maximizeLabel = win.maximized ? t('window.restore') : t('window.maximize')
   const layout = layoutOf(win)
@@ -205,7 +206,7 @@ export function Window({ id, bounds, closingState, onClosed }: Props) {
           </div>
         </header>
         <div className="window-body">
-          {app.kind === 'system-info' ? <SystemInfoWindow active={!win.minimized && !closing} /> : <PlaceholderWindow />}
+          {View ? <View active={!win.minimized && !closing} /> : <PlaceholderWindow />}
         </div>
         {layout === 'free' && <ResizeHandles id={id} rect={win} bounds={bounds} minSize={app.minSize} />}
         {win.tile && <TileResizeHandle side={win.tile} bounds={bounds} />}

@@ -1,6 +1,7 @@
 // 애드온 manifest의 프론트 타입. 원본은 백엔드 Go 구조체(api.Manifest)이고,
 // 목록(manifests.gen.ts)은 `make types`로 생성한다.
 import type { ParseKeys } from 'i18next'
+import type { ComponentType } from 'react'
 import type { Manifest } from '../api/types.gen'
 import type { IconName } from '../icons/resolver'
 
@@ -14,3 +15,13 @@ type DeepReadonly<T> = T extends (infer U)[]
 // AddonManifest는 title을 번역 키로, icon을 리졸버에 있는 아이콘 이름으로 좁힌다.
 // 없는 키·아이콘을 manifest에 쓰면 manifests.gen.ts에서 tsc 오류가 난다.
 export type AddonManifest = DeepReadonly<Omit<Manifest, 'title' | 'icon'> & { title: ParseKeys; icon: IconName }>
+
+export interface WindowViewProps {
+  // 창이 최소화되거나 닫히는 중이면 false. 이때는 주기 요청을 멈춘다.
+  active: boolean
+}
+
+// AddonViews는 애드온 하나의 보기 컴포넌트다(registry.ts).
+export interface AddonViews {
+  Window: ComponentType<WindowViewProps>
+}

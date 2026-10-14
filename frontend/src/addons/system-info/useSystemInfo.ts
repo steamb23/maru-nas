@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { fetchSystem } from '../api/client'
-import type { SystemResponse } from '../api/types.gen'
-import { createPoller } from './poller'
+import { fetchSystem } from '../../api/client'
+import type { SystemResponse } from '../../api/types.gen'
+import { createPoller } from '../common/poller'
 
 export const SYSTEM_POLL_INTERVAL_MS = 2000
 const SYSTEM_TIMEOUT_MS = 5000
