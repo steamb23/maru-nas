@@ -125,7 +125,7 @@
 - 브라우저 연결이 끊겨도 백엔드는 `Timeout`까지 기다린다. OMV 쪽 작업은 어차피 계속 돌므로, 끝날 때까지 진행 중 표시를 유지해 같은 조작이 겹치지 않게 한다
 - 로그는 `user/addon/action/target/result`만 남긴다. OMV 오류 메시지는 별도 줄로 남기고 브라우저에 넘기지 않는다(trace는 클라이언트가 버린다)
 - 프론트(`addons/common/`)
-  - 상태: `actionState.ts`(대상별 running → settling → 해제 또는 error, 확인은 한 번에 하나). 성공한 대상은 다음 현황 응답(`settle`)까지 잠가 둔다
+  - 상태: `actionState.ts`(대상별 running → settling → 해제 또는 error, 확인은 한 번에 하나). 성공한 대상은 새 현황 응답(`settle`)까지 잠가 둔다. `settle`에 결과 판정(`SettleCheck`)을 넘기면 결과 상태에 이른 대상만 풀고, 이르지 않아도 `SETTLE_TIMEOUT_MS`(15초)가 지나면 푼다
   - 실행: `useAddonActions(id, onDone)`. manifest의 `confirm`이면 확인을 열고, 아니면 바로 실행한다. 성공·실패 모두 `onDone`(보통 `refresh`)을 부른다
   - 화면: `RowActions.tsx`
     - 행 버튼(`RowActionButtons`)과 우클릭 메뉴(`actionMenuItems`) 모두 같은 확인 모달(`ActionConfirmDialog`)을 연다. 창 범위 `Modal`이라 그 창 본문만 막고, 취소에 포커스하며 Esc·배경 누르기는 취소다. 확인 중인 행 버튼은 눌린 모양으로 둔다
@@ -256,6 +256,7 @@
 
 - 상태: `Services.getStatus`(관리자). `IServiceStatus`를 구현한 OMV 모듈마다 `{name, title, enabled, running}`이다. `name`은 대개 모듈 이름(`ssh`, `samba`, `nfs`, `rsyncd`)이지만 compose 플러그인처럼 다른 값(`Docker`)을 쓰는 모듈도 있다. `title`은 OMV가 번역한 문구라 표시에만 쓴다. 참거짓을 숫자·문자열로 주는 플러그인이 있을 수 있어 느슨하게 읽는다
 - 상태 점과 문구: 켜짐+실행 ok "실행 중", 켜짐+정지 위험 "아직 정지 중", 꺼짐+실행 주의 "아직 실행 중"(설정과 실제가 다름), 꺼짐 idle "꺼짐". 위젯과 창 모두 문제 있는 것부터 보여 준다
+- OMV는 설정을 먼저 바꾸고 실제 실행은 늦게 따라온다. 창은 켜기·끄기가 끝난 뒤에도 설정과 실제 실행이 모두 바뀔 때까지(`serviceReached`, 최대 15초) 진행 중으로 두고, 그동안 그 행은 조작 전 상태로 보여 준다(`holdServices`). 중간 상태가 문제로 보이거나 행이 정렬 순서를 따라 튀지 않게 하기 위해서다
 - 켜기·끄기는 어댑터 표(`adapters`)에 있는 서비스만 한다: SSH(`SSH.get`/`set`), SMB/CIFS(`SMB.getSettings`/`setSettings`), NFS, Rsync 서버(`Rsyncd`). 응답의 `toggleable`로 알려 주고, 창은 나머지 서비스에 "OMV에서 설정" 안내를 둔다
 - 흐름(`toggle`): `Config.isDirty`가 참이면 409 `config_dirty`로 거절(사용자가 workbench에서 적용하지 않은 변경을 대신 배포하지 않기 위해) → get, 이미 원하는 값이면 성공 → get 결과에서 set 스키마 속성만 골라 `enable`만 바꿔 set → `Config.applyChangesBg({modules: [], force: false})` → `WaitBg`. 시간 제한 3분
   - set 스키마(`datamodels/rpc.<svc>.json`)는 속성이 모두 필수다. get은 다른 속성도 줄 수 있으므로(NFS의 `shares`) 그대로 넘기지 않는다

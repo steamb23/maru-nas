@@ -66,6 +66,33 @@ export function countServices(list: readonly Service[]): ServiceCounts {
 
 export type ServiceAction = AddonActionName<'services'>
 
+// serviceReached는 켜기·끄기의 결과 상태(설정과 실제 실행이 모두 바뀜)에 이르렀는지다. OMV는 설정을 먼저
+// 바꾸고 실제 실행은 조금 늦게 따라오므로, 그때까지 조작을 끝난 것으로 보지 않는다.
+export function serviceReached(s: Service, action: string): boolean {
+  if (action === 'enable') return s.enabled && s.running
+  if (action === 'disable') return !s.enabled && !s.running
+  return true
+}
+
+// holdServices는 조작 중인 서비스의 표시를 조작 전 상태로 붙잡아 둔다. 처음 busy가 된 서비스는 지금 값을
+// 붙잡고, busy가 아니게 되면 놓는다. 바뀐 것이 없으면 held를 그대로 돌려준다(렌더링 중 상태 갱신에 쓴다).
+// 붙잡아 두면 설정만 바뀐 중간 상태(아직 정지 중 등)가 보이거나 행이 정렬 순서를 따라 튀지 않는다.
+export function holdServices(
+  held: Readonly<Record<string, Service>>,
+  list: readonly Service[],
+  busy: (name: string) => boolean,
+): Readonly<Record<string, Service>> {
+  const next: Record<string, Service> = {}
+  let changed = false
+  for (const s of list) {
+    if (!busy(s.name)) continue
+    next[s.name] = held[s.name] ?? s
+    if (!held[s.name]) changed = true
+  }
+  if (!changed && Object.keys(held).length === Object.keys(next).length) return held
+  return next
+}
+
 // 끌 때 무엇이 끊기는지 알려 주는 확인 문구. 표에 없는 서비스는 일반 문구를 쓴다.
 const DISABLE_CONFIRM: Record<string, ParseKeys> = {
   ssh: 'services.action.confirmDisableSsh',

@@ -1,7 +1,16 @@
 import { describe, expect, it } from 'vitest'
 import type { Service } from '../../api/types.gen'
 import { needsConfirm } from '../common/actionSpec'
-import { countServices, isServicesResponse, serviceActions, serviceState, serviceTone, sortByAttention } from './services'
+import {
+  countServices,
+  holdServices,
+  isServicesResponse,
+  serviceActions,
+  serviceReached,
+  serviceState,
+  serviceTone,
+  sortByAttention,
+} from './services'
 
 const s = (name: string, enabled: boolean, running: boolean, title = name.toUpperCase()): Service => ({
   name,
@@ -54,5 +63,31 @@ describe('serviceActions', () => {
   it('끄기만 확인을 거친다(manifest)', () => {
     expect(needsConfirm('services', 'enable')).toBe(false)
     expect(needsConfirm('services', 'disable')).toBe(true)
+  })
+})
+
+describe('serviceReached', () => {
+  it('설정과 실제 실행이 모두 바뀌어야 끝난 것으로 본다', () => {
+    expect(serviceReached(s('ssh', true, false), 'enable')).toBe(false)
+    expect(serviceReached(s('ssh', true, true), 'enable')).toBe(true)
+    expect(serviceReached(s('ssh', false, true), 'disable')).toBe(false)
+    expect(serviceReached(s('ssh', false, false), 'disable')).toBe(true)
+  })
+})
+
+describe('holdServices', () => {
+  it('조작 중인 서비스는 처음 본 상태로 붙잡고, 끝나면 놓는다', () => {
+    const before = [s('ssh', false, false), s('nfs', true, true)]
+    let busy = new Set(['ssh'])
+    const held = holdServices({}, before, (n) => busy.has(n))
+    expect(held).toEqual({ ssh: before[0] })
+
+    // 설정만 바뀐 응답이 와도 조작 전 상태를 그대로 둔다. 바뀐 것이 없으면 같은 객체다.
+    const middle = [s('ssh', true, false), s('nfs', true, true)]
+    expect(holdServices(held, middle, (n) => busy.has(n))).toBe(held)
+
+    busy = new Set()
+    expect(holdServices(held, middle, (n) => busy.has(n))).toEqual({})
+    expect(holdServices({}, middle, () => false)).toEqual({})
   })
 })

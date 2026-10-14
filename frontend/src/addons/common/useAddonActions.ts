@@ -4,6 +4,7 @@ import type { AddonId } from '../manifests.gen'
 import {
   type ActionErrorCode,
   type ActionState,
+  type SettleCheck,
   INITIAL_ACTION_STATE,
   askConfirm,
   cancelConfirm,
@@ -23,8 +24,9 @@ export interface AddonActions {
   confirm: () => void
   cancel: () => void
   dismiss: (target: string) => void
-  // settle은 새 현황 응답을 받았을 때 부른다. 성공한 조작의 잠금을 푼다.
-  settle: () => void
+  // settle은 새 현황 응답을 받았을 때 부른다. 성공한 조작의 잠금을 푼다. done을 주면 결과 상태에 이른 대상만
+  // 푼다(actionState.ts의 settle).
+  settle: (done?: SettleCheck) => void
 }
 
 function errorCode(err: unknown): ActionErrorCode {
@@ -61,12 +63,12 @@ export function useAddonActions(id: AddonId, onDone: () => void): AddonActions {
       runAddonAction(id, action, target).then(
         () => {
           if (!mounted.current) return
-          update((s) => finish(s, target, null))
+          update((s) => finish(s, target, null, Date.now()))
           onDoneRef.current()
         },
         (err: unknown) => {
           if (!mounted.current) return
-          update((s) => finish(s, target, errorCode(err)))
+          update((s) => finish(s, target, errorCode(err), Date.now()))
           // 실패해도 상태가 바뀌었을 수 있다(일부 진행, 시간 초과).
           onDoneRef.current()
         },
@@ -96,6 +98,6 @@ export function useAddonActions(id: AddonId, onDone: () => void): AddonActions {
     confirm,
     cancel: useCallback(() => update(cancelConfirm), [update]),
     dismiss: useCallback((target: string) => update((s) => dismiss(s, target)), [update]),
-    settle: useCallback(() => update(settle), [update]),
+    settle: useCallback((done?: SettleCheck) => update((s) => settle(s, Date.now(), done)), [update]),
   }
 }

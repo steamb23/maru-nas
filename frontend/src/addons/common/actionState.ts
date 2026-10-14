@@ -6,11 +6,12 @@ import type { ErrorCode } from '../../api/client'
 
 // TargetState는 대상 하나의 상태다.
 //   - running: 요청을 보내고 기다리는 중
-//   - settling: 성공했고 다음 현황 응답을 기다리는 중(그 전까지는 옛 상태가 보이므로 계속 잠가 둔다)
+//   - settling: 성공했고 현황 응답이 바뀐 상태를 보여 줄 때까지 기다리는 중(그 전까지는 옛 상태가 보이므로 계속
+//     잠가 둔다). since는 성공한 시각(ms)이다
 //   - error: 마지막 조작이 실패했다
 export type TargetState =
   | { kind: 'running'; action: string }
-  | { kind: 'settling'; action: string }
+  | { kind: 'settling'; action: string; since: number }
   | { kind: 'error'; action: string; code: ActionErrorCode }
 
 // ActionErrorCode는 화면에 보여 줄 실패 이유다. 백엔드 코드가 없으면(연결 실패 등) unknown이다.
@@ -53,19 +54,30 @@ export function start(s: ActionState, target: string, action: string): ActionSta
   }
 }
 
-// finish는 조작 결과를 반영한다. 성공이면 다음 현황 응답까지 settling으로 둔다.
-export function finish(s: ActionState, target: string, error: ActionErrorCode | null): ActionState {
+// finish는 조작 결과를 반영한다. 성공이면 now(ms)부터 settling으로 둔다.
+export function finish(s: ActionState, target: string, error: ActionErrorCode | null, now: number): ActionState {
   const t = s.targets[target]
   if (t?.kind !== 'running') return s
-  const next: TargetState = error ? { kind: 'error', action: t.action, code: error } : { kind: 'settling', action: t.action }
+  const next: TargetState = error
+    ? { kind: 'error', action: t.action, code: error }
+    : { kind: 'settling', action: t.action, since: now }
   return { ...s, targets: { ...s.targets, [target]: next } }
 }
 
-// settle은 새 현황 응답을 받았을 때 settling 대상을 풀어 준다.
-export function settle(s: ActionState): ActionState {
+// SettleCheck는 새 현황 응답에서 대상이 조작의 결과 상태에 이르렀는지다. 대상이 목록에서 사라졌으면 true로 본다.
+export type SettleCheck = (target: string, action: string) => boolean
+
+// 결과 상태에 이르지 않아도 이만큼 지나면 잠금을 푼다. 그 뒤에도 다르면 실제 상태로 보여 준다.
+export const SETTLE_TIMEOUT_MS = 15_000
+
+// settle은 새 현황 응답을 받았을 때 settling 대상을 풀어 준다. done이 없으면 모두 풀고, 있으면 결과 상태에
+// 이른 대상과 SETTLE_TIMEOUT_MS가 지난 대상만 푼다(서비스처럼 설정이 바뀐 뒤 실제 상태가 늦게 따라오는 경우).
+export function settle(s: ActionState, now: number, done?: SettleCheck): ActionState {
   const entries = Object.entries(s.targets)
-  if (!entries.some(([, t]) => t.kind === 'settling')) return s
-  return { ...s, targets: Object.fromEntries(entries.filter(([, t]) => t.kind !== 'settling')) }
+  const release = ([target, t]: [string, TargetState]) =>
+    t.kind === 'settling' && (!done || done(target, t.action) || now - t.since >= SETTLE_TIMEOUT_MS)
+  if (!entries.some(release)) return s
+  return { ...s, targets: Object.fromEntries(entries.filter((e) => !release(e))) }
 }
 
 // dismiss는 대상의 오류 표시를 지운다.
