@@ -468,7 +468,8 @@ button {
 }
 
 .titlebar > *,
-.window-body {
+.window-body,
+.modal-host-window {
   opacity: var(--window-content-opacity);
 }
 
@@ -873,6 +874,91 @@ button {
   height: 1px;
   margin: 6px 4px;
   background: var(--window-border);
+}
+
+/* ---- 모달 ---- */
+
+/* 모달 호스트(shell/Modal.tsx). 비어 있을 때는 아래를 가리지 않는다.
+   창 범위는 .window를 기준으로 제목 표시줄 아래를 덮는다. 그래서 창 본문을 스크롤해도 제자리에 있고, 제목 표시줄은
+   계속 쓸 수 있다. 크기 조절 핸들(.resize-handle, 같은 z-index에 DOM에서 뒤)보다 아래라 가장자리로 크기도 바꿀 수 있다. */
+.modal-host {
+  position: absolute;
+  pointer-events: none;
+}
+
+.modal-host-window {
+  inset: var(--titlebar-height) 0 0 0;
+  z-index: 1;
+}
+
+/* 데스크톱 범위는 작업표시줄(.taskbar-dock)까지 화면 전체를 덮는다. */
+.modal-host-desktop {
+  inset: 0;
+  z-index: 2;
+}
+
+.modal-backdrop {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  pointer-events: auto;
+}
+
+.modal-backdrop.dim {
+  background: rgb(0 0 0 / 0.28);
+}
+
+.modal-host-desktop .modal-backdrop.dim {
+  background: rgb(0 0 0 / 0.4);
+}
+
+/* 다른 모달 아래에 깔린 모달은 배경을 겹쳐 어둡게 하지 않는다. */
+.modal-backdrop.under {
+  background: transparent;
+}
+
+.modal {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  max-width: 100%;
+  max-height: 100%;
+  padding: 16px;
+  border: 1px solid var(--window-border);
+  border-radius: 10px;
+  background: var(--window-bg);
+  box-shadow: 0 6px 24px rgb(0 0 0 / 0.3);
+  outline: none;
+}
+
+.modal-title {
+  flex: none;
+  margin: 0 0 8px;
+  font-size: 15px;
+}
+
+/* 내용이 길면 본문만 스크롤하고 머리말·단추 줄은 남긴다. */
+.modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  font-size: 13px;
+}
+
+.modal-message {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.modal-buttons {
+  display: flex;
+  flex: none;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
 }
 
 /* ---- 로그인 화면 ---- */

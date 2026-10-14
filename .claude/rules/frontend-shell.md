@@ -9,7 +9,7 @@ paths:
 
 # 데스크톱 셸과 창 시스템
 
-`src/windows/`(창 저장소·앱 목록·위치 제한·타일링), `src/widgets/`(위젯 그리드·배치·저장소), `src/shell/`의 `*Anim.ts`, `taskbarDrag.ts`, `clock.ts`, `profileMenu.ts`, `contextMenu.ts`, `contextMenuStore.ts`, `windowMenu.ts`, `menuNav.ts`는 DOM에 의존하지 않는 계산 모듈이다. 컴포넌트는 이 결과를 그리기만 한다.
+`src/windows/`(창 저장소·앱 목록·위치 제한·타일링), `src/widgets/`(위젯 그리드·배치·저장소), `src/shell/`의 `*Anim.ts`, `taskbarDrag.ts`, `clock.ts`, `profileMenu.ts`, `contextMenu.ts`, `contextMenuStore.ts`, `windowMenu.ts`, `menuNav.ts`, `modalStack.ts`는 DOM에 의존하지 않는 계산 모듈이다. 컴포넌트는 이 결과를 그리기만 한다.
 
 ## 창 순서와 DOM
 
@@ -40,6 +40,17 @@ paths:
   - 제목 표시줄: 상태 항목 / 닫기. 제목 표시줄 버튼 위에서는 열지 않고(길게 누르면 버튼이 눌리지 않게), 창을 끄는 중에는 열지 않으며, 메뉴를 연 누름은 창 끌기로 이어 가지 않는다
 - 비활성 항목은 `aria-disabled`로 두어 포커스는 받게 한다. 이유가 있으면 `detailKey`로 짧게 보여 준다
 - 키보드 이동(`menuNav.ts`), 포커스 이동(`menuFocus.ts`), 열기·닫기 애니메이션 값(`menuAnim.ts`)은 프로필 메뉴와 함께 쓴다
+
+## 모달
+
+- 범위는 창(`window`)과 데스크톱(`desktop`) 두 가지다. `Window`와 `Desktop`이 각각 호스트 요소(`.modal-host-window`, `.modal-host-desktop`)와 컨텍스트(`WindowModalContext`, `DesktopModalContext`, `modalScope.ts`)를 제공하고, `Modal`은 자기 범위의 호스트에 포털로 그린다. 창 보기 안에서는 두 컨텍스트가 모두 보이므로 `scope`를 생략하면 그 창, `'desktop'`이면 데스크톱이다
+- 차단은 포커스 가두기가 아니라 `inert`로 한다. 범위의 스택(`modalStack.ts`)이 비어 있지 않으면 창은 `.window-body`만, 데스크톱은 `.desktop-area`와 작업표시줄(`Taskbar`의 `inert`)을 막는다. 데스크톱 범위 모달이 열리면 컨텍스트 메뉴를 닫는다
+  - 창 범위는 제목 표시줄(끌기·최소화·닫기)과 크기 조절 핸들을 막지 않는다. 호스트는 `.resize-handle`과 같은 z-index에 DOM에서 앞이라 핸들이 위에 온다
+  - 창 범위에서는 다른 창이 막히지 않으므로 `Modal`이 Tab을 상자 안에서 돌린다
+- 같은 범위에서 겹치면 연 순서대로 쌓고 맨 위만 입력을 받는다(아래는 `inert`, 배경은 맨 위만 어둡게). 닫기 시작하면 바로 스택에서 빠져 차단이 풀린다
+- `Modal`은 틀(범위·차단·포커스·애니메이션·쌓임)만 다루고 내용·단추·모양은 쓰는 쪽이 정한다(`title`, `footer`, `size`, `backdrop`, `className` 등). 닫는 애니메이션 동안에는 상자(`ModalBox`)를 다시 그리지 않아 마지막 내용이 남는다. 포커스는 열 때 `initialFocus`(없으면 첫 포커스 가능한 요소)로, 닫힐 때 갈 곳을 잃었으면 열기 전 요소로 돌려준다
+- 포털 안의 React 이벤트가 모달을 그린 쪽(행 우클릭 메뉴, 끌기)으로 올라가지 않게 `Modal`이 멈춘다. 문서의 capture 처리기는 영향이 없다
+- 클래스 이름은 기존 셸 클래스(`.window`, `.desktop` 등)와 겹치지 않게 `modal-` 접두사를 붙인다
 
 ## 타일링
 

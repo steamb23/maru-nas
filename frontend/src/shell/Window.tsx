@@ -1,4 +1,4 @@
-import { type PointerEvent, memo, useCallback, useRef, useState } from 'react'
+import { type PointerEvent, memo, useCallback, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { IconImage } from '../icons/IconImage'
 import { AddonUnavailable } from '../addons/AddonUnavailable'
@@ -13,6 +13,7 @@ import { PlaceholderWindow } from './PlaceholderWindow'
 import { ResizeHandles } from './ResizeHandles'
 import { TilePreview } from './TilePreview'
 import { TileResizeHandle } from './TileResizeHandle'
+import { type WindowModalLayer, WindowModalContext, useModalHost } from './modalScope'
 import { useContextMenuTrigger } from './useContextMenuTrigger'
 import { useWindowAnimation } from './useWindowAnimation'
 import { titlebarMenuItems } from './windowMenu'
@@ -94,6 +95,9 @@ export function Window({ id, bounds, closingState, onClosed }: Props) {
   const [zone, setZone] = useState<TileZone | null>(null)
   const sectionRef = useRef<HTMLElement>(null)
   const handleClosed = useCallback(() => onClosed(id), [onClosed, id])
+  // 창 범위 모달. 열려 있으면 창 본문만 막고 제목 표시줄·크기 조절은 그대로 둔다.
+  const { setHost: setModalHost, layer: baseLayer, blocked } = useModalHost()
+  const modalLayer = useMemo<WindowModalLayer>(() => ({ ...baseLayer, windowId: id }), [baseLayer, id])
   const anim = useWindowAnimation(
     sectionRef,
     id,
@@ -276,9 +280,12 @@ export function Window({ id, bounds, closingState, onClosed }: Props) {
             </button>
           </div>
         </header>
-        <div className="window-body">
-          <WindowBody appId={win.appId} notice={notice} active={!win.minimized && !closing && pageVisible} />
-        </div>
+        <WindowModalContext value={modalLayer}>
+          <div className="window-body" inert={blocked}>
+            <WindowBody appId={win.appId} notice={notice} active={!win.minimized && !closing && pageVisible} />
+          </div>
+          <div className="modal-host modal-host-window" ref={setModalHost} />
+        </WindowModalContext>
         {layout === 'free' && <ResizeHandles id={id} rect={win} bounds={bounds} minSize={app.minSize} />}
         {win.tile && <TileResizeHandle side={win.tile} bounds={bounds} />}
       </section>

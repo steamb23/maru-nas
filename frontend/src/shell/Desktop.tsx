@@ -1,5 +1,5 @@
-// 데스크톱 셸: 바탕화면 아이콘, 위젯 레이어, 창 레이어, 작업표시줄, 컨텍스트 메뉴.
-import { useLayoutEffect, useRef, useState } from 'react'
+// 데스크톱 셸: 바탕화면 아이콘, 위젯 레이어, 창 레이어, 작업표시줄, 컨텍스트 메뉴, 데스크톱 범위 모달.
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useShallow } from 'zustand/react/shallow'
 import { appAccess, useCapabilitiesStore } from '../addons/capabilities'
@@ -13,6 +13,8 @@ import { TileDivider } from './TileDivider'
 import { type WidgetLayerHandle, WidgetLayer } from './WidgetLayer'
 import { enterDesktop } from './screenTransition'
 import { type ClosingWindow, Window } from './Window'
+import { useContextMenuStore } from './contextMenuStore'
+import { DesktopModalContext, useModalHost } from './modalScope'
 import { useClosingWindows } from './useClosingWindows'
 import { useContextMenuTrigger } from './useContextMenuTrigger'
 
@@ -30,6 +32,11 @@ export function Desktop() {
     items: () => widgetsRef.current?.desktopMenuItems() ?? [],
     accept: (e) => e.target === e.currentTarget || e.target === iconsRef.current,
   })
+  // 데스크톱 범위 모달. 열려 있으면 창·위젯·아이콘·작업표시줄을 모두 막고, 열린 컨텍스트 메뉴는 닫는다.
+  const { setHost: setModalHost, layer: modalLayer, blocked } = useModalHost()
+  useEffect(() => {
+    if (blocked) useContextMenuStore.getState().close()
+  }, [blocked])
   // 데스크톱 영역(작업표시줄 제외) 크기. 창 위치 제한의 기준이다.
   const [bounds, setBounds] = useState<Size>(() => ({ width: window.innerWidth, height: window.innerHeight }))
   // 창을 옮길 때마다 Desktop 전체가 다시 그려지지 않도록 id 목록만 구독한다.
@@ -64,23 +71,26 @@ export function Desktop() {
   useLayoutEffect(() => enterDesktop(rootRef.current), [])
 
   return (
-    <div className="desktop" ref={rootRef}>
-      <div className="desktop-area" ref={areaRef} {...desktopMenu.handlers}>
-        <ul className="desktop-icons" aria-label={t('desktop.label')} ref={iconsRef}>
-          {iconIds.map((appId) => (
-            <li key={appId}>
-              <DesktopIcon appId={appId} bounds={bounds} />
-            </li>
+    <DesktopModalContext value={modalLayer}>
+      <div className="desktop" ref={rootRef}>
+        <div className="desktop-area" ref={areaRef} inert={blocked} {...desktopMenu.handlers}>
+          <ul className="desktop-icons" aria-label={t('desktop.label')} ref={iconsRef}>
+            {iconIds.map((appId) => (
+              <li key={appId}>
+                <DesktopIcon appId={appId} bounds={bounds} />
+              </li>
+            ))}
+          </ul>
+          <WidgetLayer bounds={bounds} iconsRef={iconsRef} ref={widgetsRef} />
+          <TileDivider bounds={bounds} />
+          {renderIds.map((id) => (
+            <Window key={id} id={id} bounds={bounds} closingState={closing.get(id)} onClosed={onClosed} />
           ))}
-        </ul>
-        <WidgetLayer bounds={bounds} iconsRef={iconsRef} ref={widgetsRef} />
-        <TileDivider bounds={bounds} />
-        {renderIds.map((id) => (
-          <Window key={id} id={id} bounds={bounds} closingState={closing.get(id)} onClosed={onClosed} />
-        ))}
+        </div>
+        <Taskbar inert={blocked} />
+        <ContextMenu />
+        <div className="modal-host modal-host-desktop" ref={setModalHost} />
       </div>
-      <Taskbar />
-      <ContextMenu />
-    </div>
+    </DesktopModalContext>
   )
 }

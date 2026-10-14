@@ -92,7 +92,8 @@ function enterTask(li: HTMLLIElement | null) {
 const sameIds = (a: readonly string[], b: readonly WindowState[]) =>
   a.length === b.length && a.every((id, i) => id === b[i].id)
 
-export function Taskbar() {
+// inert이면 작업표시줄 전체가 입력을 받지 않는다(데스크톱 범위 모달이 열려 있을 때).
+export function Taskbar({ inert = false }: { inert?: boolean }) {
   const { t } = useTranslation()
   const windows = useWindowStore((s) => s.windows)
   const activeId = useWindowStore(selectActiveId)
@@ -274,7 +275,7 @@ export function Taskbar() {
   }
 
   return (
-    <div className="taskbar-dock">
+    <div className="taskbar-dock" inert={inert}>
       <nav className="taskbar" aria-label={t('taskbar.label')}>
         <ul ref={listRef} className="taskbar-items">
           {renderIds.map((id) => {
