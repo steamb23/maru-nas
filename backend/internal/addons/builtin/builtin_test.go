@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"os"
 	"testing"
-
-	"omv-desktop-dashboard/backend/internal/addons"
 )
 
 func TestBuiltinRegistryIsValid(t *testing.T) {
@@ -15,14 +13,12 @@ func TestBuiltinRegistryIsValid(t *testing.T) {
 	}
 }
 
-// 3단계(읽기 전용)에서는 어떤 내장 애드온도 쓰기 RPC를 선언하지 않는다. 4단계에서 바꾼다.
-func TestBuiltinAddonsDeclareNoWrites(t *testing.T) {
-	if addons.WritesEnabled {
-		t.Error("addons.WritesEnabled must be false before stage 4")
-	}
+// 쓰기 RPC는 조작(actions)을 가진 애드온만 선언한다. 조작이 없는 애드온은 쓰기를 부를 경로가 없으므로
+// 쓰기를 선언했다면 실수다.
+func TestBuiltinWritesOnlyWithActions(t *testing.T) {
 	for _, a := range New(HostDeps()).All() {
-		if len(a.Manifest.RPC.Write) > 0 {
-			t.Errorf("addon %q declares write rpc %v", a.Manifest.ID, a.Manifest.RPC.Write)
+		if len(a.Manifest.RPC.Write) > 0 && len(a.Manifest.Actions) == 0 {
+			t.Errorf("addon %q declares write rpc %v without actions", a.Manifest.ID, a.Manifest.RPC.Write)
 		}
 	}
 }

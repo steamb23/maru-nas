@@ -17,7 +17,9 @@ const maxRPCBodyBytes = 64 << 10
 
 // rpc는 브라우저의 OMV RPC 요청을 그 사용자의 OMV 세션으로 중계한다.
 //
-//   - 등록된 애드온이 선언한 메서드만 통과시킨다. 쓰기 메서드는 addons.WritesEnabled가 켜져야 한다.
+//   - 등록된 애드온이 선언한 읽기 메서드만 통과시킨다. 쓰기 메서드는 addons.WritesEnabled와 상관없이
+//     항상 거부한다. Compose.doContainerCommand처럼 파라미터를 검사하지 않고 셸 명령을 만드는 OMV
+//     메서드가 있으므로, 쓰기는 파라미터를 백엔드가 만드는 애드온 조작(/api/addons/{id}/actions)으로만 한다.
 //   - 그 메서드를 선언한 애드온 중 이 사용자가 쓸 수 있는 것이 있어야 한다(역할, 플러그인).
 //     최종 역할 검사는 OMV가 하며, 여기서는 불필요한 호출을 미리 막는다.
 //   - OMV 세션의 마지막 접근 시각은 갱신하지 않는다. 창·위젯의 주기 요청이 세션을 연장하면
@@ -34,7 +36,7 @@ func (h *handler) rpc(w http.ResponseWriter, r *http.Request, s auth.Session) {
 	name := req.Service + "." + req.Method
 
 	kind, ids := h.Addons.Classify(req.Service, req.Method)
-	if kind == addons.RPCNone || (kind == addons.RPCWrite && !addons.WritesEnabled) {
+	if kind != addons.RPCRead {
 		log.Printf("rpc forbidden: user=%q method=%q", s.Username, name)
 		writeError(w, http.StatusForbidden, api.ErrRPCForbidden, "rpc method is not allowed")
 		return

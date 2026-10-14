@@ -41,6 +41,19 @@ type Manifest struct {
 	Views    AddonViews   `json:"views"`
 	Requires Requirements `json:"requires"`
 	RPC      RPCMethods   `json:"rpc"`
+	// Actions는 상태를 바꾸는 조작이다(POST /api/addons/{id}/actions/{name}). 구현은 addons.Addon.Actions에 있다.
+	Actions []ActionDecl `json:"actions,omitempty"`
+}
+
+// ActionDecl은 애드온이 제공하는 조작 하나의 선언이다.
+type ActionDecl struct {
+	// Name은 조작 이름이다(start, stop 등). 소문자, 숫자, '-'만 쓴다.
+	Name string `json:"name"`
+	// Admin은 OMV 관리자만 실행할 수 있는지다. 애드온의 requires.admin과 따로 정한다
+	// (목록은 누구나 보고 조작은 관리자만 하는 경우).
+	Admin bool `json:"admin,omitempty"`
+	// Confirm은 실행 전에 사용자 확인을 받아야 하는지다(정지, 끄기 등).
+	Confirm bool `json:"confirm,omitempty"`
 }
 
 // AddonViews는 애드온의 보기 목록이다. 하나 이상 있어야 한다.
@@ -88,7 +101,8 @@ type Requirements struct {
 // 백엔드의 OMV RPC 중계는 등록된 애드온이 선언한 메서드만 통과시킨다.
 type RPCMethods struct {
 	Read []string `json:"read,omitempty"`
-	// Write는 상태를 바꾸는 메서드다. 쓰기 허용 여부는 addons.WritesEnabled가 정한다.
+	// Write는 상태를 바꾸는 메서드다. 애드온의 조작(Actions)만 부를 수 있고 /api/rpc 중계는 거부한다.
+	// 쓰기 허용 여부는 addons.WritesEnabled가 정한다.
 	Write []string `json:"write,omitempty"`
 }
 

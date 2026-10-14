@@ -94,6 +94,7 @@ func TestAddonDataRejectsUndeclaredRPC(t *testing.T) {
 		dataAddon("other", api.Requirements{}, api.RPCMethods{Read: []string{"WebGui.getAutoLogoutSettings"}},
 			callFetch("WebGui", "getAutoLogoutSettings", nil)),
 		dataAddon("sneaky", api.Requirements{}, api.RPCMethods{}, callFetch("WebGui", "getAutoLogoutSettings", nil)),
+		// Fetch는 자기가 선언한 쓰기 메서드도 부를 수 없다(조작에서만 부른다).
 		dataAddon("writer", api.Requirements{}, api.RPCMethods{Write: []string{"UserMgmt.getUserByContext"}},
 			callFetch("UserMgmt", "getUserByContext", nil)),
 	)

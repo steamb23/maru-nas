@@ -130,7 +130,7 @@ func TestRPCRejectsWithoutCallingOMV(t *testing.T) {
 		{rpcReq("System", "reboot", ""), http.StatusForbidden, api.ErrRPCForbidden},
 		{rpcReq("Session", "logout", ""), http.StatusForbidden, api.ErrRPCForbidden},
 		{rpcReq("webgui", "getAutoLogoutSettings", ""), http.StatusForbidden, api.ErrRPCForbidden},
-		// 3단계에서는 manifest에 선언한 쓰기 메서드도 막는다.
+		// 쓰기 메서드는 WritesEnabled와 상관없이 중계하지 않는다(조작 경로로만 부른다).
 		{rpcReq("UserMgmt", "getUserByContext", ""), http.StatusForbidden, api.ErrRPCForbidden},
 		{rpcReq("Smart", "getList", ""), http.StatusForbidden, api.ErrAdminRequired},
 		{rpcReq("Compose", "getContainers", ""), http.StatusForbidden, api.ErrPluginMissing},

@@ -53,13 +53,15 @@ func (h *handler) addonData(w http.ResponseWriter, r *http.Request, s auth.Sessi
 	writeJSON(w, http.StatusOK, res)
 }
 
-// rpcCaller는 provider의 OMV RPC 호출을 한 사용자 세션으로 보낸다(addons.RPCCaller).
+// rpcCaller는 provider·조작의 OMV RPC 호출을 한 사용자 세션으로 보낸다(addons.RPCCaller).
 // 여러 provider가 동시에 써도 된다.
 type rpcCaller struct {
 	h        *handler
 	s        auth.Session
 	addon    string
 	clientIP string
+	// writes는 쓰기 메서드를 허용하는지다. 조작(Action.Run)에 넘길 때만 켠다.
+	writes bool
 	// unauthorized는 OMV가 세션 만료로 거부했는지다. provider가 오류를 삼켜도 세션을 지우게 한다.
 	unauthorized atomic.Bool
 	// failed는 OMV 호출이 하나라도 실패했는지다.
@@ -69,7 +71,7 @@ type rpcCaller struct {
 func (c *rpcCaller) Call(ctx context.Context, service, method string, params any) (json.RawMessage, error) {
 	name := service + "." + method
 	kind, ids := c.h.Addons.Classify(service, method)
-	if kind == addons.RPCNone || (kind == addons.RPCWrite && !addons.WritesEnabled) || !slices.Contains(ids, c.addon) {
+	if kind == addons.RPCNone || (kind == addons.RPCWrite && !(c.writes && addons.WritesEnabled)) || !slices.Contains(ids, c.addon) {
 		log.Printf("addon %s: rpc forbidden: %s", c.addon, name)
 		return nil, fmt.Errorf("rpc %s: %w", name, addons.ErrRPCNotAllowed)
 	}
