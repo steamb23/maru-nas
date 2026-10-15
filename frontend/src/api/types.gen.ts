@@ -500,6 +500,27 @@ export interface Preferences {
    * Widgets는 바탕화면 위젯 배치다. 한 번도 저장하지 않았으면 없다(프론트가 기본 배치를 쓴다).
    */
   widgets?: WidgetPlacement[];
+  /**
+   * Shortcuts는 바탕화면 바로가기 목록이며 순서대로 놓인다. 한 번도 저장하지 않았으면 없고
+   * (프론트가 기본 목록을 쓴다), 모두 지웠으면 빈 목록이다.
+   */
+  shortcuts?: Shortcut[];
+}
+/**
+ * Shortcut은 바탕화면 바로가기 하나다. 지금은 앱만 가리킨다. 폴더나 OMV 페이지를 가리키는
+ * 바로가기가 생기면 필드를 더한다(저장 파일 형식을 바꾸지 않고 늘릴 수 있게 객체로 둔다).
+ */
+export interface Shortcut {
+  /**
+   * App은 프론트 앱 id다(창 보기가 있는 애드온 또는 준비 중 앱). 백엔드는 형식만 검사한다.
+   */
+  app: string;
+}
+/**
+ * ShortcutsRequest는 PUT /api/preferences/shortcuts의 요청 본문이다. 바로가기 목록 전체를 바꾼다.
+ */
+export interface ShortcutsRequest {
+  shortcuts: Shortcut[];
 }
 /**
  * WidgetPlacement는 바탕화면 위젯 하나의 자리다. 그리드는 오른쪽 위를 기준으로 하므로

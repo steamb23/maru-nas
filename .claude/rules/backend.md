@@ -10,8 +10,8 @@ paths:
   - Unix 소켓은 권한 `0660`으로 만들고, 남은 소켓 파일은 지우되 소켓이 아닌 파일이나 사용 중인 소켓은 건드리지 않는다(`cmd/onmaru` `listenOn`)
   - 프록시를 거치지 않은 요청은 `X-Forwarded-*`를 위조할 수 있다. 루프백·소켓 수신은 이 헤더를 믿을 근거이므로 다른 경로를 기본으로 열지 않는다
 - `-omv-url`(`ONMARU_OMV_URL`, 기본 `http://127.0.0.1`)은 루프백만 허용한다(OMV 세션 ID가 네트워크로 나가지 않게). 이 제한은 완화하지 않는다
-- 대시보드 사용자 설정(위젯 배치 등)은 `internal/prefs`가 상태 디렉터리(`-state-dir`, `ONMARU_STATE_DIR`, 없으면 systemd의 `STATE_DIRECTORY`)에 사용자별 JSON으로 저장한다. 비우면 메모리에만 둔다. 대시보드 자신의 상태만 두며 OMV 설정이나 시스템 파일은 쓰지 않는다. `make dev`는 `.dev-state/real`, `make dev-fake`는 `.dev-state/fake`를 쓴다(커밋 안 함)
-  - 설정 변경 API는 부분별로 둔다(`PUT /api/preferences/widgets`). 나중에 다른 설정이 생겨도 서로 덮어쓰지 않게 한다
+- 대시보드 사용자 설정(위젯 배치, 바로가기 등)은 `internal/prefs`가 상태 디렉터리(`-state-dir`, `ONMARU_STATE_DIR`, 없으면 systemd의 `STATE_DIRECTORY`)에 사용자별 JSON으로 저장한다. 비우면 메모리에만 둔다. 대시보드 자신의 상태만 두며 OMV 설정이나 시스템 파일은 쓰지 않는다. `make dev`는 `.dev-state/real`, `make dev-fake`는 `.dev-state/fake`를 쓴다(커밋 안 함)
+  - 설정 변경 API는 부분별로 둔다(`PUT /api/preferences/widgets`, `PUT /api/preferences/shortcuts`). 서로 덮어쓰지 않게 하며, 저장소는 설정 파일을 읽고 쓰는 동안 잠가 한쪽 저장이 다른 쪽을 지우지 않게 한다
 - `cmd/fakeomv`와 `internal/omv/omvfake`는 개발·테스트용이다. 운영 바이너리(`cmd/onmaru`)에서 import하지 않는다
 - `/api/*` 경로는 대시보드 루트 기준이다. 대시보드를 경로 접두사 아래에 두면 리버스 프록시가 접두사를 제거한다. 쿠키 Path는 `-cookie-path`(기본 `/`)
 - `internal/web/static/`에는 `.gitkeep`만 커밋한다. `dist/`는 빌드 결과다

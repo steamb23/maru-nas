@@ -1,4 +1,4 @@
-// Package prefs는 대시보드 사용자 설정(위젯 배치 등)을 사용자별로 저장한다.
+// Package prefs는 대시보드 사용자 설정(위젯 배치, 바로가기 등)을 사용자별로 저장한다.
 //
 // 대시보드 자신의 상태만 다룬다. OMV 설정이나 시스템 파일은 건드리지 않는다.
 // 운영에서는 상태 디렉터리(systemd StateDirectory) 아래 사용자별 JSON 파일(FileStore)에,
@@ -18,6 +18,8 @@ type Store interface {
 	Get(username string) (api.Preferences, error)
 	// SetWidgets는 위젯 배치만 바꾼다. 다른 설정은 그대로 둔다. 검사는 호출하는 쪽이 한다.
 	SetWidgets(username string, widgets []api.WidgetPlacement) error
+	// SetShortcuts는 바로가기 목록만 바꾼다. 다른 설정은 그대로 둔다. 검사는 호출하는 쪽이 한다.
+	SetShortcuts(username string, shortcuts []api.Shortcut) error
 }
 
 // MemoryStore는 프로세스 메모리에 두는 Store다. 백엔드를 재시작하면 사라진다.
@@ -38,27 +40,40 @@ func (m *MemoryStore) Get(username string) (api.Preferences, error) {
 }
 
 func (m *MemoryStore) SetWidgets(username string, widgets []api.WidgetPlacement) error {
+	m.update(username, func(p *api.Preferences) { p.Widgets = cloneList(widgets) })
+	return nil
+}
+
+func (m *MemoryStore) SetShortcuts(username string, shortcuts []api.Shortcut) error {
+	m.update(username, func(p *api.Preferences) { p.Shortcuts = cloneList(shortcuts) })
+	return nil
+}
+
+// update는 username의 설정 하나를 바꾼다. 다른 설정은 그대로 둔다.
+func (m *MemoryStore) update(username string, apply func(*api.Preferences)) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	p := m.users[username]
-	p.Widgets = cloneWidgets(widgets)
+	apply(&p)
 	m.users[username] = p
-	return nil
 }
 
 // clonePrefs는 호출하는 쪽이 바꿔도 저장값에 영향이 없도록 복사한다.
 func clonePrefs(p api.Preferences) api.Preferences {
 	if p.Widgets != nil {
-		p.Widgets = cloneWidgets(*p.Widgets)
+		p.Widgets = cloneList(*p.Widgets)
+	}
+	if p.Shortcuts != nil {
+		p.Shortcuts = cloneList(*p.Shortcuts)
 	}
 	return p
 }
 
-// cloneWidgets는 nil도 빈 목록으로 복사한다. 빈 목록은 "모두 지움"이고, 없음(nil 포인터)은 "저장한 적 없음"이다.
-func cloneWidgets(w []api.WidgetPlacement) *[]api.WidgetPlacement {
-	c := slices.Clone(w)
+// cloneList는 nil도 빈 목록으로 복사한다. 빈 목록은 "모두 지움"이고, 없음(nil 포인터)은 "저장한 적 없음"이다.
+func cloneList[T any](s []T) *[]T {
+	c := slices.Clone(s)
 	if c == nil {
-		c = []api.WidgetPlacement{}
+		c = []T{}
 	}
 	return &c
 }
