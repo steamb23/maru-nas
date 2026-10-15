@@ -1,7 +1,7 @@
 // 로그인 화면과 서버 연결 끊김 화면. 인증은 백엔드가 OMV에 위임한다.
 import { type FormEvent, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import logoUrl from '../assets/logo/onmaru.svg?url'
+import lockupUrl from '../assets/logo/onmaru-lockup.svg?url'
 import { useLanguage } from '../i18n'
 import { LanguageSelect } from '../shell/LanguageSelect'
 import { enterLogin } from '../shell/screenTransition'
@@ -17,9 +17,9 @@ const { login, verify, cancelChallenge, restore } = useAuthStore.getState()
 // OFFLINE_RETRY_MS마다 백엔드 연결을 다시 시도한다.
 const OFFLINE_RETRY_MS = 5000
 
-// 로그인 화면의 브랜드 영역은 현지화하지 않는다. 이름은 모든 언어에서 한글로 쓰고 그 아래 로마자 표기를,
-// 태그라인은 영어 원문을 둔다. 태그라인의 desktop-like는 하이픈 뒤에서 줄이 끊기지 않게
-// 하이픈 뒤에 U+2060(단어 결합 문자)을 둔다.
+// 로그인 화면의 브랜드 영역은 현지화하지 않는다. 이름은 모든 언어에서 묶음 로고(한글 "온마루"와 로마자 표기)로
+// 보여 주고 대체 텍스트도 같게 둔다. 태그라인은 영어 원문이다. 태그라인의 desktop-like는 하이픈 뒤에서
+// 줄이 끊기지 않게 하이픈 뒤에 U+2060(단어 결합 문자)을 둔다.
 const BRAND_NAME = '온마루'
 const BRAND_ROMANIZED = 'Onmaru'
 const BRAND_TAGLINE = 'A suspiciously normal desktop-⁠like dashboard for openmediavault.'
@@ -128,16 +128,17 @@ export function LoginScreen() {
   return (
     <div className="desktop auth-screen">
       <main ref={cardRef} className="login-card" aria-labelledby="login-title">
-        {/* 로그인 전에는 누구의 프로필인지 알 수 없으므로 사용자 아바타 대신 로고를 둔다. 이름은 옆 제목이 전한다 */}
-        <div className="login-brand">
-          <img className="login-logo" src={logoUrl} width={80} height={80} alt="" draggable={false} />
-          <div className="login-brand-text">
-            <h1 id="login-title" className="login-brand-name" lang="ko">
-              {BRAND_NAME}
-            </h1>
-            <p className="login-brand-romanized">{BRAND_ROMANIZED}</p>
-          </div>
-        </div>
+        {/* 로그인 전에는 누구의 프로필인지 알 수 없으므로 사용자 아바타 대신 묶음 로고를 제목으로 둔다 */}
+        <h1 id="login-title" className="login-brand">
+          <img
+            className="login-lockup"
+            src={lockupUrl}
+            width={210}
+            height={80}
+            alt={`${BRAND_NAME} (${BRAND_ROMANIZED})`}
+            draggable={false}
+          />
+        </h1>
         <p className="login-tagline" lang="en">
           {BRAND_TAGLINE}
         </p>
