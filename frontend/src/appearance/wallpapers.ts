@@ -98,6 +98,33 @@ export function toWallpaperView(v: unknown): WallpaperView | null {
   return null
 }
 
+// WallpaperHint는 이 브라우저에 남겨 두는 마지막 바탕화면이다(appearance/dom.ts).
+// until은 그 세션의 예상 만료 시각(이 브라우저의 Date.now() 기준 ms)이다. null이면 만료 시각을 모르고
+// (자동 로그아웃이 꺼져 있는 등), 0이면 로그아웃했거나 세션이 끝난 것을 확인했다.
+export interface WallpaperHint {
+  user: string
+  view: WallpaperView
+  until: number | null
+}
+
+// toWallpaperHint는 저장해 둔 바탕화면 힌트를 읽는다. 모양이 맞지 않으면 null. until이 없는 예전 힌트는 null로 읽는다.
+export function toWallpaperHint(v: unknown): WallpaperHint | null {
+  if (typeof v !== 'object' || v === null) return null
+  const o = v as Record<string, unknown>
+  const view = toWallpaperView(o.view)
+  if (typeof o.user !== 'string' || !view) return null
+  return { user: o.user, view, until: typeof o.until === 'number' ? o.until : null }
+}
+
+// viewBeforeSessionCheck는 세션을 확인하는 동안 그릴 바탕화면이다. 세션이 이미 끝났을 것 같으면(로그아웃했거나
+// 예상 만료 시각이 지남) null이고, 그때는 곧 나올 로그인 화면의 배경을 그린다. 끝난 세션으로 사용자 이미지를
+// 요청하면 401이 나고, 그리더라도 바로 로그인 배경으로 바뀌기 때문이다.
+export function viewBeforeSessionCheck(hint: WallpaperHint | null, now: number): WallpaperView | null {
+  if (!hint) return null
+  if (hint.until !== null && hint.until <= now) return null
+  return hint.view
+}
+
 // cssBackground는 배경 레이어의 CSS background 값이다. 이미지는 화면을 덮도록 가운데에 맞춘다.
 export function cssBackground(view: WallpaperView): string {
   if (view.kind === 'css') return view.background

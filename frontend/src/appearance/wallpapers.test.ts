@@ -5,7 +5,9 @@ import {
   cssBackground,
   presetView,
   resolveWallpaper,
+  toWallpaperHint,
   toWallpaperView,
+  viewBeforeSessionCheck,
 } from './wallpapers'
 
 describe('WALLPAPER_PRESETS', () => {
@@ -59,6 +61,46 @@ describe('toWallpaperView', () => {
     expect(toWallpaperView(null)).toBeNull()
     expect(toWallpaperView({ key: 'k', kind: 'css' })).toBeNull()
     expect(toWallpaperView({ kind: 'image', url: 'x' })).toBeNull()
+  })
+})
+
+describe('toWallpaperHint', () => {
+  const view = presetView('ocean')
+
+  it('저장한 힌트를 그대로 읽는다', () => {
+    const hint = { user: 'alice', view, until: 1000 }
+    expect(toWallpaperHint(JSON.parse(JSON.stringify(hint)))).toEqual(hint)
+  })
+
+  it('until이 없는 예전 힌트는 만료 시각을 모르는 것으로 읽는다', () => {
+    expect(toWallpaperHint({ user: 'alice', view })).toEqual({ user: 'alice', view, until: null })
+  })
+
+  it('모양이 맞지 않으면 null', () => {
+    expect(toWallpaperHint(null)).toBeNull()
+    expect(toWallpaperHint({ view })).toBeNull()
+    expect(toWallpaperHint({ user: 'alice', view: { key: 'k' } })).toBeNull()
+  })
+})
+
+describe('viewBeforeSessionCheck', () => {
+  const view = { key: 'image:u', kind: 'image', url: 'u' } as const
+
+  it('예상 만료 시각 전이면 바탕화면을 그린다', () => {
+    expect(viewBeforeSessionCheck({ user: 'alice', view, until: 2000 }, 1000)).toBe(view)
+  })
+
+  it('만료 시각을 모르면 바탕화면을 그린다', () => {
+    expect(viewBeforeSessionCheck({ user: 'alice', view, until: null }, 1000)).toBe(view)
+  })
+
+  it('예상 만료 시각이 지났거나 로그아웃했으면 그리지 않는다', () => {
+    expect(viewBeforeSessionCheck({ user: 'alice', view, until: 1000 }, 1000)).toBeNull()
+    expect(viewBeforeSessionCheck({ user: 'alice', view, until: 0 }, 1000)).toBeNull()
+  })
+
+  it('힌트가 없으면 null', () => {
+    expect(viewBeforeSessionCheck(null, 1000)).toBeNull()
   })
 })
 

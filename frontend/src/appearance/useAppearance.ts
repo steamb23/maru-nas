@@ -4,15 +4,18 @@
 //   없으면 관리자 기본 테마를 쓴다(로그아웃했다고 테마가 바뀌어 번쩍이지 않게).
 // - 배경: 로그인한 동안은 사용자 바탕화면 → 관리자 기본 바탕화면 → 대시보드 기본. 로그인 화면·연결 끊김 화면은
 //   로그인 배경. 세션 확인 중에는 마지막 바탕화면(힌트)을 보여 준다(대부분 로그인한 채 새로 고침한 경우다).
+//   다만 그 세션이 이미 끝났을 것 같으면(로그아웃했거나 예상 만료 시각이 지남) 로그인 배경(힌트)을 보여 준다.
 //   사용자 설정을 받기 전에는 배경을 바꾸지 않는다(null). 받은 뒤 한 번만 바뀌게 한다.
 import { useEffect, useMemo } from 'react'
 import { siteImageUrl, wallpaperImageUrl } from '../api/client'
 import { useAuthStore } from '../auth/store'
 import {
   applyTheme,
+  markWallpaperHintSignedOut,
   readLoginBackgroundHint,
   readThemeHint,
   readWallpaperHint,
+  readWallpaperHintBeforeSession,
   writeLoginBackgroundHint,
   writeThemeHint,
   writeWallpaperHint,
@@ -69,10 +72,18 @@ export function useAppliedTheme() {
   }, [status, ready, userTheme, siteTheme, siteLoaded])
 }
 
-// useWallpaperView는 지금 그릴 배경이다. null이면 지금 배경을 그대로 둔다.
-export function useWallpaperView(): WallpaperView | null {
+// WallpaperChoice는 지금 그릴 배경이다. view가 null이면 지금 배경을 그대로 둔다.
+// fallback은 view의 이미지를 받지 못했을 때 대신 그릴 배경이다.
+export interface WallpaperChoice {
+  view: WallpaperView | null
+  fallback: WallpaperView
+}
+
+// useWallpaperView는 지금 그릴 배경을 정한다.
+export function useWallpaperView(): WallpaperChoice {
   const status = useAuthStore((s) => s.status)
   const username = useAuthStore((s) => s.user?.username)
+  const expiresAt = useAuthStore((s) => s.expiresAt)
   const site = useSiteStore((s) => s.info)
   const ready = useAppearanceStore((s) => s.status === 'ready')
   const userWallpaper = useAppearanceStore((s) => s.prefs.wallpaper)
@@ -102,16 +113,25 @@ export function useWallpaperView(): WallpaperView | null {
   useEffect(() => {
     if (loginView) writeLoginBackgroundHint(loginView)
   }, [loginView])
+  // 바탕화면 힌트에는 세션의 예상 만료 시각을 함께 남긴다(활동으로 연장되면 다시 쓴다).
   useEffect(() => {
-    if (desktopView && username) writeWallpaperHint(username, desktopView)
-  }, [desktopView, username])
+    if (desktopView && username) writeWallpaperHint(username, desktopView, expiresAt)
+  }, [desktopView, username, expiresAt])
+  // 로그인 화면으로 오면(로그아웃, 세션 만료, 끝난 세션으로 새로 고침) 세션이 끝났다고 표시한다.
+  useEffect(() => {
+    if (status === 'loggedOut') markWallpaperHintSignedOut()
+  }, [status])
 
   switch (status) {
     case 'loggedIn':
-      return desktopView ?? readWallpaperHint(username)
-    case 'checking':
-      return readWallpaperHint() ?? readLoginBackgroundHint()
+      return { view: desktopView ?? readWallpaperHint(username), fallback: DEFAULT_VIEW }
+    case 'checking': {
+      // 바탕화면 이미지를 받지 못하면 세션이 예상과 달리 끝난 것이다(백엔드 재시작 등). 곧 로그인 화면이 나오므로
+      // 기본 배경을 거치지 않고 로그인 배경으로 바로 바꾼다.
+      const login = readLoginBackgroundHint()
+      return { view: readWallpaperHintBeforeSession() ?? login, fallback: login ?? DEFAULT_VIEW }
+    }
     default:
-      return loginView ?? readLoginBackgroundHint() ?? (site ? DEFAULT_VIEW : null)
+      return { view: loginView ?? readLoginBackgroundHint() ?? (site ? DEFAULT_VIEW : null), fallback: DEFAULT_VIEW }
   }
 }

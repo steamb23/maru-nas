@@ -4,7 +4,13 @@
 // 힌트는 이 브라우저에서 마지막으로 쓴 값이다. 새로 고침하면 서버 응답을 받기 전까지 힌트로 그리고,
 // 받은 뒤에는 서버 값을 따른다. 저장소에 접근할 수 없으면(사생활 보호 모드 등) 힌트 없이 동작한다.
 import { type ThemeMode, toThemeMode } from './theme'
-import { type WallpaperView, toWallpaperView } from './wallpapers'
+import {
+  type WallpaperHint,
+  type WallpaperView,
+  toWallpaperHint,
+  toWallpaperView,
+  viewBeforeSessionCheck,
+} from './wallpapers'
 
 const THEME_KEY = 'onmaru.theme'
 const LOGIN_BACKGROUND_KEY = 'onmaru.loginBackground'
@@ -57,15 +63,34 @@ export function writeLoginBackgroundHint(view: WallpaperView) {
   write(LOGIN_BACKGROUND_KEY, JSON.stringify(view))
 }
 
-// 바탕화면 힌트는 사용자 이름과 함께 둔다. 다른 사용자가 로그인하면 쓰지 않는다.
-export function readWallpaperHint(username?: string): WallpaperView | null {
-  const v = readJSON(WALLPAPER_KEY)
-  if (typeof v !== 'object' || v === null) return null
-  const { user, view } = v as { user?: unknown; view?: unknown }
-  if (username !== undefined && user !== username) return null
-  return toWallpaperView(view)
+// 바탕화면 힌트는 사용자 이름, 세션의 예상 만료 시각과 함께 둔다(wallpapers.ts의 WallpaperHint).
+function readHint(): WallpaperHint | null {
+  return toWallpaperHint(readJSON(WALLPAPER_KEY))
 }
 
-export function writeWallpaperHint(username: string, view: WallpaperView) {
-  write(WALLPAPER_KEY, JSON.stringify({ user: username, view }))
+function writeHint(hint: WallpaperHint) {
+  write(WALLPAPER_KEY, JSON.stringify(hint))
+}
+
+// readWallpaperHint는 로그인한 사용자의 마지막 바탕화면이다. 다른 사용자가 로그인하면 쓰지 않는다.
+export function readWallpaperHint(username: string | undefined): WallpaperView | null {
+  const hint = readHint()
+  return hint && hint.user === username ? hint.view : null
+}
+
+// readWallpaperHintBeforeSession은 세션을 확인하는 동안 그릴 마지막 바탕화면이다. 세션이 끝났을 것 같으면 null.
+export function readWallpaperHintBeforeSession(): WallpaperView | null {
+  return viewBeforeSessionCheck(readHint(), Date.now())
+}
+
+// writeWallpaperHint는 지금 바탕화면을 남긴다. until은 세션의 예상 만료 시각(모르면 null)이다.
+export function writeWallpaperHint(username: string, view: WallpaperView, until: number | null) {
+  writeHint({ user: username, view, until })
+}
+
+// markWallpaperHintSignedOut은 세션이 끝났다고 표시한다(로그아웃, 세션 만료). 다음에 새로 고침하면 세션을
+// 확인하는 동안 바탕화면 대신 로그인 배경을 그린다. 바탕화면은 남겨 두어 다시 로그인한 직후에 쓴다.
+export function markWallpaperHintSignedOut() {
+  const hint = readHint()
+  if (hint && hint.until !== 0) writeHint({ ...hint, until: 0 })
 }

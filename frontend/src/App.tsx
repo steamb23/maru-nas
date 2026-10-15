@@ -50,7 +50,7 @@ export default function App() {
 
   return (
     <>
-      <Wallpaper view={wallpaper} />
+      <Wallpaper view={wallpaper.view} fallback={wallpaper.fallback} />
       <Screen />
     </>
   )
