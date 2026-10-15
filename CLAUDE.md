@@ -31,7 +31,8 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 
 - **배포**: 앞단 리버스 프록시(Caddy 등)가 HTTPS를 처리하고 대시보드를 둘 호스트·경로를 정한다(예: 별도 서브도메인 루트, 또는 OMV와 같은 도메인의 경로 접두사). 프론트는 상대 경로(`base: './'`)로 빌드하므로 경로 접두사에 묶이지 않고, 백엔드 라우트는 대시보드 루트(`/api/*`) 기준이다. OMV의 nginx 설정은 건드리지 않는다
   - 도메인 등 개인 환경 정보는 `*.local.md`(커밋 안 함)에 둔다. 커밋되는 파일에 도메인·IP를 하드코딩하지 않는다
-  - OMV 화면을 iframe으로 띄우는 실험은 OMV와 같은 출처(같은 도메인의 경로 접두사)에 둘 때만 가능하다. 인증과는 무관하다
+  - OMV 웹 UI(workbench)는 대시보드 안 창이 아니라 이름 붙은 브라우저 탭으로 연다. 브라우저 기준 주소는 `-workbench-url`(`ONMARU_WORKBENCH_URL`)이며, 비우면 "OMV 워크벤치" 앱을 숨긴다(`README.md`의 "OMV 워크벤치 열기")
+  - OMV 화면을 iframe으로 띄우는 실험은 OMV와 같은 출처(같은 도메인의 경로 접두사)에 둘 때만 가능하다(OMV가 `X-Frame-Options: SAMEORIGIN`을 보낸다). 인증과는 무관하다
 - **실행**: systemd 서비스로 Go 실행 파일 하나를 전용 일반 사용자로 실행한다. 프론트엔드는 `go:embed`로 포함한다. 수신은 기본적으로 루프백 TCP(`127.0.0.1:8090`)이고, Docker 안의 프록시처럼 루프백에 닿지 못하는 경우를 위해 Unix 소켓(`unix:/경로`)을 지원한다. 루프백이 아닌 주소는 `-allow-non-loopback`을 명시해야만 허용한다
   - Docker는 쓰지 않는다(호스트 `/proc`, `/sys`, 네트워크를 직접 봐야 하므로)
   - 설치는 루트의 인터랙티브 `install.sh`(영어·한국어 안내)가 한다. systemd 유닛과 `/etc/default/onmaru`를 직접 만들며, Claude는 작성만 하고 실행은 사용자가 한다. 리버스 프록시는 설정하지 않는다
@@ -109,7 +110,7 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 5. 파일 탐색기 창: 공유 폴더 둘러보기(우선 읽기 전용)
 6. "심층 설정" 연결: 각 창에서 해당 OMV 페이지로 이동
 
-단계와 무관한 셸 기능: "모든 앱" 화면(앱 서랍)과 바탕화면 바로가기는 4-3단계 뒤에 사용자 요청으로 추가했다. 시스템 상태를 바꾸지 않는 셸 기능이며 이스터에그와 같은 예외다(`.claude/rules/frontend-shell.md`의 "바로가기와 모든 앱").
+단계와 무관한 셸 기능: "모든 앱" 화면(앱 서랍)과 바탕화면 바로가기, OMV 워크벤치 링크 앱(OMV 웹 UI를 새 탭으로 여는 앱과 프로필 메뉴 항목)은 4-3단계 뒤에 사용자 요청으로 추가했다. 시스템 상태를 바꾸지 않는 셸 기능이며 이스터에그와 같은 예외다(`.claude/rules/frontend-shell.md`의 "바로가기와 모든 앱"). 창별로 해당 OMV 페이지를 여는 딥링크는 6단계에서 다룬다.
 
 단계를 넘어갈지는 사용자가 정한다. 다음 단계 기능이 필요해 보이면 구현하지 말고 제안한다.
 
@@ -158,5 +159,6 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 - 4단계 조작을 실제 OMV로 확인한다(사용자가 `make dev`로). 컨테이너: `Compose.doContainerCommand` → `Exec.isRunning` 흐름, 실패한 docker 명령이 `Exec.isRunning` 예외로 오는지. 서비스: `Services.getStatus`의 실제 이름·값, 어댑터별 get → set(스키마 속성만) → `Config.applyChangesBg` → `Exec.isRunning` 흐름, 적용 대기 중 거절. 지금은 omvfake로만 검증했다
 
 - `install.sh`로 실제 설치한 뒤(사용자가 실행): 유닛 하드닝(`ProtectSystem=strict`, `DevicePolicy=closed`, `RestrictAddressFamilies` 등. `PrivateDevices=yes`는 `/dev/disk/by-label`을 숨겨 파일시스템 라벨이 사라지므로 쓰지 않는다) 아래에서 모든 애드온 데이터가 나오는지, Docker Caddy의 `/run/onmaru` 바인드 마운트가 서비스 재시작·재부팅 후에도 유지되는지. 지금은 `systemd-run --user`로 비슷한 제한을 걸어 가짜 OMV로만 확인했다
-- 같은 출처에서 OMV workbench를 iframe 창으로 띄울 수 있는지
-- 같은 탭 iframe은 sessionStorage를 공유하므로, 대시보드 로그인 후 OMV 창도 로그인 상태로 보이게 할 수 있는지. OMV 내부 저장 키(`username`, `permissions`)에 의존하는 실험이라 OMV 업데이트 시 깨질 수 있다. 실험 브랜치에서만 다룬다
+- OMV 워크벤치 링크 앱을 실제 OMV로 확인한다(사용자가 `make dev`에 `ONMARU_WORKBENCH_URL`을 두고). 같은 탭을 다시 쓸 때 브라우저가 그 탭으로 전환하는지(Chrome·Firefox), 그 탭의 OMV 로그인이 유지되는지. 지금은 가짜 OMV와 같은 출처 주소로만 확인했다
+- (보류: 새 탭 방식을 택했다) 같은 출처에서 OMV workbench를 iframe 창으로 띄울 수 있는지
+- (보류) 같은 탭 iframe은 sessionStorage를 공유하므로, 대시보드 로그인 후 OMV 창도 로그인 상태로 보이게 할 수 있는지. OMV 내부 저장 키(`username`, `permissions`)에 의존하는 실험이라 OMV 업데이트 시 깨질 수 있다. 실험 브랜치에서만 다룬다
