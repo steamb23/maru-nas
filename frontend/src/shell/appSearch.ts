@@ -2,6 +2,8 @@
 //
 // 앱마다 검색어 후보(지원하는 모든 언어의 앱 이름과 앱 id)를 받아, 화면 언어와 무관하게 어느 언어로 입력해도
 // 찾는다. 후보 목록은 부르는 쪽(AppDrawer)이 i18next로 만든다. 이 모듈은 i18n을 import하지 않는다.
+// 한글은 자모로 풀어 비교해 초성 검색과 입력 중인 글자를 함께 다룬다(hangul.ts).
+import { initials, isConsonants, toJamo } from './hangul'
 
 // normalize는 비교할 문자열을 맞춘다: 한글 조합형을 완성형으로(NFC), 소문자, 공백 제거.
 export function normalize(s: string): string {
@@ -9,10 +11,14 @@ export function normalize(s: string): string {
 }
 
 // matchRank는 후보 하나가 검색어와 얼마나 맞는지다. 0: 앞부분이 같음, 1: 중간에 들어 있음, null: 안 맞음.
-// 둘 다 normalize한 값이다.
+// 둘 다 normalize한 값이다. 자모로 풀어 비교하고(입력 중인 "넽"도 "네트워크"에 맞음), 검색어가 자음뿐이면
+// 초성끼리도 비교한다("ㄴㅌ" → "네트워크").
 export function matchRank(term: string, query: string): 0 | 1 | null {
-  if (term.startsWith(query)) return 0
-  if (term.includes(query)) return 1
+  const t = toJamo(term)
+  const q = toJamo(query)
+  const ini = isConsonants(query) ? initials(term) : null
+  if (t.startsWith(q) || ini?.startsWith(query)) return 0
+  if (t.includes(q) || ini?.includes(query)) return 1
   return null
 }
 
