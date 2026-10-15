@@ -258,7 +258,7 @@ export function Window({ id, bounds, closingState, onClosed }: Props) {
             if (!fromButton(e)) onToggleMaximize()
           }}
         >
-          <IconImage name={app.icon} size={20} />
+          <IconImage name={app.icon} size={20} app />
           <h2 className="titlebar-title">{title}</h2>
           <div className="titlebar-buttons">
             <button type="button" className="win-btn" aria-label={t('window.minimize')}

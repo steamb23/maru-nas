@@ -315,7 +315,7 @@ export function Taskbar({ inert = false }: { inert?: boolean }) {
               return (
                 <li key={id} className="leaving" data-task-id={id} inert>
                   <button type="button" className="task">
-                    <IconImage name={getApp(ghost.appId).icon} size={20} />
+                    <IconImage name={getApp(ghost.appId).icon} size={20} app />
                     <span className="task-title">{t(getApp(ghost.appId).titleKey)}</span>
                   </button>
                 </li>
@@ -357,7 +357,7 @@ export function Taskbar({ inert = false }: { inert?: boolean }) {
                     else onTaskClick(w, active)
                   }}
                 >
-                  <IconImage name={getApp(w.appId).icon} size={20} />
+                  <IconImage name={getApp(w.appId).icon} size={20} app />
                   <span className="task-title">{t(getApp(w.appId).titleKey)}</span>
                 </button>
               </li>

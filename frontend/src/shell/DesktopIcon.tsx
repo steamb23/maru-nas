@@ -9,7 +9,7 @@ export function DesktopIconFace({ appId }: { appId: AppId }) {
   const app = getApp(appId)
   return (
     <>
-      <IconImage name={app.icon} size={48} />
+      <IconImage name={app.icon} size={48} app />
       <span className="desktop-icon-label">{t(app.titleKey)}</span>
     </>
   )

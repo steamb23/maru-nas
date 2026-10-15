@@ -450,7 +450,7 @@ export function AppDrawer({ bounds, shortcuts }: Props) {
                         if (!suppressed || e.detail === 0) openApp(id)
                       }}
                     >
-                      <IconImage name={app.icon} size={64} />
+                      <IconImage name={app.icon} size={64} app />
                       <span className="app-drawer-tile-label">{t(app.titleKey)}</span>
                     </button>
                   </li>
