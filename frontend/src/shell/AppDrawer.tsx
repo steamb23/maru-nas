@@ -57,8 +57,9 @@ const GRID_ID = `${APP_DRAWER_ID}-grid`
 
 const { close } = useAppDrawerStore.getState()
 
-// 바깥을 눌러도 닫지 않는 곳: 앱 타일, 검색 상자, 타일 메뉴, 작업표시줄의 "모든 앱" 버튼(누르면 닫는다).
-const KEEP_OPEN = '.app-drawer-tile, .app-drawer-search, .context-menu, .taskbar-launcher'
+// 바깥을 눌러도 닫지 않는 곳: 앱 타일, 검색 상자, 타일 메뉴, 작업표시줄의 "모든 앱" 버튼(누르면 닫는다)과
+// 창 버튼 목록(누르면 Taskbar가 닫고 그 창을 보인다. 여기서 먼저 닫으면 활성 창 버튼이 창을 최소화한다).
+const KEEP_OPEN = '.app-drawer-tile, .app-drawer-search, .context-menu, .taskbar-launcher, .taskbar-items'
 
 // 저장 목록을 바꾼다. 계산은 늘 저장소의 최신 목록으로 한다.
 const updateShortcuts = (change: (apps: AppId[]) => AppId[]) => {
@@ -153,8 +154,11 @@ export function AppDrawer({ bounds, shortcuts }: Props) {
   }, [open, instant])
 
   // 열리면 검색 상자에 포커스한다. 터치로 열었으면 가상 키보드가 화면을 가리지 않게 하지 않는다.
+  // 지난번 끌기가 남긴 click 무시 표시도 지운다(끌어 놓은 타일은 click을 받기 전에 사라진다).
   useLayoutEffect(() => {
-    if (open && !viaTouch) searchRef.current?.focus({ preventScroll: true })
+    if (!open) return
+    suppressClick.current = false
+    if (!viaTouch) searchRef.current?.focus({ preventScroll: true })
   }, [open, viaTouch])
 
   // endDrag는 타일 끌기를 끝내고 화면을 닫는다(endTileDrag).
@@ -265,7 +269,9 @@ export function AppDrawer({ bounds, shortcuts }: Props) {
     onStart: (e) => {
       suppressClick.current = false
       const app = e.currentTarget.dataset.app
-      // 바로가기 목록을 불러오지 못했으면 끌어 놓을 수 없다(클릭은 그대로 된다).
+      // 터치로는 끌지 않는다. 격자를 스크롤하려는 손가락이 끌기가 되기 때문이다(타일 메뉴의 "바탕화면에
+      // 바로가기 추가"를 쓴다). 바로가기 목록을 불러오지 못했으면 끌어 놓을 수 없다. 둘 다 클릭은 그대로 된다.
+      if (e.pointerType === 'touch') return false
       if (!app || !isAppId(app) || closing || useShortcutStore.getState().status !== 'ready') return false
       tileDrag.current = { app, started: false, pointer: { x: e.clientX, y: e.clientY } }
     },
@@ -346,7 +352,7 @@ export function AppDrawer({ bounds, shortcuts }: Props) {
               value={query}
               placeholder={t('drawer.search')}
               aria-label={t('drawer.search')}
-              aria-controls={GRID_ID}
+              aria-controls={results.length > 0 ? GRID_ID : undefined}
               autoComplete="off"
               spellCheck={false}
               readOnly={dragging !== null}
@@ -375,9 +381,11 @@ export function AppDrawer({ bounds, shortcuts }: Props) {
                       {...mergeHandlers(menu.handlers, drag)}
                       onKeyDown={(e) => onTileKeyDown(e, i)}
                       onFocus={() => setActive(i)}
-                      onClick={() => {
-                        if (suppressClick.current) suppressClick.current = false
-                        else openApp(id)
+                      onClick={(e) => {
+                        // 끌기·길게 누르기 뒤의 click은 무시하지만 키보드(detail 0)로 누른 것은 늘 연다.
+                        const suppressed = suppressClick.current
+                        suppressClick.current = false
+                        if (!suppressed || e.detail === 0) openApp(id)
                       }}
                     >
                       <IconImage name={app.icon} size={64} />

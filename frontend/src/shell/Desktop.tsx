@@ -57,7 +57,8 @@ export function Desktop() {
   const ids = useWindowStore(useShallow((s) => s.windows.map((w) => w.id)))
   // 바로가기 목록을 불러오기(또는 실패하기) 전에는 아이콘 영역 크기를 알 수 없으므로 위젯을 그리지 않는다.
   // 먼저 그리면 위젯이 아이콘 자리에 놓였다가 바로가기가 들어오며 밀려난다.
-  const iconsReady = useShortcutStore((s) => s.status === 'ready' || s.status === 'error')
+  // 한 번 불러온 뒤에는 다시 시도하는 동안에도 위젯을 그대로 둔다(loaded).
+  const iconsReady = useShortcutStore((s) => s.loaded)
   // 창은 처음 열린 순서대로 그린다. 앞뒤는 z-index가 정하므로, 작업표시줄에서 순서를 바꿔도
   // 창 DOM이 옮겨지지 않게 한다(옮겨지면 창 안의 스크롤 위치나 iframe이 초기화된다).
   // 닫힌 창은 저장소에서 바로 지워지지만, 닫기 애니메이션이 끝나 onClosed가 불릴 때까지

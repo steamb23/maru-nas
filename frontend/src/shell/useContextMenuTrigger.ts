@@ -32,6 +32,8 @@ export interface ContextMenuTrigger {
   // 지금(또는 마지막) 누름이 메뉴를 열었는지. 끌기·클릭 처리가 그 누름을 무시하는 데 쓴다.
   // 다음 누름을 시작하면 false로 돌아간다.
   openedByPress: () => boolean
+  // 길게 누르기 대기를 멈춘다. 끌기가 시작되면 부른다(손가락이 조금 움직여 끌기가 시작된 뒤 메뉴가 열리지 않게).
+  cancelLongPress: () => void
 }
 
 export function useContextMenuTrigger(opts: ContextMenuTriggerOptions): ContextMenuTrigger {
@@ -101,6 +103,7 @@ export function useContextMenuTrigger(opts: ContextMenuTriggerOptions): ContextM
       onPointerCancel: release,
     },
     openedByPress: () => opened.current,
+    cancelLongPress: cancelTimer,
   }
 }
 

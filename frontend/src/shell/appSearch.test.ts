@@ -56,6 +56,9 @@ describe('searchApps', () => {
   it('초성으로 찾는다', () => {
     expect(search('ㄴㅌ')).toEqual(['network'])
     expect(search('ㄷㅅㅋ')).toEqual(['smart'])
+    // 입력기가 자음을 겹받침으로 묶어도 찾는다(ㅅ+ㅂ+ㅅ → ㅅㅄ)
+    expect(search('ㅅㅄ')).toEqual(['services'])
+    expect(search('ㅄ')).toEqual(['services'])
     // 앞 초성이 같은 것이 먼저: 시스템 정보·서비스(ㅅ로 시작), 디스크 건강(중간에 ㅅ)
     expect(search('ㅅ').slice(0, 2)).toEqual(['system-info', 'services'])
   })

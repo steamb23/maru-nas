@@ -17,8 +17,9 @@ export function matchRank(term: string, query: string): 0 | 1 | null {
   const t = toJamo(term)
   const q = toJamo(query)
   const ini = isConsonants(query) ? initials(term) : null
-  if (t.startsWith(q) || ini?.startsWith(query)) return 0
-  if (t.includes(q) || ini?.includes(query)) return 1
+  // 초성도 나눈 자모로 비교한다. 입력기가 자음을 겹받침으로 묶어도(ㅅ+ㅂ+ㅅ → ㅅㅄ) 맞게 한다.
+  if (t.startsWith(q) || ini?.startsWith(q)) return 0
+  if (t.includes(q) || ini?.includes(q)) return 1
   return null
 }
 

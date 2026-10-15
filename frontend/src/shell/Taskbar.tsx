@@ -23,10 +23,12 @@ const DRAG_THRESHOLD = 4
 const SETTLE_MS = 200
 
 // 작업표시줄 버튼: 활성 창은 최소화, 그 밖의 창은 복원해 맨 앞으로. 타일 그룹의 창이면 짝 창도 함께 앞으로 온다.
-// "모든 앱" 화면이 열려 있으면 닫는다(키보드로 누른 경우. 포인터는 화면 바깥 누르기로 이미 닫힌다).
+// "모든 앱" 화면이 열려 있으면 닫고 그 창을 보인다(화면에 가려져 있던 활성 창을 최소화하지 않는다).
 function onTaskClick(w: WindowState, active: boolean) {
-  useAppDrawerStore.getState().close()
-  if (active && !w.minimized) minimize(w.id)
+  const drawer = useAppDrawerStore.getState()
+  const drawerOpen = drawer.open
+  drawer.close()
+  if (active && !w.minimized && !drawerOpen) minimize(w.id)
   else raiseGroup(w.id)
 }
 

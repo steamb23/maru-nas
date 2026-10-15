@@ -90,8 +90,8 @@
   background: none;
   color: #fff;
   cursor: pointer;
-  /* 터치로 끌 때 브라우저가 포인터를 스크롤용으로 가져가지 않게 한다. */
-  touch-action: none;
+  /* 터치로는 끌지 않으므로 격자 스크롤을 브라우저에 맡긴다(두 번 눌러 확대만 막는다). */
+  touch-action: manipulation;
 }
 
 .app-drawer-tile:hover {

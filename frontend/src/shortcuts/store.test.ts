@@ -59,7 +59,25 @@ describe('load', () => {
   it('실패하면 error', async () => {
     const { store } = setup({ fetchPreferences: async () => Promise.reject(new Error('down')) })
     await store.getState().load()
-    expect(store.getState().status).toBe('error')
+    expect(store.getState()).toMatchObject({ status: 'error', loaded: true })
+  })
+
+  it('loaded는 다시 시도하는 동안에도 남고 clear에서만 지워진다', async () => {
+    let fail = true
+    const d = deferred<Preferences>()
+    const { store } = setup({
+      fetchPreferences: () => (fail ? Promise.reject(new Error('down')) : d.promise),
+    })
+    expect(store.getState().loaded).toBe(false)
+    await store.getState().load()
+    fail = false
+    const retry = store.getState().load()
+    expect(store.getState()).toMatchObject({ status: 'loading', loaded: true })
+    d.resolve({ shortcuts: [{ app: 'files' }] })
+    await retry
+    expect(store.getState()).toMatchObject({ status: 'ready', loaded: true, apps: ['files'] })
+    store.getState().clear()
+    expect(store.getState().loaded).toBe(false)
   })
 
   it('clear 뒤에 도착한 응답은 버린다', async () => {

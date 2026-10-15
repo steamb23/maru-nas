@@ -24,6 +24,8 @@ interface DragState {
   x: number
   y: number
   moved: boolean
+  // 누른 요소(pointer capture를 가진 요소)
+  el: HTMLElement
 }
 
 // usePointerDrag는 요소에 붙일 포인터 이벤트 처리기를 반환한다. 왼쪽 버튼(터치·펜 포함)만 다룬다.
@@ -45,9 +47,18 @@ export function usePointerDrag(opts: PointerDragOptions) {
 
   return {
     onPointerDown: (e: PointerEvent<HTMLElement>) => {
-      if (e.button !== 0 || drag.current) return
+      if (e.button !== 0) return
+      const prev = drag.current
+      if (prev) {
+        // 다른 포인터(두 번째 손가락 등)로 끄는 중이면 무시한다.
+        if (prev.el.isConnected && prev.el.hasPointerCapture(prev.pointerId)) return
+        // 누른 요소가 끄는 도중 지워지면 pointerup·lostpointercapture가 React까지 오지 않아 끝을 모른다.
+        // 다음 누름에서 그 끌기를 취소로 정리하고 새로 시작한다.
+        drag.current = null
+        optsRef.current.onCancel?.()
+      }
       if (optsRef.current.onStart?.(e) === false) return
-      drag.current = { pointerId: e.pointerId, x: e.clientX, y: e.clientY, moved: false }
+      drag.current = { pointerId: e.pointerId, x: e.clientX, y: e.clientY, moved: false, el: e.currentTarget }
       e.currentTarget.setPointerCapture(e.pointerId)
     },
     onPointerMove: (e: PointerEvent<HTMLElement>) => {

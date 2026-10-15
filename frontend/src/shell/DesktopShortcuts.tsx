@@ -1,7 +1,7 @@
 // 바탕화면 바로가기: 사용자가 고른 앱 아이콘을 왼쪽 위부터 열 단위로 놓는다. 위젯 레이어와 창 아래에 그리고,
 // 끄는 동안만 창 위로 올라온다. 끌어서 순서를 바꾸고, "모든 앱"에서 끌어 온 앱을 원하는 자리에 끼운다.
 // 목록은 shortcuts/store.ts(사용자별 저장), 순서 계산은 shortcuts/list.ts, 칸 계산은 shortcuts/layout.ts가 한다.
-import { type Ref, type RefObject, useEffect, useImperativeHandle, useRef, useState } from 'react'
+import { type MouseEvent, type Ref, type RefObject, useEffect, useImperativeHandle, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { appAccess, useCapabilitiesStore } from '../addons/capabilities'
@@ -55,6 +55,8 @@ interface DragView {
   source: 'desktop' | 'drawer'
   from: number | null
   to: number | null
+  // 끌기를 시작할 때 잰 한 열의 아이콘 수
+  rows: number
 }
 
 // DrawerDrag는 "모든 앱"에서 끌고 있는 앱과, 시작할 때 잰 바탕화면 정보다.
@@ -72,8 +74,9 @@ interface Press {
   app: AppId
   from: number
   button: HTMLElement
-  // 누른 시점의 보이는 순서. 끄는 사이 목록이 바뀌면 끌기를 취소하는 기준이다.
+  // 누른 시점의 보이는 순서와 데스크톱 영역 높이. 끄는 사이 바뀌면 끌기를 취소하는 기준이다.
   ids: AppId[]
+  height: number
   rows: number
   // 누른 시점의 데스크톱 영역 왼쪽 위(화면 좌표)
   origin: Point
@@ -112,8 +115,16 @@ export function DesktopShortcuts({ bounds, listRef, ref }: Props) {
   const include = (id: AppId) => appAccess(caps, id).visible
   const visible = status === 'ready' ? visibleShortcuts(apps, include) : []
 
-  const rows = rowsPerColumn(bounds.height)
   const visibleKey = visible.join(' ')
+
+  // measureRows는 지금 그려진 아이콘 목록의 한 열 아이콘 수다. 브라우저 확대 등으로 영역 높이가 소수점이면
+  // 정수로 반올림한 bounds로 계산한 값과 CSS의 행 수가 다를 수 있어, 그려진 행 수를 쓴다.
+  const measureRows = () => {
+    const list = listRef.current
+    const tracks = list ? getComputedStyle(list).gridTemplateRows : 'none'
+    const n = tracks === 'none' ? 0 : tracks.split(' ').length
+    return n > 0 ? n : rowsPerColumn(bounds.height)
+  }
 
   const open = (id: AppId) => useWindowStore.getState().open(id, bounds)
 
@@ -153,13 +164,18 @@ export function DesktopShortcuts({ bounds, listRef, ref }: Props) {
         if (frames) anims.push(b.animate(frames, { duration: DROP_MS, easing: EASING }))
       }
     }
+    // 착지가 끝나도 그사이 새 끌기가 시작됐으면 목록을 내리지 않는다(그 끌기가 끝날 때 내린다).
+    const lower = () => {
+      if (landing.current === 0 && !press.current?.moved && !drawerDrag.current) setRaised(false)
+    }
     if (anims.length === 0) {
-      if (landing.current === 0) setRaised(false)
+      lower()
       return
     }
     landing.current++
     void Promise.allSettled(anims.map((a) => a.finished)).then(() => {
-      if (--landing.current === 0) setRaised(false)
+      landing.current--
+      lower()
     })
   }
 
@@ -206,7 +222,17 @@ export function DesktopShortcuts({ bounds, listRef, ref }: Props) {
       const from = app && isAppId(app) ? visible.indexOf(app) : -1
       if (!app || !isAppId(app) || !area || from < 0 || drawerDrag.current) return false
       const r = area.getBoundingClientRect()
-      press.current = { app, from, button, ids: visible, rows, origin: { x: r.x, y: r.y }, to: from, moved: false }
+      press.current = {
+        app,
+        from,
+        button,
+        ids: visible,
+        height: bounds.height,
+        rows: measureRows(),
+        origin: { x: r.x, y: r.y },
+        to: from,
+        moved: false,
+      }
     },
     onMove: (d, e) => {
       const p = press.current
@@ -214,9 +240,11 @@ export function DesktopShortcuts({ bounds, listRef, ref }: Props) {
       if (!p || menu.openedByPress()) return
       if (!p.moved) {
         p.moved = true
+        // 손가락이 조금 움직여 끌기가 시작됐으면 길게 누르기 메뉴는 열지 않는다.
+        menu.cancelLongPress()
         for (const a of p.button.getAnimations()) a.cancel()
         setRaised(true)
-        setView({ source: 'desktop', from: p.from, to: p.from })
+        setView({ source: 'desktop', from: p.from, to: p.from, rows: p.rows })
       }
       p.button.style.transform = `translate(${d.dx}px, ${d.dy}px)`
       // 영역 밖(작업표시줄 등)이면 놓아도 제자리로 돌아가므로 미리보기도 제자리다.
@@ -227,7 +255,7 @@ export function DesktopShortcuts({ bounds, listRef, ref }: Props) {
         : p.from
       if (to === p.to) return
       p.to = to
-      setView({ source: 'desktop', from: p.from, to })
+      setView({ source: 'desktop', from: p.from, to, rows: p.rows })
     },
     onEnd: (moved, _d, e) => {
       const p = press.current
@@ -267,15 +295,17 @@ export function DesktopShortcuts({ bounds, listRef, ref }: Props) {
   // 끄는 사이 보이는 목록(capability, 다른 탭의 저장)이나 화면 높이(열 나눔)가 바뀌면 잰 자리가 맞지 않으므로 취소한다.
   useEffect(() => {
     const p = press.current
-    if (p && (p.ids.join(' ') !== visibleKey || p.rows !== rows)) cancel()
+    if (p && (p.ids.join(' ') !== visibleKey || p.height !== bounds.height)) cancel()
   })
 
-  const onClick = (id: AppId) => {
-    if (suppressClick.current) suppressClick.current = false
-    else open(id)
+  // 끌기·길게 누르기 뒤의 click은 무시하지만 키보드(Enter·Space, detail 0)로 누른 것은 늘 연다.
+  // 끈 버튼이 놓는 순간 DOM에서 옮겨지면 브라우저가 click을 보내지 않으므로 표시는 여기서 늘 지운다.
+  const onClick = (id: AppId, e: MouseEvent) => {
+    const suppressed = suppressClick.current
+    suppressClick.current = false
+    if (!suppressed || e.detail === 0) open(id)
   }
 
-  // "바로가기 추가 ▸" 하위 메뉴. 볼 수 있는 앱마다 하나씩, 이미 있는 앱은 체크 표시와 함께 비활성이다.
   // 데스크톱 영역 기준 좌표와, 고스트를 그 자리에 놓았을 때의 아이콘 가운데
   const areaPoint = (pointer: Point) => {
     const r = listRef.current?.parentElement?.getBoundingClientRect()
@@ -297,14 +327,14 @@ export function DesktopShortcuts({ bounds, listRef, ref }: Props) {
       let d = drawerDrag.current
       if (d?.app !== app) {
         const from = visible.indexOf(app)
-        d = { app, from: from < 0 ? null : from, count: visible.length, rows, to: null }
+        d = { app, from: from < 0 ? null : from, count: visible.length, rows: measureRows(), to: null }
         drawerDrag.current = d
         setRaised(true)
       }
       const to = drawerSlot(d, areaPoint(pointer))
       if (to === d.to && view) return
       d.to = to
-      setView({ source: 'drawer', from: d.from, to })
+      setView({ source: 'drawer', from: d.from, to, rows: d.rows })
     },
     dropAt: (app, pointer, ghost) => {
       const d = drawerDrag.current
@@ -325,6 +355,7 @@ export function DesktopShortcuts({ bounds, listRef, ref }: Props) {
       // 언마운트(모달, 로그아웃) 정리에서도 불리므로 flushSync를 쓰는 settle은 microtask로 미룬다.
       queueMicrotask(() => settle(null, null))
     },
+    // "바로가기 추가 ▸" 하위 메뉴. 볼 수 있는 앱마다 하나씩, 이미 있는 앱은 체크 표시와 함께 비활성이다.
     desktopMenuItems: () => {
       if (status !== 'ready') return []
       const items = APP_IDS.filter(include).map((id): ContextMenuAction => {
@@ -345,7 +376,7 @@ export function DesktopShortcuts({ bounds, listRef, ref }: Props) {
     },
   }))
 
-  const offsets = view ? previewOffsets(visible.length, view.from, view.to, rows) : null
+  const offsets = view ? previewOffsets(visible.length, view.from, view.to, view.rows) : null
 
   return (
     <ul className={raised ? 'desktop-icons raised' : 'desktop-icons'} aria-label={t('desktop.label')} ref={listRef}>
@@ -363,7 +394,7 @@ export function DesktopShortcuts({ bounds, listRef, ref }: Props) {
             className={className}
             style={o && (o.x || o.y) ? { transform: `translate(${o.x}px, ${o.y}px)` } : undefined}
           >
-            <DesktopIcon appId={id} {...mergeHandlers(menu.handlers, drag)} onClick={() => onClick(id)} />
+            <DesktopIcon appId={id} {...mergeHandlers(menu.handlers, drag)} onClick={(e) => onClick(id, e)} />
           </li>
         )
       })}

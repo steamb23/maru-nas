@@ -13,6 +13,9 @@ export type ShortcutStatus = 'idle' | 'loading' | 'ready' | 'error'
 
 export interface ShortcutData {
   status: ShortcutStatus
+  // 이번 로그인에서 한 번이라도 불러오기를 끝냈는지(성공이든 실패든). 다시 시도하는 동안에도 true로 남는다.
+  // 위젯 레이어가 아이콘 영역을 믿고 그려도 되는지 판단한다.
+  loaded: boolean
   // 저장 목록(바탕화면 순서). 지금 사용자에게 보이지 않는 앱도 들어 있다(list.ts).
   apps: AppId[]
   // 마지막 저장이 실패했는지. 다음 변경 때 다시 보낸다.
@@ -33,7 +36,7 @@ export interface ShortcutApi {
   saveShortcuts: (shortcuts: readonly Shortcut[]) => Promise<void>
 }
 
-export const initialShortcutData: ShortcutData = { status: 'idle', apps: [], saveFailed: false }
+export const initialShortcutData: ShortcutData = { status: 'idle', loaded: false, apps: [], saveFailed: false }
 
 export function createShortcutStore(api: ShortcutApi) {
   return create<ShortcutStore>()((set, get) => {
@@ -73,9 +76,9 @@ export function createShortcutStore(api: ShortcutApi) {
           const prefs = await api.fetchPreferences()
           if (gen !== generation) return
           const apps = prefs.shortcuts === undefined ? defaultShortcuts() : knownShortcuts(prefs.shortcuts)
-          set({ status: 'ready', apps, saveFailed: false })
+          set({ status: 'ready', loaded: true, apps, saveFailed: false })
         } catch {
-          if (gen === generation) set({ status: 'error' })
+          if (gen === generation) set({ status: 'error', loaded: true })
         }
       },
 
