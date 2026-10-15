@@ -42,9 +42,12 @@
 .login-brand-name {
   min-width: 0;
   margin: 0;
-  font-size: 30px;
+  font-size: 40px;
   font-weight: 700;
   line-height: 1.15;
+  letter-spacing: 0.12em;
+  /* letter-spacing은 마지막 글자 뒤에도 붙으므로 그만큼 빼서 로고·이름 묶음이 가운데에 오게 한다. */
+  margin-right: -0.12em;
 }
 
 .login-tagline {
