@@ -223,7 +223,7 @@
   },
   "linkNotice": {
     "title": "Open in a new tab",
-    "workbench": "OMV Workbench opens in a new browser tab. The first time, sign in to OMV again in that tab.",
+    "workbench": "OMV Workbench opens in a new browser tab. You need to sign in to OMV again in the new tab.",
     "dontShowAgain": "Don't show this again",
     "open": "Open"
   },
