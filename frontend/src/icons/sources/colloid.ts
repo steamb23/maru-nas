@@ -3,6 +3,7 @@
 // 실행 파일에 들어가므로, 아이콘을 쓸 때마다 여기에 한 줄씩 추가한다.
 
 import documentOpen from '@colloid/actions/symbolic/document-open-symbolic.svg?url'
+import editDelete from '@colloid/actions/symbolic/edit-delete-symbolic.svg?url'
 import editFind from '@colloid/actions/symbolic/edit-find-symbolic.svg?url'
 import helpAbout from '@colloid/actions/symbolic/help-about-symbolic.svg?url'
 import listAdd from '@colloid/actions/symbolic/list-add-symbolic.svg?url'
@@ -60,6 +61,7 @@ export const COLLOID_ICONS = {
   'preferences-desktop-locale-symbolic': { url: preferencesDesktopLocale, kind: 'symbolic' },
   'avatar-default-symbolic': { url: avatarDefault, kind: 'symbolic' },
   'open-menu-symbolic': { url: openMenu, kind: 'symbolic' },
+  'edit-delete-symbolic': { url: editDelete, kind: 'symbolic' },
   'help-about-symbolic': { url: helpAbout, kind: 'symbolic' },
   'system-lock-screen-symbolic': { url: systemLockScreen, kind: 'symbolic' },
   'preferences-desktop-appearance-symbolic': { url: preferencesDesktopAppearance, kind: 'symbolic' },

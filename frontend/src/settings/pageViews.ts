@@ -2,11 +2,13 @@
 import type { ComponentType } from 'react'
 import { PlaceholderWindow } from '../shell/PlaceholderWindow'
 import { AboutPage } from './AboutPage'
+import { GeneralPage } from './GeneralPage'
+import { ScreenPage } from './ScreenPage'
 import type { SettingsPageId } from './pages'
 
 export const SETTINGS_PAGE_VIEWS: Record<SettingsPageId, ComponentType> = {
-  screen: PlaceholderWindow,
-  general: PlaceholderWindow,
+  screen: ScreenPage,
+  general: GeneralPage,
   'login-screen': PlaceholderWindow,
   'default-screen': PlaceholderWindow,
   server: PlaceholderWindow,

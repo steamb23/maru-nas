@@ -104,3 +104,52 @@
     transition: none;
   }
 }
+
+/* 페이지 위쪽 안내(SettingsNotice) */
+.settings-notice {
+  margin: 0 0 16px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--hover-bg);
+  font-size: 13px;
+}
+
+.settings-notice.error {
+  background: light-dark(#fdecea, #4a2422);
+  color: light-dark(#a1261d, #f4b4ae);
+}
+
+/* 절 아래의 작은 안내와 버튼 줄 */
+.settings-hint {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.settings-hint.error {
+  color: light-dark(#c5352b, #f28b82);
+}
+
+.settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+/* 선택 상자 */
+.settings-select {
+  min-width: 160px;
+  padding: 5px 8px;
+  border: 1px solid var(--window-border);
+  border-radius: 6px;
+  background: var(--window-bg);
+  font: inherit;
+  color: inherit;
+}
+
+.settings-select:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  outline-offset: 1px;
+}

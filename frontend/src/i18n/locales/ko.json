@@ -278,6 +278,42 @@
         "pretendard": "온마루 로고의 글자에 썼으며 윤곽선으로 바꿔 넣었습니다.",
         "go": "백엔드 실행 파일에 표준 라이브러리가 들어 있습니다."
       }
+    },
+    "common": {
+      "loading": "설정을 불러오는 중…",
+      "loadFailed": "설정을 불러오지 못했습니다. 다시 시도하는 중…",
+      "saveFailed": "바꾼 설정을 저장하지 못했습니다. 다음에 바꿀 때 함께 저장합니다."
+    },
+    "screen": {
+      "theme": "테마",
+      "modes": {
+        "auto": "자동",
+        "light": "라이트",
+        "dark": "다크"
+      },
+      "wallpaper": "바탕화면",
+      "following": "관리자가 정한 기본값을 따르고 있습니다.",
+      "useDefault": "기본값 사용"
+    },
+    "image": {
+      "upload": "이미지 올리기…",
+      "uploading": "올리는 중…",
+      "uploaded": "올린 이미지",
+      "delete": "올린 이미지 지우기",
+      "deleteButton": "지우기",
+      "deleteConfirm": "올린 이미지를 지울까요? 이 이미지를 쓰고 있었다면 기본 배경으로 바뀝니다.",
+      "hint": "PNG, JPEG, WebP 이미지를 20MB까지 올릴 수 있습니다.",
+      "tooLarge": "이미지가 너무 큽니다. 20MB 이하로 올려 주세요.",
+      "unsupported": "PNG, JPEG, WebP 이미지만 올릴 수 있습니다.",
+      "failed": "이미지를 올리거나 지우지 못했습니다."
+    },
+    "general": {
+      "language": "언어",
+      "languageDesc": "이 브라우저에만 적용됩니다.",
+      "motion": "동작",
+      "animations": "애니메이션",
+      "animationsDesc": "창·메뉴·배경 전환에 애니메이션을 씁니다.",
+      "reducedMotion": "기기의 '동작 줄이기'가 켜져 있어 애니메이션이 꺼져 있습니다."
     }
   },
   "appearance": {

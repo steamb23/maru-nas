@@ -278,6 +278,42 @@
         "pretendard": "Used for the lettering in the Onmaru logo, converted to outlines.",
         "go": "Standard library compiled into the backend."
       }
+    },
+    "common": {
+      "loading": "Loading settings…",
+      "loadFailed": "Couldn't load settings. Retrying…",
+      "saveFailed": "Couldn't save your change. It will be saved with your next change."
+    },
+    "screen": {
+      "theme": "Theme",
+      "modes": {
+        "auto": "Automatic",
+        "light": "Light",
+        "dark": "Dark"
+      },
+      "wallpaper": "Desktop wallpaper",
+      "following": "Using the default set by an administrator.",
+      "useDefault": "Use default"
+    },
+    "image": {
+      "upload": "Upload image…",
+      "uploading": "Uploading…",
+      "uploaded": "Uploaded image",
+      "delete": "Delete uploaded image",
+      "deleteButton": "Delete",
+      "deleteConfirm": "Delete the uploaded image? If it's in use, the default background will be shown instead.",
+      "hint": "PNG, JPEG or WebP, up to 20 MB.",
+      "tooLarge": "The image is too large. Upload an image of 20 MB or less.",
+      "unsupported": "Only PNG, JPEG and WebP images can be uploaded.",
+      "failed": "Couldn't upload or delete the image."
+    },
+    "general": {
+      "language": "Language",
+      "languageDesc": "Applies to this browser only.",
+      "motion": "Motion",
+      "animations": "Animations",
+      "animationsDesc": "Animate windows, menus and background changes.",
+      "reducedMotion": "Reduce motion is on in your device settings, so animations stay off."
     }
   },
   "appearance": {

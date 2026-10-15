@@ -1,0 +1,223 @@
+/* 테마·배경 고르기(pickers.tsx). 칸은 숨긴 라디오 버튼을 품은 label이다. */
+.picker-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* 테마 */
+.theme-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  gap: 12px;
+}
+
+.theme-option {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid var(--window-border);
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.theme-option:hover {
+  background: var(--hover-bg);
+}
+
+.theme-option:has(.picker-input:checked) {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.theme-option:has(.picker-input:focus-visible) {
+  outline: 2px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  outline-offset: 2px;
+}
+
+.theme-option:has(.picker-input:disabled) {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.theme-preview {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  height: 72px;
+  padding: 10px 0 0 14px;
+  overflow: hidden;
+  border-radius: 6px;
+}
+
+/* 미리보기 색은 실제 토큰이 아니라 각 테마의 모습을 고정해 그린다. */
+.theme-preview-light {
+  --pv-bg: #c9d6e8;
+  --pv-window: #ffffff;
+  --pv-bar: #e1e6ee;
+  --pv-line: #d3d8df;
+  background: var(--pv-bg);
+}
+
+.theme-preview-dark {
+  --pv-bg: #2a3243;
+  --pv-window: #23262b;
+  --pv-bar: #353a42;
+  --pv-line: #454b55;
+  background: var(--pv-bg);
+}
+
+.theme-preview-auto {
+  --pv-window: #ffffff;
+  --pv-bar: #e1e6ee;
+  --pv-line: #d3d8df;
+  background: linear-gradient(135deg, #c9d6e8 50%, #2a3243 50%);
+}
+
+.theme-preview-window {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  height: 100%;
+  border-radius: 6px 0 0;
+  background: var(--pv-window);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.2);
+}
+
+.theme-preview-auto .theme-preview-window {
+  background: linear-gradient(135deg, #ffffff 50%, #23262b 50%);
+}
+
+.theme-preview-bar {
+  height: 12px;
+  border-radius: 6px 0 0;
+  background: var(--pv-bar);
+}
+
+.theme-preview-auto .theme-preview-bar {
+  background: linear-gradient(135deg, #e1e6ee 50%, #353a42 50%);
+}
+
+.theme-preview-line {
+  width: 70%;
+  height: 6px;
+  margin-left: 10px;
+  border-radius: 3px;
+  background: var(--pv-line);
+}
+
+.theme-preview-auto .theme-preview-line {
+  background: #9aa3ad;
+}
+
+.theme-preview-line.short {
+  width: 45%;
+}
+
+.theme-option-name {
+  text-align: center;
+}
+
+/* 배경 */
+.wallpaper-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+  gap: 12px;
+}
+
+.wallpaper-option {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  text-align: center;
+  cursor: pointer;
+}
+
+.wallpaper-swatch {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 16 / 10;
+  border-radius: 8px;
+  box-shadow: inset 0 0 0 1px var(--window-border);
+}
+
+.wallpaper-option:hover .wallpaper-swatch {
+  filter: brightness(1.08);
+}
+
+.wallpaper-option:has(.picker-input:checked) .wallpaper-swatch {
+  box-shadow:
+    0 0 0 2px var(--window-bg),
+    0 0 0 4px var(--accent);
+}
+
+.wallpaper-option:has(.picker-input:focus-visible) .wallpaper-swatch,
+.wallpaper-upload:focus-visible .wallpaper-swatch {
+  outline: 2px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  outline-offset: 5px;
+}
+
+.wallpaper-upload:focus-visible {
+  outline: none;
+}
+
+.wallpaper-option:has(.picker-input:disabled),
+.wallpaper-upload:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.wallpaper-option-name {
+  overflow: hidden;
+  font-size: 12px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.wallpaper-upload .wallpaper-swatch {
+  border: 1px dashed var(--text-muted);
+  box-shadow: none;
+  color: var(--text-muted);
+}
+
+.wallpaper-image-option {
+  position: relative;
+  min-width: 0;
+}
+
+.wallpaper-delete {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: rgb(0 0 0 / 0.55);
+  color: #fff;
+  cursor: pointer;
+}
+
+.wallpaper-delete:hover:not(:disabled),
+.wallpaper-delete:focus-visible {
+  background: #d93025;
+  outline: none;
+}
+
+.wallpaper-delete:disabled {
+  cursor: default;
+}
