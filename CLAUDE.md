@@ -74,7 +74,7 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 | 명령 | 내용 |
 |---|---|
 | `make dev` | 개발 서버. 백엔드 `127.0.0.1:8090`(`go run`) + Vite `0.0.0.0:5173`. 접속은 `http://<NAS-IP>:5173/`. Ctrl+C로 둘 다 종료. 실제 OMV에 연결하므로 `frontend/.env.local`에 `ONMARU_OMV_URL`(이 NAS의 OMV 주소)을 둔다 |
-| `make dev-fake` | `make dev`와 같지만 가짜 OMV(`127.0.0.1:8091`)를 함께 띄워 연결한다. `FAKEOMV_TIMEOUT=1m make dev-fake`처럼 세션 timeout을 분 단위로 바꿀 수 있다 |
+| `make dev-fake` | `make dev`와 같지만 가짜 OMV(`127.0.0.1:8091`)를 함께 띄워 연결한다. `FAKEOMV_TIMEOUT=1m make dev-fake`처럼 세션 timeout을 분 단위로 바꿀 수 있다. 포트는 `ONMARU_LISTEN`(백엔드), `FAKEOMV_LISTEN`(가짜 OMV), `DEV_PORT`(Vite)로 바꾼다 |
 | `make build` | 프론트 빌드 → `backend/internal/web/static/dist/` → `bin/onmaru` 단일 실행 파일 |
 | `make lint` | `gofmt -l`, `go vet`, oxlint, `tsc -b` |
 | `make test` | `go test -count=1 ./...`(모듈 밖 생성물 검사가 캐시로 통과하지 않게), `vitest run` |
@@ -119,8 +119,14 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 
 1. **Go 테스트**: 가짜 OMV(`internal/omv/omvfake`)를 `httptest`로 띄워 실제 클라이언트·핸들러와 연결한다. 상세는 `.claude/rules/backend.md`
 2. **Vitest**: 저장소·클라이언트·순수 함수
-3. **브라우저(Playwright)**: `make dev-fake`로 띄우고 `http://<NAS-IP>:5173/`에 가짜 계정으로 로그인해 확인한다. 만료 확인은 `FAKEOMV_TIMEOUT=1m make dev-fake`
-   - 사용자가 `make dev`(실제 OMV 연결)를 띄워 두었을 수 있다. 로그인하기 전에 백엔드 로그의 `omv:` 주소가 가짜 OMV(`127.0.0.1:8091`)인지 확인한다. `scripts/dev.sh`는 개발 서버 포트가 이미 쓰이고 있으면 시작하지 않는다
+3. **브라우저(Playwright)**: Claude가 띄우는 개발 서버는 **기본 포트(8090·8091·5173)를 쓰지 않는다**. 사용자가 기본 포트로 자기 개발 서버를 띄울 수 있게, 저장소 루트에서 다른 포트와 상태 디렉터리로 띄운다
+   ```sh
+   DEV_PORT=5174 ONMARU_LISTEN=127.0.0.1:8190 FAKEOMV_LISTEN=127.0.0.1:8191 \
+     ONMARU_STATE_DIR="$PWD/.dev-state/fake-claude" make dev-fake
+   ```
+   `http://<NAS-IP>:5174/`에 가짜 계정으로 로그인해 확인한다. 만료 확인은 앞에 `FAKEOMV_TIMEOUT=1m`을 더한다. 확인이 끝나면 서버를 내린다
+   - 로그인하기 전에 백엔드 로그의 `omv:` 주소가 가짜 OMV(`127.0.0.1:8191`)인지 확인한다. `scripts/dev.sh`는 개발 서버 포트가 이미 쓰이고 있으면 시작하지 않는다
+   - 상태 디렉터리를 나누는 것은 사용자의 `make dev-fake`와 같은 사용자 설정 파일(`.dev-state/fake`)을 동시에 쓰지 않기 위해서다
    - 탭을 여러 개 열면 뒤쪽 탭에 마우스 입력이 전달되지 않을 수 있다. 다른 탭 확인이 끝나면 닫거나 브라우저를 새로 연다
 4. **실제 OMV**: 사용자가 `make dev`로 직접 확인한다. Claude는 단계마다 확인 체크리스트를 제시한다
 

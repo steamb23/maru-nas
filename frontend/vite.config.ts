@@ -11,6 +11,7 @@ export default defineConfig(({ mode }) => {
   //   DEV_HOST            개발 서버 바인딩 주소 (기본: 모든 인터페이스)
   //   DEV_ALLOWED_HOSTS   IP가 아닌 호스트 이름으로 접속할 때 허용할 이름 (쉼표 구분)
   //   ONMARU_LISTEN      백엔드 주소 (기본: 127.0.0.1:8090)
+  //   DEV_PORT           개발 서버 포트 (기본: 5173). scripts/dev.sh의 포트 검사와 같은 값을 쓴다
   const env = { ...loadEnv(mode, fromHere('.'), ''), ...process.env }
   const backend = env.ONMARU_LISTEN || '127.0.0.1:8090'
 
@@ -18,6 +19,8 @@ export default defineConfig(({ mode }) => {
     // 상대 경로로 빌드해 어떤 경로 접두사 아래에서도 동작하게 한다. 대시보드를 둘 호스트·경로는
     // 리버스 프록시가 정한다(접두사 아래에 둘 때는 프록시가 접두사를 떼고 넘긴다).
     base: './',
+    // DEV_PORT로 개발 서버를 하나 더 띄울 때 의존성 최적화 캐시(node_modules/.vite)를 함께 쓰지 않게 나눈다.
+    cacheDir: env.DEV_PORT ? `node_modules/.vite-${env.DEV_PORT}` : undefined,
     plugins: [react()],
     resolve: {
       alias: {
@@ -29,7 +32,7 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       host: env.DEV_HOST || true,
-      port: 5173,
+      port: Number(env.DEV_PORT) || 5173,
       strictPort: true,
       allowedHosts: env.DEV_ALLOWED_HOSTS ? env.DEV_ALLOWED_HOSTS.split(',') : [],
       // 아이콘 서브모듈이 Vite 루트 밖에 있으므로 vendor/icons만 추가로 허용한다.

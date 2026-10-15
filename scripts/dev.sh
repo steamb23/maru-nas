@@ -38,8 +38,8 @@ fi
 export ONMARU_STATE_DIR="${ONMARU_STATE_DIR:-$root/.dev-state/$([[ $fake == 1 ]] && echo fake || echo real)}"
 
 # 이미 떠 있는 서버가 있으면 시작하지 않는다. 일부만 떠서 다른 서버(예: 실제 OMV에 연결된
-# 백엔드)에 붙는 일을 막는다. Vite 포트는 vite.config.ts의 server.port와 맞춘다.
-ports=("${ONMARU_LISTEN##*:}" 5173)
+# 백엔드)에 붙는 일을 막는다. Vite 포트(DEV_PORT)는 vite.config.ts의 server.port와 같은 기본값을 쓴다.
+ports=("${ONMARU_LISTEN##*:}" "${DEV_PORT:-5173}")
 [[ $fake == 1 ]] && ports+=("${FAKEOMV_LISTEN##*:}")
 for port in "${ports[@]}"; do
   if (exec 3<>"/dev/tcp/127.0.0.1/$port") 2>/dev/null; then
