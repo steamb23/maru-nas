@@ -122,6 +122,17 @@ valid_omv_url() {
   [[ -z ${BASH_REMATCH[3]} ]] || valid_port "${BASH_REMATCH[3]}"
 }
 
+# valid_workbench_url: 백엔드 -workbench-url과 같은 조건. 빈 값(끔), http(s)://호스트[/경로],
+# 또는 /·./·../로 시작하는 경로(대시보드 기준). query·fragment·공백·사용자 정보는 받지 않는다.
+valid_workbench_url() {
+  local u=$1
+  [[ -z $u ]] && return 0
+  [[ $u == *[?#[:space:]]* ]] && return 1
+  [[ $u =~ ^https?://[^/@]+(/.*)?$ ]] && return 0
+  [[ $u == //* ]] && return 1
+  [[ $u == /* || $u == . || $u == .. || $u == ./* || $u == ../* ]]
+}
+
 # omv_forces_https: OMV의 "Force SSL/TLS"가 켜져 있으면 평문 포트가 https로 리다이렉트한다.
 # 백엔드의 OMV 클라이언트는 자체 서명 인증서를 받지 않으므로 이 구성에서는 로그인할 수 없다.
 omv_forces_https() {
@@ -160,6 +171,7 @@ usage() {
   --listen ADDR              127.0.0.1:8090, unix:$SOCKET_PATH, 또는 host:port
   --allow-non-loopback       루프백이 아닌 --listen 주소를 허용합니다(위험)
   --omv-url URL              OMV 웹 UI 주소(루프백)
+  --workbench-url URL        브라우저에서 OMV 웹 UI를 열 주소(빈 값이면 OMV 워크벤치 앱을 숨깁니다)
   --smart-refresh-at HH:MM   SMART 정보를 매일 다시 가져올 시각
 
 일반 사용자는 sudo 없이 실행하세요. 빌드는 그 사용자로 하고, 설치 단계만 sudo로 실행합니다.
@@ -181,6 +193,7 @@ Settings (only the missing ones are asked):
   --listen ADDR              127.0.0.1:8090, unix:$SOCKET_PATH, or host:port
   --allow-non-loopback       allow a non-loopback --listen address (dangerous)
   --omv-url URL              OMV web UI address (loopback)
+  --workbench-url URL        OMV web UI address for browsers (empty hides the OMV Workbench app)
   --smart-refresh-at HH:MM   daily SMART refresh time
 
 Normal users should run it without sudo: the build runs as that user and only the install step uses sudo.
@@ -290,14 +303,18 @@ S_LISTEN=""
 S_ALLOW=false
 S_OMV=""
 S_SMART=""
+# OMV 워크벤치 주소는 빈 값(끔)도 정한 값이므로 정했는지를 따로 둔다.
+S_WORKBENCH=""
+S_WORKBENCH_SET=false
 
 settings_complete() {
-  [[ -n $S_USER && -n $S_LISTEN && -n $S_OMV && -n $S_SMART ]]
+  [[ -n $S_USER && -n $S_LISTEN && -n $S_OMV && -n $S_SMART && $S_WORKBENCH_SET == true ]]
 }
 
 # settings_args: 2단계(--service-install)로 넘길 옵션을 한 줄에 하나씩 출력한다.
 settings_args() {
-  printf '%s\n' --user "$S_USER" --listen "$S_LISTEN" --omv-url "$S_OMV" --smart-refresh-at "$S_SMART"
+  printf '%s\n' --user "$S_USER" --listen "$S_LISTEN" --omv-url "$S_OMV" --smart-refresh-at "$S_SMART" \
+    --workbench-url "$S_WORKBENCH"
   if [[ $S_ALLOW == true ]]; then
     printf '%s\n' --allow-non-loopback
   fi
@@ -319,6 +336,11 @@ load_installed_settings() {
   fi
   [[ -n $S_OMV ]] || S_OMV=$(env_get ONMARU_OMV_URL)
   [[ -n $S_SMART ]] || S_SMART=$(env_get ONMARU_SMART_REFRESH_AT)
+  # 빈 값도 정한 값(끔)이므로 키가 있는지로 판단한다.
+  if [[ $S_WORKBENCH_SET != true ]] && grep -q '^ONMARU_WORKBENCH_URL=' "$ENV_FILE"; then
+    S_WORKBENCH=$(env_get ONMARU_WORKBENCH_URL)
+    S_WORKBENCH_SET=true
+  fi
 }
 
 # ask_settings: 아직 정하지 않은 설정만 묻는다. 기존 설치가 있으면 그 값을 기본값으로 쓴다.
@@ -375,6 +397,24 @@ ask_settings() {
     ask "$(t "Daily SMART refresh time (HH:MM, local time)" "SMART 정보를 매일 다시 가져올 시각(HH:MM, 서버 시간)")" \
       "${smart_def:-00:00}"
     S_SMART=$REPLY
+  fi
+
+  # 5. OMV 워크벤치 주소(브라우저 기준). ask는 빈 입력이면 기본값을 쓰므로 끄는 값은 -로 받는다.
+  if [[ $S_WORKBENCH_SET != true ]]; then
+    local wb_def
+    wb_def=$(env_get ONMARU_WORKBENCH_URL)
+    t "The dashboard's \"OMV Workbench\" app opens the OMV web UI in a new browser tab at this address.
+  Enter the address you open OMV with in the browser, e.g. https://nas.example.lan/
+  (if the dashboard is under a path on the same host as OMV, / also works). Enter - to hide the app." \
+      "대시보드의 \"OMV 워크벤치\" 앱이 이 주소로 OMV 웹 UI를 새 탭에 엽니다.
+  브라우저에서 OMV에 접속하는 주소를 입력하세요. 예: https://nas.example.lan/
+  (대시보드를 OMV와 같은 호스트의 경로 아래에 두었다면 /도 됩니다). -를 입력하면 앱을 숨깁니다."
+    echo
+    ask "$(t "OMV Workbench address for browsers (- to turn off)" "브라우저에서 OMV 워크벤치를 열 주소(끄려면 -)")" \
+      "${wb_def:--}"
+    [[ $REPLY == - ]] && REPLY=""
+    S_WORKBENCH=$REPLY
+    S_WORKBENCH_SET=true
   fi
 }
 
@@ -475,6 +515,9 @@ validate_settings() {
   valid_omv_url "$S_OMV" ||
     die "$(t "OMV address must be a loopback http(s) URL: $S_OMV" "OMV 주소는 루프백 http(s) URL이어야 합니다: $S_OMV")"
   [[ $S_SMART =~ ^([01][0-9]|2[0-3]):[0-5][0-9]$ ]] || die "$(t "invalid time: $S_SMART" "시각이 올바르지 않습니다: $S_SMART")"
+  valid_workbench_url "$S_WORKBENCH" ||
+    die "$(t "OMV Workbench address must start with http:// or https://, or be a path starting with / or ./ or ../ (no query or fragment): $S_WORKBENCH" \
+      "OMV 워크벤치 주소는 http:// 또는 https://로 시작하거나 /·./·../로 시작하는 경로여야 합니다(query·fragment 없이): $S_WORKBENCH")"
 }
 
 # check_settings: validate_settings. --upgrade에서 기존 설치의 값이 이 버전의 검사를 통과하지 못하면
@@ -488,7 +531,7 @@ check_settings() {
 }
 
 show_summary() {
-  local allow_note=""
+  local allow_note="" workbench=${S_WORKBENCH:-"($(t "off" "끔"))"}
   [[ $S_ALLOW == true ]] && allow_note="  ($(t "non-loopback allowed" "루프백 외 주소 허용"))"
   if [[ $LANG_UI == ko ]]; then
     cat <<EOF
@@ -498,6 +541,7 @@ show_summary() {
   서비스 사용자 $S_USER
   수신          $S_LISTEN$allow_note
   OMV 주소      $S_OMV
+  OMV 워크벤치  $workbench
   SMART 갱신    $S_SMART
   상태 디렉터리 $STATE_DIR
   설정 파일     $UNIT_FILE, $ENV_FILE
@@ -511,6 +555,7 @@ Summary
   service user  $S_USER
   listen        $S_LISTEN$allow_note
   OMV address   $S_OMV
+  OMV Workbench $workbench
   SMART refresh $S_SMART
   state dir     $STATE_DIR
   files         $UNIT_FILE, $ENV_FILE
@@ -545,7 +590,7 @@ install_service() {
   else
     check_settings
   fi
-  local user=$S_USER listen=$S_LISTEN allow=$S_ALLOW omv_url=$S_OMV smart_at=$S_SMART group
+  local user=$S_USER listen=$S_LISTEN allow=$S_ALLOW omv_url=$S_OMV smart_at=$S_SMART workbench_url=$S_WORKBENCH group
 
   if ! id -u "$user" >/dev/null 2>&1; then
     info "$(t "Creating system user $user" "시스템 사용자 $user 생성")"
@@ -574,6 +619,7 @@ ONMARU_LISTEN=$listen
 ONMARU_ALLOW_NON_LOOPBACK=$allow
 ONMARU_OMV_URL=$omv_url
 ONMARU_SMART_REFRESH_AT=$smart_at
+ONMARU_WORKBENCH_URL=$workbench_url
 EOF
 
   # 특정 IP에 바인딩하면 부팅 중 그 주소가 생긴 뒤에 시작해야 한다.
@@ -725,7 +771,7 @@ main() {
   while (($#)); do
     # --name=value 형식은 --name value로 나눈다.
     case $1 in
-      --user=* | --listen=* | --omv-url=* | --smart-refresh-at=* | --lang=*)
+      --user=* | --listen=* | --omv-url=* | --smart-refresh-at=* | --workbench-url=* | --lang=*)
         set -- "${1%%=*}" "${1#*=}" "${@:2}"
         ;;
     esac
@@ -747,6 +793,13 @@ main() {
           --omv-url) S_OMV=$2 ;;
           --smart-refresh-at) S_SMART=$2 ;;
         esac
+        shift
+        ;;
+      # 빈 값(끔)도 받는다.
+      --workbench-url)
+        [[ $# -ge 2 ]] || { usage >&2; exit 2; }
+        S_WORKBENCH=$2
+        S_WORKBENCH_SET=true
         shift
         ;;
       --allow-non-loopback) S_ALLOW=true ;;

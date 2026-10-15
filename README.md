@@ -18,7 +18,7 @@ OpenMediaVault 8 위에 올리는 데스크톱형 웹 대시보드입니다. 창
 
 일반 사용자 계정이라면 **sudo 없이** 실행해 주세요. 인터랙티브 설치 스크립트이며 다음 순서로 진행됩니다.
 
-1. **설정 입력**: 서비스 사용자, 수신 방식, OMV 주소, SMART 갱신 시각을 묻고 요약을 보여 준 뒤 확인을 받습니다. 입력은 이 단계에서 모두 끝납니다.
+1. **설정 입력**: 서비스 사용자, 수신 방식, OMV 주소, SMART 갱신 시각, OMV 워크벤치 주소를 묻고 요약을 보여 준 뒤 확인을 받습니다. 입력은 이 단계에서 모두 끝납니다.
 2. **빌드**: 실행한 계정으로 빌드합니다. 처음 클론한 상태라면 아이콘 서브모듈과 npm 의존성부터 준비합니다(`make build` → `bin/onmaru`).
 3. **설치**: root 권한이 필요한 단계입니다. 일반 사용자라면 스크립트가 1단계의 설정을 옵션으로 넘겨 스스로 `sudo ./install.sh --service-install ...`을 실행하므로 비밀번호만 한 번 입력하면 됩니다. root 계정만 있는 환경이라면 sudo 없이 그대로 이어서 진행합니다.
 
@@ -43,12 +43,13 @@ OpenMediaVault 8 위에 올리는 데스크톱형 웹 대시보드입니다. 창
 | `--allow-non-loopback` | 루프백이 아닌 `--listen` 주소를 허용합니다(위험). |
 | `--omv-url URL` | OMV 웹 UI 주소입니다(루프백). |
 | `--smart-refresh-at HH:MM` | SMART 정보를 매일 다시 가져올 시각입니다. |
+| `--workbench-url URL` | 브라우저에서 OMV 웹 UI를 열 주소입니다. 빈 값(`--workbench-url ''`)이면 "OMV 워크벤치" 앱을 숨깁니다. 질문에서는 `-`를 입력하면 끕니다. |
 
 설정 옵션으로 준 항목은 묻지 않습니다. 옵션 없이 실행할 때는 설정을 모두 주더라도 요약을 보여 주고 진행 여부를 확인합니다. 확인까지 생략하는 것은 root로 `--service-install`에 설정을 모두 준 경우뿐이므로, 자동화에는 다음과 같이 사용합니다(빌드는 미리 해 두어야 합니다).
 
 ```sh
 ./install.sh --service-install --user onmaru --listen unix:/run/onmaru/onmaru.sock \
-  --omv-url http://127.0.0.1 --smart-refresh-at 00:00
+  --omv-url http://127.0.0.1 --smart-refresh-at 00:00 --workbench-url https://nas.example.lan/
 ```
 
 root로 실행했는데 저장소의 소유자가 root가 아니면(`sudo ./install.sh`, `sudo -i`, `su` 등) 빌드를 건너뜁니다. root로 빌드하면 저장소에 root 소유 파일이 생기고, sudo 환경의 PATH에는 사용자가 설치한 Go·npm이 없을 수 있기 때문입니다. 이때는 기존 `bin/onmaru`로 설치만 할지 물어봅니다(`--upgrade`이면 묻지 않고 멈춥니다).
@@ -85,8 +86,18 @@ git pull
 | `-cookie-path` | `ONMARU_COOKIE_PATH` | `/` | 브라우저가 보는 대시보드 경로(세션 쿠키의 Path)입니다. 경로 접두사 아래에 둘 때 좁힐 수 있습니다. |
 | `-state-dir` | `ONMARU_STATE_DIR`, `STATE_DIRECTORY` | (없음) | 사용자 설정을 저장할 디렉터리입니다(`users/<사용자 이름>.json`). 비워 두면 메모리에만 보관하므로 재시작하면 사라집니다. systemd의 `StateDirectory=`가 `STATE_DIRECTORY`를 넘겨줍니다. |
 | `-smart-refresh-at` | `ONMARU_SMART_REFRESH_AT` | `00:00` | SMART 정보를 하루 한 번 다시 가져오는 기준 시각입니다(`HH:MM`, 서버 로컬 시간). 마지막 조회가 이 시각 이전이면 다음 접속 때 다시 가져옵니다. SMART 조회는 대기 중인 디스크를 깨우므로 자동 주기 조회는 하지 않습니다. |
+| `-workbench-url` | `ONMARU_WORKBENCH_URL` | (없음) | 브라우저에서 OMV 웹 UI(workbench)를 열 주소입니다. 아래 "OMV 워크벤치 열기"를 참고해 주세요. 비워 두면 "OMV 워크벤치" 앱과 프로필 메뉴 항목이 보이지 않습니다. |
 
 세션은 백엔드 메모리에만 있으므로 백엔드를 재시작하면 모든 사용자가 다시 로그인해야 합니다. `/var/lib/onmaru`에는 대시보드 자신의 상태만 들어 있으며 OMV 설정과는 관계가 없습니다. 백업할 때 이 디렉터리를 함께 복사하면 사용자별 위젯 배치와 바탕화면 바로가기가 유지됩니다.
+
+### OMV 워크벤치 열기
+
+`-workbench-url`을 설정하면 "모든 앱"·바탕화면 바로가기의 "OMV 워크벤치"와 프로필 메뉴의 "OMV 워크벤치 열기"가 OMV 웹 UI를 브라우저의 새 탭으로 엽니다.
+
+- 값은 브라우저에서 OMV에 접속하는 주소입니다(예: `https://nas.example.lan/`). `http://`·`https://`로 시작하는 주소 또는 대시보드 기준 경로(`/`, `./`, `../`)를 받습니다. 대시보드를 OMV와 같은 호스트의 경로 접두사(예: `/desk/`) 아래에 두었다면 `/`도 됩니다. 쿼리·프래그먼트는 받지 않으며, `nas.example.lan/`처럼 `http(s)://`가 없는 주소는 거부합니다.
+- 같은 탭을 다시 씁니다. 이미 연 OMV 탭이 있으면 새 탭을 만들지 않고 그 탭에서 OMV 첫 화면으로 이동합니다.
+- OMV 로그인은 그 탭에서 따로 합니다. OMV는 탭마다 로그인 상태를 따로 두고 비밀번호 없이 로그인하는 방법을 제공하지 않으므로, 대시보드 로그인을 OMV 탭에 넘길 수 없습니다. 탭을 닫지 않고 다시 쓰는 동안에는 로그인이 유지됩니다. 처음 로그인하는 브라우저라면 OMV가 "새 브라우저 로그인" 알림 메일을 보낼 수 있습니다.
+- 대시보드 안의 창(iframe)으로 띄우지 않는 이유: OMV 웹 UI는 `X-Frame-Options: SAMEORIGIN`을 보내므로 대시보드와 출처(호스트·포트)가 같을 때만 iframe에 들어갈 수 있습니다. 보안 헤더를 끄는 방식은 쓰지 않습니다.
 
 ## 리버스 프록시
 
