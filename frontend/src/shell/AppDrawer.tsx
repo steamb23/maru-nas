@@ -58,8 +58,8 @@ const GRID_ID = `${APP_DRAWER_ID}-grid`
 const { close } = useAppDrawerStore.getState()
 
 // 바깥을 눌러도 닫지 않는 곳: 앱 타일, 검색 상자, 타일 메뉴, 작업표시줄의 "모든 앱" 버튼(누르면 닫는다)과
-// 창 버튼 목록(누르면 Taskbar가 닫고 그 창을 보인다. 여기서 먼저 닫으면 활성 창 버튼이 창을 최소화한다).
-const KEEP_OPEN = '.app-drawer-tile, .app-drawer-search, .context-menu, .taskbar-launcher, .taskbar-items'
+// 창 버튼(누르면 Taskbar가 닫고 그 창을 보인다. 여기서 먼저 닫으면 활성 창 버튼이 창을 최소화한다).
+const KEEP_OPEN = '.app-drawer-tile, .app-drawer-search, .context-menu, .taskbar-launcher, .taskbar-items .task'
 
 // 저장 목록을 바꾼다. 계산은 늘 저장소의 최신 목록으로 한다.
 const updateShortcuts = (change: (apps: AppId[]) => AppId[]) => {
