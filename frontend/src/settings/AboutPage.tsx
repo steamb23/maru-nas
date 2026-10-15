@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { fetchAbout } from '../api/client'
 import type { AboutResponse } from '../api/types.gen'
 import lockupUrl from '../assets/logo/onmaru-lockup.svg?url'
-import { BRAND_NAME, BRAND_ROMANIZED, BRAND_TAGLINE } from '../brand'
+import { BRAND_COPYRIGHT, BRAND_NAME, BRAND_ROMANIZED, BRAND_TAGLINE } from '../brand'
 import { useLanguage } from '../i18n'
 import { formatRevisionTime, shortRevision } from './about/about'
 import { NOTICES } from './about/notices'
@@ -64,6 +64,7 @@ export function AboutPage() {
       </SettingsSection>
 
       <SettingsSection title={t('settings.about.license')}>
+        <p className="about-copyright selectable">{BRAND_COPYRIGHT}</p>
         <p className="about-text">{t('settings.about.licenseText')}</p>
       </SettingsSection>
 

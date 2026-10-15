@@ -26,6 +26,11 @@
   font-variant-numeric: tabular-nums;
 }
 
+.about-copyright {
+  margin: 0 0 4px;
+  font-weight: 600;
+}
+
 .about-text,
 .about-error {
   margin: 0;

@@ -4,3 +4,5 @@
 export const BRAND_NAME = '온마루'
 export const BRAND_ROMANIZED = 'Onmaru'
 export const BRAND_TAGLINE = 'A suspiciously normal desktop-⁠like dashboard for openmediavault.'
+// 저작권 표시. 법적 표기라 모든 언어에서 같게 둔다(정보 페이지).
+export const BRAND_COPYRIGHT = 'Copyright © 2026 by SteamB23 (steamb23@outlook.com)'
