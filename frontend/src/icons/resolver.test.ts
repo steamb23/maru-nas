@@ -36,4 +36,26 @@ describe('ICON_SOURCES', () => {
   it('출처마다 vendor/icons/<출처>/에 LICENSE 또는 NOTICE가 있다', () => {
     expect(sources.filter((s) => !licensedSources.has(s))).toEqual([])
   })
+
+  // 루트 <svg>에 SVG 이름공간이 없으면 브라우저가 이미지(mask-image 포함)로 읽지 못한다. 원본에 없으면
+  // vite.config.ts의 svgNamespace가 붙여 data URL로 넣는다. 파일 경로로 남은 아이콘은 검사하지 않는다.
+  it('data URL 아이콘은 루트 <svg>에 SVG 이름공간이 있다', () => {
+    const missing = Object.values(ICON_SOURCES).flatMap((table) =>
+      Object.entries(table)
+        .filter(([, icon]) => icon.url.startsWith('data:') && !hasSvgNamespace(decodeDataUrl(icon.url)))
+        .map(([name]) => name),
+    )
+    expect(missing).toEqual([])
+  })
 })
+
+function decodeDataUrl(url: string): string {
+  const comma = url.indexOf(',')
+  const body = url.slice(comma + 1)
+  return url.slice(0, comma).endsWith(';base64') ? atob(body) : decodeURIComponent(body)
+}
+
+function hasSvgNamespace(svg: string): boolean {
+  const root = svg.match(/<svg\b[^>]*>/)?.[0] ?? ''
+  return /\sxmlns=['"]http:\/\/www\.w3\.org\/2000\/svg['"]/.test(root)
+}

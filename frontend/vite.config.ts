@@ -1,9 +1,31 @@
 /// <reference types="vitest/config" />
+import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
-import { defineConfig, loadEnv } from 'vite'
+import { type Plugin, defineConfig, loadEnv } from 'vite'
 
 const fromHere = (p: string) => fileURLToPath(new URL(p, import.meta.url))
+
+const vendorIcons = fromHere('../vendor/icons')
+
+// Colloid의 일부 SVG(external-link-symbolic 등)는 루트 <svg>에 xmlns가 없어 브라우저가 이미지로 읽지 못한다.
+// 그러면 mask-image가 비어 아이콘이 보이지 않는다. 원본(서브모듈)은 고치지 않고, ?url로 불러올 때만
+// SVG 이름공간을 붙여 data URL로 넣는다. 따로 내보낸 .svg 파일도 같은 이유로 깨지므로 크기와 관계없이 넣는다.
+function svgNamespace(): Plugin {
+  return {
+    name: 'onmaru:svg-namespace',
+    enforce: 'pre',
+    async load(id) {
+      const [file, query = ''] = id.split('?', 2)
+      if (!file.endsWith('.svg') || !file.startsWith(`${vendorIcons}/`) || !/(^|&)url(&|$)/.test(query)) return null
+      const src = await readFile(file, 'utf8')
+      const root = src.match(/<svg\b[^>]*>/)
+      if (!root || /\sxmlns=['"]http:\/\/www\.w3\.org\/2000\/svg['"]/.test(root[0])) return null
+      const fixed = src.replace(/<svg\b/, '<svg xmlns="http://www.w3.org/2000/svg"')
+      return `export default ${JSON.stringify(`data:image/svg+xml,${encodeURIComponent(fixed)}`)}`
+    },
+  }
+}
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
@@ -21,13 +43,13 @@ export default defineConfig(({ mode }) => {
     base: './',
     // DEV_PORT로 개발 서버를 하나 더 띄울 때 의존성 최적화 캐시(node_modules/.vite)를 함께 쓰지 않게 나눈다.
     cacheDir: env.DEV_PORT ? `node_modules/.vite-${env.DEV_PORT}` : undefined,
-    plugins: [react()],
+    plugins: [svgNamespace(), react()],
     resolve: {
       alias: {
         // 기본 아이콘 테마(Colloid)의 원본 SVG.
         '@colloid': fromHere('../vendor/icons/colloid/src'),
         // 테마 밖 제3자 아이콘 출처(vendor/icons/<출처>/). src/icons/sources/에서만 쓴다.
-        '@vendor-icons': fromHere('../vendor/icons'),
+        '@vendor-icons': vendorIcons,
       },
     },
     server: {
@@ -37,7 +59,7 @@ export default defineConfig(({ mode }) => {
       allowedHosts: env.DEV_ALLOWED_HOSTS ? env.DEV_ALLOWED_HOSTS.split(',') : [],
       // 아이콘 서브모듈이 Vite 루트 밖에 있으므로 vendor/icons만 추가로 허용한다.
       // 저장소 루트 전체를 허용하면 CLAUDE.local.md 등이 LAN에 노출된다.
-      fs: { allow: [fromHere('.'), fromHere('../vendor/icons')] },
+      fs: { allow: [fromHere('.'), vendorIcons] },
       proxy: {
         // xfwd: 브라우저 IP를 X-Forwarded-For로 넘긴다(로그인 제한·OMV 인증 로그용).
         '/api': {

@@ -5,6 +5,7 @@
 - 아이콘은 경로를 직접 쓰지 말고 리졸버(`getIcon(name)`, `src/icons/resolver.ts`)를 통해 freedesktop 아이콘 이름(`folder-music`, `drive-harddisk` 등)으로 가져온다. 테마 교체는 출처 테이블만 바꾸면 되게 한다
 - 리졸버는 출처별 테이블(`src/icons/sources/<출처>.ts`, `ICON_SOURCES`)을 합친다. 테이블에 `?url` import로 한 줄씩 추가한 아이콘만 번들에 들어간다. 디렉터리 glob import는 쓰지 않는다
   - import 경로: Colloid는 `@colloid/…`(`colloid/src/`), 그 밖의 출처는 `@vendor-icons/<출처>/…`
+  - Colloid 일부 SVG(`external-link-symbolic` 등)는 루트에 `xmlns`가 없어 브라우저가 그리지 못한다. `vite.config.ts`의 `svgNamespace` 플러그인이 `?url`로 불러올 때 이름공간을 붙여 data URL로 넣으므로 서브모듈 원본을 고치지 않는다(`resolver.test.ts`가 검사)
   - `resolver.test.ts`가 출처 사이 이름 중복, README 절, 출처 폴더의 `LICENSE`·`NOTICE`를 검사한다
 - 테마별로 이름이 다른 아이콘(창 최소화 등)은 리졸버의 매핑 테이블에서 처리한다
 - 브랜드 앱 아이콘(Colloid의 Discord, Steam 등과 제3자 로고)은 실제 그 앱을 가리킬 때만 쓴다. 장식이나 대표 이미지로 쓰지 않는다
