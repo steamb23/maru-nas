@@ -425,6 +425,11 @@ type ServerOverrides struct {
 	SmartRefreshAt *string `json:"smartRefreshAt,omitempty"`
 }
 
+// AppearanceRequest는 PUT /api/preferences/appearance의 요청 본문이다. 화면 설정 전체를 바꾼다.
+type AppearanceRequest struct {
+	Appearance *AppearancePrefs `json:"appearance"`
+}
+
 // "모든 앱" 화면의 앱 정렬 방식. DrawerPrefs.Sort에 들어간다.
 const (
 	// DrawerSortRecommended는 대시보드가 정한 순서다(비슷한 기능의 앱끼리 모인다).
@@ -556,13 +561,17 @@ const (
 	ErrActionTimeout = "action_timeout"
 	// ErrConfigDirty는 OMV에 적용하지 않은 설정 변경이 있어 조작을 시작하지 않았다는 뜻이다.
 	ErrConfigDirty = "config_dirty"
+	// ErrImageTooLarge는 올린 배경 이미지가 크기 제한을 넘었다는 뜻이다.
+	ErrImageTooLarge = "image_too_large"
+	// ErrUnsupportedImage는 올린 파일이 받는 이미지 형식(PNG, JPEG, WebP)이 아니라는 뜻이다.
+	ErrUnsupportedImage = "unsupported_image"
 )
 
 // ErrorResponse는 2xx가 아닌 상태 코드와 함께 반환된다.
 type ErrorResponse struct {
 	Error string `json:"error"`
 	// Code는 화면에서 분기할 때 쓰는 오류 종류다. 없을 수 있다.
-	Code string `json:"code,omitempty" tstype:"'invalid_credentials' | 'rate_limited' | 'challenge_failed' | 'challenge_expired' | 'omv_unavailable' | 'unauthorized' | 'bad_request' | 'rpc_forbidden' | 'admin_required' | 'plugin_missing' | 'omv_error' | 'action_busy' | 'action_failed' | 'action_timeout' | 'config_dirty'"`
+	Code string `json:"code,omitempty" tstype:"'invalid_credentials' | 'rate_limited' | 'challenge_failed' | 'challenge_expired' | 'omv_unavailable' | 'unauthorized' | 'bad_request' | 'rpc_forbidden' | 'admin_required' | 'plugin_missing' | 'omv_error' | 'action_busy' | 'action_failed' | 'action_timeout' | 'config_dirty' | 'image_too_large' | 'unsupported_image'"`
 	// RetryAfterSeconds는 rate_limited일 때 다시 시도할 수 있기까지 남은 초다.
 	RetryAfterSeconds int `json:"retryAfterSeconds,omitempty"`
 }

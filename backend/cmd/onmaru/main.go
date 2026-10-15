@@ -69,7 +69,12 @@ func main() {
 		log.Fatal(err)
 	}
 
-	var store prefs.Store
+	// store는 사용자 설정, 전역 설정, 배경 이미지를 함께 저장한다.
+	var store interface {
+		prefs.Store
+		prefs.SiteStore
+		prefs.ImageStore
+	}
 	if *stateDir == "" {
 		log.Printf("no state directory: preferences will not persist across restarts")
 		store = prefs.NewMemoryStore()
@@ -100,6 +105,8 @@ func main() {
 			Addons:       builtin.New(deps),
 			Plugins:      plugins,
 			Prefs:        store,
+			Site:         store,
+			Images:       store,
 			CookiePath:   *cookiePath,
 			WorkbenchURL: *workbenchURL,
 		}),

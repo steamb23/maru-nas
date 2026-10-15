@@ -154,6 +154,21 @@ func (b *browser) do(method, path string, body any) *httptest.ResponseRecorder {
 	if method == http.MethodPost || method == http.MethodPut {
 		req.Header.Set("Content-Type", "application/json")
 	}
+	return b.send(req)
+}
+
+// raw는 JSON이 아닌 본문(올리는 이미지 등)을 contentType으로 보낸다. contentType이 비어 있으면 헤더를 넣지 않는다.
+func (b *browser) raw(method, path, contentType string, body []byte) *httptest.ResponseRecorder {
+	b.e.t.Helper()
+	req := httptest.NewRequest(method, path, bytes.NewReader(body))
+	if contentType != "" {
+		req.Header.Set("Content-Type", contentType)
+	}
+	return b.send(req)
+}
+
+// send는 브라우저 헤더와 쿠키를 붙여 요청을 보내고 응답 쿠키를 보관한다.
+func (b *browser) send(req *http.Request) *httptest.ResponseRecorder {
 	for k, v := range b.header {
 		req.Header[k] = v
 	}

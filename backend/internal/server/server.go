@@ -63,6 +63,9 @@ type Config struct {
 	Plugins PluginDetector
 	// Prefs는 사용자 설정 저장소다. nil이면 메모리에 둔다(재시작하면 사라진다).
 	Prefs prefs.Store
+	// Site는 전역 설정, Images는 배경 이미지 저장소다. nil이면 메모리에 둔다.
+	Site   prefs.SiteStore
+	Images prefs.ImageStore
 
 	// Sessions, Limiter가 nil이면 새로 만든다.
 	Sessions *auth.Store
@@ -118,6 +121,12 @@ func New(cfg Config) http.Handler {
 	if cfg.Prefs == nil {
 		cfg.Prefs = prefs.NewMemoryStore()
 	}
+	if cfg.Site == nil {
+		cfg.Site = prefs.NewMemoryStore()
+	}
+	if cfg.Images == nil {
+		cfg.Images = prefs.NewMemoryStore()
+	}
 	h := &handler{Config: cfg, actions: newInflight(), about: buildinfo.Read()}
 
 	mux := http.NewServeMux()
@@ -139,6 +148,10 @@ func New(cfg Config) http.Handler {
 	mux.HandleFunc("PUT /api/preferences/widgets", h.requireSession(h.setWidgets))
 	mux.HandleFunc("PUT /api/preferences/shortcuts", h.requireSession(h.setShortcuts))
 	mux.HandleFunc("PUT /api/preferences/drawer", h.requireSession(h.setDrawer))
+	mux.HandleFunc("PUT /api/preferences/appearance", h.requireSession(h.setAppearance))
+	mux.HandleFunc("GET /api/preferences/wallpaper-image", h.requireSession(h.wallpaperImage))
+	mux.HandleFunc("PUT /api/preferences/wallpaper-image", h.requireSession(h.putWallpaperImage))
+	mux.HandleFunc("DELETE /api/preferences/wallpaper-image", h.requireSession(h.deleteWallpaperImage))
 	mux.HandleFunc("/api/", func(w http.ResponseWriter, _ *http.Request) {
 		writeJSON(w, http.StatusNotFound, api.ErrorResponse{Error: "not found"})
 	})

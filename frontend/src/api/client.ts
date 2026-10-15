@@ -39,6 +39,8 @@ const ERROR_CODES: readonly ErrorCode[] = [
   'action_failed',
   'action_timeout',
   'config_dirty',
+  'image_too_large',
+  'unsupported_image',
 ]
 
 export class ApiError extends Error {

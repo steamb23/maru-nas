@@ -3,24 +3,136 @@ package server
 import (
 	"log"
 	"net/http"
+	"regexp"
 
 	"onmaru/backend/internal/addons"
 	"onmaru/backend/internal/api"
 	"onmaru/backend/internal/auth"
+	"onmaru/backend/internal/prefs"
 )
 
 // maxPreferencesBodyBytes는 PUT /api/preferences/* 본문의 상한이다. 위젯·바로가기 64개도 넉넉히 들어간다.
 const maxPreferencesBodyBytes = 64 << 10
 
-// preferences는 로그인한 사용자의 대시보드 설정을 돌려준다.
+// preferences는 로그인한 사용자의 대시보드 설정을 돌려준다. 올린 바탕화면 이미지가 있으면 그 정보도 붙인다.
 func (h *handler) preferences(w http.ResponseWriter, _ *http.Request, s auth.Session) {
 	p, err := h.Prefs.Get(s.Username)
+	if err == nil {
+		p.WallpaperImage, err = h.userImageInfo(s.Username)
+	}
 	if err != nil {
 		log.Printf("preferences: read: %v", err)
 		writeError(w, http.StatusInternalServerError, "", "failed to read preferences")
 		return
 	}
 	writeJSON(w, http.StatusOK, p)
+}
+
+func (h *handler) userImageInfo(username string) (*api.ImageInfo, error) {
+	key, err := prefs.UserWallpaper(username)
+	if err != nil {
+		return nil, err
+	}
+	return h.Images.ImageInfo(key)
+}
+
+// presetPattern은 배경 프리셋 id의 형식이다. 어떤 id가 있는지는 프론트가 정한다.
+var presetPattern = regexp.MustCompile(`^[a-z0-9-]{1,32}$`)
+
+// validWallpaper는 배경 서술자의 형식을 검사한다. 없음(nil)은 기본값을 따른다는 뜻이라 받는다.
+func validWallpaper(w *api.Wallpaper) bool {
+	if w == nil {
+		return true
+	}
+	switch w.Kind {
+	case api.WallpaperPreset:
+		return presetPattern.MatchString(w.Preset)
+	case api.WallpaperImage:
+		return w.Preset == ""
+	}
+	return false
+}
+
+// validTheme은 테마 값을 검사한다. 빈 값은 기본값을 따른다는 뜻이라 받는다.
+func validTheme(theme string) bool {
+	return theme == "" || theme == api.ThemeAuto || theme == api.ThemeLight || theme == api.ThemeDark
+}
+
+// setAppearance는 화면 설정 전체를 바꾼다. 다른 설정은 그대로 둔다. 바탕화면을 올린 이미지로 고르는 것은
+// 이미지가 없어도 받는다(프론트가 기본 배경으로 그린다).
+func (h *handler) setAppearance(w http.ResponseWriter, r *http.Request, s auth.Session) {
+	var req api.AppearanceRequest
+	if !decodeJSONLimit(w, r, &req, maxPreferencesBodyBytes) {
+		return
+	}
+	if req.Appearance == nil {
+		writeError(w, http.StatusBadRequest, api.ErrBadRequest, "appearance is required")
+		return
+	}
+	if !validTheme(req.Appearance.Theme) || !validWallpaper(req.Appearance.Wallpaper) {
+		writeError(w, http.StatusBadRequest, api.ErrBadRequest, "invalid appearance")
+		return
+	}
+	next := *req.Appearance
+	if err := h.Prefs.UpdateAppearance(s.Username, func(a *api.AppearancePrefs) { *a = next }); err != nil {
+		log.Printf("preferences: write: %v", err)
+		writeError(w, http.StatusInternalServerError, "", "failed to save preferences")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// wallpaperImage는 로그인한 사용자가 올린 바탕화면 이미지를 보낸다.
+func (h *handler) wallpaperImage(w http.ResponseWriter, r *http.Request, s auth.Session) {
+	key, err := prefs.UserWallpaper(s.Username)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "", "failed to read image")
+		return
+	}
+	h.serveImage(w, r, key)
+}
+
+// putWallpaperImage는 바탕화면 이미지를 올리고 바탕화면을 그 이미지로 바꾼다. 응답은 이미지 정보다.
+func (h *handler) putWallpaperImage(w http.ResponseWriter, r *http.Request, s auth.Session) {
+	key, err := prefs.UserWallpaper(s.Username)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "", "failed to save image")
+		return
+	}
+	info, ok := h.putImage(w, r, key)
+	if !ok {
+		return
+	}
+	if err := h.Prefs.UpdateAppearance(s.Username, func(a *api.AppearancePrefs) {
+		a.Wallpaper = &api.Wallpaper{Kind: api.WallpaperImage}
+	}); err != nil {
+		log.Printf("preferences: write: %v", err)
+		writeError(w, http.StatusInternalServerError, "", "failed to save preferences")
+		return
+	}
+	writeJSON(w, http.StatusOK, info)
+}
+
+// deleteWallpaperImage는 올린 바탕화면 이미지를 지운다. 바탕화면이 그 이미지였으면 기본값을 따르게 한다.
+func (h *handler) deleteWallpaperImage(w http.ResponseWriter, _ *http.Request, s auth.Session) {
+	key, err := prefs.UserWallpaper(s.Username)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "", "failed to delete image")
+		return
+	}
+	if !h.deleteImage(w, key) {
+		return
+	}
+	if err := h.Prefs.UpdateAppearance(s.Username, func(a *api.AppearancePrefs) {
+		if a.Wallpaper != nil && a.Wallpaper.Kind == api.WallpaperImage {
+			a.Wallpaper = nil
+		}
+	}); err != nil {
+		log.Printf("preferences: write: %v", err)
+		writeError(w, http.StatusInternalServerError, "", "failed to save preferences")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // setWidgets는 위젯 배치 전체를 바꾼다. 다른 설정은 그대로 둔다.

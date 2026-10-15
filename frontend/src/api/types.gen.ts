@@ -632,6 +632,12 @@ export interface ServerOverrides {
   smartRefreshAt?: string;
 }
 /**
+ * AppearanceRequest는 PUT /api/preferences/appearance의 요청 본문이다. 화면 설정 전체를 바꾼다.
+ */
+export interface AppearanceRequest {
+  appearance?: AppearancePrefs;
+}
+/**
  * DrawerSortRecommended는 대시보드가 정한 순서다(비슷한 기능의 앱끼리 모인다).
  */
 export const DrawerSortRecommended = "recommended";
@@ -839,6 +845,14 @@ export const ErrActionTimeout = "action_timeout";
  */
 export const ErrConfigDirty = "config_dirty";
 /**
+ * ErrImageTooLarge는 올린 배경 이미지가 크기 제한을 넘었다는 뜻이다.
+ */
+export const ErrImageTooLarge = "image_too_large";
+/**
+ * ErrUnsupportedImage는 올린 파일이 받는 이미지 형식(PNG, JPEG, WebP)이 아니라는 뜻이다.
+ */
+export const ErrUnsupportedImage = "unsupported_image";
+/**
  * ErrorResponse는 2xx가 아닌 상태 코드와 함께 반환된다.
  */
 export interface ErrorResponse {
@@ -846,7 +860,7 @@ export interface ErrorResponse {
   /**
    * Code는 화면에서 분기할 때 쓰는 오류 종류다. 없을 수 있다.
    */
-  code?: 'invalid_credentials' | 'rate_limited' | 'challenge_failed' | 'challenge_expired' | 'omv_unavailable' | 'unauthorized' | 'bad_request' | 'rpc_forbidden' | 'admin_required' | 'plugin_missing' | 'omv_error' | 'action_busy' | 'action_failed' | 'action_timeout' | 'config_dirty';
+  code?: 'invalid_credentials' | 'rate_limited' | 'challenge_failed' | 'challenge_expired' | 'omv_unavailable' | 'unauthorized' | 'bad_request' | 'rpc_forbidden' | 'admin_required' | 'plugin_missing' | 'omv_error' | 'action_busy' | 'action_failed' | 'action_timeout' | 'config_dirty' | 'image_too_large' | 'unsupported_image';
   /**
    * RetryAfterSeconds는 rate_limited일 때 다시 시도할 수 있기까지 남은 초다.
    */
