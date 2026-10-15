@@ -72,6 +72,15 @@ export default defineConfig(({ mode }) => {
       // go:embed로 실행 파일에 포함하기 위해 Go 패키지 안에 빌드한다.
       outDir: fromHere('../backend/internal/web/static/dist'),
       emptyOutDir: true,
+      rolldownOptions: {
+        output: {
+          // 라이브러리(React, i18next 등)를 앱 코드와 다른 청크로 나눈다. 진입 청크 하나가 500KB 경고 기준을
+          // 넘지 않게 하려는 것이며 내려받는 총량은 같다.
+          codeSplitting: {
+            groups: [{ name: 'vendor', test: /node_modules[\\/]/ }],
+          },
+        },
+      },
     },
     test: {
       environment: 'node',
