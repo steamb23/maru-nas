@@ -49,14 +49,24 @@ type User struct {
 	Admin    bool
 	// TOTP가 비어 있지 않으면 로그인에 2차 인증이 필요하고, 이 값이 맞는 코드다.
 	TOTP string
+	// 아래는 UserMgmt RPC가 주는 계정 정보다(usermgmt.go). 모두 합성 값이다.
+	Email   string
+	Comment string
+	Groups  []string
+	// System은 OMV 사용자 관리 목록에 없는 시스템 계정인지다(실제 OMV의 기본 admin 계정처럼).
+	System bool
+	// ReadOnly는 OMV에서 사용자 수정을 막았는지다(disallowusermod).
+	ReadOnly bool
 }
 
 // DefaultUsers는 개발 서버(cmd/fakeomv)와 테스트가 쓰는 가짜 계정이다.
 func DefaultUsers() []User {
 	return []User{
-		{Name: "admin", Password: "admin", Admin: true},
-		{Name: "user", Password: "user"},
-		{Name: "totp", Password: "totp", Admin: true, TOTP: "123456"},
+		// 실제 OMV의 기본 관리자 계정처럼 시스템 계정이다.
+		{Name: "admin", Password: "admin", Admin: true, System: true, Groups: []string{"openmediavault-admin"}},
+		{Name: "user", Password: "user", Email: "user@example.com", Comment: "Example user", Groups: []string{"users"}},
+		{Name: "totp", Password: "totp", Admin: true, TOTP: "123456", Email: "totp@example.com",
+			Groups: []string{"users", "openmediavault-admin"}},
 	}
 }
 
@@ -286,14 +296,10 @@ func (s *Server) handle(req *request, body rpcBody, touch bool) (any, *rpcError)
 	if body.Service == "WebGui" && body.Method == "getAutoLogoutSettings" {
 		return map[string]any{"timeout": int(s.timeout / time.Minute)}, nil
 	}
-	if body.Service == "UserMgmt" && body.Method == "getUserByContext" {
-		return map[string]any{
-			"name":       req.sess.username,
-			"comment":    "",
-			"email":      "",
-			"sshpubkeys": []string{},
-			"_readonly":  false,
-		}, nil
+	if body.Service == "UserMgmt" {
+		if res, rerr, ok := s.handleUserMgmt(req.sess, body.Method, body.Params); ok {
+			return res, rerr
+		}
 	}
 	if body.Service == "Exec" && body.Method == "isRunning" {
 		return s.execIsRunning(req.sess, body.Params)

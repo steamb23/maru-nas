@@ -62,6 +62,8 @@ type rpcCaller struct {
 	clientIP string
 	// writes는 쓰기 메서드를 허용하는지다. 조작(Action.Run)에 넘길 때만 켠다.
 	writes bool
+	// fixed가 있으면 manifest 허용 목록 대신 이 고정 메서드(이름 → 종류)만 부른다. 애드온이 아닌 서버 기능(프로필)이 쓴다.
+	fixed map[string]addons.RPCKind
 	// unauthorized는 OMV가 세션 만료로 거부했는지다. provider가 오류를 삼켜도 세션을 지우게 한다.
 	unauthorized atomic.Bool
 	// failed는 OMV 호출이 하나라도 실패했는지다.
@@ -70,8 +72,16 @@ type rpcCaller struct {
 
 func (c *rpcCaller) Call(ctx context.Context, service, method string, params any) (json.RawMessage, error) {
 	name := service + "." + method
-	kind, ids := c.h.Addons.Classify(service, method)
-	if kind == addons.RPCNone || (kind == addons.RPCWrite && !(c.writes && addons.WritesEnabled)) || !slices.Contains(ids, c.addon) {
+	var kind addons.RPCKind
+	allowed := false
+	if c.fixed != nil {
+		kind, allowed = c.fixed[name]
+	} else {
+		var ids []string
+		kind, ids = c.h.Addons.Classify(service, method)
+		allowed = kind != addons.RPCNone && slices.Contains(ids, c.addon)
+	}
+	if !allowed || (kind == addons.RPCWrite && !(c.writes && addons.WritesEnabled)) {
 		log.Printf("addon %s: rpc forbidden: %s", c.addon, name)
 		return nil, fmt.Errorf("rpc %s: %w", name, addons.ErrRPCNotAllowed)
 	}

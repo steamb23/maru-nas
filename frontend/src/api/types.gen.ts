@@ -811,6 +811,38 @@ export interface RuntimeSetting {
   source: 'default' | 'env' | 'flag' | 'systemd';
 }
 /**
+ * ProfileReadOnlySystem은 OMV 시스템 계정이다(OMV 기본 admin 계정 등). OMV 사용자 관리 목록에도 없다.
+ */
+export const ProfileReadOnlySystem = "system";
+/**
+ * ProfileReadOnlyLocked는 OMV에서 이 사용자의 계정 수정을 막았다는 뜻이다(disallowusermod).
+ */
+export const ProfileReadOnlyLocked = "locked";
+/**
+ * ProfileResponse는 GET /api/profile의 응답이며 로그인한 사용자 자신의 OMV 계정 정보다.
+ * SSH 공개 키, uid, 홈 디렉터리 등은 넘기지 않는다.
+ */
+export interface ProfileResponse {
+  username: string;
+  email?: string;
+  /**
+   * Comment는 계정 설명이다(Linux 계정의 GECOS).
+   */
+  comment?: string;
+  /**
+   * Groups는 속한 그룹이다. OMV가 관리자에게만 알려 주므로 일반 사용자는 없다.
+   */
+  groups?: string[];
+  /**
+   * SystemAccount는 OMV 사용자 관리 목록에 없는 시스템 계정인지다. 관리자만 알 수 있다.
+   */
+  systemAccount?: boolean;
+  /**
+   * ReadOnlyReason이 있으면 계정 설명을 바꿀 수 없다.
+   */
+  readOnlyReason?: 'system' | 'locked';
+}
+/**
  * AboutResponse는 GET /api/about의 응답이다. 설정 앱의 정보 페이지가 보여 준다.
  */
 export interface AboutResponse {

@@ -154,6 +154,7 @@ func New(cfg Config) http.Handler {
 	mux.HandleFunc("GET /api/system", h.requireSession(h.system))
 	mux.HandleFunc("GET /api/capabilities", h.requireSession(h.capabilities))
 	mux.HandleFunc("GET /api/about", h.requireSession(h.aboutInfo))
+	mux.HandleFunc("GET /api/profile", h.requireSession(h.profile))
 	mux.HandleFunc("GET /api/addons/{id}", h.requireSession(h.addonData))
 	mux.HandleFunc("POST /api/addons/{id}/actions/{action}", h.requireSession(h.addonAction))
 	mux.HandleFunc("POST /api/rpc", h.requireSession(h.rpc))
