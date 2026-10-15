@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"onmaru/backend/internal/api"
 )
 
 func TestParseListen(t *testing.T) {
@@ -103,36 +105,42 @@ func TestListenOnUnix(t *testing.T) {
 	}
 }
 
-func TestCheckWorkbenchURL(t *testing.T) {
-	cases := []struct {
-		raw     string
-		wantErr bool
-	}{
-		{raw: ""},
-		{raw: "https://nas.example.lan/"},
-		{raw: "http://192.0.2.10:8001"},
-		{raw: "https://nas.example.lan/omv/"},
-		{raw: "HTTPS://nas.example.lan/"},
-		{raw: "/"},
-		{raw: "/omv/"},
-		{raw: "../"},
-		{raw: "./omv/"},
-		{raw: "nas.example.lan/", wantErr: true},
-		{raw: "nas.example.lan:8001/", wantErr: true},
-		{raw: "omv/", wantErr: true},
-		{raw: "//nas.example.lan/", wantErr: true},
-		{raw: "https:///omv/", wantErr: true},
-		{raw: "https://user:pass@nas.example.lan/", wantErr: true},
-		{raw: "https://nas.example.lan/?a=1", wantErr: true},
-		{raw: "https://nas.example.lan/#/dashboard", wantErr: true},
-		{raw: "https://nas.example.lan/a b", wantErr: true},
-		{raw: "javascript:alert(1)", wantErr: true},
-		{raw: "ftp://nas.example.lan/", wantErr: true},
+func TestRuntimeSettings(t *testing.T) {
+	env := map[string]string{
+		"ONMARU_LISTEN":        "unix:/run/onmaru/onmaru.sock",
+		"ONMARU_OMV_URL":       "",
+		"ONMARU_WORKBENCH_URL": "",
+		"STATE_DIRECTORY":      "/var/lib/onmaru",
 	}
-	for _, c := range cases {
-		err := checkWorkbenchURL(c.raw)
-		if (err != nil) != c.wantErr {
-			t.Errorf("checkWorkbenchURL(%q) = %v, wantErr %v", c.raw, err, c.wantErr)
+	lookup := func(k string) (string, bool) {
+		v, ok := env[k]
+		return v, ok
+	}
+	got := runtimeSettings(map[string]bool{"cookie-path": true}, lookup, []runtimeEntry{
+		{flag: "listen", env: "ONMARU_LISTEN", value: "unix:/run/onmaru/onmaru.sock"},
+		{flag: "omv-url", env: "ONMARU_OMV_URL", value: "http://127.0.0.1"},
+		{flag: "cookie-path", env: "ONMARU_COOKIE_PATH", value: "/desk/"},
+		{flag: "state-dir", env: "ONMARU_STATE_DIR", value: "/var/lib/onmaru", systemdEnv: "STATE_DIRECTORY"},
+		{flag: "workbench-url", env: "ONMARU_WORKBENCH_URL", value: "", emptyIsSet: true},
+		{flag: "smart-refresh-at", env: "ONMARU_SMART_REFRESH_AT", value: "00:00"},
+	})
+	want := map[string]string{
+		"listen":           api.RuntimeSourceEnv,
+		"omv-url":          api.RuntimeSourceDefault, // 빈 환경 변수는 기본값을 쓴다
+		"cookie-path":      api.RuntimeSourceFlag,
+		"state-dir":        api.RuntimeSourceSystemd,
+		"workbench-url":    api.RuntimeSourceEnv, // 빈 값은 "끔"으로 설정한 것이다
+		"smart-refresh-at": api.RuntimeSourceDefault,
+	}
+	if len(got) != len(want) {
+		t.Fatalf("got %d entries", len(got))
+	}
+	for _, s := range got {
+		if s.Source != want[s.Flag] {
+			t.Errorf("%s: source %q, want %q", s.Flag, s.Source, want[s.Flag])
 		}
+	}
+	if got[0].Env != "ONMARU_LISTEN" || got[0].Value != "unix:/run/onmaru/onmaru.sock" {
+		t.Errorf("first entry %+v", got[0])
 	}
 }

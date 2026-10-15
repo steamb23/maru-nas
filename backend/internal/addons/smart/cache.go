@@ -54,6 +54,14 @@ func NewCache(hour, minute int) *Cache {
 	return &Cache{Now: time.Now, RefreshHour: hour, RefreshMinute: minute}
 }
 
+// SetRefreshAt은 기준 시각을 바꾼다. 설정의 서버 페이지에서 바꾼 값을 실행 중에 반영한다.
+// 이미 보관한 결과는 새 기준 시각으로 다시 판단한다.
+func (c *Cache) SetRefreshAt(hour, minute int) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.RefreshHour, c.RefreshMinute = hour, minute
+}
+
 // ParseRefreshAt은 "HH:MM" 형식의 기준 시각을 읽는다.
 func ParseRefreshAt(s string) (hour, minute int, err error) {
 	t, err := time.Parse("15:04", s)

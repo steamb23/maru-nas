@@ -152,6 +152,23 @@ func TestCacheCustomRefreshTime(t *testing.T) {
 	}
 }
 
+func TestCacheSetRefreshAt(t *testing.T) {
+	// 실행 중에 기준 시각을 앞당기면 이미 보관한 결과도 새 기준으로 판단한다.
+	c, clk := newTestCache(at(10, 5, 0))
+	rpc := &fakeRPC{}
+	c.Get(context.Background(), rpc, false)
+	clk.Set(at(10, 7, 0))
+	c.Get(context.Background(), rpc, false)
+	if n := rpc.calls.Load(); n != 1 {
+		t.Fatalf("calls = %d, want 1", n)
+	}
+	c.SetRefreshAt(6, 0)
+	c.Get(context.Background(), rpc, false)
+	if n := rpc.calls.Load(); n != 2 {
+		t.Errorf("calls = %d, want 2", n)
+	}
+}
+
 func TestCacheManualRefreshLimit(t *testing.T) {
 	c, clk := newTestCache(at(10, 9, 0))
 	rpc := &fakeRPC{}

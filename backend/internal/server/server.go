@@ -72,8 +72,15 @@ type Config struct {
 	Limiter  *auth.Limiter
 	// CookiePath는 브라우저가 보는 대시보드 경로다(리버스 프록시가 떼기 전). 기본 /.
 	CookiePath string
-	// WorkbenchURL은 브라우저에서 OMV 웹 UI를 열 주소다. /api/capabilities로 그대로 알려 준다. 비우면 알리지 않는다.
+	// WorkbenchURL은 브라우저에서 OMV 웹 UI를 열 주소다(-workbench-url). /api/capabilities로 알려 준다.
+	// 비우면 알리지 않는다. 설정의 서버 페이지에서 덮어쓴 값(site.json)이 있으면 그 값이 우선한다.
 	WorkbenchURL string
+	// SmartRefreshAt은 -smart-refresh-at(HH:MM)이다. 비우면 00:00. 덮어쓴 값이 있으면 그 값이 우선한다.
+	SmartRefreshAt string
+	// SetSmartRefreshAt은 SMART 캐시의 기준 시각을 바꾼다. 시작할 때와 덮어쓰기를 저장할 때 부른다. nil이면 부르지 않는다.
+	SetSmartRefreshAt func(hour, minute int)
+	// Runtime은 시작할 때 정해진 가동 설정 전체다. 설정의 서버 페이지(관리자)에 보여 준다.
+	Runtime []api.RuntimeSetting
 	// CheckInterval마다 요청 처리 중에 OMV 세션이 살아 있는지 확인한다. 기본 60초.
 	// 예상 만료 시각이 지났으면 주기와 상관없이 확인한다.
 	CheckInterval time.Duration
@@ -90,6 +97,8 @@ type handler struct {
 	actions *inflight
 	// about은 실행 파일의 버전·빌드 정보다. 실행 중에 바뀌지 않으므로 시작할 때 한 번 읽는다.
 	about api.AboutResponse
+	// over는 웹에서 덮어쓴 가동 설정이다(site.go).
+	over overrides
 }
 
 // New는 루트 핸들러를 반환한다. /api/ 밖의 요청은 cfg.Static이 처리한다.
@@ -128,6 +137,7 @@ func New(cfg Config) http.Handler {
 		cfg.Images = prefs.NewMemoryStore()
 	}
 	h := &handler{Config: cfg, actions: newInflight(), about: buildinfo.Read()}
+	h.loadOverrides()
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/health", func(w http.ResponseWriter, _ *http.Request) {
@@ -136,6 +146,9 @@ func New(cfg Config) http.Handler {
 	mux.HandleFunc("POST /api/login", h.login)
 	mux.HandleFunc("POST /api/login/verify", h.verify)
 	mux.HandleFunc("POST /api/logout", h.logout)
+	// 로그인 화면이 로그인 전에 쓰는 공개 정보. 화면 꾸밈에 쓰는 전역 설정만 담는다.
+	mux.HandleFunc("GET /api/site", h.siteInfo)
+	mux.HandleFunc("GET /api/site/images/login-background", h.loginBackgroundImage)
 	mux.HandleFunc("GET /api/session", h.requireSession(h.session))
 	mux.HandleFunc("POST /api/session/activity", h.requireSession(h.activity))
 	mux.HandleFunc("GET /api/system", h.requireSession(h.system))
@@ -152,6 +165,13 @@ func New(cfg Config) http.Handler {
 	mux.HandleFunc("GET /api/preferences/wallpaper-image", h.requireSession(h.wallpaperImage))
 	mux.HandleFunc("PUT /api/preferences/wallpaper-image", h.requireSession(h.putWallpaperImage))
 	mux.HandleFunc("DELETE /api/preferences/wallpaper-image", h.requireSession(h.deleteWallpaperImage))
+	mux.HandleFunc("GET /api/site/images/default-wallpaper", h.requireSession(h.defaultWallpaperImage))
+	mux.HandleFunc("PUT /api/site/login", h.requireAdmin(h.setSiteLogin))
+	mux.HandleFunc("PUT /api/site/defaults", h.requireAdmin(h.setSiteDefaults))
+	mux.HandleFunc("PUT /api/site/images/{name}", h.requireAdmin(h.putSiteImage))
+	mux.HandleFunc("DELETE /api/site/images/{name}", h.requireAdmin(h.deleteSiteImage))
+	mux.HandleFunc("GET /api/site/server", h.requireAdmin(h.serverSettings))
+	mux.HandleFunc("PUT /api/site/server", h.requireAdmin(h.setServerSettings))
 	mux.HandleFunc("/api/", func(w http.ResponseWriter, _ *http.Request) {
 		writeJSON(w, http.StatusNotFound, api.ErrorResponse{Error: "not found"})
 	})
@@ -173,7 +193,7 @@ func (h *handler) system(w http.ResponseWriter, _ *http.Request, _ auth.Session)
 // OMV 웹 UI 주소(설정했으면)도 함께 알려 준다.
 func (h *handler) capabilities(w http.ResponseWriter, _ *http.Request, s auth.Session) {
 	resp := h.Addons.Capabilities(h.Plugins.Plugins(), s.Admin)
-	resp.WorkbenchURL = h.WorkbenchURL
+	resp.WorkbenchURL = h.workbenchURL()
 	writeJSON(w, http.StatusOK, resp)
 }
 

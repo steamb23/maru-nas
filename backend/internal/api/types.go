@@ -479,6 +479,77 @@ type WidgetsRequest struct {
 	Widgets []WidgetPlacement `json:"widgets"`
 }
 
+// SiteInfo는 GET /api/site의 응답이다. 로그인 화면이 로그인 전에 받으므로 인증 없이 준다.
+// 화면 꾸밈에 쓰는 전역 설정만 담고 가동 설정(주소 등)은 넣지 않는다.
+type SiteInfo struct {
+	// LoginBackground는 로그인 화면 배경이다. 없으면 대시보드 기본 배경이다.
+	LoginBackground *Wallpaper `json:"loginBackground,omitempty"`
+	// LoginEasterEgg는 로그인 화면의 대기 연출을 켤지다.
+	LoginEasterEgg bool `json:"loginEasterEgg"`
+	// DefaultTheme, DefaultWallpaper는 화면 설정을 정하지 않은 사용자에게 적용하는 기본 화면이다.
+	DefaultTheme     string     `json:"defaultTheme,omitempty" tstype:"'auto' | 'light' | 'dark'"`
+	DefaultWallpaper *Wallpaper `json:"defaultWallpaper,omitempty"`
+	Images           SiteImages `json:"images"`
+}
+
+// SiteImages는 관리자가 올린 전역 배경 이미지의 정보다. 올리지 않은 이미지는 없다.
+type SiteImages struct {
+	LoginBackground  *ImageInfo `json:"loginBackground,omitempty"`
+	DefaultWallpaper *ImageInfo `json:"defaultWallpaper,omitempty"`
+}
+
+// SiteLoginRequest는 PUT /api/site/login의 요청 본문이다. 로그인 화면 설정 전체를 바꾼다.
+type SiteLoginRequest struct {
+	Login *SiteLogin `json:"login"`
+}
+
+// SiteDefaultsRequest는 PUT /api/site/defaults의 요청 본문이다. 기본 화면 전체를 바꾼다.
+type SiteDefaultsRequest struct {
+	Defaults *SiteDefaults `json:"defaults"`
+}
+
+// ServerSettingsRequest는 PUT /api/site/server의 요청 본문이다. 덮어쓰기 값 전체를 바꾼다(없는 값은 덮어쓰지 않음).
+type ServerSettingsRequest struct {
+	Server *ServerOverrides `json:"server"`
+}
+
+// ServerSettings는 GET /api/site/server의 응답이다(관리자).
+type ServerSettings struct {
+	WorkbenchURL   OverridableSetting `json:"workbenchUrl"`
+	SmartRefreshAt OverridableSetting `json:"smartRefreshAt"`
+	// Runtime은 시작할 때 정해진 가동 설정 전체다(플래그 순서). 바꾸려면 /etc/default/onmaru를 고치고 다시 시작한다.
+	Runtime []RuntimeSetting `json:"runtime"`
+}
+
+// OverridableSetting은 웹에서 덮어쓸 수 있는 가동 설정 하나다.
+type OverridableSetting struct {
+	// Value는 지금 쓰는 값이다.
+	Value string `json:"value"`
+	// Base는 플래그·환경 변수(없으면 기본값)로 정한 값이다. 덮어쓰기를 지우면 이 값으로 돌아간다.
+	Base string `json:"base"`
+	// Overridden은 웹에서 덮어썼는지다.
+	Overridden bool `json:"overridden"`
+}
+
+// 가동 설정 값의 출처. RuntimeSetting.Source에 들어간다.
+const (
+	RuntimeSourceDefault = "default"
+	RuntimeSourceEnv     = "env"
+	RuntimeSourceFlag    = "flag"
+	// RuntimeSourceSystemd는 systemd가 넘긴 값이다(StateDirectory=의 STATE_DIRECTORY).
+	RuntimeSourceSystemd = "systemd"
+)
+
+// RuntimeSetting은 시작할 때 정해진 가동 설정 하나다.
+type RuntimeSetting struct {
+	// Flag는 명령줄 플래그 이름이다(listen, omv-url 등).
+	Flag string `json:"flag"`
+	// Env는 같은 값을 정하는 환경 변수 이름이다.
+	Env    string `json:"env"`
+	Value  string `json:"value"`
+	Source string `json:"source" tstype:"'default' | 'env' | 'flag' | 'systemd'"`
+}
+
 // AboutResponse는 GET /api/about의 응답이다. 설정 앱의 정보 페이지가 보여 준다.
 type AboutResponse struct {
 	// Version은 온마루 버전이다.

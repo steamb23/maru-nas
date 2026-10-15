@@ -25,6 +25,7 @@ import (
 	"onmaru/backend/internal/addons"
 	"onmaru/backend/internal/addons/builtin"
 	"onmaru/backend/internal/addons/smart"
+	"onmaru/backend/internal/api"
 	"onmaru/backend/internal/buildinfo"
 	"onmaru/backend/internal/omv"
 	"onmaru/backend/internal/prefs"
@@ -65,7 +66,7 @@ func main() {
 	if err := checkOMVURL(*omvURL); err != nil {
 		log.Fatal(err)
 	}
-	if err := checkWorkbenchURL(*workbenchURL); err != nil {
+	if err := server.CheckWorkbenchURL(*workbenchURL); err != nil {
 		log.Fatal(err)
 	}
 
@@ -97,6 +98,17 @@ func main() {
 	plugins.Refresh()
 	log.Printf("detected omv plugins: %v", slices.Sorted(maps.Keys(plugins.Plugins())))
 
+	runtime := runtimeSettings(explicitFlags(), os.LookupEnv, []runtimeEntry{
+		{flag: "listen", env: "ONMARU_LISTEN", value: *listen},
+		{flag: "allow-non-loopback", env: "ONMARU_ALLOW_NON_LOOPBACK", value: strconv.FormatBool(*allowNonLoopback)},
+		{flag: "omv-url", env: "ONMARU_OMV_URL", value: *omvURL},
+		{flag: "cookie-path", env: "ONMARU_COOKIE_PATH", value: *cookiePath},
+		{flag: "state-dir", env: "ONMARU_STATE_DIR", value: *stateDir, systemdEnv: "STATE_DIRECTORY"},
+		// 빈 값은 "끔"이라는 뜻으로 일부러 넣는 값이다(install.sh).
+		{flag: "workbench-url", env: "ONMARU_WORKBENCH_URL", value: *workbenchURL, emptyIsSet: true},
+		{flag: "smart-refresh-at", env: "ONMARU_SMART_REFRESH_AT", value: *smartAt},
+	})
+
 	srv := &http.Server{
 		Handler: server.New(server.Config{
 			System:       deps.System,
@@ -109,6 +121,10 @@ func main() {
 			Images:       store,
 			CookiePath:   *cookiePath,
 			WorkbenchURL: *workbenchURL,
+			// 설정의 서버 페이지에서 덮어쓴 SMART 기준 시각을 실행 중인 캐시에 반영한다.
+			SmartRefreshAt:    *smartAt,
+			SetSmartRefreshAt: deps.Smart.SetRefreshAt,
+			Runtime:           runtime,
 		}),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
@@ -220,37 +236,37 @@ func checkOMVURL(raw string) error {
 	return nil
 }
 
-// checkWorkbenchURL은 브라우저가 OMV 웹 UI를 열 주소(-workbench-url)를 확인한다. 빈 값은 기능을 끈 것이다.
-// http(s) 절대 URL이거나, 대시보드 문서 기준으로 해석할 경로 참조(/, ./, ../로 시작)만 받는다.
-// scheme 없는 호스트 이름(nas.example.lan/)은 브라우저가 상대 경로로 해석해 대시보드 안을 가리키므로 거부한다.
-func checkWorkbenchURL(raw string) error {
-	if raw == "" {
-		return nil
-	}
-	if strings.ContainsAny(raw, "?# \t") {
-		return errors.New("workbench url must not contain a query, fragment or spaces, got " + raw)
-	}
-	u, err := url.Parse(raw)
-	if err != nil {
-		return fmt.Errorf("workbench url: %w", err)
-	}
-	switch {
-	case u.Scheme == "http" || u.Scheme == "https":
-		if u.Host == "" || u.User != nil {
-			return errors.New("workbench url must have a host and no user info, got " + raw)
-		}
-	case u.Scheme == "" && u.Host == "" && isPathRef(raw):
-	default:
-		return errors.New("workbench url must start with http:// or https://, or be a path starting with / or ./ or ../ " +
-			"(add the scheme to a host name, e.g. https://nas.example.lan/), got " + raw)
-	}
-	return nil
+// runtimeEntry는 설정의 서버 페이지에 보여 줄 가동 설정 하나다.
+type runtimeEntry struct {
+	flag, env, value string
+	// systemdEnv는 env가 없을 때 값을 주는 systemd 환경 변수다(StateDirectory=의 STATE_DIRECTORY).
+	systemdEnv string
+	// emptyIsSet이면 빈 환경 변수도 설정한 값으로 본다(빈 값이 기능을 끈다는 뜻인 설정).
+	emptyIsSet bool
 }
 
-// isPathRef는 /, ./, ../로 시작하는 경로 참조인지 확인한다. //host 형태는 아니다.
-func isPathRef(s string) bool {
-	if strings.HasPrefix(s, "//") {
-		return false
+// explicitFlags는 명령줄에서 준 플래그 이름이다.
+func explicitFlags() map[string]bool {
+	set := map[string]bool{}
+	flag.Visit(func(f *flag.Flag) { set[f.Name] = true })
+	return set
+}
+
+// runtimeSettings는 가동 설정 값마다 출처를 정한다. 명령줄 플래그가 환경 변수보다 우선한다(main의 플래그 기본값이
+// 환경 변수이므로). 빈 환경 변수는 기본값을 쓰므로 출처를 기본값으로 본다.
+func runtimeSettings(explicit map[string]bool, lookup func(string) (string, bool), entries []runtimeEntry) []api.RuntimeSetting {
+	out := make([]api.RuntimeSetting, 0, len(entries))
+	for _, e := range entries {
+		source := api.RuntimeSourceDefault
+		if v, ok := lookup(e.env); ok && (v != "" || e.emptyIsSet) {
+			source = api.RuntimeSourceEnv
+		} else if v, _ := lookup(e.systemdEnv); e.systemdEnv != "" && v != "" {
+			source = api.RuntimeSourceSystemd
+		}
+		if explicit[e.flag] {
+			source = api.RuntimeSourceFlag
+		}
+		out = append(out, api.RuntimeSetting{Flag: e.flag, Env: e.env, Value: e.value, Source: source})
 	}
-	return strings.HasPrefix(s, "/") || s == "." || s == ".." || strings.HasPrefix(s, "./") || strings.HasPrefix(s, "../")
+	return out
 }

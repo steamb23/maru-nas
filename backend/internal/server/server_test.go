@@ -76,6 +76,12 @@ type envOptions struct {
 	prefs   prefs.Store
 	// workbenchURL은 Config.WorkbenchURL이다.
 	workbenchURL string
+	// site, images, smartAt, setSmart, runtime은 Config의 같은 이름 필드다.
+	site     prefs.SiteStore
+	images   prefs.ImageStore
+	smartAt  string
+	setSmart func(hour, minute int)
+	runtime  []api.RuntimeSetting
 }
 
 func newEnv(t *testing.T, o envOptions) *env {
@@ -116,18 +122,23 @@ func newEnv(t *testing.T, o envOptions) *env {
 	t.Cleanup(func() { log.SetOutput(prev) })
 
 	h := New(Config{
-		System:        o.system,
-		Static:        static,
-		OMV:           client,
-		Sessions:      store,
-		Limiter:       lim,
-		Addons:        o.addons,
-		Plugins:       o.plugins,
-		Prefs:         o.prefs,
-		WorkbenchURL:  o.workbenchURL,
-		CheckInterval: o.interval,
-		FailDelay:     o.failDelay,
-		Now:           clk.Now,
+		System:            o.system,
+		Static:            static,
+		OMV:               client,
+		Sessions:          store,
+		Limiter:           lim,
+		Addons:            o.addons,
+		Plugins:           o.plugins,
+		Prefs:             o.prefs,
+		WorkbenchURL:      o.workbenchURL,
+		Site:              o.site,
+		Images:            o.images,
+		SmartRefreshAt:    o.smartAt,
+		SetSmartRefreshAt: o.setSmart,
+		Runtime:           o.runtime,
+		CheckInterval:     o.interval,
+		FailDelay:         o.failDelay,
+		Now:               clk.Now,
 	})
 	return &env{t: t, h: h, fake: fake, omvTS: ts, clk: clk, store: store, logs: logs}
 }
