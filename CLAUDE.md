@@ -41,7 +41,7 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
   - 사용자 대상 설치·설정·프록시 안내는 `README.md`에 둔다. 플래그를 추가·변경하면 `README.md`의 설정 표와 `install.sh`도 함께 고친다
 - **백엔드는 얇은 API 서버**다. 역할은 (1) 현황 읽기: `/proc`·`/sys` 직접 읽기, root가 필요한 정보는 OMV RPC, (2) 설정 변경 요청을 OMV `rpc.php`로 전달, (3) 대시보드 설정(사용자별 위젯 배치·바로가기·화면 설정, 관리자의 전역 설정, 배경 이미지) 저장, 세 가지뿐이다
   - (3)은 대시보드 자신의 상태만 다룬다. 상태 디렉터리(`-state-dir`, systemd `StateDirectory=`)의 사용자별 JSON 파일, 관리자가 바꾸는 전역 설정(`site.json`), 올린 배경 이미지(`images/`)이며 OMV 설정·시스템 파일과 무관하다(`internal/prefs`)
-  - 설정 창 앱(`src/settings/`)이 화면(테마·바탕화면) 같은 사용자 설정과 관리자 전용 전역 설정(로그인 화면, 기본 화면, 서버), 정보 페이지를 맡는다. 전역에 적용되는 설정은 관리자만 바꾼다. OMV·OS 설정은 넣지 않고, 넣게 되면 페이지 그룹으로 더한다
+  - 설정 창 앱(`src/settings/`)이 프로필(사진, 자기 OMV 계정의 전자 우편·태그), 화면(테마·바탕화면) 같은 사용자 설정과 관리자 전용 전역 설정(로그인 화면, 기본 화면, 서버), 정보 페이지를 맡는다. 전역에 적용되는 설정은 관리자만 바꾼다. 그 밖의 OMV·OS 설정은 넣지 않고, 넣게 되면 페이지 그룹으로 더한다
   - 가동 설정 중 재시작 없이 바뀌는 워크벤치 주소와 SMART 확인 시각만 웹에서 덮어쓴다(`site.json`, 플래그보다 우선). 나머지는 `/etc/default/onmaru`를 root가 고치며, 웹에서 sudo로 바꾸는 방식은 `ROADMAP.md`에 있다
 - **OMV RPC는 항상 백엔드가 중계한다**: 브라우저 → `/api/rpc` → 백엔드 → OMV `rpc.php`. 브라우저가 `rpc.php`를 직접 호출하지 않는다
   - 백엔드는 대시보드 세션마다 OMV 세션을 메모리에 보관하고, 항상 같은 주소(127.0.0.1)와 고정 User-Agent로 OMV를 호출한다
@@ -140,6 +140,7 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 - 컨테이너·서비스 조작을 실제 OMV로 확인한다(사용자가 `make dev`로). 컨테이너: `Compose.doContainerCommand` → `Exec.isRunning` 흐름, 실패한 docker 명령이 `Exec.isRunning` 예외로 오는지. 서비스: `Services.getStatus`의 실제 이름·값, 어댑터별 get → set(스키마 속성만) → `Config.applyChangesBg` → `Exec.isRunning` 흐름, 적용 대기 중 거절. 지금은 omvfake로만 검증했다
 
 - 설정 앱을 실제 OMV·설치본으로 확인한다(사용자가). 유닛 하드닝 아래에서 `site.json`·`images/` 쓰기와 이미지 올리기(리버스 프록시의 본문 크기 제한이 20MB보다 작으면 413), 워크벤치 주소·SMART 시각 덮어쓰기가 재시작 뒤에도 유지되는지. 지금은 가짜 OMV와 `make dev-fake`로만 확인했다
+- 프로필 저장을 실제 OMV로 확인한다(사용자가 `make dev`로). 관리자(일반 계정)는 저장 후 `/etc/passwd`의 GECOS·OMV 전자 우편이 바뀌고 적용 대기가 남지 않는지, 일반 사용자는 적용 대기가 생기는지, 내장 `admin`은 읽기 전용으로 보이는지, "OMV에서 사용자 편집"이 실제 편집 화면(`#/usermgmt/users/edit/<이름>`)을 여는지. 지금은 omvfake로만 확인했다
 - 강제 테마(라이트·다크)에서 묶음 로고(`<img>` 안 SVG의 `prefers-color-scheme`) 글자색이 따라가는지 Firefox·Safari에서 확인한다. Chromium에서는 따라간다. 따르지 않으면 로고를 `?raw`로 인라인한다
 - `install.sh`로 실제 설치한 뒤(사용자가 실행): 유닛 하드닝(`ProtectSystem=strict`, `DevicePolicy=closed`, `RestrictAddressFamilies` 등. `PrivateDevices=yes`는 `/dev/disk/by-label`을 숨겨 파일시스템 라벨이 사라지므로 쓰지 않는다) 아래에서 모든 애드온 데이터가 나오는지, Docker Caddy의 `/run/onmaru` 바인드 마운트가 서비스 재시작·재부팅 후에도 유지되는지. 지금은 `systemd-run --user`로 비슷한 제한을 걸어 가짜 OMV로만 확인했다
 - OMV 워크벤치 링크 앱을 실제 OMV로 확인한다(사용자가 `make dev`에 `ONMARU_WORKBENCH_URL`을 두고). 같은 탭을 다시 쓸 때 브라우저가 그 탭으로 전환하는지(Chrome·Firefox), 그 탭의 OMV 로그인이 유지되는지. 지금은 가짜 OMV와 같은 출처 주소로만 확인했다

@@ -35,7 +35,7 @@ OMV 공식 저장소 소스(2026-10 기준)에서 확인한 내용이다. OMV �
 - 로그인 성공 시 대시보드 자체 세션 쿠키(`onmaru_session`, HttpOnly, SameSite=Strict, Path는 `-cookie-path`, 기본 `/`)를 발급한다. 2차 인증 대기 중에는 `onmaru_pending`. Secure는 HTTPS로 들어온 요청(`X-Forwarded-Proto: https`)에만 붙인다(평문 HTTP 개발 서버에서는 브라우저가 Secure 쿠키를 저장하지 않으므로). 세션 저장소는 메모리이며 백엔드 재시작 시 모두 재로그인한다
 - 백엔드의 OMV 클라이언트는 세션 ID를 쿠키가 아닌 `X-OpenMediaVault-SessionID` 헤더로 보내고, 응답 `Set-Cookie`로 바뀐 ID를 갱신한다
 - `/api/*`는 대시보드 세션이 없으면 401을 반환한다(`/api/health`, 로그인 라우트, 로그인 화면이 쓰는 `GET /api/site`와 `GET /api/site/images/login-background` 제외). 본문이 있는 요청(POST, PUT)은 `Content-Type: application/json`만 받는다(CSRF 보조 장치)
-  - 예외: 배경 이미지 올리기(`PUT /api/preferences/wallpaper-image`, `PUT /api/site/images/{name}`)는 원시 이미지 본문(`image/png|jpeg|webp`)만 받는다. HTML 폼은 이 형식을 보낼 수 없고 다른 출처의 fetch는 preflight에서 막히므로 같은 보조 장치가 된다. multipart는 받지 않는다
+  - 예외: 이미지 올리기(`PUT /api/preferences/wallpaper-image`, `…/avatar-image`, `PUT /api/site/images/{name}`)는 원시 이미지 본문(`image/png|jpeg|webp`)만 받는다. HTML 폼은 이 형식을 보낼 수 없고 다른 출처의 fetch는 preflight에서 막히므로 같은 보조 장치가 된다. multipart는 받지 않는다
   - 공개 로그인 배경은 대시보드 주소에 닿는 누구나 받을 수 있다(로그인 화면에 보이는 그림이다). 설정 앱이 관리자에게 이 점을 알린다
 - 로그인 상태를 localStorage·sessionStorage에 저장하지 않는다. 앱 시작 시 `/api/session`으로 상태를 복원한다(workbench처럼 탭마다 로그인하지 않게 하기 위함)
 - OMV가 중계 호출에 401을 반환하면 해당 대시보드 세션을 지우고 브라우저를 로그인 화면으로 보낸다

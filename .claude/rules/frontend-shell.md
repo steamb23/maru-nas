@@ -110,13 +110,15 @@ paths:
 
 - 트레이는 `[시계][프로필]` 순서이며 프로필 버튼이 오른쪽 끝에 고정된다
 - 프로필 메뉴 항목은 `profileMenu.ts`의 `PROFILE_MENU_ITEMS`에 데이터로 둔다(`requires`로 거름: `admin`은 관리자만, `workbench`는 OMV 웹 UI 주소가 있을 때만). 항목은 `action`과 `submenu` 두 종류다. `action` 항목을 추가하면 `ProfileMenu.tsx`의 `actions`에 동작도 넣는다
-- 프로필 메뉴 머리글(아바타·이름·역할)은 메뉴 항목 버튼이며 누르면 설정 창의 화면 페이지를 연다. 메뉴에 따로 "설정" 항목은 두지 않는다. `ProfileMenu`는 데스크톱 크기를 모르므로 `Desktop`이 `onOpenSettings`를 `Taskbar`를 거쳐 넘긴다
-- 아바타 그리기는 `ProfileAvatar` 한 곳에 모은다
+- 프로필 메뉴 머리글(아바타·이름·역할)은 메뉴 항목 버튼이며 누르면 설정 창의 프로필 페이지를 연다. 메뉴에 따로 "설정" 항목은 두지 않는다. `ProfileMenu`는 데스크톱 크기를 모르므로 `Desktop`이 `onOpenSettings`를 `Taskbar`를 거쳐 넘긴다
+- 아바타 그리기는 `ProfileAvatar` 한 곳에 모은다. 프로필 사진(`profile/store.ts`, 로그인한 동안 불러옴)이 있으면 원형 이미지로, 없거나 받지 못하면 기본 아이콘으로 그린다
 
 ## 설정 앱
 
 - `src/settings/`. 페이지 목록은 데이터(`pages.ts`: id, 문구 키, 아이콘, 그룹, `requires: 'admin'`)이고 화면 컴포넌트는 `pageViews.ts`의 `Record`에 둔다(빠지면 tsc가 잡는다). 관리자 전용 페이지(전역 설정)는 일반 사용자에게 숨긴다. OMV·시스템 설정을 넣게 되면 그룹을 더한다
-- 어느 페이지를 보일지는 창 저장소가 아니라 `navStore.ts`에 둔다(창 밖에서 특정 페이지로 열 때 `show` 후 `launchApp`). 창이 닫히면 기본 페이지로 되돌린다
+- 어느 페이지를 보일지는 창 저장소가 아니라 `navStore.ts`에 둔다(창 밖에서 특정 페이지로 열 때 `show` 후 `launchApp`). 창이 닫히면 기본 페이지로 되돌린다. 창 저장소를 구독해 창이 사라질 때 되돌리며, 창 컴포넌트의 정리 함수는 쓰지 않는다(StrictMode 개발 모드에서 마운트 직후에도 불린다)
+- 프로필 페이지(`profile`)는 사이드바 목록에 넣지 않고(`nav: 'card'`) 사이드바 맨 위 사용자 카드 버튼으로 연다. 볼 수 없는 페이지를 요청하면 기본 페이지(화면)로 간다
+- 프로필 사진 자르기 편집기(`AvatarEditor.tsx`, 계산은 `profile/avatarCrop.ts`)는 창 범위 대화상자다. 끌기는 `usePointerDrag`, 휠은 passive가 아닌 네이티브 리스너로 받고, 저장은 512px WebP(안 되면 PNG)다. OMV 사용자 편집 화면은 워크벤치 앱과 같은 이름 붙은 탭으로 연다(`launchApp.ts`의 `openWorkbenchRoute`, 라우트는 `windows/links.ts`)
 - 창 너비가 `SETTINGS_NARROW_WIDTH`(640px)보다 좁으면(ResizeObserver로 재서 `.narrow`) 사이드바를 숨기고 메뉴 단추(☰, `hamburger-menu-symbolic`)로 내용 위에 덮어 연다. 열린 동안 내용은 `inert`이고, Esc·바깥 누르기·페이지 고르기로 닫으며 닫힌 뒤(내용의 `inert`가 풀린 뒤) 메뉴 단추로 포커스를 돌려준다. 열기·닫기 값은 `navAnim.ts`
 - 페이지가 함께 쓰는 틀과 컨트롤은 `controls.tsx`(절, 묶음 카드, 행, 스위치, 안내), 테마·배경 고르기는 `pickers.tsx`(숨긴 기본 라디오 버튼이라 키보드·화면 읽기는 브라우저 기본 동작)다
 - 사용자 값은 바로 적용·저장한다(저장 큐). 전역 설정은 고른 값을 먼저 보여 주고 저장한 뒤 서버 값을 다시 받으며, 실패하면 되돌린다(`siteSettings.ts`)

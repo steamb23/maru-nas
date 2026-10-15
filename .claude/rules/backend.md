@@ -23,7 +23,11 @@ paths:
 - 주기 요청·세션 확인으로 부르는 OMV RPC는 `options.updatelastaccess=false`로 호출해 OMV 세션을 연장하지 않는다. 세션 연장은 로그인과 사용자 활동 신호만 한다(`auth-omv.md`의 "세션 만료")
 - 애드온 계약은 `internal/addons`, 내장 애드온은 `internal/addons/<id>/`, 정적 목록은 `internal/addons/builtin`이다. manifest를 바꾸면 `make types`로 `frontend/src/addons/manifests.gen.ts`도 다시 만든다(`.claude/docs/addons.md`)
 - OMV RPC는 `/api/rpc` 중계든 provider 내부 호출이든 manifest 허용 목록(`Registry.Classify`)과 `addons.WritesEnabled`를 거친다
-- 쓰기 RPC는 애드온 조작(`Addon.Actions`, `POST /api/addons/{id}/actions/{action}`)으로만 부른다. `/api/rpc`와 `Fetch`는 쓰기를 거부한다. 조작은 브라우저가 보낸 대상을 검사하고 OMV 파라미터를 직접 만든다(OMV에는 파라미터를 검사하지 않고 셸 명령을 만드는 메서드가 있다). 백그라운드 작업은 `addons.WaitBg`로 기다린다(`.claude/docs/addons.md`의 "조작")
+  - 예외: 애드온이 아닌 서버 기능은 고정 메서드 목록(`rpcCaller.fixed`)만 부른다. 지금은 프로필(`internal/server/profile.go`의 `profileMethods`)뿐이며, 쓰기는 여기서도 `writes`와 `WritesEnabled`를 따른다
+- 쓰기 RPC는 애드온 조작(`Addon.Actions`, `POST /api/addons/{id}/actions/{action}`)과 프로필 저장(`PUT /api/profile`, 자기 계정의 전자 우편·태그를 `UserMgmt.setUserByContext`로)으로만 부른다. `/api/rpc`와 `Fetch`는 쓰기를 거부한다. 조작은 브라우저가 보낸 대상을 검사하고 OMV 파라미터를 직접 만든다(OMV에는 파라미터를 검사하지 않고 셸 명령을 만드는 메서드가 있다). 백그라운드 작업은 `addons.WaitBg`로 기다린다(`.claude/docs/addons.md`의 "조작")
+- OMV 설정을 바꾸고 적용하는 흐름(적용 대기 확인 → 변경 → `Config.applyChangesBg` → `WaitBg`)은 `addons.ApplyChange` 하나로 한다. 이 백엔드 안의 적용은 그 안의 잠금으로 하나씩 실행된다(서비스 켜기·끄기, 관리자의 프로필 저장). 적용 대기가 이미 있으면 남이 만든 변경을 대신 배포하지 않게 409 `config_dirty`로 거절한다
+- 프로필(`GET·PUT /api/profile`)은 로그인한 사용자 자신만 다룬다. 관리자는 `UserMgmt.getUser(자기 이름)`, 일반 사용자는 `getUserByContext`로 읽고, SSH 키·uid 등은 넘기지 않는다. OMV의 설명 칸(comment, GECOS)은 워크벤치가 "Tags"로 쓰므로 쉼표로 나눈 태그로 주고받는다. 저장은 보내지 않은 값을 지금 값으로 채워 보내며, 관리자는 `ApplyChange`로 적용까지, 일반 사용자는 적용 대기로 남긴다. 시스템 계정·수정 금지 계정은 409 `profile_readonly`
+- 프로필 사진은 배경 이미지와 같은 이미지 저장소의 사용자 자리(`prefs.UserAvatar`)이고 상한은 2MiB다(브라우저가 512px로 잘라 줄여 보낸다)
 - 내장 애드온의 현황 데이터는 `Addon.Fetch` → `GET /api/addons/{id}`로 준다. provider는 `Request.RPC`(그 애드온이 선언한 메서드만, `updatelastaccess=false`)로 OMV를 부르고, 일부 출처 실패는 응답의 `failedSources`에 담는다(`.claude/docs/addons.md`의 "애드온 데이터 API")
 - `Smart.getList`는 대기 중인 디스크를 깨운다. 주기적으로 부르지 말고 `smart.Cache`를 거친다(온도는 `Peek`만)
 - OMV가 매번 프로세스를 실행하는 느린 읽기 RPC(`Services.getStatus`, `Compose.getContainers`)는 `addons.SharedCache`로 세션 사이에 짧게(5초) 함께 쓴다. 결과가 사용자와 무관한 RPC에만 쓰고, `Request.Refresh`면 건너뛰며, 상태를 바꾸는 조작은 끝난 뒤(실패해도) `Invalidate`한다
