@@ -365,6 +365,15 @@
         "workbenchUrl": "OMV Workbench address",
         "smartRefreshAt": "SMART check time"
       }
+    },
+    "profile": {
+      "editor": {
+        "title": "Edit photo",
+        "view": "Photo position. Drag or use the arrow keys to move it, and + or - to zoom.",
+        "zoom": "Zoom",
+        "hint": "Drag to position the photo. The circle becomes your profile photo.",
+        "save": "Save"
+      }
     }
   },
   "appearance": {

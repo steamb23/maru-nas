@@ -365,6 +365,15 @@
         "workbenchUrl": "OMV 워크벤치 주소",
         "smartRefreshAt": "SMART 확인 시각"
       }
+    },
+    "profile": {
+      "editor": {
+        "title": "사진 편집",
+        "view": "사진 위치. 끌거나 화살표 키로 옮기고 + / - 키로 확대합니다.",
+        "zoom": "확대",
+        "hint": "끌어서 위치를 맞추세요. 원 안이 프로필 사진이 됩니다.",
+        "save": "저장"
+      }
     }
   },
   "appearance": {

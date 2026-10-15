@@ -1,0 +1,65 @@
+/* 프로필 사진 자르기 편집기(AvatarEditor.tsx). */
+.avatar-editor {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+}
+
+/* 한 변은 AvatarEditor.tsx의 VIEW와 맞춘다. */
+.avatar-editor-view {
+  position: relative;
+  width: 256px;
+  height: 256px;
+  margin: 0 auto;
+  overflow: hidden;
+  border-radius: 8px;
+  background: #000;
+  cursor: grab;
+  touch-action: none;
+}
+
+.avatar-editor-view:active {
+  cursor: grabbing;
+}
+
+.avatar-editor-view:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 60%, transparent);
+  outline-offset: 2px;
+}
+
+.avatar-editor-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* 원 밖을 어둡게 덮고 원 테두리를 그린다. 원이 프로필 사진이 된다. */
+.avatar-editor-mask {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 2px rgb(255 255 255 / 0.85),
+    0 0 0 200px rgb(0 0 0 / 0.5);
+  pointer-events: none;
+}
+
+.avatar-editor-zoom {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.avatar-editor-zoom input {
+  flex: 1;
+  accent-color: var(--accent);
+}
+
+.avatar-editor .settings-hint {
+  margin: 0;
+}
+
+.avatar-editor .modal-buttons {
+  margin-top: 4px;
+}
