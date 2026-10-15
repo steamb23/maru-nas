@@ -666,7 +666,7 @@ export const ErrUnauthorized = "unauthorized";
  */
 export const ErrBadRequest = "bad_request";
 /**
- * ErrRPCForbidden는 허용 목록에 없거나 현재 단계가 허용하지 않는 OMV RPC다.
+ * ErrRPCForbidden는 허용 목록에 없거나 쓰기라서 중계하지 않는 OMV RPC다.
  */
 export const ErrRPCForbidden = "rpc_forbidden";
 /**

@@ -1,6 +1,6 @@
 # 데이터 출처와 OMV 플러그인 의존성
 
-3단계 애드온(창·위젯)의 각 항목을 어디서 가져올지 정리한 문서다. 애드온 구조는 [addons.md](addons.md)를 본다.
+애드온(창·위젯·조작)의 각 항목을 어디서 가져올지 정리한 문서다. 애드온 구조는 [addons.md](addons.md)를 본다.
 
 - 조사 기준일: 2026-10-14, OMV 8.5.11 ("synchrony")
 - 설치된 플러그인의 RPC 이름·역할은 NAS의 `/usr/share/openmediavault/engined/rpc/*.inc`에서 확인했다
@@ -33,7 +33,7 @@
 - `Network.enumerateDevicesList`의 통계는 누적값이다. 속도를 계산하려면 직접 읽기와 마찬가지로 차이를 구해야 하므로, 속도에는 `/proc/net/dev`를 쓴다
 - 그래프 플러그인(diskstats, 코어 perfstats/collectd, cputemp·tempmon의 RRD 페이지)은 admin 전용 `Rrd.getGraph`로 PNG만 준다. 수치가 없으므로 데이터 출처로 쓰지 않는다
 
-### 3-3단계에서 쓴 출처
+### 현황에 쓴 출처
 
 - 디스크 용량: `/proc/mounts` + statfs + `/dev/disk/by-label`(직접 읽기만). `FileSystemMgmt.enumerateMountedFilesystems`(admin)는 쓰지 않았다. 라벨은 by-label로 충분하고, 일반 사용자에게도 같은 화면을 보여 주기 위해서다. OMV가 관리하는 파일시스템 표시가 필요해지면 관리자용 보강 provider 후보다
 - 네트워크: 직접 읽기만. `Network.enumerateDevicesList`(admin)는 주소·설정 표시가 필요해지면 관리자용 보강 provider 후보다
@@ -41,7 +41,7 @@
 - SMART: `Smart.getList`(admin)를 하루 한 번·새로고침 때만. 백그라운드 버전 `getListBg`는 쓰지 않았다(백엔드 캐시가 같은 역할)
 - 컨테이너: `Compose.getContainers`(모두)
 
-### 4단계 조작에서 쓴 출처
+### 조작에 쓴 출처
 
 - 컨테이너 시작·정지·재시작: `Compose.doContainerCommand`(admin, `{command, command2, id}`)
   - 파라미터 스키마 검사가 없다(같은 일을 하는 `doDockerCmd`는 `cmd`가 `inspect`·`logs`·`restart` enum이다). `docker <command> <command2> <id>`를 `OMV\System\Process`로 만드는데 인자를 이스케이프하지 않고 공백으로 이어 셸에서 실행한다. 그래서 브라우저 값을 그대로 넘기면 임의 명령 실행이 된다. 백엔드는 `command`를 고정값으로, `id`를 형식 검사와 목록 확인을 거친 컨테이너 이름으로만 보낸다
@@ -57,7 +57,7 @@
 
 ## 호환 후보 플러그인
 
-"설치"는 이 NAS에 설치되어 있는지를 뜻한다. 3단계는 설치된 플러그인을 먼저 구현한다.
+"설치"는 이 NAS에 설치되어 있는지를 뜻한다. 설치된 플러그인을 먼저 구현한다.
 
 | 패키지 | 저장소 | OMV 8 버전 | 설치 | RPC → 쓸 만한 메서드 (역할) | 항목 |
 |---|---|---|---|---|---|
@@ -71,7 +71,7 @@
 | openmediavault-zfs | omv-extras | 8.1.1 | X | `zfs.getPoolHealth`/`getPoolStatus`/`listPools`/`getScrubStatus`/`getArcStats` (admin) | 용량 |
 | openmediavault-md | 공식 (코어와 별도 패키지) | 8.1.6 | X | `MdMgmt.getList`/`getDetail` (admin): RAID 상태 | 용량 |
 | openmediavault-lvm2 | 공식 | 8.0.3 | X | `LogicalVolumeMgmt.getVolumeGroupsList`/`getLogicalVolumesList` (admin) | 용량 |
-| openmediavault-snapraid, -snapraid-aio | omv-extras | 8.0.3 / 8.1 | X | `SnapRaid.getArrayList`/`getDriveList` (admin). 상태 조회는 명령 실행 메서드(`executeCommand`)를 거치므로 읽기 전용 단계에서는 쓰지 않는다 | 용량 |
+| openmediavault-snapraid, -snapraid-aio | omv-extras | 8.0.3 / 8.1 | X | `SnapRaid.getArrayList`/`getDriveList` (admin). 상태 조회는 명령 실행 메서드(`executeCommand`)를 거치므로 읽기 provider에서는 쓰지 않는다 | 용량 |
 | openmediavault-luksencryption | omv-extras | 8.1.6 | X | `LuksMgmt.getContainersList` (admin): 열림·잠김 상태 | 용량 |
 | openmediavault-remotemount | omv-extras | 8.1.10 | X | `RemoteMount.getList` (admin) | 용량 |
 | openmediavault-podman | 공식 | 8.0.1 | X | `Podman.containerList`/`containerStats`/`podList`/`podStats`/`imageList`/`volumeList` (admin). `containerList`는 `-a` 없이 실행해 실행 중인 컨테이너만 나오는 것으로 보인다(미확인) | 컨테이너 |
@@ -114,7 +114,7 @@
 | Docker·Podman | 플러그인 설정 하나로 둘 다 | 런타임마다 구현하거나 Docker 호환 API에 의존 |
 | 정보량·속도 | 일반 사용자에게는 이미지·이름·상태만. PHP 프로세스와 CLI를 거쳐 느리고, 플러그인 캐시 설정의 영향을 받는다 | Engine API JSON으로 풍부하고 빠르다 |
 | 의존성 | 플러그인과 로그인 세션이 필요하다. 플러그인 API가 바뀌면 따라가야 한다 | OMV와 무관하게 동작한다 |
-| 4단계 조작 | "조작은 OMV RPC로" 규칙과 맞는다 | 규칙과 충돌한다. OMV 화면과 상태가 어긋날 수 있다 |
+| 조작 | "조작은 OMV RPC로" 규칙과 맞는다 | 규칙과 충돌한다. OMV 화면과 상태가 어긋날 수 있다 |
 
 둘 다 지원하면 플러그인이 없는 환경까지 다룰 수 있다. 대신 테스트 조합이 두 배가 되고, 권한 상승 경로가 생긴다.
 

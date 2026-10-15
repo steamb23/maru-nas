@@ -1,6 +1,6 @@
 # 애드온 구조
 
-기능(시스템 정보, 저장소, 온도, 네트워크, 컨테이너 등)을 같은 계약으로 만들기 위한 설계다. 각 기능은 창과 바탕화면 위젯 중 하나 이상의 보기로 보여 준다. 3단계에서 도입했고(3-1 애드온 계약, 3-2 위젯 시스템, 3-3 위젯 세부 구현), 4단계에서 상태를 바꾸는 조작을 더했다(4-1 조작 계약, 4-2 컨테이너 조작, 4-3 OMV 서비스). 항목별 데이터 출처는 [data-sources.md](data-sources.md)를 본다.
+기능(시스템 정보, 저장소, 온도, 네트워크, 컨테이너 등)을 같은 계약으로 만들기 위한 설계다. 각 기능은 창과 바탕화면 위젯 중 하나 이상의 보기로 보여 주고, 필요하면 상태를 바꾸는 조작(컨테이너, OMV 서비스)을 둔다. 항목별 데이터 출처는 [data-sources.md](data-sources.md)를 본다.
 
 데이터·조작이 없는 셸 기능("모든 앱", 바로가기, OMV 웹 UI를 새 탭으로 여는 링크 앱)은 애드온이 아니다. 링크 앱은 `windows/apps.ts`의 `kind: 'link'`이며 `.claude/rules/frontend-shell.md`의 "바로가기와 모든 앱"을 본다.
 
@@ -60,10 +60,10 @@
 - 프론트(`src/addons/capabilities.ts`)는 로그인한 동안 5분마다 가져온다. 관리자 전용은 바로가기와 "모든 앱"에서 숨기고(저장한 바로가기 목록에는 남는다), 플러그인 없음은 아이콘을 둔 채 창 안에 안내한다(`AddonUnavailable`). 아직 받지 못했거나 요청이 실패하면 모두 그린다. 실제 차단은 백엔드가 한다
 - 실제 호출이 OMV에서 `RPC service '...' not found.`(HTTP 404)로 실패하면 provider를 쓸 수 없는 상태로 바꾼다. 이 경로는 마지막 안전장치일 뿐, 감지의 기본 수단이 아니다
 
-### RPC 허용 목록과 단계 규칙
+### RPC 허용 목록과 쓰기 허용
 
 - 백엔드의 OMV RPC 호출(`/api/rpc` 중계, provider의 내부 호출, 조작)은 등록된 manifest의 `rpc.read`·`rpc.write`에 있는 메서드만 통과시킨다(`Registry.Classify`, 대소문자까지 정확히 일치)
-- 쓰기 RPC 허용 여부는 백엔드 한 곳(상수 `addons.WritesEnabled`)에서 정한다. 3단계에서는 꺼 두었고 4단계에서 켰다
+- 쓰기 RPC 허용 여부는 백엔드 한 곳(상수 `addons.WritesEnabled`)에서 정한다. 지금은 켜져 있다
 - 켜져 있어도 **쓰기는 조작으로만** 부른다. `/api/rpc` 중계와 `Fetch`는 쓰기를 거부한다. `Compose.doContainerCommand`처럼 파라미터를 검사하지 않고 셸 명령을 만드는 OMV 메서드가 있어서, 쓰기 파라미터는 브라우저가 아니라 애드온 Go 코드가 만들어야 한다
 - 테스트(`builtin`)로 "쓰기를 선언한 내장 애드온은 조작이 있다"를 확인한다
 - 역할 검사는 OMV가 최종적으로 한다. 백엔드는 `requires.admin`과 조작의 `admin`으로 불필요한 호출을 미리 막을 뿐이다
@@ -82,14 +82,14 @@
 
 - OMV에는 `updatelastaccess=false`로 호출한다. 창·위젯의 주기 요청이 OMV 세션을 연장하면 안 되기 때문이다
 - params는 다시 직렬화하지 않고 그대로 넘긴다(큰 정수의 정밀도 유지)
-- 3-3의 내장 애드온은 이 중계를 쓰지 않고 provider 내부 호출(아래 "애드온 데이터 API")로 OMV를 부른다. 중계는 나중의 선언형 애드온 등을 위해 남겨 둔다
+- 내장 애드온은 이 중계를 쓰지 않고 provider 내부 호출(아래 "애드온 데이터 API")로 OMV를 부른다. 중계는 나중의 선언형 애드온 등을 위해 남겨 둔다
 - 통과 경로(허용된 메서드가 실제 OMV까지 가는 경우)는 Go 테스트(omvfake)로만 검증했다
 
-### 애드온 데이터 API (3-3단계에서 정함)
+### 애드온 데이터 API
 
 내장 애드온의 현황 데이터는 브라우저가 OMV RPC를 직접 조합하지 않고 백엔드 provider가 만든다. 출처 합치기·중복 제거(온도), 세션 사이에 공유하는 캐시(SMART)가 백엔드에 있어야 하기 때문이다.
 
-- `addons.Addon.Fetch(ctx, Request)`가 응답을 만든다. 없으면 `GET /api/addons/{id}`는 404다. 시스템 정보는 3-1 이전부터 있던 `/api/system`을 그대로 쓴다
+- `addons.Addon.Fetch(ctx, Request)`가 응답을 만든다. 없으면 `GET /api/addons/{id}`는 404다. 시스템 정보는 애드온 계약 이전부터 있던 `/api/system`을 그대로 쓴다
 - `Request`: `Admin`, `Sources`(capability로 계산한 쓸 수 있는 provider, 우선순위 순서. `Has(name)`), `Refresh`(`?refresh=1`, 캐시를 쓰는 애드온만 본다), `RPC`
 - `RPC`(`addons.RPCCaller`)는 서버가 요청마다 사용자 세션으로 만든다
   - **호출한 애드온 자신이** manifest `rpc.read`에 선언한 메서드만 부른다(`Registry.Classify`로 확인, 다른 애드온이 선언한 메서드는 거부). 쓰기는 부를 수 없다(조작에서만)
@@ -100,7 +100,7 @@
 - 응답은 모두 `api.AddonSources`(`sources`: 값을 보탠 provider, `failedSources`: 쓸 수 있었지만 실패한 provider)를 품는다. 일부 출처만 실패하면 나머지 값으로 응답하고, 모두 실패했을 때만 오류로 본다
 - 프론트: `fetchAddon(id, guard, {refresh})`(`api/client.ts`)와 응답 형태 검사(`api/guards.ts`), 엔드포인트별 공유 폴러 `createSharedPoll`과 그것에 붙는 훅 `usePolledData`(`refresh()` 포함, 결과는 같은 엔드포인트의 모든 보기가 받는다)
 
-### 조작 (4-1단계에서 정함)
+### 조작
 
 상태를 바꾸는 일(컨테이너 시작·정지, 서비스 켜기·끄기)은 애드온 조작으로만 한다.
 
@@ -149,7 +149,7 @@
   - 창은 자유 배치와 겹침을 전제로 하므로 그리드 배치·겹침 방지를 창 시스템 안에 넣기 어렵다
   - 창 화면을 작게 줄이면 위젯처럼 보이지 않아 결국 작은 화면을 따로 만들게 된다
 
-### 위젯 시스템 (3-2단계에서 정함)
+### 위젯 시스템
 
 #### 그리드와 화면 크기
 
@@ -202,7 +202,7 @@
 - 위젯은 늘 떠 있으므로 창보다 길게 갱신한다(시스템 정보: 창 2초, 위젯 5초)
 - 알려진 한계: 시스템 정보의 CPU 사용률은 백엔드가 직전 샘플과 비교해 계산하므로, 창과 위젯이 함께 열려 있으면 위젯 값은 5초 평균이 아니라 직전 요청(창 포함) 이후의 평균이다
 
-### 3-3단계 내장 애드온
+### 현황 내장 애드온
 
 | id | 이름 | requires | provider (우선순위) | 위젯 / 창 갱신 |
 |---|---|---|---|---|
@@ -239,7 +239,7 @@
 - `Compose.getContainers`(모든 사용자). 첫 행은 런타임 행이며 번역되지 않는 `name`으로 Docker·Podman만 판단하고, 번역된 `status`는 표시에만 쓴다
 - 나머지 행의 상태 문구(docker CLI, 영어)에서 상태(running, paused, restarting, exited, created, dead, removing)와 헬스체크 결과를 읽는다. 원문도 함께 준다
 - 위젯과 창 모두 문제 있는 컨테이너(dead, restarting, unhealthy, 헬스체크 대기)를 먼저 보여 준다. Podman이면 창에 미검증 안내를 띄운다
-- 조작(4-2단계): `start`, `stop`(확인), `restart`(확인), 모두 관리자. `Compose.doContainerCommand`가 파라미터를 검사하지 않고 셸 명령을 만들므로(`data-sources.md`의 "4단계 조작에서 쓴 출처") 명령은 고정값, 이름은 docker 형식(`^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$`)과 지금 `getContainers` 목록에 있는지를 확인한 뒤 보낸다. 시간 제한은 2분(`docker stop`의 종료 유예 시간)
+- 조작: `start`, `stop`(확인), `restart`(확인), 모두 관리자. `Compose.doContainerCommand`가 파라미터를 검사하지 않고 셸 명령을 만들므로(`data-sources.md`의 "조작에 쓴 출처") 명령은 고정값, 이름은 docker 형식(`^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$`)과 지금 `getContainers` 목록에 있는지를 확인한 뒤 보낸다. 시간 제한은 2분(`docker stop`의 종료 유예 시간)
   - 창: 실행 중·일시 정지·다시 시작 중이면 정지·재시작, 정지·생성됨·dead면 시작. 삭제 중·알 수 없음은 조작 없음(`containerActions`). 버튼 칸은 두 개 너비로 고정해 상태 열을 맞춘다
   - 위젯에는 조작이 없다
 
@@ -255,14 +255,14 @@
 - `overallstatus`는 workbench의 색 구분을 따라 good(GOOD), warning(BAD_SECTOR), failing(BAD_ATTRIBUTE_NOW, BAD_ATTRIBUTE_IN_THE_PAST, BAD_SECTOR_MANY), unknown(BAD_STATUS 등)으로 줄이고 원래 값도 준다. 시리얼 번호·WWN은 브라우저에 넘기지 않는다
 - 위젯은 10분마다 백엔드에 묻지만 백엔드는 기준 시각을 넘긴 경우에만 OMV를 부른다
 
-### 4단계 내장 애드온
+### 조작이 있는 내장 애드온
 
 | id | 이름 | requires | provider | 조작 | 위젯 / 창 갱신 |
 |---|---|---|---|---|---|
 | `containers` | 컨테이너 | compose 플러그인 | `omv-compose` | `start`, `stop`(확인), `restart`(확인), 관리자 | 30초 / 15초 |
 | `services` | 서비스 | admin | `omv-services` | `enable`, `disable`(확인) | 30초 / 10초 |
 
-#### 서비스 (`services`, 4-3단계)
+#### 서비스 (`services`)
 
 - 상태: `Services.getStatus`(관리자). `IServiceStatus`를 구현한 OMV 모듈마다 `{name, title, enabled, running}`이다. `name`은 대개 모듈 이름(`ssh`, `samba`, `nfs`, `rsyncd`)이지만 compose 플러그인처럼 다른 값(`Docker`)을 쓰는 모듈도 있다. `title`은 OMV가 번역한 문구라 표시에만 쓴다. 참거짓을 숫자·문자열로 주는 플러그인이 있을 수 있어 느슨하게 읽는다
 - 상태 점과 문구: 켜짐+실행 ok "실행 중", 켜짐+정지 위험 "아직 정지 중", 꺼짐+실행 주의 "아직 실행 중"(설정과 실제가 다름), 꺼짐 idle "꺼짐". 위젯과 창 모두 문제 있는 것부터 보여 준다
@@ -277,9 +277,9 @@
 
 ### 시스템 정보
 
-- 3-1단계: 시스템 정보 창을 첫 내장 애드온(창 보기, provider `proc`)으로 옮겼다
-- 3-2단계: CPU 사용률·RAM·가동 시간 요약을 첫 위젯(`SystemInfoWidget`, 기본 3×2, 2×2~4×3)으로 옮겼다. 2칸 너비에서는 메모리 용량을 빼고 가동 시간을 두 줄로 나눈다
-- 이후(시점 미정): 창 보기를 프로세스 모니터로 확장한다. 프로세스 목록 읽기는 읽기 전용이지만, 프로세스 종료 같은 조작은 4단계 이후다
+- 시스템 정보 창이 첫 내장 애드온(창 보기, provider `proc`)이다
+- CPU 사용률·RAM·가동 시간 요약이 첫 위젯(`SystemInfoWidget`, 기본 3×2, 2×2~4×3)이다. 2칸 너비에서는 메모리 용량을 빼고 가동 시간을 두 줄로 나눈다
+- 창 보기를 프로세스 모니터로 확장하는 일은 `ROADMAP.md`에 있다
 
 ## 내장 애드온
 
@@ -297,7 +297,7 @@
   - `windows/apps.ts`는 창 보기가 있는 애드온을 manifest에서 만들고 준비 중 앱과 합친다. 준비 중 앱과 같은 id의 애드온을 만들면 준비 중 앱을 지운다
 - 별도 패키지, 런타임 로딩, Go `plugin` 패키지는 쓰지 않는다
 
-### manifest 원본과 id 일치 검사 (3-1단계에서 정함)
+### manifest 원본과 id 일치 검사
 
 - Go 구조체가 원본이다. `cmd/genaddons`가 `frontend/src/addons/manifests.gen.ts`(`MANIFESTS`, `AddonId`)를 `as const`로 생성하고, `make types`가 tygo와 함께 실행한다
   - JSON 파일 공유는 쓰지 않았다. `go:embed`는 패키지 밖 파일을 읽을 수 없고, Vite `server.fs.allow`에 backend 경로를 열어야 하며, JSON import는 리터럴 타입이 넓어져 `AddonId`를 얻으려면 결국 생성이 필요하다
@@ -309,7 +309,7 @@
 
 1. 데이터 출처를 정하고 [data-sources.md](data-sources.md)에 추가한다. root가 필요한 정보는 OMV RPC로만 가져온다
 2. RPC 메서드 이름과 역할은 추측하지 않는다. `/usr/share/openmediavault/engined/rpc/*.inc`에서 확인한다
-3. manifest의 `requires`와 `rpc.read`를 채운다. `rpc.write`는 현재 단계가 허용할 때만 채운다
+3. manifest의 `requires`와 `rpc.read`를 채운다. `rpc.write`는 조작(`Addon.Actions`)이 부를 메서드만 채운다
    - 새 플러그인이 필요하면 `knownPlugins`에 패키지와 `.inc` 파일을 추가한다(`dpkg -S`로 확인)
 4. provider를 만든다
    - 입력부(`fs.FS`, RPC 클라이언트)를 주입받게 한다
@@ -330,7 +330,7 @@
 ### 선언형 애드온
 
 - YAML 같은 데이터만으로 정의한다. "이 RPC를 호출해 표·게이지·키-값으로 보여 준다" 정도다. OMV workbench의 `dashboard.d/*.yaml` 위젯과 같은 방식이다
-- 실행하는 코드가 없으므로 비교적 안전하다. RPC 허용 목록과 단계 규칙도 manifest 검사로 그대로 강제할 수 있다
+- 실행하는 코드가 없으므로 비교적 안전하다. RPC 허용 목록과 쓰기 제한도 manifest 검사로 그대로 강제할 수 있다
 - tempmon, zfs, nut처럼 RPC 하나를 표로 보여 주면 되는 플러그인 대부분이 여기에 해당한다
 
 ### 코드 애드온

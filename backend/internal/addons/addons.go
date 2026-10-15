@@ -19,7 +19,7 @@ import (
 )
 
 // WritesEnabled는 상태를 바꾸는 OMV RPC(manifest의 rpc.write)를 부를 수 있는지다.
-// 쓰기 허용 여부는 이 상수 한 곳에서 정한다. 3단계(읽기 전용)에서는 꺼 두었고 4단계에서 켰다.
+// 쓰기 허용 여부는 이 상수 한 곳에서 정한다. 끄면 조작에서도 쓰기 RPC를 부를 수 없다.
 //
 // 켜져 있어도 쓰기는 애드온 조작(Addon.Actions)으로만 부른다. /api/rpc 중계와 Fetch는 쓰기를
 // 거부한다. Compose.doContainerCommand처럼 파라미터를 검사하지 않고 셸 명령을 만드는 OMV 메서드가
@@ -113,7 +113,8 @@ type RPCCaller interface {
 	Call(ctx context.Context, service, method string, params any) (json.RawMessage, error)
 }
 
-// ErrRPCNotAllowed는 애드온이 선언하지 않았거나 지금 단계가 허용하지 않는 RPC를 부르려 했다는 뜻이다.
+// ErrRPCNotAllowed는 애드온이 선언하지 않은 RPC를 부르거나, 쓰기를 부를 수 없는 곳(Fetch, WritesEnabled가
+// 꺼져 있을 때)에서 쓰기 RPC를 부르려 했다는 뜻이다.
 var ErrRPCNotAllowed = errors.New("rpc method is not allowed for this addon")
 
 // RPCKind는 OMV RPC 메서드가 허용 목록에서 어떤 종류인지다.

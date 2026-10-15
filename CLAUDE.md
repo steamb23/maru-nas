@@ -25,7 +25,7 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 - `sudo`나 root 권한이 필요한 명령은 실행하지 않는다. 필요하면 명령과 이유를 제시하고 사용자가 직접 실행하게 한다
 - 시스템 상태를 바꾸는 RPC(서비스 재시작, 디스크·파일시스템·공유 폴더 변경 등)는 코드로 작성만 하고, 실제 호출 테스트는 사용자에게 맡긴다
 - 비밀번호, OMV 세션 ID, 토큰을 로그·파일·커밋·테스트 픽스처에 남기지 않는다
-- 마지막 완료 단계의 바로 다음 단계가 허용하지 않는 기능(아래 "개발 단계")은 구현하지 않는다
+- `ROADMAP.md`에 있는 기능은 사용자가 요청하기 전에 구현하지 않는다. 필요해 보이면 구현하지 말고 제안한다
 
 ## 아키텍처
 
@@ -54,7 +54,7 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 - **현지화**: `en`, `ko`. 화면 문구(aria-label·title 포함)는 모두 `t()`를 거치고, 새 키는 `en.json`과 `ko.json`에 함께 넣는다. 로그인 대기 이스터에그 문구는 현지화 제외(영어 고정)
 - **아이콘**: Colloid 테마 하나만, 리졸버 `getIcon(name)`으로 freedesktop 이름을 써서 가져온다
 
-## 애드온과 위젯 (3단계)
+## 애드온과 위젯
 
 상세 설계는 `.claude/docs/addons.md`, 출처별 표와 플러그인 조사는 `.claude/docs/data-sources.md`.
 
@@ -84,36 +84,6 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 
 개별 실행: `cd backend && go test ./internal/addons/sysinfo -run TestParseMemInfo`, `cd frontend && npx vitest run src/icons`
 
-## 개발 단계
-
-마지막 완료 단계: **4-3단계**
-
-3·4단계는 세부 단계(3-1 → 3-2 → 3-3, 4-1 → 4-2 → 4-3) 순서로 진행하고, 완료 표시도 세부 단계로 적는다(예: **3-1단계**). "바로 다음 단계"는 다음 세부 단계를 뜻한다.
-
-1. 데스크톱 셸 + 시스템 정보 창(`/proc`의 CPU·RAM·가동 시간을 2초마다 갱신). 완료
-2. 로그인: OMV 위임 로그인, 세션 복원·만료, 로그인 시도 제한. 작업표시줄 시계·프로필 메뉴와 현지화(ko·en)도 이 무렵 추가했다. 로그인 대기 이스터에그(`frontend/src/auth/easterEgg/`)는 단계와 무관하게 사용자 요청으로 추가한 예외다. 완료
-3. 애드온과 위젯(읽기 전용): 세 세부 단계 모두 시스템 상태를 바꾸는 코드(쓰기 RPC 포함) 금지
-   - 3-1. 애드온 구현: 애드온 계약(manifest, provider, RPC 허용 목록)과 capability 감지(`/api/capabilities`)를 만든다. 완료
-     - 기존 시스템 정보 창을 첫 내장 애드온(창 보기)으로 옮겨 계약을 검증한다
-     - 위젯 레이어와 새 기능 애드온은 만들지 않는다
-   - 3-2. 위젯 시스템 구현: 바탕화면 위젯 레이어(그리드 배치, 추가·제거·이동·크기 조절, 배치 저장)와 manifest의 위젯 보기 선언을 만든다. 완료
-     - 시스템 정보의 CPU 사용률·RAM·가동 시간을 첫 위젯으로 옮겨 위젯 시스템을 검증한다
-     - 정한 내용은 `.claude/docs/addons.md`의 "위젯 시스템"에 있다. 위젯 잠금(프로필 설정)은 나중에 추가한다
-   - 3-3. 위젯 세부 구현: 디스크 용량, SMART, 온도, 네트워크, 컨테이너 목록을 내장 애드온의 위젯으로 구현한다. 완료
-     - 현재 설치된 플러그인 기준으로 먼저 구현한다. 컨테이너는 Docker 런타임 기준으로 검증한다
-     - 위젯으로 부족한 항목은 같은 애드온에 창 보기를 둔다
-   - 시스템 정보 창은 위젯으로 요약을 옮긴 뒤 나중에 프로세스 모니터로 확장한다(시점 미정, 사용자가 정한다). 프로세스 목록 읽기는 읽기 전용이지만 프로세스 종료 같은 조작은 4단계 이후다
-4. 간단한 조작: 컨테이너 시작·정지, 서비스 켜기·끄기를 OMV RPC로. 쓰기 RPC는 애드온 조작으로만 부른다(`.claude/docs/addons.md`의 "조작"). 실제 OMV로 호출해 보는 것은 사용자가 한다
-   - 4-1. 조작 계약: manifest `actions`, `POST /api/addons/{id}/actions/{action}`, 백그라운드 작업 대기(`WaitBg`), 프론트 공통 조작 UI(행 버튼·인라인 확인·우클릭 메뉴·확인 대화상자). 완료
-   - 4-2. 컨테이너 시작·정지·재시작(`Compose.doContainerCommand`, 관리자). 완료
-   - 4-3. OMV 서비스 애드온(`services`, 관리자): 상태 위젯·창, 핵심 서비스(SSH, SMB/CIFS, NFS, Rsync 서버)의 켜기·끄기(설정의 `enable` 변경 + `Config.applyChangesBg`). OMV에 적용하지 않은 변경이 있으면 거부한다. 완료
-5. 파일 탐색기 창: 공유 폴더 둘러보기(우선 읽기 전용)
-6. "심층 설정" 연결: 각 창에서 해당 OMV 페이지로 이동
-
-단계와 무관한 셸 기능: "모든 앱" 화면(앱 서랍)과 바탕화면 바로가기, OMV 워크벤치 링크 앱(OMV 웹 UI를 새 탭으로 여는 앱과 프로필 메뉴 항목)은 4-3단계 뒤에 사용자 요청으로 추가했다. 시스템 상태를 바꾸지 않는 셸 기능이며 이스터에그와 같은 예외다(`.claude/rules/frontend-shell.md`의 "바로가기와 모든 앱"). 창별로 해당 OMV 페이지를 여는 딥링크는 6단계에서 다룬다.
-
-단계를 넘어갈지는 사용자가 정한다. 다음 단계 기능이 필요해 보이면 구현하지 말고 제안한다.
-
 ## 테스트 전략
 
 로그인이 필요한 기능도 실제 비밀번호 없이 검증한다. Claude는 실제 OMV에 로그인 시도를 보내지 않는다(실패 로그·fail2ban 영향, 비밀번호 취급 금지).
@@ -129,7 +99,7 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
    - 로그인하기 전에 백엔드 로그의 `omv:` 주소가 가짜 OMV(`127.0.0.1:8191`)인지 확인한다. `scripts/dev.sh`는 개발 서버 포트가 이미 쓰이고 있으면 시작하지 않는다
    - 상태 디렉터리를 나누는 것은 사용자의 `make dev-fake`와 같은 사용자 설정 파일(`.dev-state/fake`)을 동시에 쓰지 않기 위해서다
    - 탭을 여러 개 열면 뒤쪽 탭에 마우스 입력이 전달되지 않을 수 있다. 다른 탭 확인이 끝나면 닫거나 브라우저를 새로 연다
-4. **실제 OMV**: 사용자가 `make dev`로 직접 확인한다. Claude는 단계마다 확인 체크리스트를 제시한다
+4. **실제 OMV**: 사용자가 `make dev`로 직접 확인한다. Claude는 기능마다 확인 체크리스트를 제시한다
 
 가짜 계정(`omvfake.DefaultUsers`, 모두 가짜 값):
 
@@ -156,7 +126,7 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 
 - provider 내부 RPC 경로(`GET /api/addons/{id}` → OMV)를 실제 OMV로 확인한다: 컨테이너(`Compose.getContainers`), SMART(`Smart.getList`, 관리자), cputemp(hwmon에 CPU 센서가 없을 때만). 지금은 Go 테스트(omvfake)로만 검증했다. `/api/rpc` 중계 통과 경로도 아직 실제 OMV로 확인하지 않았다
 - Podman 모드의 컨테이너 목록(미검증 표시 중)
-- 4단계 조작을 실제 OMV로 확인한다(사용자가 `make dev`로). 컨테이너: `Compose.doContainerCommand` → `Exec.isRunning` 흐름, 실패한 docker 명령이 `Exec.isRunning` 예외로 오는지. 서비스: `Services.getStatus`의 실제 이름·값, 어댑터별 get → set(스키마 속성만) → `Config.applyChangesBg` → `Exec.isRunning` 흐름, 적용 대기 중 거절. 지금은 omvfake로만 검증했다
+- 컨테이너·서비스 조작을 실제 OMV로 확인한다(사용자가 `make dev`로). 컨테이너: `Compose.doContainerCommand` → `Exec.isRunning` 흐름, 실패한 docker 명령이 `Exec.isRunning` 예외로 오는지. 서비스: `Services.getStatus`의 실제 이름·값, 어댑터별 get → set(스키마 속성만) → `Config.applyChangesBg` → `Exec.isRunning` 흐름, 적용 대기 중 거절. 지금은 omvfake로만 검증했다
 
 - `install.sh`로 실제 설치한 뒤(사용자가 실행): 유닛 하드닝(`ProtectSystem=strict`, `DevicePolicy=closed`, `RestrictAddressFamilies` 등. `PrivateDevices=yes`는 `/dev/disk/by-label`을 숨겨 파일시스템 라벨이 사라지므로 쓰지 않는다) 아래에서 모든 애드온 데이터가 나오는지, Docker Caddy의 `/run/onmaru` 바인드 마운트가 서비스 재시작·재부팅 후에도 유지되는지. 지금은 `systemd-run --user`로 비슷한 제한을 걸어 가짜 OMV로만 확인했다
 - OMV 워크벤치 링크 앱을 실제 OMV로 확인한다(사용자가 `make dev`에 `ONMARU_WORKBENCH_URL`을 두고). 같은 탭을 다시 쓸 때 브라우저가 그 탭으로 전환하는지(Chrome·Firefox), 그 탭의 OMV 로그인이 유지되는지. 지금은 가짜 OMV와 같은 출처 주소로만 확인했다

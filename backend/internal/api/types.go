@@ -448,7 +448,7 @@ const (
 	ErrOMVUnavailable     = "omv_unavailable"
 	ErrUnauthorized       = "unauthorized"
 	ErrBadRequest         = "bad_request"
-	// ErrRPCForbidden는 허용 목록에 없거나 현재 단계가 허용하지 않는 OMV RPC다.
+	// ErrRPCForbidden는 허용 목록에 없거나 쓰기라서 중계하지 않는 OMV RPC다.
 	ErrRPCForbidden = "rpc_forbidden"
 	// ErrAdminRequired, ErrPluginMissing은 RPC를 선언한 애드온을 이 사용자가 쓸 수 없는 이유다.
 	ErrAdminRequired = ReasonAdminRequired
