@@ -4,6 +4,8 @@ paths:
   - "frontend/src/windows/**"
   - "frontend/src/widgets/**"
   - "frontend/src/shortcuts/**"
+  - "frontend/src/settings/**"
+  - "frontend/src/appearance/**"
   - "frontend/src/App.tsx"
   - "frontend/src/index.css"
   - "frontend/src/base.css"
@@ -34,7 +36,7 @@ paths:
 ## 바로가기와 모든 앱
 
 - 바탕화면에는 사용자가 고른 바로가기만 놓는다(`DesktopShortcuts`). 모든 앱은 작업표시줄 왼쪽 끝 버튼으로 여는 "모든 앱" 화면(`AppDrawer`)에 있다. 화면 용어는 "바로가기"(붙여 씀)와 "모든 앱", 코드 이름은 `shortcut`과 `AppDrawer`다
-- 앱은 창 앱(`addon`, `placeholder`)과 링크 앱(`link`, 창 없이 브라우저 탭으로 연다)이다(`windows/apps.ts`). 창 저장소는 `WindowAppId`만 받으므로, 앱을 여는 곳(서랍 타일·바로가기·메뉴 "열기")은 `shell/launchApp.ts`의 `launchApp`을 부른다
+- 앱은 창 앱(`addon`, `placeholder`, 셸이 직접 그리는 `shell`)과 링크 앱(`link`, 창 없이 브라우저 탭으로 연다)이다(`windows/apps.ts`). 셸 앱의 보기 컴포넌트는 `shell/shellViews.ts`에 두어 node 테스트 대상인 `apps.ts`가 컴포넌트를 import하지 않게 한다. 창 저장소는 `WindowAppId`만 받으므로, 앱을 여는 곳(서랍 타일·바로가기·메뉴 "열기")은 `shell/launchApp.ts`의 `launchApp`을 부른다
   - 링크 앱(지금은 OMV 워크벤치)은 `openLink`가 `window.open(주소, 탭 이름)`으로 이름 붙은 탭 하나를 다시 쓴다. 이름 조회가 되도록 `noopener`를 주지 않으며, 팝업 차단을 피하려고 입력 처리기 안에서 동기로 부른다. 주소 계산은 `windows/links.ts`(끝에 OMV 첫 화면 `#/`를 붙여, 다시 열 때 새로 고침 없이 이동한다)
   - 열기 전에 "새 탭에서 열립니다" 데스크톱 대화상자를 띄운다(`linkNoticeDialog.tsx`의 `confirmLinkOpen`, 내용은 `LinkNotice.tsx`). 탭은 "열기" 클릭 처리 안에서 바로 연다(결과를 기다린 뒤 열면 팝업 차단). "다음에 알리지 않음"은 브라우저별 편의 설정이라 쿠키(`onmaru_link_notice_<id>=off`, 1년, Path 없음)에 두며 계산은 `linkNotice.ts`
   - 링크 앱은 주소(`/api/capabilities`의 `workbenchUrl`)가 있을 때만 보인다. capability를 받기 전에도 숨긴다(`appAccess`의 예외). 프로필 메뉴의 "OMV 워크벤치 열기"는 `requires: 'workbench'`로 같은 조건을 따른다
@@ -98,14 +100,31 @@ paths:
 - 재생은 Web Animations API로 하며 transform·opacity만 움직인다. 설정값과 FLIP 계산은 DOM 없는 `*Anim.ts`에 둔다
   - 예외: 위젯 가이드처럼 목표가 계속 바뀌는 추적은 애니메이션을 재시작하면 속도가 끊기므로 requestAnimationFrame 스프링으로 transform을 바꾼다(`WidgetPreview`)
 - 창 밖(작업표시줄 메뉴)에서 배치를 바꿀 때는 `captureWindowLayout(id)`로 그 창의 `captureFrom`을 부른다. 숨겨진(최소화된) 창은 재지 않고 복원 애니메이션이 새 배치로 재생된다
-- 창 애니메이션 켜기/끄기는 `WINDOW_ANIMATIONS` 상수다. 설정 기능이 생기면 그쪽으로 옮긴다
+- 애니메이션 켜기/끄기는 사용자 화면 설정(`appearance/store.ts`의 `animations`, 불러오기 전에는 켜짐)이고, 시스템의 '동작 줄이기'가 켜져 있으면 늘 끈다(`animationsEnabled`). 창·메뉴·화면 전환·배경 페이드가 함께 따른다
 - 닫기: 저장소의 `close`는 창을 바로 지워 작업표시줄·포커스가 즉시 바뀐다. `Desktop`은 `useClosingWindows`로 지워진 창의 마지막 상태와 타일 비율(`ClosingWindow`)을 받아 두고, 애니메이션이 끝나 `onClosed`가 불릴 때까지 그 상태로 그린다(`stableOrder`의 `keep`). 닫히는 창은 클릭을 받지 않고 창 내용의 주기 요청도 바로 멈춘다
 - 작업표시줄 버튼: 등장은 `li`의 ref(`enterTask`), 퇴장은 `Taskbar`가 너비·투명도를 애니메이션한다. 닫힌 창의 버튼은 `useClosingWindows`로 받아 `.leaving` 버튼으로 남긴다(`withLeaving`)
 - 작업표시줄 드래그 정렬: 드래그 중에는 transform으로만 움직이고 놓은 뒤 순서를 반영한다. 전환 효과는 부모가 아닌 각 `li` 클래스에 둔다. 배치 계산에서 `.leaving` 버튼은 뺀다
-- 로그인 ↔ 데스크톱 전환(`screenAnim.ts`, 재생은 `screenTransition.ts`): 배경(`.desktop`)은 그대로 두고 내용(`.login-card`, `.desktop-area`·`.taskbar`)만 움직인다. 나가는 애니메이션은 auth 저장소가 화면을 바꾸기 전에 `beforeScreenChange` 훅(`leaveScreen`)으로, 들어오는 애니메이션은 각 화면이 처음 그려질 때 재생한다
+- 로그인 ↔ 데스크톱 전환(`screenAnim.ts`, 재생은 `screenTransition.ts`): 배경은 움직이지 않고 내용(`.login-card`, `.desktop-area`·`.taskbar`)만 움직인다. 로그인 배경과 바탕화면이 다르면 배경 레이어가 따로 페이드한다(아래 "화면 설정"). 나가는 애니메이션은 auth 저장소가 화면을 바꾸기 전에 `beforeScreenChange` 훅(`leaveScreen`)으로, 들어오는 애니메이션은 각 화면이 처음 그려질 때 재생한다
 
 ## 작업표시줄 트레이와 프로필 메뉴
 
 - 트레이는 `[시계][프로필]` 순서이며 프로필 버튼이 오른쪽 끝에 고정된다
 - 프로필 메뉴 항목은 `profileMenu.ts`의 `PROFILE_MENU_ITEMS`에 데이터로 둔다(`requires`로 거름: `admin`은 관리자만, `workbench`는 OMV 웹 UI 주소가 있을 때만). 항목은 `action`과 `submenu` 두 종류다. `action` 항목을 추가하면 `ProfileMenu.tsx`의 `actions`에 동작도 넣는다
+- 프로필 메뉴 머리글(아바타·이름·역할)은 메뉴 항목 버튼이며 누르면 설정 창의 화면 페이지를 연다. 메뉴에 따로 "설정" 항목은 두지 않는다. `ProfileMenu`는 데스크톱 크기를 모르므로 `Desktop`이 `onOpenSettings`를 `Taskbar`를 거쳐 넘긴다
 - 아바타 그리기는 `ProfileAvatar` 한 곳에 모은다
+
+## 설정 앱
+
+- `src/settings/`. 페이지 목록은 데이터(`pages.ts`: id, 문구 키, 아이콘, 그룹, `requires: 'admin'`)이고 화면 컴포넌트는 `pageViews.ts`의 `Record`에 둔다(빠지면 tsc가 잡는다). 관리자 전용 페이지(전역 설정)는 일반 사용자에게 숨긴다. OMV·시스템 설정을 넣게 되면 그룹을 더한다
+- 어느 페이지를 보일지는 창 저장소가 아니라 `navStore.ts`에 둔다(창 밖에서 특정 페이지로 열 때 `show` 후 `launchApp`). 창이 닫히면 기본 페이지로 되돌린다
+- 창 너비가 `SETTINGS_NARROW_WIDTH`(640px)보다 좁으면(ResizeObserver로 재서 `.narrow`) 사이드바를 숨기고 메뉴 단추(☰, `hamburger-menu-symbolic`)로 내용 위에 덮어 연다. 열린 동안 내용은 `inert`이고, Esc·바깥 누르기·페이지 고르기로 닫으며 닫힌 뒤(내용의 `inert`가 풀린 뒤) 메뉴 단추로 포커스를 돌려준다. 열기·닫기 값은 `navAnim.ts`
+- 페이지가 함께 쓰는 틀과 컨트롤은 `controls.tsx`(절, 묶음 카드, 행, 스위치, 안내), 테마·배경 고르기는 `pickers.tsx`(숨긴 기본 라디오 버튼이라 키보드·화면 읽기는 브라우저 기본 동작)다
+- 사용자 값은 바로 적용·저장한다(저장 큐). 전역 설정은 고른 값을 먼저 보여 주고 저장한 뒤 서버 값을 다시 받으며, 실패하면 되돌린다(`siteSettings.ts`)
+
+## 화면 설정(테마·배경)
+
+- 계산은 `appearance/`의 DOM 없는 모듈(`theme.ts`, `wallpapers.ts`, `store.ts`, `siteStore.ts`), 문서·localStorage는 `appearance/dom.ts`, 반영은 `appearance/useAppearance.ts`의 훅을 App이 부른다
+- 테마는 `<html data-theme>`로 `color-scheme`을 덮는다(`base.css`). 로그인한 동안은 사용자 값 → 관리자 기본 테마, 로그인 화면은 이 브라우저의 마지막 테마(localStorage 힌트)를 쓴다(로그아웃하며 테마가 바뀌지 않게). `main.tsx`가 그리기 전에 힌트를 먼저 적용한다
+- 배경은 App이 화면과 관계없이 두는 배경 레이어(`shell/Wallpaper.tsx`, `.wallpaper`)가 그리고 `.desktop`은 배경이 없다. 로그인·연결 끊김 화면은 로그인 배경, 데스크톱은 사용자 바탕화면 → 관리자 기본 바탕화면 → 기본 배경(`dusk`)이다. 모르는 프리셋·없는 이미지는 다음 후보로 넘어간다
+- 배경이 바뀌면 새 레이어를 위에 겹쳐 투명도만 올린다(`wallpaperAnim.ts`). 이미지는 `decode()`가 끝난 뒤 시작하고 실패하면 기본 배경으로 바꾼다. 페이드 중에 또 바뀌면 그 위에 겹쳐 이어 간다. 사용자 설정을 받기 전에는 배경을 바꾸지 않아(마지막 바탕화면 힌트로 그림) 로그인 뒤 한 번만 바뀐다
+- 바탕화면 아이콘 글자가 흰색이므로 프리셋은 어둡거나 중간 밝기만 둔다

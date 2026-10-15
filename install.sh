@@ -282,8 +282,8 @@ uninstall() {
   info "$(t "Removed service, binary and settings (backups $ENV_FILE.bak-* are kept)" \
     "서비스, 실행 파일, 설정을 지웠습니다(백업 $ENV_FILE.bak-* 은 남겨 둡니다)")"
 
-  if [[ -d $STATE_DIR ]] && confirm "$(t "Also delete $STATE_DIR (per-user widget layouts)?" \
-    "$STATE_DIR(사용자별 위젯 배치)도 지울까요?")" n; then
+  if [[ -d $STATE_DIR ]] && confirm "$(t "Also delete $STATE_DIR (dashboard settings and uploaded backgrounds)?" \
+    "$STATE_DIR(대시보드 설정과 올린 배경 이미지)도 지울까요?")" n; then
     rm -rf -- "$STATE_DIR"
     info "$(t "Removed $STATE_DIR" "$STATE_DIR 삭제")"
   fi

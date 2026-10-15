@@ -18,7 +18,7 @@ paths:
 
 - 일반 전역 CSS다(CSS Modules 아님). 진입점은 `src/index.css` 하나이고 주석과 `@import` 목록만 둔다. 컴포넌트는 CSS를 직접 import하지 않는다(적용 순서를 모듈 그래프가 아니라 이 목록이 정하게)
 - 파일 위치는 클래스를 보고 짐작할 수 있게 정한다
-  1. 컴포넌트 폴더(`shell/`, `auth/`, `icons/`, `addons/` 루트): 클래스를 그리는 컴포넌트와 같은 이름으로 옆에 둔다(`Taskbar.tsx` → `Taskbar.css`)
+  1. 컴포넌트 폴더(`shell/`, `auth/`, `icons/`, `settings/`, `addons/` 루트): 클래스를 그리는 컴포넌트와 같은 이름으로 옆에 둔다(`Taskbar.tsx` → `Taskbar.css`)
   2. 애드온 폴더(`addons/<id>/`, `addons/common/`): 폴더 이름의 파일 하나에 창·위젯 스타일을 함께 둔다(`addons/network/network.css`). 쓸 스타일이 없으면 만들지 않는다
   3. 여러 곳이 쓰는 클래스는 주인(이름 접두사를 가진 쪽) 파일 한 곳에만 둔다. 애드온 공통 클래스(`.addon-*`, `.widget-line` 등, `.status-dot`, `.row-*`)는 `addons/common/common.css`
   - 전역 토대(디자인 토큰, reset, `user-select`)는 `src/base.css`

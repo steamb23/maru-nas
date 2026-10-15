@@ -192,6 +192,7 @@
 - `PUT /api/preferences/shortcuts`: 바로가기 목록 전체(`[{app}]`, 바탕화면 순서)를 바꾼다. 다른 설정은 그대로 둔다
   - 검사(`addons.ValidateShortcuts`)는 형식만 본다: 앱 id는 애드온 id와 같은 형식, 앱마다 하나, 64개 이하. 준비 중 앱(`files`)은 프론트에만 있으므로 레지스트리로 검사하지 않고, 모르는 id는 프론트가 불러올 때 뺀다. capability도 위젯과 같은 이유로 보지 않는다
   - 객체 목록으로 둔 것은 나중에 폴더·OMV 페이지 바로가기를 필드만 더해 담기 위해서다
+- `PUT /api/preferences/appearance`: 화면 설정(`{theme, wallpaper, animations}`) 전체를 바꾼다. 빈 값은 관리자 기본 화면을 따른다. 바탕화면 이미지는 `…/wallpaper-image`로 따로 올리며, 응답의 `wallpaperImage`(리비전)는 저장하지 않고 응답할 때 붙인다
 - `PUT /api/preferences/drawer`: "모든 앱" 화면 설정(`{sort}`) 전체를 바꾼다. `sort`는 `recommended`(추천순, 대시보드가 정한 순서)나 `name`(화면 언어의 이름순)만 받는다. 저장한 적 없거나 프론트가 모르는 값이면 추천순이다
 - 설정 파일은 설정 하나를 바꿀 때 읽기부터 쓰기까지 잠그므로(`prefs` `update`), 위젯과 바로가기를 동시에 저장해도 서로를 지우지 않는다
 - 프론트 저장소(`widgets/store.ts`, `shortcuts/store.ts`, "모든 앱" 설정)는 같은 저장 큐(`api/saveQueue.ts`)로 저장 요청을 하나씩 보내고, 보내는 동안 바뀐 값은 마지막 것만 이어서 보낸다. 실패하면 로컬 값을 유지하고 다음 변경 때 다시 보낸다. 각 저장소는 따로 `GET /api/preferences`를 부르지만 동시에 부른 요청은 클라이언트가 하나로 합친다(`fetchPreferences`)
