@@ -19,6 +19,7 @@ paths:
 - `cmd/fakeomv`와 `internal/omv/omvfake`는 개발·테스트용이다. 운영 바이너리(`cmd/onmaru`)에서 import하지 않는다
 - `/api/*` 경로는 대시보드 루트 기준이다. 대시보드를 경로 접두사 아래에 두면 리버스 프록시가 접두사를 제거한다. 쿠키 Path는 `-cookie-path`(기본 `/`)
 - `internal/web/static/`에는 `.gitkeep`만 커밋한다. `dist/`는 빌드 결과다
+  - 캐시: 해시가 붙은 `assets/*`는 `Cache-Control: public, max-age=31536000, immutable`, 그 밖의 파일(`index.html`)은 `no-cache`다. embed 파일은 수정 시각이 0이라 `Last-Modified`가 없으므로 시작할 때 내용 해시로 ETag를 만든다. 없는 파일(업그레이드 전 탭이 요청한 옛 청크)의 404에는 캐시 헤더를 붙이지 않는다(`internal/web`)
 - `internal/api`는 TS 타입 생성의 원본이다. 바꾸면 `make types`를 실행하고 `frontend/src/api/types.gen.ts`도 함께 커밋한다
 - 주기 요청·세션 확인으로 부르는 OMV RPC는 `options.updatelastaccess=false`로 호출해 OMV 세션을 연장하지 않는다. 세션 연장은 로그인과 사용자 활동 신호만 한다(`auth-omv.md`의 "세션 만료")
 - 애드온 계약은 `internal/addons`, 내장 애드온은 `internal/addons/<id>/`, 정적 목록은 `internal/addons/builtin`이다. manifest를 바꾸면 `make types`로 `frontend/src/addons/manifests.gen.ts`도 다시 만든다(`.claude/docs/addons.md`)
