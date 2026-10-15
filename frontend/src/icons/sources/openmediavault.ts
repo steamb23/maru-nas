@@ -3,6 +3,8 @@
 import favicon from '@vendor-icons/openmediavault/favicon.svg?url'
 import type { Icon } from '../types'
 
+// 로고는 캔버스를 꽉 채운 사각형이다. Colloid 앱 아이콘은 64칸 중 가운데 56칸을 쓰므로
+// 같은 크기로 보이게 그릴 때 4/64씩 여백을 둔다.
 export const OPENMEDIAVAULT_ICONS = {
-  openmediavault: { url: favicon, kind: 'color' },
+  openmediavault: { url: favicon, kind: 'color', inset: 4 / 64 },
 } as const satisfies Record<string, Icon>

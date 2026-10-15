@@ -13,7 +13,9 @@ interface Props {
 export function IconImage({ name, size, className }: Props) {
   const icon = getIcon(name)
   if (icon.kind === 'color') {
-    return <img className={className} src={icon.url} width={size} height={size} alt="" draggable={false} />
+    // 여백은 padding으로 둔다(box-sizing: border-box라 바깥 크기는 size 그대로다).
+    const style = icon.inset ? { padding: size * icon.inset } : undefined
+    return <img className={className} src={icon.url} width={size} height={size} style={style} alt="" draggable={false} />
   }
   const mask = `url("${icon.url}")`
   const style: CSSProperties = { width: size, height: size, maskImage: mask, WebkitMaskImage: mask }

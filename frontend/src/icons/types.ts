@@ -7,4 +7,7 @@ export type IconKind = 'color' | 'symbolic'
 export interface Icon {
   url: string
   kind: IconKind
+  // inset은 그릴 때 네 변에 둘 투명 여백의 비율(아이콘 크기 기준)이다. 테마 밖 아이콘이 테마 아이콘과
+  // 같은 크기로 보이게 맞출 때 쓴다. 파일은 바꾸지 않는다.
+  inset?: number
 }
