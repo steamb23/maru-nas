@@ -112,6 +112,7 @@ func TestCheckWorkbenchURL(t *testing.T) {
 		{raw: "https://nas.example.lan/"},
 		{raw: "http://192.0.2.10:8001"},
 		{raw: "https://nas.example.lan/omv/"},
+		{raw: "HTTPS://nas.example.lan/"},
 		{raw: "/"},
 		{raw: "/omv/"},
 		{raw: "../"},

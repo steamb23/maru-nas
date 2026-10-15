@@ -128,7 +128,8 @@ valid_workbench_url() {
   local u=$1
   [[ -z $u ]] && return 0
   [[ $u == *[?#[:space:]]* ]] && return 1
-  [[ $u =~ ^https?://[^/@]+(/.*)?$ ]] && return 0
+  # scheme은 대소문자를 가리지 않는다(백엔드의 url.Parse와 같게).
+  [[ ${u,,} =~ ^https?://[^/@]+(/.*)?$ ]] && return 0
   [[ $u == //* ]] && return 1
   [[ $u == /* || $u == . || $u == .. || $u == ./* || $u == ../* ]]
 }
