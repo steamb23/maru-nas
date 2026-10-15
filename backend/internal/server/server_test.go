@@ -74,6 +74,8 @@ type envOptions struct {
 	addons  *addons.Registry
 	plugins PluginDetector
 	prefs   prefs.Store
+	// workbenchURL은 Config.WorkbenchURL이다.
+	workbenchURL string
 }
 
 func newEnv(t *testing.T, o envOptions) *env {
@@ -122,6 +124,7 @@ func newEnv(t *testing.T, o envOptions) *env {
 		Addons:        o.addons,
 		Plugins:       o.plugins,
 		Prefs:         o.prefs,
+		WorkbenchURL:  o.workbenchURL,
 		CheckInterval: o.interval,
 		FailDelay:     o.failDelay,
 		Now:           clk.Now,

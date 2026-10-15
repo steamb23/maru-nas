@@ -136,3 +136,17 @@ func TestCapabilitiesDefaults(t *testing.T) {
 		t.Errorf("body = %q", body)
 	}
 }
+
+// OMV 웹 UI 주소는 설정했을 때만 그대로 알려 준다(일반 사용자에게도).
+func TestCapabilitiesWorkbenchURL(t *testing.T) {
+	e := newEnv(t, envOptions{workbenchURL: "https://nas.example.lan/"})
+	for _, user := range []string{"admin", "user"} {
+		b := e.browser()
+		wantStatus(t, b.login(user, user), http.StatusOK)
+		rec := b.do(http.MethodGet, "/api/capabilities", nil)
+		wantStatus(t, rec, http.StatusOK)
+		if got := decode[api.CapabilitiesResponse](t, rec).WorkbenchURL; got != "https://nas.example.lan/" {
+			t.Errorf("%s: workbenchUrl = %q", user, got)
+		}
+	}
+}

@@ -171,6 +171,11 @@ export interface CapabilitiesResponse {
    * Plugins는 설치된 것으로 감지한, 대시보드가 아는 OMV 플러그인 패키지 이름이다(정렬).
    */
   plugins: string[];
+  /**
+   * WorkbenchURL은 브라우저에서 OMV 웹 UI(workbench)를 열 주소다(-workbench-url). 비어 있으면
+   * 설정하지 않은 것이다. http(s) URL이거나 대시보드 문서 기준의 경로 참조(/, ../)이며 해석은 프론트엔드가 한다.
+   */
+  workbenchUrl?: string;
 }
 /**
  * AddonCapability는 애드온 하나를 이 사용자가 쓸 수 있는지다.

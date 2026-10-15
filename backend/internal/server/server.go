@@ -68,6 +68,8 @@ type Config struct {
 	Limiter  *auth.Limiter
 	// CookiePath는 브라우저가 보는 대시보드 경로다(리버스 프록시가 떼기 전). 기본 /.
 	CookiePath string
+	// WorkbenchURL은 브라우저에서 OMV 웹 UI를 열 주소다. /api/capabilities로 그대로 알려 준다. 비우면 알리지 않는다.
+	WorkbenchURL string
 	// CheckInterval마다 요청 처리 중에 OMV 세션이 살아 있는지 확인한다. 기본 60초.
 	// 예상 만료 시각이 지났으면 주기와 상관없이 확인한다.
 	CheckInterval time.Duration
@@ -151,8 +153,11 @@ func (h *handler) system(w http.ResponseWriter, _ *http.Request, _ auth.Session)
 }
 
 // capabilities는 플러그인 설치 상태와 세션 역할로 애드온마다 쓸 수 있는지 알려 준다.
+// OMV 웹 UI 주소(설정했으면)도 함께 알려 준다.
 func (h *handler) capabilities(w http.ResponseWriter, _ *http.Request, s auth.Session) {
-	writeJSON(w, http.StatusOK, h.Addons.Capabilities(h.Plugins.Plugins(), s.Admin))
+	resp := h.Addons.Capabilities(h.Plugins.Plugins(), s.Admin)
+	resp.WorkbenchURL = h.WorkbenchURL
+	writeJSON(w, http.StatusOK, resp)
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) {

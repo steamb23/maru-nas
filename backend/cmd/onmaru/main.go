@@ -46,6 +46,8 @@ func main() {
 	// systemd의 StateDirectory=를 쓰면 STATE_DIRECTORY가 설정된다.
 	stateDir := flag.String("state-dir", cmp.Or(os.Getenv("ONMARU_STATE_DIR"), os.Getenv("STATE_DIRECTORY")),
 		"사용자 설정(위젯 배치 등)을 저장할 디렉터리. 비우면 메모리에만 둔다 (환경 변수 ONMARU_STATE_DIR, STATE_DIRECTORY)")
+	workbenchURL := flag.String("workbench-url", os.Getenv("ONMARU_WORKBENCH_URL"),
+		"브라우저에서 OMV 웹 UI(workbench)를 열 주소. http(s) URL 또는 대시보드 기준 경로(/, ../). 비우면 OMV 워크벤치 앱을 숨긴다 (환경 변수 ONMARU_WORKBENCH_URL)")
 	smartAt := flag.String("smart-refresh-at", cmp.Or(os.Getenv("ONMARU_SMART_REFRESH_AT"), "00:00"),
 		"SMART 정보를 하루 한 번 다시 가져오는 기준 시각 HH:MM, 서버 로컬 시간 (환경 변수 ONMARU_SMART_REFRESH_AT)")
 	flag.Parse()
@@ -60,6 +62,9 @@ func main() {
 			"(login rate limit, OMV auth log, cookie Secure flag)", address)
 	}
 	if err := checkOMVURL(*omvURL); err != nil {
+		log.Fatal(err)
+	}
+	if err := checkWorkbenchURL(*workbenchURL); err != nil {
 		log.Fatal(err)
 	}
 
@@ -88,13 +93,14 @@ func main() {
 
 	srv := &http.Server{
 		Handler: server.New(server.Config{
-			System:     deps.System,
-			Static:     web.Handler(),
-			OMV:        omv.NewClient(*omvURL, userAgent),
-			Addons:     builtin.New(deps),
-			Plugins:    plugins,
-			Prefs:      store,
-			CookiePath: *cookiePath,
+			System:       deps.System,
+			Static:       web.Handler(),
+			OMV:          omv.NewClient(*omvURL, userAgent),
+			Addons:       builtin.New(deps),
+			Plugins:      plugins,
+			Prefs:        store,
+			CookiePath:   *cookiePath,
+			WorkbenchURL: *workbenchURL,
 		}),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
@@ -204,4 +210,39 @@ func checkOMVURL(raw string) error {
 		return errors.New("omv url must point to a loopback address (e.g. http://127.0.0.1), got " + raw)
 	}
 	return nil
+}
+
+// checkWorkbenchURL은 브라우저가 OMV 웹 UI를 열 주소(-workbench-url)를 확인한다. 빈 값은 기능을 끈 것이다.
+// http(s) 절대 URL이거나, 대시보드 문서 기준으로 해석할 경로 참조(/, ./, ../로 시작)만 받는다.
+// scheme 없는 호스트 이름(nas.example.lan/)은 브라우저가 상대 경로로 해석해 대시보드 안을 가리키므로 거부한다.
+func checkWorkbenchURL(raw string) error {
+	if raw == "" {
+		return nil
+	}
+	if strings.ContainsAny(raw, "?# \t") {
+		return errors.New("workbench url must not contain a query, fragment or spaces, got " + raw)
+	}
+	u, err := url.Parse(raw)
+	if err != nil {
+		return fmt.Errorf("workbench url: %w", err)
+	}
+	switch {
+	case u.Scheme == "http" || u.Scheme == "https":
+		if u.Host == "" || u.User != nil {
+			return errors.New("workbench url must have a host and no user info, got " + raw)
+		}
+	case u.Scheme == "" && u.Host == "" && isPathRef(raw):
+	default:
+		return errors.New("workbench url must start with http:// or https://, or be a path starting with / or ./ or ../ " +
+			"(add the scheme to a host name, e.g. https://nas.example.lan/), got " + raw)
+	}
+	return nil
+}
+
+// isPathRef는 /, ./, ../로 시작하는 경로 참조인지 확인한다. //host 형태는 아니다.
+func isPathRef(s string) bool {
+	if strings.HasPrefix(s, "//") {
+		return false
+	}
+	return strings.HasPrefix(s, "/") || s == "." || s == ".." || strings.HasPrefix(s, "./") || strings.HasPrefix(s, "../")
 }
