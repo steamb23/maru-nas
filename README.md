@@ -47,7 +47,7 @@ OpenMediaVault 8 위에 올리는 데스크톱형 웹 대시보드입니다. 창
 
 ```sh
 ./install.sh --service-install --user onmaru --listen unix:/run/onmaru/onmaru.sock \
-  --omv-url http://127.0.0.1:8001 --smart-refresh-at 00:00
+  --omv-url http://127.0.0.1 --smart-refresh-at 00:00
 ```
 
 root로 실행했는데 저장소의 소유자가 root가 아니면(`sudo ./install.sh`, `sudo -i`, `su` 등) 빌드를 건너뜁니다. root로 빌드하면 저장소에 root 소유 파일이 생기고, sudo 환경의 PATH에는 사용자가 설치한 Go·npm이 없을 수 있기 때문입니다. 이때는 기존 `bin/onmaru`로 설치만 할지 물어봅니다.
@@ -75,7 +75,7 @@ root로 실행했는데 저장소의 소유자가 root가 아니면(`sudo ./inst
 
 ## 리버스 프록시
 
-대시보드를 둘 호스트와 경로는 프록시 설정에서 정합니다. 별도 서브도메인의 루트에 두어도 되고, 같은 도메인의 경로 접두사(예: `/desk/`) 아래에 두어도 됩니다. 프론트엔드는 상대 경로로 빌드되어 있습니다.
+대시보드는 따로 설치한 리버스 프록시 뒤에 둡니다. 아래 예시는 Caddy 기준이며, 다른 프록시를 쓰더라도 "프록시 요구 사항"을 만족하면 됩니다. 대시보드를 둘 호스트와 경로는 프록시 설정에서 정합니다. 별도 서브도메인의 루트에 두어도 되고, 같은 도메인의 경로 접두사(예: `/desk/`) 아래에 두어도 됩니다. 프론트엔드는 상대 경로로 빌드되어 있습니다.
 
 ### 수신 방식 고르기
 
@@ -92,11 +92,61 @@ root로 실행했는데 저장소의 소유자가 root가 아니면(`sudo ./inst
 
 ### 프록시 요구 사항
 
-- `X-Forwarded-Proto: https`를 전달해야 합니다. 백엔드는 이 값이 있을 때만 세션 쿠키에 `Secure`를 붙입니다(Caddy `reverse_proxy`의 기본 동작입니다).
-- `X-Forwarded-For`에 브라우저 IP를 넣어야 합니다(Caddy의 기본 동작입니다). 백엔드는 마지막 항목을 로그인 시도 제한과 OMV 인증 로그에 사용합니다. Caddy 앞에 다른 프록시가 없다면 `trusted_proxies`는 설정하지 마세요. 그래야 브라우저가 보낸 값을 Caddy가 덮어씁니다.
+- `X-Forwarded-Proto`에 브라우저가 접속한 프로토콜(`https` 또는 `http`)을 전달해야 합니다. 백엔드는 이 값이 `https`일 때만 세션 쿠키에 `Secure`를 붙입니다.
+- `X-Forwarded-For`의 마지막 항목이 브라우저 IP여야 합니다. 백엔드는 마지막 항목만 로그인 시도 제한과 OMV 인증 로그에 사용합니다. 앞쪽 항목은 브라우저가 임의로 보낼 수 있으므로 쓰지 않습니다.
 - 경로 접두사 아래에 둘 때는 접두사를 떼고 전달하고, 끝 슬래시가 없는 주소(`/desk`)를 `/desk/`로 리다이렉트해 주세요. 상대 경로가 `/desk/`를 기준으로 해석되기 때문입니다.
+- 응답 대기 시간이 3분보다 길어야 합니다. 서비스 켜기·끄기 같은 조작은 OMV 작업이 끝날 때까지 최대 3분 동안 응답을 기다리며, 프록시가 먼저 연결을 끊으면 작업은 계속 진행되지만 화면에는 시간 초과 오류가 표시됩니다. nginx 계열 프록시는 기본값이 60초이므로 `proxy_read_timeout`을 늘려 주세요.
 
-### Caddy 예시
+Caddy의 `reverse_proxy`는 기본 설정으로 이 조건을 모두 만족합니다. `X-Forwarded-Proto`와 `X-Forwarded-For`를 붙이고, 응답 대기 시간에 제한이 없습니다. Caddy 앞에 다른 프록시가 없다면 `trusted_proxies`는 설정하지 마세요. 그래야 브라우저가 보낸 `X-Forwarded-For`를 Caddy가 덮어씁니다.
+
+### Caddy 예시: OMV 기본 포트를 유지하는 경우
+
+OMV 웹 UI가 설치할 때의 기본값대로 80번 포트(HTTP)를 쓰고 있다면, Caddy는 443번 포트(HTTPS)만 사용하게 합니다. OMV 설정은 바꾸지 않으며, OMV 웹 UI 설정(시스템 → Workbench)의 SSL/TLS는 443번 포트가 겹치지 않도록 꺼 둔 상태(기본값)여야 합니다.
+
+Caddy는 기본적으로 80번 포트에서 HTTP를 HTTPS로 리다이렉트하므로 OMV nginx와 포트가 겹칩니다. 전역 옵션 `auto_https disable_redirects`를 주면 이 리다이렉트를 만들지 않고 80번 포트를 열지 않습니다. 따라서 `http://` 주소로 접속하면 OMV 웹 UI가 응답하고, 대시보드는 반드시 `https://` 주소로 접속해야 합니다. Caddy를 Docker로 실행한다면 443번 포트만 publish합니다.
+
+80번 포트를 쓸 수 없으므로 HTTP-01 방식의 인증서 발급은 할 수 없습니다. 로컬 네트워크에서는 다음 중 하나를 사용합니다.
+
+- `tls internal`: Caddy가 자체 CA로 인증서를 발급합니다. 브라우저 경고를 없애려면 Caddy의 루트 인증서(`<Caddy 데이터 디렉터리>/pki/authorities/local/root.crt`)를 접속하는 기기에 신뢰할 인증서로 등록합니다.
+- DNS-01 방식: 실제로 소유한 도메인이 있다면 DNS 공급자 모듈을 포함한 Caddy로 공인 인증서를 받을 수 있습니다. 설정 방법은 Caddy 문서의 `tls` 지시어 `dns` 항목을 참고해 주세요.
+
+서브도메인 루트에 두는 경우:
+
+```caddyfile
+{
+	auto_https disable_redirects
+}
+
+dash.example.lan {
+	tls internal
+	reverse_proxy 127.0.0.1:8090
+}
+```
+
+OMV와 같은 이름의 경로 접두사 아래에 두는 경우입니다. `https://nas.example.lan/`은 Caddy를 거쳐 OMV 웹 UI로, `https://nas.example.lan/desk/`는 대시보드로 연결됩니다. 기존 `http://nas.example.lan/`도 그대로 OMV 웹 UI에 접속됩니다.
+
+```caddyfile
+{
+	auto_https disable_redirects
+}
+
+nas.example.lan {
+	tls internal
+	redir /desk /desk/ 308
+	handle_path /desk/* {
+		reverse_proxy 127.0.0.1:8090
+	}
+	handle {
+		reverse_proxy 127.0.0.1:80   # OMV 웹 UI(기본 포트)
+	}
+}
+```
+
+두 예시 모두 Caddy가 호스트에서 실행되는 경우입니다. Docker 컨테이너의 Caddy라면 대시보드는 아래의 Unix 소켓 예시처럼 연결하고, OMV 웹 UI 주소는 컨테이너에서 닿는 호스트 주소로 바꿔 주세요.
+
+### Caddy 예시: Caddy를 메인 리버스 프록시로 쓰는 경우
+
+Caddy가 80·443번 포트를 모두 맡아 HTTPS 리다이렉트와 인증서 발급·갱신을 하고, OMV 웹 UI와 온마루를 모두 Caddy 뒤에 두는 구성입니다. 이 경우 OMV 웹 UI 설정(시스템 → Workbench)에서 OMV 포트를 다른 값으로 옮기고 SSL/TLS는 끕니다. 아래 예시에서는 `8001`로 옮겼다고 가정합니다. 온마루의 OMV 주소도 바꾼 포트에 맞춰 `http://127.0.0.1:8001`로 설정해야 합니다(설치 스크립트는 nginx 설정에서 포트를 찾아 제안합니다).
 
 서브도메인 루트에 두고, 프록시가 호스트에서 실행되는 경우:
 
@@ -123,7 +173,7 @@ nas.example.com {
 		reverse_proxy 127.0.0.1:8090
 	}
 	handle {
-		reverse_proxy 127.0.0.1:8001   # OMV 웹 UI
+		reverse_proxy 127.0.0.1:8001   # OMV 웹 UI(옮긴 포트)
 	}
 }
 ```
