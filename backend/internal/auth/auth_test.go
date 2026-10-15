@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"strconv"
 	"testing"
 	"time"
 )
@@ -103,7 +104,7 @@ func TestStorePending(t *testing.T) {
 
 func fail(t *testing.T, l *Limiter, ip, user string) {
 	t.Helper()
-	done, wait := l.Begin(ip, user)
+	done, wait := l.Begin(ip, user, "")
 	if done == nil {
 		t.Fatalf("blocked unexpectedly (%v)", wait)
 	}
@@ -117,20 +118,20 @@ func TestLimiterLockout(t *testing.T) {
 		fail(t, l, "192.0.2.1", "admin")
 	}
 	fail(t, l, "192.0.2.1", "admin") // 이번 실패부터 잠긴다.
-	if done, wait := l.Begin("192.0.2.1", "admin"); done != nil || wait != BaseLockout {
+	if done, wait := l.Begin("192.0.2.1", "admin", ""); done != nil || wait != BaseLockout {
 		t.Fatalf("want lockout %v, got %v", BaseLockout, wait)
 	}
 	// 같은 IP의 다른 사용자, 다른 IP의 같은 사용자도 막힌다.
-	if done, _ := l.Begin("192.0.2.1", "user"); done != nil {
+	if done, _ := l.Begin("192.0.2.1", "user", ""); done != nil {
 		t.Error("same ip not blocked")
 	}
-	if done, _ := l.Begin("192.0.2.2", "ADMIN "); done != nil {
+	if done, _ := l.Begin("192.0.2.2", "ADMIN ", ""); done != nil {
 		t.Error("same user (normalized) not blocked")
 	}
 
 	clk.Add(BaseLockout)
 	fail(t, l, "192.0.2.1", "admin")
-	if _, wait := l.Begin("192.0.2.1", "admin"); wait != 2*BaseLockout {
+	if _, wait := l.Begin("192.0.2.1", "admin", ""); wait != 2*BaseLockout {
 		t.Errorf("second lockout %v", wait)
 	}
 }
@@ -141,12 +142,12 @@ func TestLimiterSuccessResets(t *testing.T) {
 	for range FreeFailures {
 		fail(t, l, "192.0.2.1", "admin")
 	}
-	done, _ := l.Begin("192.0.2.1", "admin")
+	done, _ := l.Begin("192.0.2.1", "admin", "")
 	done(Success)
 	for range FreeFailures {
 		fail(t, l, "192.0.2.1", "admin")
 	}
-	if done, _ := l.Begin("192.0.2.1", "admin"); done == nil {
+	if done, _ := l.Begin("192.0.2.1", "admin", ""); done == nil {
 		t.Error("blocked after success reset")
 	}
 }
@@ -159,7 +160,7 @@ func TestLimiterWindow(t *testing.T) {
 	}
 	clk.Add(FailWindow + time.Second)
 	fail(t, l, "192.0.2.1", "admin")
-	if done, _ := l.Begin("192.0.2.1", "admin"); done == nil {
+	if done, _ := l.Begin("192.0.2.1", "admin", ""); done == nil {
 		t.Error("old failures should have been forgotten")
 	}
 }
@@ -168,18 +169,18 @@ func TestLimiterInflight(t *testing.T) {
 	l := newTestLimiter(newClock())
 	var dones []func(Outcome)
 	for range MaxInflight {
-		done, _ := l.Begin("192.0.2.1", "admin")
+		done, _ := l.Begin("192.0.2.1", "admin", "")
 		if done == nil {
 			t.Fatal("blocked below inflight limit")
 		}
 		dones = append(dones, done)
 	}
-	if done, wait := l.Begin("192.0.2.1", "other"); done != nil || wait <= 0 {
+	if done, wait := l.Begin("192.0.2.1", "other", ""); done != nil || wait <= 0 {
 		t.Fatal("inflight limit not enforced")
 	}
 	dones[0](Neutral)
 	dones[0](Neutral) // 두 번 불러도 한 번만 반영된다.
-	if done, _ := l.Begin("192.0.2.1", "other"); done == nil {
+	if done, _ := l.Begin("192.0.2.1", "other", ""); done == nil {
 		t.Error("slot not released")
 	}
 }
@@ -187,7 +188,7 @@ func TestLimiterInflight(t *testing.T) {
 func TestLimiterNeutral(t *testing.T) {
 	l := newTestLimiter(newClock())
 	for range FreeFailures + 3 {
-		done, _ := l.Begin("192.0.2.1", "admin")
+		done, _ := l.Begin("192.0.2.1", "admin", "")
 		if done == nil {
 			t.Fatal("neutral outcomes must not lock")
 		}
@@ -198,5 +199,135 @@ func TestLimiterNeutral(t *testing.T) {
 func TestLockoutCap(t *testing.T) {
 	if got := lockout(100); got != MaxLockout {
 		t.Errorf("lockout(100) = %v", got)
+	}
+}
+
+// lockUser는 공격자 IP에서 username을 잠근다. 공격자 IP도 함께 잠기므로 부를 때마다 다른 IP를 쓴다.
+func lockUser(t *testing.T, l *Limiter, username string) {
+	t.Helper()
+	attackers++
+	ip := "198.51.100." + strconv.Itoa(attackers)
+	for range FreeFailures + 1 {
+		fail(t, l, ip, username)
+	}
+}
+
+var attackers int
+
+func TestLimiterTrustedDeviceSkipsUserLock(t *testing.T) {
+	l := newTestLimiter(newClock())
+	token := l.Trust("Admin", "")
+	other := l.Trust("user", "")
+	lockUser(t, l, "admin")
+
+	if done, _ := l.Begin("192.0.2.1", "admin", ""); done != nil {
+		t.Fatal("untrusted attempt not blocked")
+	}
+	if done, _ := l.Begin("192.0.2.1", "admin", "unknown-token"); done != nil {
+		t.Fatal("unknown token treated as trusted")
+	}
+	// 다른 사용자의 토큰은 신뢰하지 않는다.
+	if done, _ := l.Begin("192.0.2.1", "admin", other); done != nil {
+		t.Fatal("token of another user treated as trusted")
+	}
+	done, wait := l.Begin("192.0.2.1", " ADMIN", token)
+	if done == nil {
+		t.Fatalf("trusted device blocked (%v)", wait)
+	}
+	done(Neutral)
+	// 신뢰 기기라도 IP별 잠금은 받는다.
+	if done, _ := l.Begin("198.51.100."+strconv.Itoa(attackers), "admin", token); done != nil {
+		t.Fatal("trusted device bypassed ip lock")
+	}
+}
+
+func TestLimiterTrustedFailuresStayOffUserRecord(t *testing.T) {
+	l := newTestLimiter(newClock())
+	token := l.Trust("admin", "")
+	for i := range MaxDeviceFailures - 1 {
+		done, _ := l.Begin("192.0.2."+strconv.Itoa(i+1), "admin", token)
+		done(Failure)
+	}
+	// 신뢰 기기의 실패는 사용자 이름별 기록에 들어가지 않는다.
+	fail(t, l, "192.0.2.100", "admin")
+	if done, _ := l.Begin("192.0.2.101", "admin", ""); done == nil {
+		t.Error("trusted failures counted toward the username lock")
+	}
+}
+
+func TestLimiterDeviceRevokedAfterFailures(t *testing.T) {
+	l := newTestLimiter(newClock())
+	token := l.Trust("admin", "")
+	lockUser(t, l, "admin")
+	attempt := func(i int, o Outcome) {
+		t.Helper()
+		done, wait := l.Begin("192.0.2."+strconv.Itoa(i+1), "admin", token)
+		if done == nil {
+			t.Fatalf("attempt %d blocked (%v)", i, wait)
+		}
+		done(o)
+	}
+	for i := range MaxDeviceFailures - 1 {
+		attempt(i, Failure)
+	}
+	attempt(10, Success) // 성공하면 기기 실패 횟수가 초기화된다.
+	lockUser(t, l, "admin")
+	for i := range MaxDeviceFailures {
+		attempt(20+i, Failure)
+	}
+	if done, _ := l.Begin("192.0.2.200", "admin", token); done != nil {
+		t.Error("token not revoked after repeated failures")
+	}
+}
+
+func TestLimiterDeviceExpiryAndReplace(t *testing.T) {
+	clk := newClock()
+	l := newTestLimiter(clk)
+	old := l.Trust("admin", "")
+	token := l.Trust("admin", old)
+	lockUser(t, l, "admin")
+	if done, _ := l.Begin("192.0.2.1", "admin", old); done != nil {
+		t.Error("replaced token still trusted")
+	}
+	if done, _ := l.Begin("192.0.2.1", "admin", token); done == nil {
+		t.Fatal("new token not trusted")
+	} else {
+		done(Neutral)
+	}
+	clk.Add(DeviceTTL)
+	lockUser(t, l, "admin")
+	if done, _ := l.Begin("192.0.2.1", "admin", token); done != nil {
+		t.Error("expired token still trusted")
+	}
+}
+
+func TestLimiterDeviceCap(t *testing.T) {
+	clk := newClock()
+	l := newTestLimiter(clk)
+	first := l.Trust("admin", "")
+	for range MaxDevices {
+		clk.Add(time.Second)
+		l.Trust("user", "")
+	}
+	if len(l.devices) != MaxDevices {
+		t.Errorf("devices %d, want %d", len(l.devices), MaxDevices)
+	}
+	if _, ok := l.devices[first]; ok {
+		t.Error("oldest token not evicted")
+	}
+}
+
+func TestLimiterEntriesBounded(t *testing.T) {
+	l := newTestLimiter(newClock())
+	lockUser(t, l, "admin")
+	for i := range maxEntries {
+		fail(t, l, "203.0.113."+strconv.Itoa(i), "spray"+strconv.Itoa(i))
+	}
+	if n := len(l.fails); n > maxEntries {
+		t.Errorf("fail records %d, want <= %d", n, maxEntries)
+	}
+	// 잠기지 않은 기록부터 지우므로 잠긴 사용자는 그대로 잠겨 있다.
+	if done, _ := l.Begin("192.0.2.1", "admin", ""); done != nil {
+		t.Error("locked user evicted before unlocked records")
 	}
 }

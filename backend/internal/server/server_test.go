@@ -310,6 +310,50 @@ func TestLoginRateLimit(t *testing.T) {
 	wantStatus(t, b.login("admin", "admin"), http.StatusOK)
 }
 
+func TestTrustedDeviceSkipsUserLock(t *testing.T) {
+	e := newEnv(t, envOptions{})
+	from := func(ip string) *browser {
+		b := e.browser()
+		b.header.Set("X-Forwarded-For", ip)
+		return b
+	}
+	owner := from("192.0.2.10")
+	wantStatus(t, owner.login("admin", "admin"), http.StatusOK)
+	dev, ok := owner.cookies[DeviceCookie]
+	if !ok || !dev.HttpOnly || dev.SameSite != http.SameSiteStrictMode || dev.MaxAge != int(auth.DeviceTTL/time.Second) {
+		t.Fatalf("device cookie %+v", dev)
+	}
+	// 로그아웃해도 신뢰 기기 쿠키는 남는다.
+	wantStatus(t, owner.do(http.MethodPost, "/api/logout", struct{}{}), http.StatusNoContent)
+	if _, ok := owner.cookies[DeviceCookie]; !ok {
+		t.Fatal("device cookie cleared on logout")
+	}
+
+	attacker := from("198.51.100.7")
+	for range auth.FreeFailures + 1 {
+		wantCode(t, attacker.login("admin", "wrong"), http.StatusBadRequest, api.ErrInvalidCredentials)
+	}
+	wantCode(t, from("192.0.2.11").login("admin", "admin"), http.StatusTooManyRequests, api.ErrRateLimited)
+	// 신뢰 기기는 잠긴 사용자 이름으로도 로그인할 수 있고, 새 토큰을 받는다.
+	wantStatus(t, owner.login("admin", "admin"), http.StatusOK)
+	if owner.cookies[DeviceCookie].Value == dev.Value {
+		t.Error("device token not rotated on login")
+	}
+}
+
+func TestDeviceCookieAfterChallenge(t *testing.T) {
+	e := newEnv(t, envOptions{})
+	b := e.browser()
+	wantStatus(t, b.login("totp", "totp"), http.StatusOK)
+	if _, ok := b.cookies[DeviceCookie]; ok {
+		t.Fatal("device cookie issued before the challenge was answered")
+	}
+	wantStatus(t, b.do(http.MethodPost, "/api/login/verify", api.VerifyRequest{Response: "123456"}), http.StatusOK)
+	if _, ok := b.cookies[DeviceCookie]; !ok {
+		t.Error("device cookie not issued after the challenge")
+	}
+}
+
 func TestRequireJSON(t *testing.T) {
 	e := newEnv(t, envOptions{})
 	req := httptest.NewRequest(http.MethodPost, "/api/login", strings.NewReader("username=admin&password=admin"))

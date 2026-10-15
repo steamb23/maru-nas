@@ -22,6 +22,8 @@ const (
 	SessionCookie = "onmaru_session"
 	// PendingCookie는 2차 인증 대기 쿠키 이름이다.
 	PendingCookie = "onmaru_pending"
+	// DeviceCookie는 신뢰 기기 토큰 쿠키 이름이다(auth.Limiter.Trust). 로그아웃해도 지우지 않는다.
+	DeviceCookie = "onmaru_device"
 	// maxBodyBytes는 인증 요청 본문의 최대 크기다.
 	maxBodyBytes = 4 << 10
 )
@@ -40,7 +42,7 @@ func (h *handler) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ip := clientIP(r)
-	done, wait := h.Limiter.Begin(ip, req.Username)
+	done, wait := h.Limiter.Begin(ip, req.Username, deviceToken(r))
 	if done == nil {
 		log.Printf("login rate limited: user=%q ip=%s", req.Username, ip)
 		writeRateLimited(w, wait)
@@ -79,7 +81,7 @@ func (h *handler) verify(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ip := clientIP(r)
-	done, wait := h.Limiter.Begin(ip, p.Username)
+	done, wait := h.Limiter.Begin(ip, p.Username, deviceToken(r))
 	if done == nil {
 		log.Printf("verify rate limited: user=%q ip=%s", p.Username, ip)
 		writeRateLimited(w, wait)
@@ -146,6 +148,8 @@ func (h *handler) startSession(w http.ResponseWriter, r *http.Request, res omv.L
 	}
 	h.setCookie(w, r, SessionCookie, s.ID, 0)
 	h.clearCookie(w, r, PendingCookie)
+	// 인증을 끝까지 마친 브라우저를 신뢰 기기로 등록한다. 이후 이 사용자 이름의 잠금을 받지 않는다.
+	h.setCookie(w, r, DeviceCookie, h.Limiter.Trust(res.Username, deviceToken(r)), int(auth.DeviceTTL/time.Second))
 	// 실행 중에 플러그인을 설치하거나 지웠을 수 있으므로 로그인할 때 다시 확인한다.
 	h.Plugins.Refresh()
 	log.Printf("login ok: user=%q ip=%s admin=%t", s.Username, ip, s.Admin)
@@ -261,6 +265,14 @@ func (h *handler) expire(w http.ResponseWriter, r *http.Request, s auth.Session)
 	h.clearCookie(w, r, SessionCookie)
 	log.Printf("omv session expired: user=%q", s.Username)
 	writeError(w, http.StatusUnauthorized, api.ErrUnauthorized, "session expired")
+}
+
+// deviceToken은 브라우저가 보낸 신뢰 기기 토큰이다. 없으면 빈 문자열이다.
+func deviceToken(r *http.Request) string {
+	if ck, err := r.Cookie(DeviceCookie); err == nil {
+		return ck.Value
+	}
+	return ""
 }
 
 func (h *handler) pending(r *http.Request) (auth.Pending, bool) {
