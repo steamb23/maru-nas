@@ -292,13 +292,22 @@ export function isPreferences(v: unknown): v is Preferences {
   )
 }
 
+// 진행 중인 설정 요청. 동시에 부른 fetchPreferences는 이 요청 하나를 함께 기다린다.
+let preferencesRequest: Promise<Preferences> | null = null
+
 // fetchPreferences는 로그인한 사용자의 대시보드 설정(위젯 배치, 바로가기 등)을 가져온다.
-export async function fetchPreferences(signal?: AbortSignal): Promise<Preferences> {
-  const data = await getJSON('/preferences', { signal })
-  if (!isPreferences(data)) {
-    throw new Error('/preferences: unexpected response shape')
-  }
-  return data
+// 로그인 직후 설정 저장소 여럿이 함께 부르므로 동시에 부른 요청은 하나로 합친다. 끝나면 다음 부름은 새로 묻는다.
+export function fetchPreferences(): Promise<Preferences> {
+  preferencesRequest ??= (async () => {
+    const data = await getJSON('/preferences')
+    if (!isPreferences(data)) {
+      throw new Error('/preferences: unexpected response shape')
+    }
+    return data
+  })().finally(() => {
+    preferencesRequest = null
+  })
+  return preferencesRequest
 }
 
 // saveWidgets는 위젯 배치 전체를 저장한다. 다른 설정은 바꾸지 않는다.

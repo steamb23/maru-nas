@@ -222,6 +222,17 @@ describe('preferences', () => {
     await expect(fetchPreferences()).rejects.toThrow('unexpected response shape')
   })
 
+  it('fetchPreferences는 동시에 부르면 요청 하나를 함께 쓰고, 끝난 뒤에는 새로 묻는다', async () => {
+    const fn = stubFetch(Response.json({ widgets: [] }))
+    const [a, b] = await Promise.all([fetchPreferences(), fetchPreferences()])
+    expect(a).toEqual({ widgets: [] })
+    expect(b).toBe(a)
+    expect(fn).toHaveBeenCalledTimes(1)
+    fn.mockResolvedValueOnce(Response.json({ shortcuts: [] }))
+    await expect(fetchPreferences()).resolves.toEqual({ shortcuts: [] })
+    expect(fn).toHaveBeenCalledTimes(2)
+  })
+
   it('saveWidgets는 JSON 본문으로 PUT하고 204를 받는다', async () => {
     const fn = stubFetch(new Response(null, { status: 204 }))
     await saveWidgets([placement])

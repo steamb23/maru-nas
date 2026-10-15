@@ -1,9 +1,10 @@
 // 바탕화면 바로가기 저장소. DOM에 의존하지 않아 node 환경에서 테스트한다.
 //
 // 목록은 백엔드에 사용자별로 저장한다(/api/preferences). 로그인하면 load()로 가져오고, 로그아웃·만료로
-// 데스크톱을 떠나면 clear()로 비운다. 불러오기·저장 방식은 위젯 배치 저장소(widgets/store.ts)와 같다.
+// 데스크톱을 떠나면 clear()로 비운다. 불러오기·저장 방식은 위젯 배치 저장소(widgets/store.ts)와 같다(api/saveQueue.ts).
 import { create } from 'zustand'
 import * as client from '../api/client'
+import { createSaveQueue } from '../api/saveQueue'
 import type { Preferences, Shortcut } from '../api/types.gen'
 import type { AppId } from '../windows/apps'
 import { defaultShortcuts, knownShortcuts } from './list'
@@ -40,37 +41,20 @@ export const initialShortcutData: ShortcutData = { status: 'idle', loaded: false
 
 export function createShortcutStore(api: ShortcutApi) {
   return create<ShortcutStore>()((set, get) => {
-    // load·clear마다 바뀐다. 로그아웃한 뒤 늦게 도착한 응답과 남은 저장을 버리는 데 쓴다.
+    // load·clear마다 바뀐다. 로그아웃한 뒤 늦게 도착한 응답을 버리는 데 쓴다.
     let generation = 0
-    // 저장은 한 번에 하나만 보낸다. 보내는 동안 바뀐 목록은 마지막 것만 기다렸다 보낸다.
-    let saving = false
-    let pending: AppId[] | null = null
-
-    const flush = async () => {
-      if (saving || !pending) return
-      saving = true
-      const gen = generation
-      const value = pending
-      pending = null
-      try {
-        await api.saveShortcuts(value.map((app) => ({ app })))
-        if (gen === generation) set({ saveFailed: false })
-      } catch {
-        // 로컬 목록은 그대로 둔다. 401은 API 클라이언트가 로그인 화면으로 보낸다.
-        if (gen === generation) set({ saveFailed: true })
-      } finally {
-        saving = false
-      }
-      // 보내는 동안 바뀐 목록이 있으면 이어서 보낸다(clear()는 기다리던 목록을 버린다).
-      void flush()
-    }
+    // 실패해도 로컬 목록은 그대로 두고 다음 변경 때 다시 보낸다. load·clear는 남은 저장을 버린다.
+    const saves = createSaveQueue(
+      (apps: AppId[]) => api.saveShortcuts(apps.map((app) => ({ app }))),
+      (ok) => set({ saveFailed: !ok }),
+    )
 
     return {
       ...initialShortcutData,
 
       load: async () => {
         const gen = ++generation
-        pending = null
+        saves.reset()
         set({ status: 'loading' })
         try {
           const prefs = await api.fetchPreferences()
@@ -85,13 +69,12 @@ export function createShortcutStore(api: ShortcutApi) {
       set: (apps) => {
         if (get().status !== 'ready') return
         set({ apps })
-        pending = apps
-        void flush()
+        saves.push(apps)
       },
 
       clear: () => {
         generation++
-        pending = null
+        saves.reset()
         set(initialShortcutData)
       },
     }

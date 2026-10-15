@@ -4,6 +4,7 @@
 // 로그아웃·만료로 데스크톱을 떠나면 clear()로 비운다. 화면 배치 계산(layout.ts)은 이 저장소 밖에서 한다.
 import { create } from 'zustand'
 import * as client from '../api/client'
+import { createSaveQueue } from '../api/saveQueue'
 import type { Preferences, WidgetPlacement } from '../api/types.gen'
 import { defaultLayout, knownPlacements } from './catalog'
 
@@ -36,37 +37,17 @@ export const initialWidgetData: WidgetData = { status: 'idle', placements: [], s
 
 export function createWidgetStore(api: WidgetApi) {
   return create<WidgetStore>()((set, get) => {
-    // load·clear마다 바뀐다. 로그아웃한 뒤 늦게 도착한 응답과 남은 저장을 버리는 데 쓴다.
+    // load·clear마다 바뀐다. 로그아웃한 뒤 늦게 도착한 응답을 버리는 데 쓴다.
     let generation = 0
-    // 저장은 한 번에 하나만 보낸다. 보내는 동안 바뀐 배치는 마지막 것만 기다렸다 보낸다.
-    let saving = false
-    let pending: WidgetPlacement[] | null = null
-
-    const flush = async () => {
-      if (saving || !pending) return
-      saving = true
-      const gen = generation
-      const value = pending
-      pending = null
-      try {
-        await api.saveWidgets(value)
-        if (gen === generation) set({ saveFailed: false })
-      } catch {
-        // 로컬 배치는 그대로 둔다. 401은 API 클라이언트가 로그인 화면으로 보낸다.
-        if (gen === generation) set({ saveFailed: true })
-      } finally {
-        saving = false
-      }
-      // 보내는 동안 바뀐 배치가 있으면 이어서 보낸다(clear()는 기다리던 배치를 버린다).
-      void flush()
-    }
+    // 실패해도 로컬 배치는 그대로 두고 다음 변경 때 다시 보낸다. load·clear는 남은 저장을 버린다.
+    const saves = createSaveQueue(api.saveWidgets, (ok) => set({ saveFailed: !ok }))
 
     return {
       ...initialWidgetData,
 
       load: async () => {
         const gen = ++generation
-        pending = null
+        saves.reset()
         set({ status: 'loading' })
         try {
           const prefs = await api.fetchPreferences()
@@ -81,13 +62,12 @@ export function createWidgetStore(api: WidgetApi) {
       set: (placements) => {
         if (get().status !== 'ready') return
         set({ placements })
-        pending = placements
-        void flush()
+        saves.push(placements)
       },
 
       clear: () => {
         generation++
-        pending = null
+        saves.reset()
         set(initialWidgetData)
       },
     }
