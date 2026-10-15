@@ -21,13 +21,13 @@
   backdrop-filter: blur(16px);
 }
 
-/* 로고 오른쪽에 이름을 크게, 그 아래 태그라인을 작게 둔다. */
+/* 로고와 이름을 한 줄에 세로 가운데로 맞추고, 태그라인은 그 아래 따로 둔다. */
 .login-brand {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 14px;
-  width: 100%;
-  margin-bottom: 4px;
+  max-width: 100%;
 }
 
 /* 로고는 64칸 격자로 그렸으므로 1.25배인 80px로 그려 4칸 단위 선이 정수 픽셀(5px)에 맞게 한다.
@@ -39,14 +39,8 @@
   height: 80px;
 }
 
-.login-brand-text {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-}
-
 .login-brand-name {
+  min-width: 0;
   margin: 0;
   font-size: 30px;
   font-weight: 700;
@@ -54,9 +48,12 @@
 }
 
 .login-tagline {
-  margin: 0;
+  margin: 0 0 4px;
   font-size: 12px;
   line-height: 1.4;
+  text-align: center;
+  /* 둘째 줄에 단어 하나만 남지 않게 줄 길이를 고르게 나눈다. */
+  text-wrap: balance;
   color: var(--text-muted);
 }
 

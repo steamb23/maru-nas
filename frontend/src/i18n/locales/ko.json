@@ -1,7 +1,7 @@
 {
   "app": {
     "title": "온마루",
-    "tagline": "A suspiciously normal desktop-like dashboard for openmediavault."
+    "tagline": "A suspiciously normal desktop-⁠like dashboard for openmediavault."
   },
   "login": {
     "sessionExpired": "세션이 만료되었습니다. 다시 로그인하세요.",

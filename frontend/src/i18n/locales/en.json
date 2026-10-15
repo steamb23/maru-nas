@@ -1,7 +1,7 @@
 {
   "app": {
     "title": "Onmaru",
-    "tagline": "A suspiciously normal desktop-like dashboard for openmediavault."
+    "tagline": "A suspiciously normal desktop-⁠like dashboard for openmediavault."
   },
   "login": {
     "sessionExpired": "Your session has expired. Please sign in again.",

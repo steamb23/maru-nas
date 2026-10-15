@@ -124,16 +124,15 @@ export function LoginScreen() {
         {/* 로그인 전에는 누구의 프로필인지 알 수 없으므로 사용자 아바타 대신 로고를 둔다. 이름은 옆 제목이 전한다 */}
         <div className="login-brand">
           <img className="login-logo" src={logoUrl} width={80} height={80} alt="" draggable={false} />
-          <div className="login-brand-text">
-            <h1 id="login-title" className="login-brand-name">
-              {t('app.title')}
-            </h1>
-            {/* 태그라인은 모든 언어에서 영어 원문을 쓴다(카탈로그에도 같은 영어 문장을 둔다) */}
-            <p className="login-tagline" lang="en">
-              {t('app.tagline')}
-            </p>
-          </div>
+          <h1 id="login-title" className="login-brand-name">
+            {t('app.title')}
+          </h1>
         </div>
+        {/* 태그라인은 모든 언어에서 영어 원문을 쓴다(카탈로그에도 같은 영어 문장을 둔다).
+            카탈로그의 desktop-like는 하이픈 뒤에서 줄이 끊기지 않게 하이픈 뒤에 U+2060(단어 결합 문자)을 둔다 */}
+        <p className="login-tagline" lang="en">
+          {t('app.tagline')}
+        </p>
 
         {notice === 'expired' && !error && (
           <p className="login-notice" role="status">
