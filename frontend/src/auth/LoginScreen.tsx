@@ -1,8 +1,8 @@
 // 로그인 화면과 서버 연결 끊김 화면. 인증은 백엔드가 OMV에 위임한다.
 import { type FormEvent, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import logoUrl from '../assets/logo/onmaru.svg?url'
 import { useLanguage } from '../i18n'
-import { IconImage } from '../icons/IconImage'
 import { LanguageSelect } from '../shell/LanguageSelect'
 import { enterLogin } from '../shell/screenTransition'
 import { formatUnit } from '../addons/common/format'
@@ -121,9 +121,8 @@ export function LoginScreen() {
   return (
     <div className="desktop auth-screen">
       <main ref={cardRef} className="login-card" aria-labelledby="login-title">
-        <div className="login-avatar">
-          <IconImage name="avatar-default-symbolic" size={40} />
-        </div>
+        {/* 로그인 전에는 누구의 프로필인지 알 수 없으므로 사용자 아바타 대신 로고를 둔다. 이름은 아래 제목이 전한다 */}
+        <img className="login-logo" src={logoUrl} width={80} height={80} alt="" draggable={false} />
         <h1 id="login-title" className="login-title">
           {t('app.title')}
         </h1>

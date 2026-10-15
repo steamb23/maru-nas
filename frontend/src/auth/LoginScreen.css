@@ -21,14 +21,12 @@
   backdrop-filter: blur(16px);
 }
 
-.login-avatar {
-  display: grid;
-  place-items: center;
-  width: 72px;
-  height: 72px;
-  border-radius: 50%;
-  background: var(--accent);
-  color: #fff;
+/* 로고는 64칸 격자로 그렸으므로 1.25배인 80px로 그려 4칸 단위 선이 정수 픽셀(5px)에 맞게 한다.
+   여백을 뺀 타일은 70px쯤이다. */
+.login-logo {
+  display: block;
+  width: 80px;
+  height: 80px;
 }
 
 .login-title {
