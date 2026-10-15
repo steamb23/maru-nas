@@ -36,6 +36,7 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
   - Docker는 쓰지 않는다(호스트 `/proc`, `/sys`, 네트워크를 직접 봐야 하므로)
   - 설치는 루트의 인터랙티브 `install.sh`(영어·한국어 안내)가 한다. systemd 유닛과 `/etc/default/onmaru`를 직접 만들며, Claude는 작성만 하고 실행은 사용자가 한다. 리버스 프록시는 설정하지 않는다
     - 2단계 구조: `./install.sh`가 설정 질문과 확인, 실행한 계정으로 빌드(1단계)를 한 뒤, root가 아니면 설정을 옵션으로 넘겨 `sudo ./install.sh --service-install ...`로 자신을 다시 실행해 사용자 생성·유닛 작성·시작(2단계)을 한다. 2단계는 받은 설정을 다시 검증하고, 설정이 모두 있으면 묻지 않는다. root만 있는 환경은 sudo 없이 이어서 진행한다. 일반 사용자가 sudo로 실행하면 root로 빌드하지 않는다
+    - `--upgrade`는 기존 설치(유닛의 `User=`, `/etc/default/onmaru`)의 설정으로 질문·확인 없이 진행하고, 기존 설치에 없는 설정만 묻는다. 설치 설정을 새로 더하면 `load_installed_settings`에서도 읽게 한다
   - 사용자 대상 설치·설정·프록시 안내는 `README.md`에 둔다. 플래그를 추가·변경하면 `README.md`의 설정 표와 `install.sh`도 함께 고친다
 - **백엔드는 얇은 API 서버**다. 역할은 (1) 현황 읽기: `/proc`·`/sys` 직접 읽기, root가 필요한 정보는 OMV RPC, (2) 설정 변경 요청을 OMV `rpc.php`로 전달, (3) 대시보드 사용자 설정(위젯 배치, 바탕화면 바로가기 등) 저장, 세 가지뿐이다
   - (3)은 대시보드 자신의 상태만 다룬다. 상태 디렉터리(`-state-dir`, systemd `StateDirectory=`)의 사용자별 JSON 파일이며 OMV 설정·시스템 파일과 무관하다(`internal/prefs`)

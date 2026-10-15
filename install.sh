@@ -4,6 +4,8 @@
 #   ./install.sh                    1단계: 실행한 계정으로 빌드한다(일반 사용자 또는 root만 있는 환경의 root)
 #                                   2단계: root가 아니면 sudo로 자신을 --service-install로 다시 실행한다
 #   ./install.sh --no-build         빌드를 건너뛰고 기존 bin/onmaru를 설치한다
+#   ./install.sh --upgrade          기존 설치의 설정 그대로 묻지 않고 빌드·설치한다. 기존 설치에 없는 설정
+#                                   (새 버전에서 생긴 설정)만 묻는다. sudo 비밀번호는 필요하면 묻는다
 #   ./install.sh --uninstall        제거한다(root가 아니면 sudo로 다시 실행한다)
 #   ./install.sh --service-install  2단계만 실행한다(root 전용). 설정 질문, 사용자 생성, 유닛 작성, 시작
 #   --lang en|ko                    안내 문구 언어. 생략하면 로캘(LC_ALL, LC_MESSAGES, LANG)로 고른다.
@@ -33,6 +35,9 @@ readonly DIST_INDEX=$repo_dir/backend/internal/web/static/dist/index.html
 
 # 안내 문구 언어(en, ko). main에서 정한다.
 LANG_UI=en
+
+# --upgrade로 실행했는지(1). 기존 설치의 설정을 쓰고 확인 질문을 하지 않는다.
+UPGRADE=0
 
 # t EN KO: 현재 언어의 문구를 출력한다.
 t() {
@@ -140,9 +145,11 @@ detect_omv_url() {
 usage() {
   if [[ $LANG_UI == ko ]]; then
     cat <<EOF
-사용법: $0 [--no-build | --uninstall | --service-install] [설정 옵션] [--lang en|ko]
+사용법: $0 [--upgrade] [--no-build | --uninstall | --service-install] [설정 옵션] [--lang en|ko]
 
   (옵션 없음)        설정을 묻고 빌드한 뒤 설치하거나 업그레이드합니다. 설치 단계에서 필요하면 sudo를 사용합니다
+  --upgrade          기존 설치의 설정 그대로 묻지 않고 빌드한 뒤 업그레이드합니다
+                     기존 설치에 없는 설정(새 버전에서 생긴 설정)만 묻습니다
   --no-build         빌드를 건너뛰고 기존 bin/onmaru를 설치합니다
   --uninstall        서비스, 실행 파일, 설정을 제거합니다
   --service-install  빌드 없이 설치 단계만 실행합니다(root 전용). 설정 옵션을 모두 주면 묻지 않습니다
@@ -159,9 +166,11 @@ usage() {
 EOF
   else
     cat <<EOF
-Usage: $0 [--no-build | --uninstall | --service-install] [settings] [--lang en|ko]
+Usage: $0 [--upgrade] [--no-build | --uninstall | --service-install] [settings] [--lang en|ko]
 
   (no option)        ask for settings, build, then install or upgrade. Uses sudo for the install step when needed
+  --upgrade          build and upgrade with the installed settings, without questions
+                     only settings missing from the installation (new in this version) are asked
   --no-build         skip the build and install the existing bin/onmaru
   --uninstall        remove the service, binary and settings
   --service-install  run only the install step, without building (root only). No questions if all settings are given
@@ -213,6 +222,10 @@ as_root() {
   local args=()
   if [[ $action == service-install ]]; then
     mapfile -t args < <(settings_args)
+    # 2단계도 확인 질문 없이 진행한다.
+    if (( UPGRADE )); then
+      args+=(--upgrade)
+    fi
   fi
   command -v sudo >/dev/null 2>&1 ||
     die "$(t "root privileges are required and sudo is not installed. Run this as root." \
@@ -270,6 +283,8 @@ uninstall() {
 }
 
 # 설정값. 명령줄 옵션(--user 등)으로 받거나 ask_settings로 묻는다. 비어 있으면 아직 정하지 않은 것이다.
+# 설정을 새로 더하면 load_installed_settings에서도 기존 설치의 값을 읽는다. 기존 설치에 그 값이 없으면
+# --upgrade는 그 설정만 묻는다.
 S_USER=""
 S_LISTEN=""
 S_ALLOW=false
@@ -288,10 +303,34 @@ settings_args() {
   fi
 }
 
+# load_installed_settings: --upgrade. 기존 설치(유닛, 환경 파일)의 설정을 옵션으로 받지 않은 항목에 채운다.
+# 기존 설치에 없는 설정은 비워 두어 ask_settings가 그것만 묻게 한다. 일반 사용자도 읽을 수 있다(0644).
+load_installed_settings() {
+  [[ -f $UNIT_FILE && -f $ENV_FILE ]] ||
+    die "$(t "--upgrade needs an existing installation ($UNIT_FILE, $ENV_FILE). Run $SELF without --upgrade to install." \
+      "--upgrade는 기존 설치($UNIT_FILE, $ENV_FILE)가 있어야 합니다. 처음 설치라면 --upgrade 없이 $SELF 를 실행하세요.")"
+  [[ -n $S_USER ]] || S_USER=$(sed -n '/^User=/{s///p;q}' "$UNIT_FILE")
+  # 루프백 외 주소 허용은 수신 주소와 짝이므로 수신 주소를 기존 설치에서 읽을 때만 함께 읽는다.
+  if [[ -z $S_LISTEN ]]; then
+    S_LISTEN=$(env_get ONMARU_LISTEN)
+    if [[ $(env_get ONMARU_ALLOW_NON_LOOPBACK) == true ]]; then
+      S_ALLOW=true
+    fi
+  fi
+  [[ -n $S_OMV ]] || S_OMV=$(env_get ONMARU_OMV_URL)
+  [[ -n $S_SMART ]] || S_SMART=$(env_get ONMARU_SMART_REFRESH_AT)
+}
+
 # ask_settings: 아직 정하지 않은 설정만 묻는다. 기존 설치가 있으면 그 값을 기본값으로 쓴다.
 # 일반 사용자도 실행할 수 있다(읽는 파일은 모두 0644).
 ask_settings() {
-  if [[ -f $UNIT_FILE ]]; then
+  if (( UPGRADE )); then
+    info "$(t "Upgrading with the installed settings." "기존 설치의 설정으로 업그레이드합니다.")"
+    if ! settings_complete; then
+      info "$(t "Some settings are new in this version. Please answer them." \
+        "이 버전에서 새로 생긴 설정이 있습니다. 그 설정만 입력해 주세요.")"
+    fi
+  elif [[ -f $UNIT_FILE ]]; then
     info "$(t "Existing installation found. Current settings are used as defaults." \
       "기존 설치를 찾았습니다. 현재 설정을 기본값으로 씁니다.")"
   fi
@@ -316,7 +355,10 @@ ask_settings() {
   if omv_forces_https; then
     warn "$(t "OMV redirects HTTP to HTTPS (\"Force SSL/TLS\" is on). onmaru talks to OMV over plain HTTP on loopback and cannot log in this way. Turn off Force SSL/TLS in the OMV web UI (System > Workbench) first." \
       "OMV가 HTTP를 HTTPS로 리다이렉트합니다(\"Force SSL/TLS\" 켜짐). onmaru는 루프백의 평문 HTTP로 OMV에 접속하므로 이 상태로는 로그인할 수 없습니다. 먼저 OMV 웹 UI(System > Workbench)에서 Force SSL/TLS를 끄세요.")"
-    confirm "$(t "Continue anyway?" "그래도 계속할까요?")" n || exit 1
+    # --upgrade는 묻지 않고 알리기만 한다(이미 설치된 구성이다).
+    if (( ! UPGRADE )); then
+      confirm "$(t "Continue anyway?" "그래도 계속할까요?")" n || exit 1
+    fi
   fi
   if [[ -z $S_OMV ]]; then
     local omv_def
@@ -435,6 +477,16 @@ validate_settings() {
   [[ $S_SMART =~ ^([01][0-9]|2[0-3]):[0-5][0-9]$ ]] || die "$(t "invalid time: $S_SMART" "시각이 올바르지 않습니다: $S_SMART")"
 }
 
+# check_settings: validate_settings. --upgrade에서 기존 설치의 값이 이 버전의 검사를 통과하지 못하면
+# 고치는 방법을 먼저 알린다(검사가 엄격해졌거나 손으로 고친 설정 파일).
+check_settings() {
+  if (( UPGRADE )) && ! (validate_settings) >/dev/null 2>&1; then
+    warn "$(t "the installed settings do not pass this version's checks. Run $SELF without --upgrade to fix them." \
+      "기존 설치의 설정이 이 버전의 검사를 통과하지 못했습니다. --upgrade 없이 $SELF 를 실행해 고치세요.")"
+  fi
+  validate_settings
+}
+
 show_summary() {
   local allow_note=""
   [[ $S_ALLOW == true ]] && allow_note="  ($(t "non-loopback allowed" "루프백 외 주소 허용"))"
@@ -477,16 +529,21 @@ require_binary() {
 }
 
 # install_service: 2단계(root). 설정이 모두 정해져 있으면 묻지 않고 설치한다.
-# root가 옵션 없이 --service-install을 직접 실행했다면 여기서 묻는다.
+# root가 옵션 없이 --service-install을 직접 실행했다면 여기서 묻는다(--upgrade면 기존 설치에 없는 설정만).
 install_service() {
   require_binary
+  if (( UPGRADE )); then
+    load_installed_settings
+  fi
   if ! settings_complete; then
     ask_settings
-    validate_settings
+    check_settings
     show_summary
-    confirm "$(t "Proceed?" "진행할까요?")" y || exit 0
+    if (( ! UPGRADE )); then
+      confirm "$(t "Proceed?" "진행할까요?")" y || exit 0
+    fi
   else
-    validate_settings
+    check_settings
   fi
   local user=$S_USER listen=$S_LISTEN allow=$S_ALLOW omv_url=$S_OMV smart_at=$S_SMART group
 
@@ -583,7 +640,10 @@ check_port_free() {
   if [[ -n $(ss -Hltn "sport = :${listen##*:}") ]]; then
     warn "$(t "port ${listen##*:} is already in use by another process (for example a 'make dev' backend). The service will fail to start until it is free." \
       "포트 ${listen##*:}을(를) 다른 프로세스가 쓰고 있습니다(예: 'make dev' 백엔드). 비워질 때까지 서비스가 시작되지 않습니다.")"
-    confirm "$(t "Continue anyway?" "그래도 계속할까요?")" n || exit 1
+    # --upgrade는 묻지 않고 알리기만 한다. 포트가 비면 systemd가 다시 시작한다(Restart=on-failure).
+    if (( ! UPGRADE )); then
+      confirm "$(t "Continue anyway?" "그래도 계속할까요?")" n || exit 1
+    fi
   fi
 }
 
@@ -660,6 +720,7 @@ main() {
       --uninstall) action=uninstall ;;
       --service-install) action=service-install ;;
       --no-build) do_build=0 ;;
+      --upgrade) UPGRADE=1 ;;
       --lang)
         [[ ${2:-} == en || ${2:-} == ko ]] || { usage >&2; exit 2; }
         LANG_UI=$2
@@ -681,6 +742,10 @@ main() {
     esac
     shift
   done
+  if (( UPGRADE )) && [[ $action == uninstall ]]; then
+    usage >&2
+    exit 2
+  fi
   case $action in
     uninstall)
       as_root uninstall
@@ -694,6 +759,11 @@ main() {
       # root로 다른 사용자의 저장소를 빌드하면 root 소유 파일이 생긴다(sudo, sudo -i, su 모두).
       # 저장소 소유자가 root가 아니면 root로 빌드하지 않는다.
       if (( do_build )) && is_root && [[ $(stat -c %u "$repo_dir") != 0 ]]; then
+        # --upgrade는 묻지 않으므로, 빌드하지 않은 예전 실행 파일을 몰래 설치하지 않고 멈춘다.
+        if (( UPGRADE )); then
+          die "$(t "running as root on a repository owned by $(stat -c %U "$repo_dir"): the build would create root-owned files. Run $SELF --upgrade as that user without sudo, or add --no-build to install the existing $BIN_SRC." \
+            "root로 $(stat -c %U "$repo_dir") 소유 저장소에서 실행했습니다. root로 빌드하면 root 소유 파일이 생깁니다. 그 사용자로 sudo 없이 $SELF --upgrade 를 실행하거나, 기존 $BIN_SRC 를 설치하려면 --no-build를 더하세요.")"
+        fi
         warn "$(t "running as root on a repository owned by $(stat -c %U "$repo_dir"): the build is skipped to avoid root-owned files. To build, run $SELF as that user without sudo." \
           "root로 $(stat -c %U "$repo_dir") 소유 저장소에서 실행되어 빌드를 건너뜁니다(root 소유 파일이 생기지 않게). 빌드하려면 그 사용자로 sudo 없이 $SELF 를 실행하세요.")"
         confirm "$(t "Install the existing $BIN_SRC instead?" "대신 기존 $BIN_SRC 로 설치할까요?")" n || exit 1
@@ -702,11 +772,17 @@ main() {
       if (( ! do_build )); then
         require_binary
       fi
+      # --upgrade는 기존 설치의 설정을 쓰고, 그 설치에 없는 설정만 아래 ask_settings가 묻는다.
+      if (( UPGRADE )); then
+        load_installed_settings
+      fi
       # 질문은 빌드 전에 모두 받는다. 2단계는 이 값을 옵션으로 받아 묻지 않고 설치한다.
       ask_settings
-      validate_settings
+      check_settings
       show_summary
-      confirm "$(t "Proceed?" "진행할까요?")" y || exit 0
+      if (( ! UPGRADE )); then
+        confirm "$(t "Proceed?" "진행할까요?")" y || exit 0
+      fi
       if (( do_build )); then
         build
         require_binary
