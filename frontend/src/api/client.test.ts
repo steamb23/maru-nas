@@ -13,6 +13,7 @@ import {
   login,
   logout,
   runAddonAction,
+  saveShortcuts,
   saveWidgets,
   sendActivity,
   setUnauthorizedHandler,
@@ -196,6 +197,8 @@ describe('preferences', () => {
     ['저장한 적 없음', {}],
     ['빈 배치', { widgets: [] }],
     ['위젯 하나', { widgets: [placement] }],
+    ['빈 바로가기', { shortcuts: [] }],
+    ['위젯과 바로가기', { widgets: [placement], shortcuts: [{ app: 'files' }] }],
   ])('%s를 받는다', (_name, v) => {
     expect(isPreferences(v)).toBe(true)
   })
@@ -207,6 +210,9 @@ describe('preferences', () => {
     ['음수 좌표', { widgets: [{ ...placement, right: -1 }] }],
     ['소수 좌표', { widgets: [{ ...placement, top: 0.5 }] }],
     ['크기가 문자열', { widgets: [{ ...placement, cols: '3' }] }],
+    ['shortcuts가 배열 아님', { shortcuts: 'files' }],
+    ['바로가기가 문자열', { shortcuts: ['files'] }],
+    ['app이 숫자', { shortcuts: [{ app: 1 }] }],
   ])('%s는 거부한다', (_name, v) => {
     expect(isPreferences(v)).toBe(false)
   })
@@ -224,6 +230,16 @@ describe('preferences', () => {
     expect(init?.method).toBe('PUT')
     expect(new Headers(init?.headers).get('Content-Type')).toBe('application/json')
     expect(JSON.parse(String(init?.body))).toEqual({ widgets: [placement] })
+  })
+
+  it('saveShortcuts는 JSON 본문으로 PUT한다', async () => {
+    const fn = stubFetch(new Response(null, { status: 204 }))
+    await saveShortcuts([{ app: 'files' }, { app: 'storage' }])
+    const [url, init] = fn.mock.calls[0]
+    expect(url).toMatch(/\/api\/preferences\/shortcuts$/)
+    expect(init?.method).toBe('PUT')
+    expect(new Headers(init?.headers).get('Content-Type')).toBe('application/json')
+    expect(JSON.parse(String(init?.body))).toEqual({ shortcuts: [{ app: 'files' }, { app: 'storage' }] })
   })
 
   it('saveWidgets의 401은 로그인 화면으로 보낸다', async () => {

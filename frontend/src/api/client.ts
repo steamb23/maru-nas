@@ -7,6 +7,8 @@ import type {
   LoginResponse,
   Preferences,
   SessionInfo,
+  Shortcut,
+  ShortcutsRequest,
   SystemResponse,
   WidgetPlacement,
   WidgetsRequest,
@@ -278,11 +280,19 @@ export function isWidgetPlacement(v: unknown): v is WidgetPlacement {
   )
 }
 
-export function isPreferences(v: unknown): v is Preferences {
-  return isObj(v) && (v.widgets === undefined || (Array.isArray(v.widgets) && v.widgets.every(isWidgetPlacement)))
+export function isShortcut(v: unknown): v is Shortcut {
+  return isObj(v) && isStr(v.app)
 }
 
-// fetchPreferences는 로그인한 사용자의 대시보드 설정(위젯 배치 등)을 가져온다.
+export function isPreferences(v: unknown): v is Preferences {
+  return (
+    isObj(v) &&
+    isOptional(v.widgets, (x) => isArrayOf(x, isWidgetPlacement)) &&
+    isOptional(v.shortcuts, (x) => isArrayOf(x, isShortcut))
+  )
+}
+
+// fetchPreferences는 로그인한 사용자의 대시보드 설정(위젯 배치, 바로가기 등)을 가져온다.
 export async function fetchPreferences(signal?: AbortSignal): Promise<Preferences> {
   const data = await getJSON('/preferences', { signal })
   if (!isPreferences(data)) {
@@ -295,4 +305,10 @@ export async function fetchPreferences(signal?: AbortSignal): Promise<Preference
 export async function saveWidgets(widgets: readonly WidgetPlacement[]): Promise<void> {
   const body: WidgetsRequest = { widgets: [...widgets] }
   await request('PUT', '/preferences/widgets', { body })
+}
+
+// saveShortcuts는 바로가기 목록 전체를 저장한다. 다른 설정은 바꾸지 않는다.
+export async function saveShortcuts(shortcuts: readonly Shortcut[]): Promise<void> {
+  const body: ShortcutsRequest = { shortcuts: [...shortcuts] }
+  await request('PUT', '/preferences/shortcuts', { body })
 }

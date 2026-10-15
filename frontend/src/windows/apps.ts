@@ -1,4 +1,5 @@
-// 데스크톱에서 열 수 있는 앱 목록. 바탕화면 아이콘은 이 순서대로 놓인다(창 보기가 있는 애드온, 준비 중 앱).
+// 데스크톱에서 열 수 있는 앱 목록. "모든 앱" 화면은 이 순서대로 놓인다(창 보기가 있는 애드온, 준비 중 앱).
+// 바탕화면에는 사용자가 고른 바로가기만 놓인다(src/shortcuts).
 import type { ParseKeys } from 'i18next'
 import { type AddonId, MANIFESTS } from '../addons/manifests.gen'
 import type { AddonManifest } from '../addons/types'
@@ -61,6 +62,11 @@ export const APP_IDS = Object.keys(APPS) as AppId[]
 
 export function getApp(id: AppId): AppDef {
   return APPS[id]
+}
+
+// isAppId는 지금 빌드에 있는 앱 id인지 확인한다. 저장된 바로가기처럼 밖에서 온 id를 거를 때 쓴다.
+export function isAppId(id: string): id is AppId {
+  return Object.hasOwn(APPS, id)
 }
 
 // isAddonApp은 id가 애드온의 창 보기인지 확인한다. 보기 컴포넌트는 addons/registry.ts에서 찾는다.

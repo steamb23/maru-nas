@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { MANIFESTS } from '../addons/manifests.gen'
-import { APP_IDS, getApp, isAddonApp } from './apps'
+import { APP_IDS, getApp, isAddonApp, isAppId } from './apps'
 import { MIN_HEIGHT, MIN_WIDTH } from './geometry'
 
 describe('APPS', () => {
@@ -39,5 +39,14 @@ describe('애드온 앱', () => {
       .filter((m) => 'window' in m.views)
       .map((m) => m.id)
     expect(APP_IDS).toEqual([...windowAddons, 'files'])
+  })
+})
+
+describe('isAppId', () => {
+  it('앱 목록에 있는 id만 받는다', () => {
+    for (const id of APP_IDS) expect(isAppId(id)).toBe(true)
+    expect(isAppId('removed-app')).toBe(false)
+    expect(isAppId('toString')).toBe(false)
+    expect(isAppId('')).toBe(false)
   })
 })
