@@ -1,0 +1,14 @@
+/* 배경 레이어(Wallpaper.tsx). 로그인 화면과 데스크톱(.desktop)이 그 위에 그린다.
+   배경을 바꿀 때 새 레이어를 이전 레이어 위에 겹쳐 투명도를 올린다. */
+.wallpaper {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  /* 레이어가 그려지기 전과 이미지 둘레의 빈 곳 */
+  background: #2b3550;
+}
+
+.wallpaper-layer {
+  position: absolute;
+  inset: 0;
+}

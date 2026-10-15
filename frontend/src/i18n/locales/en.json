@@ -279,5 +279,18 @@
         "go": "Standard library compiled into the backend."
       }
     }
+  },
+  "appearance": {
+    "presets": {
+      "dusk": "Dusk",
+      "aurora": "Aurora",
+      "ocean": "Ocean",
+      "forest": "Forest",
+      "sunset": "Sunset",
+      "night": "Night",
+      "graphite": "Graphite",
+      "slate": "Slate",
+      "plum": "Plum"
+    }
   }
 }

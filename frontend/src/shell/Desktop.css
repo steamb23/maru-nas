@@ -1,8 +1,8 @@
+/* 배경은 그 아래의 배경 레이어(.wallpaper, Wallpaper.css)가 그린다. 로그인 화면도 이 클래스를 쓴다. */
 .desktop {
   position: fixed;
   inset: 0;
   overflow: hidden;
-  background: linear-gradient(160deg, #2b5876 0%, #4e4376 100%);
 }
 
 /* 창 영역. 크기는 창 위치 제한과 최대화의 기준이며 작업표시줄 자리는 뺀다.

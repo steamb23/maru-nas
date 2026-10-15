@@ -1,5 +1,5 @@
 // 작업표시줄 버튼 등장·퇴장 애니메이션의 설정값과 순서 계산(DOM 없음). 재생은 Taskbar.tsx가 한다.
-// 창 애니메이션(windowAnim.ts)과 같은 WINDOW_ANIMATIONS·동작 줄이기 설정을 따른다.
+// 창 애니메이션(windowAnim.ts)과 같은 화면 설정의 애니메이션·동작 줄이기 설정(animationsEnabled)을 따른다.
 
 // 창을 열면 버튼이 너비 0에서 펼쳐지며 나타나고, 닫으면 접히며 사라진다(뒤쪽 버튼이 당겨진다).
 export const TASK_ENTER_MS = 200

@@ -11,6 +11,7 @@
 // 재생 중에 다시 바뀌면 지금 보이는 위치·투명도에서 이어 간다.
 import { type RefObject, useCallback, useLayoutEffect, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
+import { animationsAllowed } from '../appearance/store'
 import type { Rect } from '../windows/geometry'
 import type { WindowLayout } from '../windows/tiling'
 import {
@@ -24,7 +25,6 @@ import {
   MINIMIZE_MS,
   OPEN_MS,
   OPEN_SCALE,
-  WINDOW_ANIMATIONS,
   fitInside,
   flipTransform,
   sameRect,
@@ -33,8 +33,10 @@ import {
 
 type MinAnim = 'minimize' | 'restore' | null
 
+// animationsEnabled는 애니메이션을 재생할지다. 화면 설정에서 끄거나(설정을 받기 전에는 켜짐) 시스템의
+// '동작 줄이기'(prefers-reduced-motion)가 켜져 있으면 false다. 창·메뉴·화면 전환·배경 페이드가 함께 따른다.
 export function animationsEnabled(): boolean {
-  return WINDOW_ANIMATIONS && !window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  return animationsAllowed() && !window.matchMedia('(prefers-reduced-motion: reduce)').matches
 }
 
 function rectOf(el: Element): Rect {

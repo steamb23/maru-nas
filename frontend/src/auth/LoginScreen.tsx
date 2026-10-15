@@ -2,6 +2,7 @@
 import { type FormEvent, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import lockupUrl from '../assets/logo/onmaru-lockup.svg?url'
+import { useSiteStore } from '../appearance/siteStore'
 import { BRAND_NAME, BRAND_ROMANIZED, BRAND_TAGLINE } from '../brand'
 import { useLanguage } from '../i18n'
 import { LanguageSelect } from '../shell/LanguageSelect'
@@ -61,7 +62,9 @@ export function LoginScreen() {
   const inChallenge = status === 'challenge' && challenge !== null
   const redirectOnly = inChallenge && !!challenge.redirectUrl
   // 대기 이스터에그는 일반 로그인 폼에서만 나온다(2차 인증 중, 로그인 요청 중에는 끔).
-  const idleSince = useIdle(easterEggEnabled() && !inChallenge && !busy, IDLE_DELAY_MS)
+  // 대기 연출은 관리자가 끄지 않았을 때만 쓴다. 전역 정보를 받기 전이나 받지 못했으면 켜진 것으로 본다.
+  const eggAllowed = useSiteStore((s) => s.info?.loginEasterEgg ?? true)
+  const idleSince = useIdle(easterEggEnabled(eggAllowed) && !inChallenge && !busy, IDLE_DELAY_MS)
 
   useEffect(() => {
     if (inChallenge) codeRef.current?.focus()

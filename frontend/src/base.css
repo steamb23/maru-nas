@@ -23,6 +23,16 @@
   --hover-bg: light-dark(rgb(0 0 0 / 0.07), rgb(255 255 255 / 0.1));
 }
 
+/* 화면 설정의 테마. auto면 data-theme이 없어 브라우저(OS) 설정을 따른다(appearance/dom.ts의 applyTheme).
+   light-dark() 토큰은 color-scheme을 따르므로 여기만 바꾸면 된다. */
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+}
+
 *,
 *::before,
 *::after {

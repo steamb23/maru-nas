@@ -4,7 +4,7 @@
 // - 로그아웃·세션 만료: 뒤로 물러나는 느낌. 데스크톱이 줄어들며 흐려져 사라진 뒤, 로그인 카드가 크고 흐린 상태에서 줄어들며 또렷해진다.
 // 두 화면은 함께 그려지지 않으므로 나가는 애니메이션이 끝난 뒤(auth 저장소의 beforeScreenChange) 들어오는 애니메이션이 이어진다.
 // 배경(.desktop)은 두 화면이 같아 그대로 두고 내용만 움직인다.
-// 창 애니메이션과 같은 WINDOW_ANIMATIONS·동작 줄이기 설정을 따른다.
+// 창 애니메이션과 같은 화면 설정의 애니메이션·동작 줄이기 설정(animationsEnabled)을 따른다.
 import type { Rect, Size } from '../windows/geometry'
 
 export const SCREEN_LEAVE_MS = 180

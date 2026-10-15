@@ -2,21 +2,35 @@ import type {
   AboutResponse,
   ActionRequest,
   AddonCapability,
+  AppearancePrefs,
+  AppearanceRequest,
   CapabilitiesResponse,
   ChallengeInfo,
   DrawerPrefs,
   DrawerRequest,
   ErrorResponse,
+  ImageInfo,
   LoginResponse,
+  OverridableSetting,
   Preferences,
+  RuntimeSetting,
+  ServerOverrides,
+  ServerSettings,
+  ServerSettingsRequest,
   SessionInfo,
   Shortcut,
   ShortcutsRequest,
+  SiteDefaults,
+  SiteDefaultsRequest,
+  SiteInfo,
+  SiteLogin,
+  SiteLoginRequest,
   SystemResponse,
+  Wallpaper,
   WidgetPlacement,
   WidgetsRequest,
 } from './types.gen'
-import { isArrayOf, isBool, isNum, isObj, isOptional, isStr } from './guards'
+import { isArrayOf, isBool, isNum, isObj, isOneOf, isOptional, isStr } from './guards'
 
 // BASE_URL은 Vite base 설정값이다. 개발 서버는 '/', 빌드는 './'(문서 URL 기준 상대 경로)다.
 const API_BASE = `${import.meta.env.BASE_URL}api`
@@ -89,13 +103,23 @@ async function toApiError(path: string, res: Response): Promise<ApiError> {
 interface RequestOptions {
   signal?: AbortSignal
   body?: unknown
+  // image가 있으면 JSON 대신 이미지 바이트를 그 형식으로 보낸다(배경 이미지 올리기).
+  image?: Blob
   // true면 401을 받아도 onUnauthorized를 부르지 않는다.
   authRequest?: boolean
 }
 
-async function request(method: 'GET' | 'POST' | 'PUT', path: string, opts: RequestOptions = {}): Promise<Response> {
+async function request(
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE',
+  path: string,
+  opts: RequestOptions = {},
+): Promise<Response> {
   const init: RequestInit = { method, signal: opts.signal, credentials: 'same-origin' }
-  if (method !== 'GET') {
+  if (opts.image) {
+    // 이미지 올리기만 원시 이미지 본문을 받는다(다른 출처의 폼은 이 형식을 보낼 수 없다).
+    init.headers = { 'Content-Type': opts.image.type }
+    init.body = opts.image
+  } else if (method === 'POST' || method === 'PUT') {
     // 백엔드는 본문이 있는 요청에 application/json만 받는다(CSRF 보조 장치).
     init.headers = { 'Content-Type': 'application/json' }
     init.body = JSON.stringify(opts.body ?? {})
@@ -294,12 +318,34 @@ export function isDrawerPrefs(v: unknown): v is DrawerPrefs {
   return isObj(v) && isStr(v.sort)
 }
 
+const THEMES = ['auto', 'light', 'dark'] as const
+
+// isWallpaper는 배경 서술자의 모양을 본다. 모르는 프리셋 id는 화면이 기본 배경으로 다룬다(appearance/wallpapers.ts).
+export function isWallpaper(v: unknown): v is Wallpaper {
+  return isObj(v) && isOneOf(v.kind, ['preset', 'image'] as const) && isOptional(v.preset, isStr)
+}
+
+export function isImageInfo(v: unknown): v is ImageInfo {
+  return isObj(v) && isStr(v.rev) && v.rev !== ''
+}
+
+export function isAppearancePrefs(v: unknown): v is AppearancePrefs {
+  return (
+    isObj(v) &&
+    isOptional(v.theme, (x) => isOneOf(x, THEMES)) &&
+    isOptional(v.wallpaper, isWallpaper) &&
+    isOptional(v.animations, isBool)
+  )
+}
+
 export function isPreferences(v: unknown): v is Preferences {
   return (
     isObj(v) &&
     isOptional(v.widgets, (x) => isArrayOf(x, isWidgetPlacement)) &&
     isOptional(v.shortcuts, (x) => isArrayOf(x, isShortcut)) &&
-    isOptional(v.drawer, isDrawerPrefs)
+    isOptional(v.drawer, isDrawerPrefs) &&
+    isOptional(v.appearance, isAppearancePrefs) &&
+    isOptional(v.wallpaperImage, isImageInfo)
   )
 }
 
@@ -355,4 +401,112 @@ export async function saveShortcuts(shortcuts: readonly Shortcut[]): Promise<voi
 export async function saveDrawer(drawer: DrawerPrefs): Promise<void> {
   const body: DrawerRequest = { drawer: { ...drawer } }
   await request('PUT', '/preferences/drawer', { body })
+}
+
+// saveAppearance는 화면 설정 전체를 저장한다. 다른 설정은 바꾸지 않는다.
+export async function saveAppearance(appearance: AppearancePrefs): Promise<void> {
+  const body: AppearanceRequest = { appearance: { ...appearance } }
+  await request('PUT', '/preferences/appearance', { body })
+}
+
+async function putImage(path: string, image: Blob): Promise<ImageInfo> {
+  const data = await (await request('PUT', path, { image })).json()
+  if (!isImageInfo(data)) throw new Error(`${path}: unexpected response shape`)
+  return data
+}
+
+// uploadWallpaperImage는 바탕화면 이미지를 올린다. 백엔드가 바탕화면을 이 이미지로 바꾼다.
+export function uploadWallpaperImage(image: Blob): Promise<ImageInfo> {
+  return putImage('/preferences/wallpaper-image', image)
+}
+
+// deleteWallpaperImage는 올린 바탕화면 이미지를 지운다. 바탕화면이 그 이미지였으면 기본값을 따르게 된다.
+export async function deleteWallpaperImage(): Promise<void> {
+  await request('DELETE', '/preferences/wallpaper-image')
+}
+
+// 전역 배경 이미지 자리 이름(백엔드 prefs.SiteImage).
+export type SiteImageName = 'login-background' | 'default-wallpaper'
+
+// imageUrl은 배경 이미지 주소다. 리비전을 붙여 이미지가 바뀌면 브라우저가 새로 받게 한다.
+export function wallpaperImageUrl(rev: string): string {
+  return `${API_BASE}/preferences/wallpaper-image?v=${encodeURIComponent(rev)}`
+}
+
+export function siteImageUrl(name: SiteImageName, rev: string): string {
+  return `${API_BASE}/site/images/${name}?v=${encodeURIComponent(rev)}`
+}
+
+export function isSiteInfo(v: unknown): v is SiteInfo {
+  return (
+    isObj(v) &&
+    isOptional(v.loginBackground, isWallpaper) &&
+    isBool(v.loginEasterEgg) &&
+    isOptional(v.defaultTheme, (x) => isOneOf(x, THEMES)) &&
+    isOptional(v.defaultWallpaper, isWallpaper) &&
+    isObj(v.images) &&
+    isOptional(v.images.loginBackground, isImageInfo) &&
+    isOptional(v.images.defaultWallpaper, isImageInfo)
+  )
+}
+
+// fetchSite는 로그인 화면이 쓰는 공개 전역 정보(로그인 배경, 기본 화면 등)다. 로그인 전에도 받는다.
+export async function fetchSite(signal?: AbortSignal): Promise<SiteInfo> {
+  const data = await getJSON('/site', { signal, authRequest: true })
+  if (!isSiteInfo(data)) throw new Error('/site: unexpected response shape')
+  return data
+}
+
+// saveSiteLogin은 로그인 화면 설정 전체를 저장한다(관리자).
+export async function saveSiteLogin(login: SiteLogin): Promise<void> {
+  const body: SiteLoginRequest = { login: { ...login } }
+  await request('PUT', '/site/login', { body })
+}
+
+// saveSiteDefaults는 기본 화면 전체를 저장한다(관리자).
+export async function saveSiteDefaults(defaults: SiteDefaults): Promise<void> {
+  const body: SiteDefaultsRequest = { defaults: { ...defaults } }
+  await request('PUT', '/site/defaults', { body })
+}
+
+// uploadSiteImage는 전역 배경 이미지를 올린다(관리자). 그 자리의 배경이 이 이미지로 바뀐다.
+export function uploadSiteImage(name: SiteImageName, image: Blob): Promise<ImageInfo> {
+  return putImage(`/site/images/${name}`, image)
+}
+
+// deleteSiteImage는 전역 배경 이미지를 지운다(관리자).
+export async function deleteSiteImage(name: SiteImageName): Promise<void> {
+  await request('DELETE', `/site/images/${name}`)
+}
+
+const isOverridable = (v: unknown): v is OverridableSetting =>
+  isObj(v) && isStr(v.value) && isStr(v.base) && isBool(v.overridden)
+
+const isRuntimeSetting = (v: unknown): v is RuntimeSetting =>
+  isObj(v) &&
+  isStr(v.flag) &&
+  isStr(v.env) &&
+  isStr(v.value) &&
+  isOneOf(v.source, ['default', 'env', 'flag', 'systemd'] as const)
+
+export function isServerSettings(v: unknown): v is ServerSettings {
+  return (
+    isObj(v) &&
+    isOverridable(v.workbenchUrl) &&
+    isOverridable(v.smartRefreshAt) &&
+    isArrayOf(v.runtime, isRuntimeSetting)
+  )
+}
+
+// fetchServerSettings는 웹에서 덮어쓸 수 있는 가동 설정과 가동 설정 현황이다(관리자).
+export async function fetchServerSettings(signal?: AbortSignal): Promise<ServerSettings> {
+  const data = await getJSON('/site/server', { signal })
+  if (!isServerSettings(data)) throw new Error('/site/server: unexpected response shape')
+  return data
+}
+
+// saveServerSettings는 덮어쓰기 값 전체를 저장한다(관리자). 없는 값은 플래그·환경 변수 값으로 돌아간다.
+export async function saveServerSettings(server: ServerOverrides): Promise<void> {
+  const body: ServerSettingsRequest = { server: { ...server } }
+  await request('PUT', '/site/server', { body })
 }

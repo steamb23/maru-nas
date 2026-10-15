@@ -3,10 +3,6 @@
 // 매 프레임 레이아웃을 다시 계산하게 된다. 실제 재생은 useWindowAnimation.ts가 한다.
 import type { Rect, Size } from '../windows/geometry'
 
-// 창 애니메이션 사용 여부. 시스템의 '동작 줄이기'(prefers-reduced-motion)가 켜져 있으면 이 값과 관계없이 끈다.
-// TODO: 설정 기능이 생기면 이 값을 사용자 설정에서 읽어 끄고 켤 수 있게 한다.
-export const WINDOW_ANIMATIONS = true
-
 // 최대화·타일링 전환 시간
 export const MAXIMIZE_MS = 200
 // 최대화·타일링 애니메이션은 창 틀만 늘어나 보이도록 창 내용(Window.css의 --window-content-opacity)을 숨겼다가,

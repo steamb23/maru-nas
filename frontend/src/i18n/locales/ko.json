@@ -279,5 +279,18 @@
         "go": "백엔드 실행 파일에 표준 라이브러리가 들어 있습니다."
       }
     }
+  },
+  "appearance": {
+    "presets": {
+      "dusk": "황혼",
+      "aurora": "오로라",
+      "ocean": "바다",
+      "forest": "숲",
+      "sunset": "노을",
+      "night": "밤하늘",
+      "graphite": "흑연",
+      "slate": "청회색",
+      "plum": "자두"
+    }
   }
 }

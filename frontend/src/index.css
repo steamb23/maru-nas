@@ -20,6 +20,7 @@
 @import './icons/IconImage.css';
 
 /* 데스크톱 셸 */
+@import './shell/Wallpaper.css';
 @import './shell/Desktop.css';
 @import './shell/DesktopShortcuts.css';
 @import './shell/DesktopIcon.css';

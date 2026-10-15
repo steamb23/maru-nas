@@ -1,11 +1,13 @@
 import { useEffect } from 'react'
 import { useCapabilities } from './addons/useCapabilities'
 import { setUnauthorizedHandler } from './api/client'
+import { useAppearanceLoader, useAppliedTheme, useSiteInfoLoader, useWallpaperView } from './appearance/useAppearance'
 import { LoginScreen, OfflineScreen } from './auth/LoginScreen'
 import { useAuthStore } from './auth/store'
 import { useSessionKeeper } from './auth/useSessionKeeper'
 import { Desktop } from './shell/Desktop'
 import { installNativeGuard } from './shell/nativeGuard'
+import { Wallpaper } from './shell/Wallpaper'
 
 const { restore, expire } = useAuthStore.getState()
 
@@ -13,7 +15,24 @@ const { restore, expire } = useAuthStore.getState()
 function SignedIn() {
   useSessionKeeper()
   useCapabilities()
+  useAppearanceLoader()
   return <Desktop />
+}
+
+// Screen은 인증 상태에 맞는 화면이다. 배경 레이어는 App이 화면과 관계없이 그 아래에 둔다.
+function Screen() {
+  const status = useAuthStore((s) => s.status)
+  switch (status) {
+    case 'loggedIn':
+      return <SignedIn />
+    case 'checking':
+      // 세션을 확인하는 짧은 동안은 배경만 보여 준다.
+      return <div className="desktop" />
+    case 'offline':
+      return <OfflineScreen />
+    default:
+      return <LoginScreen />
+  }
 }
 
 export default function App() {
@@ -22,17 +41,15 @@ export default function App() {
   // 다른 요청이 401을 받으면(세션 만료 등) 로그인 화면으로 보낸다.
   useEffect(() => setUnauthorizedHandler(expire), [])
   useEffect(() => void restore(), [])
+  // 화면 설정(테마, 배경)은 로그인 화면에도 적용한다.
+  useSiteInfoLoader()
+  useAppliedTheme()
+  const wallpaper = useWallpaperView()
 
-  const status = useAuthStore((s) => s.status)
-  switch (status) {
-    case 'loggedIn':
-      return <SignedIn />
-    case 'checking':
-      // 세션을 확인하는 짧은 동안은 바탕화면 배경만 보여 준다.
-      return <div className="desktop" />
-    case 'offline':
-      return <OfflineScreen />
-    default:
-      return <LoginScreen />
-  }
+  return (
+    <>
+      <Wallpaper view={wallpaper} />
+      <Screen />
+    </>
+  )
 }
