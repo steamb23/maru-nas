@@ -282,7 +282,8 @@
     "common": {
       "loading": "Loading settings…",
       "loadFailed": "Couldn't load settings. Retrying…",
-      "saveFailed": "Couldn't save your change. It will be saved with your next change."
+      "saveFailed": "Couldn't save your change. It will be saved with your next change.",
+      "siteSaveFailed": "Couldn't save the setting. The previous value is shown again."
     },
     "screen": {
       "theme": "Theme",
@@ -314,6 +315,55 @@
       "animations": "Animations",
       "animationsDesc": "Animate windows, menus and background changes.",
       "reducedMotion": "Reduce motion is on in your device settings, so animations stay off."
+    },
+    "loginScreen": {
+      "intro": "These settings apply to the sign-in screen for everyone. You can see the result after signing out.",
+      "background": "Sign-in background",
+      "backgroundHint": "The image is shown before sign-in, so anyone who can reach the dashboard can see it. PNG, JPEG or WebP, up to 20 MB.",
+      "idle": "While waiting",
+      "easterEgg": "Idle animation",
+      "easterEggDesc": "Shows an animation when the sign-in screen is left idle for 30 seconds."
+    },
+    "defaultScreen": {
+      "intro": "Applied to users who haven't chosen their own theme or wallpaper in Screen settings."
+    },
+    "server": {
+      "intro": "Settings that Onmaru runs with. The two values below can be changed here; the rest are set in the server's settings file.",
+      "loadFailed": "Couldn't load the server settings.",
+      "saveFailed": "Couldn't save the setting.",
+      "invalid": "The value isn't in a valid format.",
+      "editable": "Change here",
+      "editableDesc": "Takes effect immediately and overrides the value from the settings file.",
+      "workbenchDesc": "Address the browser uses to open the OMV web UI. Leave empty to hide the OMV Workbench app.",
+      "smartDesc": "SMART information is read again once a day after this time (server time).",
+      "fromServer": "Using the server value: {{base}}",
+      "overridden": "Changed here. Server value: {{base}}",
+      "save": "Save",
+      "reset": "Use server value",
+      "empty": "(not set)",
+      "runtime": "Current settings",
+      "runtimeDesc": "Values the server started with and where they came from.",
+      "overriddenBadge": "Changed here",
+      "howTo": "Changing other settings",
+      "howToDesc": "These values are environment variables in /etc/default/onmaru. Restart the service after editing. If you change the listen address, update the reverse proxy too.",
+      "howToInstall": "You can also run ./install.sh again from the repository and answer its questions.",
+      "copy": "Copy commands",
+      "copied": "Copied",
+      "sources": {
+        "default": "Default",
+        "env": "Environment variable",
+        "flag": "Command-line flag",
+        "systemd": "systemd"
+      },
+      "flags": {
+        "listen": "Listen address",
+        "allowNonLoopback": "Allow non-loopback listening",
+        "omvUrl": "OMV address",
+        "cookiePath": "Cookie path",
+        "stateDir": "State directory",
+        "workbenchUrl": "OMV Workbench address",
+        "smartRefreshAt": "SMART check time"
+      }
     }
   },
   "appearance": {

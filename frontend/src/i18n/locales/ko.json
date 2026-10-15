@@ -282,7 +282,8 @@
     "common": {
       "loading": "설정을 불러오는 중…",
       "loadFailed": "설정을 불러오지 못했습니다. 다시 시도하는 중…",
-      "saveFailed": "바꾼 설정을 저장하지 못했습니다. 다음에 바꿀 때 함께 저장합니다."
+      "saveFailed": "바꾼 설정을 저장하지 못했습니다. 다음에 바꿀 때 함께 저장합니다.",
+      "siteSaveFailed": "설정을 저장하지 못했습니다. 이전 값으로 되돌렸습니다."
     },
     "screen": {
       "theme": "테마",
@@ -314,6 +315,55 @@
       "animations": "애니메이션",
       "animationsDesc": "창·메뉴·배경 전환에 애니메이션을 씁니다.",
       "reducedMotion": "기기의 '동작 줄이기'가 켜져 있어 애니메이션이 꺼져 있습니다."
+    },
+    "loginScreen": {
+      "intro": "모든 사용자의 로그인 화면에 적용됩니다. 로그아웃하면 바뀐 모습을 볼 수 있습니다.",
+      "background": "로그인 배경",
+      "backgroundHint": "로그인하기 전에 보이는 그림이라 대시보드에 접속할 수 있는 누구나 볼 수 있습니다. PNG, JPEG, WebP 이미지를 20MB까지 올릴 수 있습니다.",
+      "idle": "기다리는 동안",
+      "easterEgg": "대기 연출",
+      "easterEggDesc": "로그인 화면에서 30초 동안 입력이 없으면 연출을 보여 줍니다."
+    },
+    "defaultScreen": {
+      "intro": "화면 설정에서 테마나 바탕화면을 정하지 않은 사용자에게 적용됩니다."
+    },
+    "server": {
+      "intro": "온마루가 가동되는 설정입니다. 아래 두 값은 여기서 바꿀 수 있고, 나머지는 서버의 설정 파일에서 바꿉니다.",
+      "loadFailed": "서버 설정을 불러오지 못했습니다.",
+      "saveFailed": "설정을 저장하지 못했습니다.",
+      "invalid": "값의 형식이 올바르지 않습니다.",
+      "editable": "여기서 바꾸기",
+      "editableDesc": "저장하면 바로 적용되며 설정 파일의 값보다 우선합니다.",
+      "workbenchDesc": "브라우저에서 OMV 웹 UI를 열 주소입니다. 비우면 OMV 워크벤치 앱을 숨깁니다.",
+      "smartDesc": "하루에 한 번, 이 시각(서버 시간)이 지나면 SMART 정보를 다시 읽습니다.",
+      "fromServer": "서버 값을 쓰는 중: {{base}}",
+      "overridden": "여기서 바꾼 값을 쓰는 중. 서버 값: {{base}}",
+      "save": "저장",
+      "reset": "서버 값 사용",
+      "empty": "(없음)",
+      "runtime": "가동 설정 현황",
+      "runtimeDesc": "서버가 시작할 때 정해진 값과 그 출처입니다.",
+      "overriddenBadge": "여기서 바꿈",
+      "howTo": "다른 설정 바꾸기",
+      "howToDesc": "이 값들은 /etc/default/onmaru의 환경 변수로 정합니다. 고친 뒤 서비스를 다시 시작해야 반영됩니다. 수신 주소를 바꾸면 리버스 프록시 설정도 함께 바꿔 주세요.",
+      "howToInstall": "저장소에서 ./install.sh를 다시 실행해 질문에 답하는 방법도 있습니다.",
+      "copy": "명령 복사",
+      "copied": "복사했습니다",
+      "sources": {
+        "default": "기본값",
+        "env": "환경 변수",
+        "flag": "명령줄 플래그",
+        "systemd": "systemd"
+      },
+      "flags": {
+        "listen": "수신 주소",
+        "allowNonLoopback": "루프백 밖 수신 허용",
+        "omvUrl": "OMV 주소",
+        "cookiePath": "쿠키 경로",
+        "stateDir": "상태 디렉터리",
+        "workbenchUrl": "OMV 워크벤치 주소",
+        "smartRefreshAt": "SMART 확인 시각"
+      }
     }
   },
   "appearance": {
