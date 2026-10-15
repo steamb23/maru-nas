@@ -27,12 +27,20 @@
   min-height: 0;
 }
 
-.app-drawer-search {
+/* 검색 상자와 정렬 버튼 줄 */
+.app-drawer-bar {
   display: flex;
   flex: none;
+  gap: 8px;
+  width: min(540px, 100%);
+}
+
+.app-drawer-search {
+  display: flex;
+  flex: 1;
   align-items: center;
   gap: 8px;
-  width: min(420px, 100%);
+  min-width: 0;
   height: 40px;
   padding: 0 16px;
   border: 1px solid rgb(255 255 255 / 0.22);
@@ -60,6 +68,33 @@
 
 .app-drawer-search input::placeholder {
   color: rgb(255 255 255 / 0.65);
+}
+
+/* 정렬 버튼. 지금 정렬 방식을 보여 주고 누르면 정렬 메뉴를 연다. */
+.app-drawer-sort {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  height: 40px;
+  padding: 0 14px;
+  border: 1px solid rgb(255 255 255 / 0.22);
+  border-radius: 20px;
+  background: rgb(255 255 255 / 0.14);
+  color: #fff;
+  font: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.app-drawer-sort:hover {
+  background: rgb(255 255 255 / 0.2);
+}
+
+.app-drawer-sort:focus-visible {
+  outline: none;
+  border-color: rgb(255 255 255 / 0.6);
+  background: rgb(255 255 255 / 0.2);
 }
 
 /* 앱이 많거나 화면이 낮으면 격자만 스크롤한다. */

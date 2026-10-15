@@ -26,7 +26,7 @@ OpenMediaVault 8 위에 올리는 데스크톱형 웹 대시보드입니다. 창
 
 - 시스템 사용자를 만들고(기본값 `onmaru`), `bin/onmaru`를 `/usr/local/bin/onmaru`에 설치합니다.
 - 설정 파일 `/etc/default/onmaru`와 systemd 유닛 `/etc/systemd/system/onmaru.service`를 작성한 뒤 서비스를 시작합니다.
-- 사용자 설정(위젯 배치, 바탕화면 바로가기)은 `/var/lib/onmaru`(`StateDirectory=`)에 저장됩니다.
+- 사용자 설정(위젯 배치, 바탕화면 바로가기, "모든 앱" 정렬 방식)은 `/var/lib/onmaru`(`StateDirectory=`)에 저장됩니다.
 
 다시 실행하면 기존 설정을 기본값으로 보여 주며, 업그레이드할 때도 같은 명령을 사용합니다. 설정이 바뀌면 기존 `/etc/default/onmaru`는 `/etc/default/onmaru.bak-<시각>`으로 백업됩니다. 안내 문구는 로캘에 따라 영어 또는 한국어로 표시되며, `--lang en|ko`로 직접 고를 수도 있습니다.
 

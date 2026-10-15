@@ -11,7 +11,7 @@ paths:
 
 # 데스크톱 셸과 창 시스템
 
-`src/windows/`(창 저장소·앱 목록·위치 제한·타일링), `src/widgets/`(위젯 그리드·배치·저장소), `src/shortcuts/`(바로가기 목록·저장소), `src/shell/`의 `*Anim.ts`, `taskbarDrag.ts`, `clock.ts`, `profileMenu.ts`, `contextMenu.ts`, `contextMenuStore.ts`, `windowMenu.ts`, `menuNav.ts`, `modalStack.ts`, `dialogs.ts`, `appDrawerStore.ts`, `gridNav.ts`, `appSearch.ts`, `hangul.ts`는 DOM에 의존하지 않는 계산 모듈이다. 컴포넌트는 이 결과를 그리기만 한다.
+`src/windows/`(창 저장소·앱 목록·위치 제한·타일링), `src/widgets/`(위젯 그리드·배치·저장소), `src/shortcuts/`(바로가기 목록·저장소), `src/shell/`의 `*Anim.ts`, `taskbarDrag.ts`, `clock.ts`, `profileMenu.ts`, `contextMenu.ts`, `contextMenuStore.ts`, `windowMenu.ts`, `menuNav.ts`, `modalStack.ts`, `dialogs.ts`, `appDrawerStore.ts`, `appDrawerPrefsStore.ts`, `appSort.ts`, `gridNav.ts`, `appSearch.ts`, `hangul.ts`는 DOM에 의존하지 않는 계산 모듈이다. 컴포넌트는 이 결과를 그리기만 한다.
 
 ## 창 순서와 DOM
 
@@ -53,6 +53,7 @@ paths:
   - DOM에서 `.desktop-area` 다음, 작업표시줄 앞에 `.desktop` 수준으로 그린다. `nav.taskbar`의 `backdrop-filter`가 위치 기준 상자가 되므로 작업표시줄 안에 둘 수 없다. 창·위젯 위, 작업표시줄·모달·컨텍스트 메뉴 아래다
   - 열린 동안 `.desktop-area`는 `inert`이고 작업표시줄은 그대로 쓴다. 바깥(배경, 격자의 빈 곳, 시계·프로필 등 작업표시줄의 다른 요소) 누르기, Esc(검색어가 있으면 먼저 지운다), 앱 열기, 작업 버튼 누르기, 데스크톱 범위 모달, 로그아웃이면 닫힌다. 작업 버튼은 바깥으로 보지 않고 `onTaskClick`이 닫은 뒤 그 창을 보인다(서랍에 가려 있던 활성 창을 최소화하지 않게). 타일 메뉴(`.context-menu`)를 누르는 것은 바깥으로 보지 않고, 메뉴의 Esc는 메뉴만 닫는다(`defaultPrevented`). 가상 키보드 때문에 창 크기 변화로는 닫지 않는다
   - 열면 검색 상자에 포커스한다(터치로 열었으면 하지 않는다). 격자는 로빙 tabindex이고 화살표 이동은 `gridNav.ts`(첫 줄에서 위 → 검색 상자)다
+  - 정렬은 검색 상자 옆 버튼의 메뉴(컨텍스트 메뉴 모델)로 고른다: "추천순"(대시보드가 정한 순서, `APP_IDS`)과 "이름순"(지금 화면 언어, `Intl.Collator`). 고른 방식은 사용자별로 저장하고(`appDrawerPrefsStore.ts`, `/api/preferences`의 `drawer`), 불러오기 전이나 실패하면 추천순으로 보이며 바꿀 수 없다. 검색 결과는 맞는 정도가 같으면 정렬 순서를 따른다
   - 검색(`appSearch.ts`)은 지원 언어 모두의 앱 이름과 앱 id로 화면 언어와 무관하게 찾고, 한글은 자모로 풀어 초성과 조합 중인 글자도 맞춘다(`hangul.ts`). 후보는 `i18n.getFixedT(언어)`로 만들므로 모든 언어 번들이 로드되어 있어야 한다(`i18n.md`)
   - 열기·닫기 애니메이션 값은 `appDrawerAnim.ts`, 열림 상태는 `appDrawerStore.ts`다. 로그인·로그아웃 전환에서 데스크톱과 함께 움직인다(`screenTransition.ts`의 `DESKTOP_PARTS`)
 

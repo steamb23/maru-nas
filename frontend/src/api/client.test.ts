@@ -13,6 +13,7 @@ import {
   login,
   logout,
   runAddonAction,
+  saveDrawer,
   saveShortcuts,
   saveWidgets,
   sendActivity,
@@ -199,6 +200,8 @@ describe('preferences', () => {
     ['위젯 하나', { widgets: [placement] }],
     ['빈 바로가기', { shortcuts: [] }],
     ['위젯과 바로가기', { widgets: [placement], shortcuts: [{ app: 'files' }] }],
+    ['모든 앱 설정', { drawer: { sort: 'name' } }],
+    ['모르는 정렬 방식(다른 버전)', { drawer: { sort: 'later' } }],
   ])('%s를 받는다', (_name, v) => {
     expect(isPreferences(v)).toBe(true)
   })
@@ -213,6 +216,8 @@ describe('preferences', () => {
     ['shortcuts가 배열 아님', { shortcuts: 'files' }],
     ['바로가기가 문자열', { shortcuts: ['files'] }],
     ['app이 숫자', { shortcuts: [{ app: 1 }] }],
+    ['drawer가 문자열', { drawer: 'name' }],
+    ['sort 없음', { drawer: {} }],
   ])('%s는 거부한다', (_name, v) => {
     expect(isPreferences(v)).toBe(false)
   })
@@ -251,6 +256,15 @@ describe('preferences', () => {
     expect(init?.method).toBe('PUT')
     expect(new Headers(init?.headers).get('Content-Type')).toBe('application/json')
     expect(JSON.parse(String(init?.body))).toEqual({ shortcuts: [{ app: 'files' }, { app: 'storage' }] })
+  })
+
+  it('saveDrawer는 JSON 본문으로 PUT한다', async () => {
+    const fn = stubFetch(new Response(null, { status: 204 }))
+    await saveDrawer({ sort: 'name' })
+    const [url, init] = fn.mock.calls[0]
+    expect(url).toMatch(/\/api\/preferences\/drawer$/)
+    expect(init?.method).toBe('PUT')
+    expect(JSON.parse(String(init?.body))).toEqual({ drawer: { sort: 'name' } })
   })
 
   it('saveWidgets의 401은 로그인 화면으로 보낸다', async () => {

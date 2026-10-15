@@ -3,6 +3,8 @@ import type {
   AddonCapability,
   CapabilitiesResponse,
   ChallengeInfo,
+  DrawerPrefs,
+  DrawerRequest,
   ErrorResponse,
   LoginResponse,
   Preferences,
@@ -284,11 +286,17 @@ export function isShortcut(v: unknown): v is Shortcut {
   return isObj(v) && isStr(v.app)
 }
 
+// isDrawerPrefs는 정렬 방식이 문자열인지만 본다. 모르는 값은 화면이 추천순으로 다룬다(appSort.ts).
+export function isDrawerPrefs(v: unknown): v is DrawerPrefs {
+  return isObj(v) && isStr(v.sort)
+}
+
 export function isPreferences(v: unknown): v is Preferences {
   return (
     isObj(v) &&
     isOptional(v.widgets, (x) => isArrayOf(x, isWidgetPlacement)) &&
-    isOptional(v.shortcuts, (x) => isArrayOf(x, isShortcut))
+    isOptional(v.shortcuts, (x) => isArrayOf(x, isShortcut)) &&
+    isOptional(v.drawer, isDrawerPrefs)
   )
 }
 
@@ -320,4 +328,10 @@ export async function saveWidgets(widgets: readonly WidgetPlacement[]): Promise<
 export async function saveShortcuts(shortcuts: readonly Shortcut[]): Promise<void> {
   const body: ShortcutsRequest = { shortcuts: [...shortcuts] }
   await request('PUT', '/preferences/shortcuts', { body })
+}
+
+// saveDrawer는 "모든 앱" 화면 설정 전체를 저장한다. 다른 설정은 바꾸지 않는다.
+export async function saveDrawer(drawer: DrawerPrefs): Promise<void> {
+  const body: DrawerRequest = { drawer: { ...drawer } }
+  await request('PUT', '/preferences/drawer', { body })
 }

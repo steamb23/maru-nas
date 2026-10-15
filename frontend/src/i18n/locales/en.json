@@ -102,7 +102,11 @@
   "drawer": {
     "title": "All apps",
     "search": "Search apps",
-    "empty": "No matching apps"
+    "empty": "No matching apps",
+    "sort": "Sort",
+    "sortLabel": "Sort: {{method}}",
+    "sortRecommended": "Recommended",
+    "sortName": "Name"
   },
   "storage": {
     "root": "System",

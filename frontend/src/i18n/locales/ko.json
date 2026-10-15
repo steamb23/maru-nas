@@ -102,7 +102,11 @@
   "drawer": {
     "title": "모든 앱",
     "search": "앱 검색",
-    "empty": "일치하는 앱 없음"
+    "empty": "일치하는 앱 없음",
+    "sort": "정렬",
+    "sortLabel": "정렬: {{method}}",
+    "sortRecommended": "추천순",
+    "sortName": "이름순"
   },
   "storage": {
     "root": "시스템",

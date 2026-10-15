@@ -1,10 +1,12 @@
-// "모든 앱" 화면: 작업표시줄 왼쪽 끝 버튼으로 여는 전체 화면 앱 목록. 검색, 키보드 이동, 바로가기 추가·제거,
+// "모든 앱" 화면: 작업표시줄 왼쪽 끝 버튼으로 여는 전체 화면 앱 목록. 검색, 정렬, 키보드 이동, 바로가기 추가·제거,
 // 바탕화면으로 끌어 놓아 바로가기 만들기를 한다.
 // 데스크톱 영역 위, 작업표시줄 아래에 그린다(작업표시줄은 열려 있는 동안에도 쓸 수 있다).
-// 열림 상태는 appDrawerStore, 검색은 appSearch.ts, 격자 이동은 gridNav.ts가 계산한다.
+// 열림 상태는 appDrawerStore, 정렬 방식은 appDrawerPrefsStore(사용자별 저장), 검색은 appSearch.ts,
+// 정렬은 appSort.ts, 격자 이동은 gridNav.ts가 계산한다.
 import { type KeyboardEvent, type RefObject, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { appAccess, useCapabilitiesStore } from '../addons/capabilities'
+import { useLanguage } from '../i18n'
 import { SUPPORTED_LANGUAGES } from '../i18n/languages'
 import { IconImage } from '../icons/IconImage'
 import { placeShortcut, removeShortcut } from '../shortcuts/list'
@@ -23,9 +25,12 @@ import {
   GHOST_FADE_MS,
   GHOST_GRAB,
 } from './appDrawerAnim'
+import { useAppDrawerPrefsStore } from './appDrawerPrefsStore'
 import { APP_DRAWER_ID, useAppDrawerStore } from './appDrawerStore'
 import { searchApps } from './appSearch'
-import type { ContextMenuItem } from './contextMenu'
+import { APP_SORT_LABELS, APP_SORTS, sortApps } from './appSort'
+import type { ContextMenuAction, ContextMenuItem } from './contextMenu'
+import { useContextMenuStore } from './contextMenuStore'
 import { DesktopIconFace } from './DesktopIcon'
 import type { DesktopShortcutsHandle } from './DesktopShortcuts'
 import { gridNextIndex } from './gridNav'
@@ -57,9 +62,15 @@ const GRID_ID = `${APP_DRAWER_ID}-grid`
 
 const { close } = useAppDrawerStore.getState()
 
-// 바깥을 눌러도 닫지 않는 곳: 앱 타일, 검색 상자, 타일 메뉴, 작업표시줄의 "모든 앱" 버튼(누르면 닫는다)과
-// 창 버튼(누르면 Taskbar가 닫고 그 창을 보인다. 여기서 먼저 닫으면 활성 창 버튼이 창을 최소화한다).
-const KEEP_OPEN = '.app-drawer-tile, .app-drawer-search, .context-menu, .taskbar-launcher, .taskbar-items .task'
+// 바깥을 눌러도 닫지 않는 곳: 앱 타일, 검색 상자와 정렬 버튼, 타일·정렬 메뉴, 작업표시줄의 "모든 앱" 버튼
+// (누르면 닫는다)과 창 버튼(누르면 Taskbar가 닫고 그 창을 보인다. 여기서 먼저 닫으면 활성 창 버튼이 창을
+// 최소화한다).
+const KEEP_OPEN = '.app-drawer-tile, .app-drawer-bar, .context-menu, .taskbar-launcher, .taskbar-items .task'
+
+// 정렬 설정을 불러오지 못했을 때 다시 시도하는 간격
+const PREFS_RETRY_MS = 10_000
+
+const prefsStore = useAppDrawerPrefsStore.getState()
 
 // 저장 목록을 바꾼다. 계산은 늘 저장소의 최신 목록으로 한다.
 const updateShortcuts = (change: (apps: AppId[]) => AppId[]) => {
@@ -79,6 +90,9 @@ function columnsOf(grid: HTMLElement | null): number {
 
 export function AppDrawer({ bounds, shortcuts }: Props) {
   const { t, i18n } = useTranslation()
+  const lang = useLanguage()
+  const sort = useAppDrawerPrefsStore((s) => s.sort)
+  const prefsStatus = useAppDrawerPrefsStore((s) => s.status)
   const open = useAppDrawerStore((s) => s.open)
   const viaTouch = useAppDrawerStore((s) => s.viaTouch)
   const instant = useAppDrawerStore((s) => s.instant)
@@ -103,6 +117,7 @@ export function AppDrawer({ bounds, shortcuts }: Props) {
   const rootRef = useRef<HTMLDivElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
   const searchRef = useRef<HTMLInputElement>(null)
+  const sortRef = useRef<HTMLButtonElement>(null)
   const gridRef = useRef<HTMLUListElement>(null)
   const ghostRef = useRef<HTMLDivElement>(null)
   const tileDrag = useRef<TileDrag | null>(null)
@@ -118,7 +133,9 @@ export function AppDrawer({ bounds, shortcuts }: Props) {
     const fixed = SUPPORTED_LANGUAGES.map((lng) => i18n.getFixedT(lng))
     return new Map(APP_IDS.map((id) => [id, [...fixed.map((tl) => tl(getApp(id).titleKey)), id]]))
   }, [i18n])
-  const results = searchApps(APP_IDS.filter(include), (id) => terms.get(id) ?? [id], query)
+  // 정렬한 뒤 검색한다. 검색 결과는 맞는 정도가 같으면 정렬 순서를 따른다.
+  const sorted = sortApps(APP_IDS.filter(include), sort, (id) => t(getApp(id).titleKey), lang)
+  const results = searchApps(sorted, (id) => terms.get(id) ?? [id], query)
   const activeIndex = Math.min(active, Math.max(results.length - 1, 0))
 
   const openApp = (id: AppId) => {
@@ -211,6 +228,37 @@ export function AppDrawer({ bounds, shortcuts }: Props) {
     tileDrag.current = null
     shortcuts.current?.dragEnd()
   }, [open, shortcuts])
+
+  // 정렬 방식은 로그인한 동안 불러 둔다. 못 불러오면 추천순으로 보이고 정렬을 바꿀 수 없으며, 잠시 뒤 다시 시도한다.
+  useEffect(() => {
+    void prefsStore.load()
+    return prefsStore.clear
+  }, [])
+  useEffect(() => {
+    if (prefsStatus !== 'error') return
+    const timer = setTimeout(() => void prefsStore.load(), PREFS_RETRY_MS)
+    return () => clearTimeout(timer)
+  }, [prefsStatus])
+
+  // 정렬 메뉴. 정렬 버튼 아래에 연다. 고르면 정렬 버튼으로 포커스를 돌려 키보드로 이어 쓸 수 있게 한다.
+  const openSortMenu = (viaKeyboard: boolean) => {
+    const r = sortRef.current?.getBoundingClientRect()
+    if (!r) return
+    const items = APP_SORTS.map(
+      (s): ContextMenuAction => ({
+        kind: 'action',
+        id: s,
+        labelKey: APP_SORT_LABELS[s],
+        checked: s === sort,
+        disabled: prefsStatus !== 'ready',
+        onSelect: () => {
+          prefsStore.setSort(s)
+          sortRef.current?.focus()
+        },
+      }),
+    )
+    useContextMenuStore.getState().openAt({ x: r.left, y: r.bottom + 4 }, items, viaKeyboard)
+  }
 
   // 로그아웃·만료로 데스크톱이 사라지면 닫는다(다음 로그인 때 닫힌 상태로 시작하게).
   // 끄는 중이었으면 바탕화면의 미리보기도 지운다.
@@ -344,25 +392,39 @@ export function AppDrawer({ bounds, shortcuts }: Props) {
         inert={closing}
       >
         <div className="app-drawer-content" ref={contentRef}>
-          <label className="app-drawer-search">
-            <IconImage name="edit-find-symbolic" size={16} />
-            <input
-              ref={searchRef}
-              type="search"
-              value={query}
-              placeholder={t('drawer.search')}
-              aria-label={t('drawer.search')}
-              aria-controls={results.length > 0 ? GRID_ID : undefined}
-              autoComplete="off"
-              spellCheck={false}
-              readOnly={dragging !== null}
-              onChange={(e) => {
-                setQuery(e.target.value)
-                setActive(0)
-              }}
-              onKeyDown={onSearchKeyDown}
-            />
-          </label>
+          <div className="app-drawer-bar">
+            <label className="app-drawer-search">
+              <IconImage name="edit-find-symbolic" size={16} />
+              <input
+                ref={searchRef}
+                type="search"
+                value={query}
+                placeholder={t('drawer.search')}
+                aria-label={t('drawer.search')}
+                aria-controls={results.length > 0 ? GRID_ID : undefined}
+                autoComplete="off"
+                spellCheck={false}
+                readOnly={dragging !== null}
+                onChange={(e) => {
+                  setQuery(e.target.value)
+                  setActive(0)
+                }}
+                onKeyDown={onSearchKeyDown}
+              />
+            </label>
+            <button
+              ref={sortRef}
+              type="button"
+              className="app-drawer-sort"
+              aria-haspopup="menu"
+              aria-label={t('drawer.sortLabel', { method: t(APP_SORT_LABELS[sort]) })}
+              title={t('drawer.sortLabel', { method: t(APP_SORT_LABELS[sort]) })}
+              onClick={(e) => openSortMenu(e.detail === 0)}
+            >
+              <IconImage name="view-sort-ascending-symbolic" size={16} />
+              <span>{t(APP_SORT_LABELS[sort])}</span>
+            </button>
+          </div>
           {results.length === 0 ? (
             <p className="app-drawer-empty" role="status">
               {t('drawer.empty')}

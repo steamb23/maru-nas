@@ -16,6 +16,7 @@ import panStart from '@colloid/actions/symbolic/pan-start-symbolic.svg?url'
 import systemLogOut from '@colloid/actions/symbolic/system-log-out-symbolic.svg?url'
 import viewAppGrid from '@colloid/actions/symbolic/view-app-grid-symbolic.svg?url'
 import viewRefresh from '@colloid/actions/symbolic/view-refresh-symbolic.svg?url'
+import viewSortAscending from '@colloid/actions/symbolic/view-sort-ascending-symbolic.svg?url'
 import windowClose from '@colloid/actions/symbolic/window-close-symbolic.svg?url'
 import windowMaximize from '@colloid/actions/symbolic/window-maximize-symbolic.svg?url'
 import windowMinimize from '@colloid/actions/symbolic/window-minimize-symbolic.svg?url'
@@ -57,6 +58,7 @@ const ICONS = {
   'view-refresh-symbolic': { url: viewRefresh, kind: 'symbolic' },
   'view-app-grid-symbolic': { url: viewAppGrid, kind: 'symbolic' },
   'edit-find-symbolic': { url: editFind, kind: 'symbolic' },
+  'view-sort-ascending-symbolic': { url: viewSortAscending, kind: 'symbolic' },
   'preferences-desktop-locale-symbolic': { url: preferencesDesktopLocale, kind: 'symbolic' },
   'avatar-default-symbolic': { url: avatarDefault, kind: 'symbolic' },
   'utilities-system-monitor': { url: utilitiesSystemMonitor, kind: 'color' },
