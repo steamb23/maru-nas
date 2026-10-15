@@ -6,13 +6,13 @@ import documentOpen from '@colloid/actions/symbolic/document-open-symbolic.svg?u
 import editCopy from '@colloid/actions/symbolic/edit-copy-symbolic.svg?url'
 import editDelete from '@colloid/actions/symbolic/edit-delete-symbolic.svg?url'
 import editFind from '@colloid/actions/symbolic/edit-find-symbolic.svg?url'
+import hamburgerMenu from '@colloid/actions/symbolic/hamburger-menu-symbolic.svg?url'
 import helpAbout from '@colloid/actions/symbolic/help-about-symbolic.svg?url'
 import listAdd from '@colloid/actions/symbolic/list-add-symbolic.svg?url'
 import listRemove from '@colloid/actions/symbolic/list-remove-symbolic.svg?url'
 import mediaPlaybackStart from '@colloid/actions/symbolic/media-playback-start-symbolic.svg?url'
 import mediaPlaybackStop from '@colloid/actions/symbolic/media-playback-stop-symbolic.svg?url'
 import objectSelect from '@colloid/actions/symbolic/object-select-symbolic.svg?url'
-import openMenu from '@colloid/actions/symbolic/open-menu-symbolic.svg?url'
 import panEnd from '@colloid/actions/symbolic/pan-end-symbolic.svg?url'
 import panStart from '@colloid/actions/symbolic/pan-start-symbolic.svg?url'
 import systemLockScreen from '@colloid/actions/symbolic/system-lock-screen-symbolic.svg?url'
@@ -61,7 +61,7 @@ export const COLLOID_ICONS = {
   'view-sort-ascending-symbolic': { url: viewSortAscending, kind: 'symbolic' },
   'preferences-desktop-locale-symbolic': { url: preferencesDesktopLocale, kind: 'symbolic' },
   'avatar-default-symbolic': { url: avatarDefault, kind: 'symbolic' },
-  'open-menu-symbolic': { url: openMenu, kind: 'symbolic' },
+  'hamburger-menu-symbolic': { url: hamburgerMenu, kind: 'symbolic' },
   'edit-delete-symbolic': { url: editDelete, kind: 'symbolic' },
   'edit-copy-symbolic': { url: editCopy, kind: 'symbolic' },
   'help-about-symbolic': { url: helpAbout, kind: 'symbolic' },

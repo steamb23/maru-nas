@@ -186,7 +186,7 @@ export function SettingsWindow(_props: WindowViewProps) {
               aria-controls={navId}
               onClick={openNav}
             >
-              <IconImage name="open-menu-symbolic" size={16} />
+              <IconImage name="hamburger-menu-symbolic" size={16} />
             </button>
           )}
           <h2 className="settings-title">{t(current.labelKey)}</h2>
