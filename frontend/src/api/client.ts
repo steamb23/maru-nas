@@ -536,7 +536,7 @@ export function isProfileResponse(v: unknown): v is ProfileResponse {
     isObj(v) &&
     isStr(v.username) &&
     isOptional(v.email, isStr) &&
-    isOptional(v.comment, isStr) &&
+    isOptional(v.tags, (x) => isArrayOf(x, isStr)) &&
     isOptional(v.groups, (x) => isArrayOf(x, isStr)) &&
     isOptional(v.systemAccount, isBool) &&
     isOptional(v.readOnlyReason, (x) => isOneOf(x, ['system', 'locked'] as const))
@@ -550,9 +550,10 @@ export async function fetchProfile(signal?: AbortSignal): Promise<ProfileRespons
   return data
 }
 
-// saveProfileComment는 계정 설명을 바꾼다. applied가 false면 OMV에 적용 대기가 남았다(일반 사용자).
-export async function saveProfileComment(comment: string): Promise<ProfileSaveResponse> {
-  const body: ProfileRequest = { comment }
+// saveProfile은 자기 계정의 전자 우편·태그를 바꾼다(없는 값은 그대로). applied가 false면 OMV에 적용 대기가
+// 남았다(일반 사용자).
+export async function saveProfile(change: ProfileRequest): Promise<ProfileSaveResponse> {
+  const body: ProfileRequest = { ...change }
   const data = await (await request('PUT', '/profile', { body })).json()
   if (!isObj(data) || !isBool(data.applied)) throw new Error('/profile: unexpected response shape')
   return { applied: data.applied }

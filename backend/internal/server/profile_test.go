@@ -37,8 +37,7 @@ func TestProfileUser(t *testing.T) {
 	rec := b.do(http.MethodGet, "/api/profile", nil)
 	wantStatus(t, rec, http.StatusOK)
 	got := decode[api.ProfileResponse](t, rec)
-	want := api.ProfileResponse{Username: "user", Email: "user@example.com", Comment: "Example user"}
-	if got.Username != want.Username || got.Email != want.Email || got.Comment != want.Comment ||
+	if got.Username != "user" || got.Email != "user@example.com" || !slices.Equal(got.Tags, []string{"Example user"}) ||
 		got.Groups != nil || got.SystemAccount || got.ReadOnlyReason != "" {
 		t.Fatalf("profile %+v", got)
 	}
@@ -89,5 +88,21 @@ func TestProfileOMVErrors(t *testing.T) {
 	wantCode(t, b.do(http.MethodGet, "/api/profile", nil), http.StatusUnauthorized, api.ErrUnauthorized)
 	if _, ok := b.cookies[SessionCookie]; ok {
 		t.Error("session cookie not cleared")
+	}
+}
+
+func TestParseTags(t *testing.T) {
+	cases := map[string][]string{
+		"":                 nil,
+		"steamb23":         {"steamb23"},
+		"a,b":              {"a", "b"},
+		" a , b ,, c ":     {"a", "b", "c"},
+		"Example user":     {"Example user"},
+		"Full Name,Room 1": {"Full Name", "Room 1"},
+	}
+	for in, want := range cases {
+		if got := parseTags(in); !slices.Equal(got, want) {
+			t.Errorf("parseTags(%q) = %q, want %q", in, got, want)
+		}
 	}
 }

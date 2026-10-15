@@ -4,6 +4,8 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"net/mail"
+	"slices"
 	"strings"
 	"time"
 	"unicode"
@@ -17,7 +19,7 @@ import (
 // 프로필: 로그인한 사용자 자신의 OMV 계정 정보. 애드온이 아니므로 manifest 허용 목록 대신 아래 고정 메서드만
 // 부른다(profileMethods). 브라우저는 메서드나 파라미터를 고를 수 없고, 서버가 자기 사용자 이름으로 만든다.
 
-// profileMethods는 프로필이 부르는 OMV RPC와 그 종류다. 쓰기는 설명 저장(setProfile)만 부른다.
+// profileMethods는 프로필이 부르는 OMV RPC와 그 종류다. 쓰기는 전자 우편·태그 저장(setProfile)만 부른다.
 var profileMethods = map[string]addons.RPCKind{
 	"UserMgmt.getUserByContext": addons.RPCRead,
 	"UserMgmt.getUser":          addons.RPCRead,
@@ -30,9 +32,13 @@ var profileMethods = map[string]addons.RPCKind{
 const (
 	// maxProfileBodyBytes는 PUT /api/profile 본문의 상한이다.
 	maxProfileBodyBytes = 4 << 10
-	// maxCommentBytes는 계정 설명(GECOS)의 상한이다.
+	// maxCommentBytes는 태그를 이은 계정 설명 칸(GECOS)의 상한이다.
 	maxCommentBytes = 255
-	// profileSaveTimeout은 설명 저장과 OMV 적용(관리자)을 기다리는 시간이다. 서비스 켜기·끄기와 같다.
+	// maxTags는 태그 수의 상한이다.
+	maxTags = 32
+	// maxEmailBytes는 전자 우편 주소의 상한이다.
+	maxEmailBytes = 254
+	// profileSaveTimeout은 저장과 OMV 적용(관리자)을 기다리는 시간이다. 서비스 켜기·끄기와 같다.
 	profileSaveTimeout = 3 * time.Minute
 )
 
@@ -66,7 +72,7 @@ func (u omvUser) response(username string) api.ProfileResponse {
 	p := api.ProfileResponse{
 		Username:      username,
 		Email:         u.Email,
-		Comment:       u.Comment,
+		Tags:          parseTags(u.Comment),
 		Groups:        u.Groups,
 		SystemAccount: u.System,
 	}
@@ -104,33 +110,79 @@ func (h *handler) profile(w http.ResponseWriter, r *http.Request, s auth.Session
 	writeJSON(w, http.StatusOK, u.response(s.Username))
 }
 
-// validComment는 계정 설명으로 쓸 수 있는지다. /etc/passwd의 한 칸이므로 ':'와 줄바꿈 등 제어 문자를 받지 않는다.
-func validComment(c string) bool {
-	if !utf8.ValidString(c) || len(c) > maxCommentBytes || strings.Contains(c, ":") {
-		return false
+// OMV 워크벤치는 계정 설명 칸(comment, GECOS)을 "Tags"로 보여 주며 태그를 쉼표로 이어 저장한다.
+
+// parseTags는 설명 칸을 태그로 나눈다. 앞뒤 공백과 빈 태그는 뺀다.
+func parseTags(comment string) []string {
+	var tags []string
+	for t := range strings.SplitSeq(comment, ",") {
+		if t = strings.TrimSpace(t); t != "" {
+			tags = append(tags, t)
+		}
 	}
-	return !strings.ContainsFunc(c, unicode.IsControl)
+	return tags
 }
 
-// setProfile은 로그인한 사용자 자신의 계정 설명을 바꾼다.
+// cleanTags는 받은 태그의 앞뒤 공백을 지우고 빈 태그와 중복을 뺀다. 쓸 수 없는 태그가 있으면 false다.
+// 설명 칸은 /etc/passwd의 한 칸이므로 ':'와 줄바꿈 등 제어 문자를 받지 않고, ','는 태그 구분자라 받지 않는다.
+func cleanTags(in []string) ([]string, bool) {
+	out := []string{}
+	for _, t := range in {
+		t = strings.TrimSpace(t)
+		if t == "" || slices.Contains(out, t) {
+			continue
+		}
+		if !utf8.ValidString(t) || strings.ContainsAny(t, ",:") || strings.ContainsFunc(t, unicode.IsControl) {
+			return nil, false
+		}
+		out = append(out, t)
+	}
+	return out, len(out) <= maxTags && len(strings.Join(out, ",")) <= maxCommentBytes
+}
+
+// validEmail은 전자 우편 주소인지다. 빈 값은 지우는 것이라 받는다. 최종 검사는 OMV가 한다.
+func validEmail(e string) bool {
+	if e == "" {
+		return true
+	}
+	if len(e) > maxEmailBytes || strings.ContainsFunc(e, unicode.IsSpace) {
+		return false
+	}
+	a, err := mail.ParseAddress(e)
+	return err == nil && a.Name == "" && a.Address == e
+}
+
+// setProfile은 로그인한 사용자 자신의 전자 우편과 태그를 바꾼다. 보내지 않은 값은 그대로 둔다.
 //
-// OMV의 UserMgmt.setUserByContext는 전자 우편도 필수라 서버가 지금 값을 다시 읽어 그대로 함께 보낸다(브라우저는 설명만
-// 보낸다). 저장하면 OMV가 postfix 등을 적용 대기로 표시하므로, 관리자는 서비스 켜기·끄기처럼 적용까지 하고
-// (addons.ApplyChange, 적용 대기가 있으면 409 config_dirty), 일반 사용자는 적용 권한이 없어 적용 대기로 남긴다.
-// 실제 OMV로는 시스템 상태를 바꾸는 호출이라 사용자가 확인한다.
+// OMV의 UserMgmt.setUserByContext는 전자 우편과 설명 칸이 모두 필수라 서버가 지금 값을 다시 읽어 보내지 않은 값을
+// 채운다(OMV 자체의 사용자 프로필 폼과 같은 범위). 저장하면 OMV가 postfix 등을 적용 대기로 표시하므로, 관리자는
+// 서비스 켜기·끄기처럼 적용까지 하고(addons.ApplyChange, 적용 대기가 있으면 409 config_dirty), 일반 사용자는
+// 적용 권한이 없어 적용 대기로 남긴다. 실제 OMV로는 시스템 상태를 바꾸는 호출이라 사용자가 확인한다.
 func (h *handler) setProfile(w http.ResponseWriter, r *http.Request, s auth.Session) {
 	var req api.ProfileRequest
 	if !decodeJSONLimit(w, r, &req, maxProfileBodyBytes) {
 		return
 	}
-	if req.Comment == nil {
-		writeError(w, http.StatusBadRequest, api.ErrBadRequest, "comment is required")
+	if req.Email == nil && req.Tags == nil {
+		writeError(w, http.StatusBadRequest, api.ErrBadRequest, "email or tags is required")
 		return
 	}
-	comment := strings.TrimSpace(*req.Comment)
-	if !validComment(comment) {
-		writeError(w, http.StatusBadRequest, api.ErrBadRequest, "invalid comment")
-		return
+	var change profileChange
+	if req.Email != nil {
+		email := strings.TrimSpace(*req.Email)
+		if !validEmail(email) {
+			writeError(w, http.StatusBadRequest, api.ErrBadRequest, "invalid email")
+			return
+		}
+		change.email = &email
+	}
+	if req.Tags != nil {
+		tags, ok := cleanTags(*req.Tags)
+		if !ok {
+			writeError(w, http.StatusBadRequest, api.ErrBadRequest, "invalid tags")
+			return
+		}
+		change.tags = tags
 	}
 	if !addons.WritesEnabled {
 		writeError(w, http.StatusForbidden, api.ErrRPCForbidden, "omv writes are disabled")
@@ -147,10 +199,10 @@ func (h *handler) setProfile(w http.ResponseWriter, r *http.Request, s auth.Sess
 	ctx, cancel := context.WithTimeout(context.WithoutCancel(r.Context()), profileSaveTimeout)
 	defer cancel()
 	caller := h.profileCaller(r, s, true)
-	applied, err := saveComment(ctx, caller, s, comment)
+	applied, err := saveProfile(ctx, caller, s, change)
 	result, ae := actionOutcome(ctx, err, caller)
-	// 설명 내용은 로그에 남기지 않는다.
-	log.Printf("profile: user=%q change=comment result=%s", s.Username, result)
+	// 전자 우편·태그 내용은 로그에 남기지 않는다.
+	log.Printf("profile: user=%q email=%t tags=%t result=%s", s.Username, change.email != nil, change.tags != nil, result)
 	if err != nil {
 		log.Printf("profile: %v", err)
 	}
@@ -161,9 +213,15 @@ func (h *handler) setProfile(w http.ResponseWriter, r *http.Request, s auth.Sess
 	writeJSON(w, http.StatusOK, api.ProfileSaveResponse{Applied: applied})
 }
 
-// saveComment는 설명을 저장하고, 관리자면 OMV 적용까지 한다. applied는 적용 대기를 남기지 않았는지다.
+// profileChange는 바꿀 값이다. nil이면 그대로 둔다.
+type profileChange struct {
+	email *string
+	tags  []string
+}
+
+// saveProfile은 전자 우편·태그를 저장하고, 관리자면 OMV 적용까지 한다. applied는 적용 대기를 남기지 않았는지다.
 // 저장이 거절되면 OMV 오류(502 omv_error), 저장은 됐지만 적용이 실패하면 ErrActionFailed(502 action_failed)다.
-func saveComment(ctx context.Context, rpc addons.RPCCaller, s auth.Session, comment string) (bool, error) {
+func saveProfile(ctx context.Context, rpc addons.RPCCaller, s auth.Session, c profileChange) (bool, error) {
 	u, err := loadProfile(ctx, rpc, s)
 	if err != nil {
 		return false, err
@@ -175,11 +233,19 @@ func saveComment(ctx context.Context, rpc addons.RPCCaller, s auth.Session, comm
 			Message: "this account cannot be modified",
 		}
 	}
+	email, comment := u.Email, u.Comment
+	if c.email != nil {
+		email = *c.email
+	}
+	// 태그가 같으면 설명 칸을 그대로 둔다(OMV가 저장한 공백 등 모양을 바꾸지 않게).
+	if c.tags != nil && !slices.Equal(c.tags, parseTags(u.Comment)) {
+		comment = strings.Join(c.tags, ",")
+	}
 	set := func(ctx context.Context) (bool, error) {
-		if u.Comment == comment {
+		if email == u.Email && comment == u.Comment {
 			return false, nil
 		}
-		params := map[string]any{"email": u.Email, "comment": comment}
+		params := map[string]any{"email": email, "comment": comment}
 		if _, err := rpc.Call(ctx, "UserMgmt", "setUserByContext", params); err != nil {
 			return false, err
 		}

@@ -552,7 +552,7 @@ type RuntimeSetting struct {
 	Source string `json:"source" tstype:"'default' | 'env' | 'flag' | 'systemd'"`
 }
 
-// 프로필(계정 설명)을 바꿀 수 없는 이유. ProfileResponse.ReadOnlyReason에 들어간다.
+// 프로필(전자 우편, 태그)을 바꿀 수 없는 이유. ProfileResponse.ReadOnlyReason에 들어간다.
 const (
 	// ProfileReadOnlySystem은 OMV 시스템 계정이다(OMV 기본 admin 계정 등). OMV 사용자 관리 목록에도 없다.
 	ProfileReadOnlySystem = "system"
@@ -565,19 +565,23 @@ const (
 type ProfileResponse struct {
 	Username string `json:"username"`
 	Email    string `json:"email,omitempty"`
-	// Comment는 계정 설명이다(Linux 계정의 GECOS).
-	Comment string `json:"comment,omitempty"`
+	// Tags는 계정 태그다. OMV 사용자 편집 화면의 "Tags"이며, 실제로는 Linux 계정의 설명 칸(GECOS)에
+	// 쉼표로 이어 저장된다. 백엔드가 나누고 잇는다.
+	Tags []string `json:"tags,omitempty"`
 	// Groups는 속한 그룹이다. OMV가 관리자에게만 알려 주므로 일반 사용자는 없다.
 	Groups []string `json:"groups,omitempty"`
 	// SystemAccount는 OMV 사용자 관리 목록에 없는 시스템 계정인지다. 관리자만 알 수 있다.
 	SystemAccount bool `json:"systemAccount,omitempty"`
-	// ReadOnlyReason이 있으면 계정 설명을 바꿀 수 없다.
+	// ReadOnlyReason이 있으면 전자 우편·태그를 바꿀 수 없다.
 	ReadOnlyReason string `json:"readOnlyReason,omitempty" tstype:"'system' | 'locked'"`
 }
 
-// ProfileRequest는 PUT /api/profile의 요청 본문이다. 계정 설명만 바꾼다(전자 우편 등은 OMV에서 바꾼다).
+// ProfileRequest는 PUT /api/profile의 요청 본문이다. 사용자가 자기 계정에서 바꿀 수 있는 전자 우편과 태그를
+// 바꾼다(OMV UserMgmt.setUserByContext와 같은 범위). 없는 값은 그대로 둔다. 비밀번호·그룹 등은 OMV에서 바꾼다.
 type ProfileRequest struct {
-	Comment *string `json:"comment"`
+	// Email이 빈 문자열이면 전자 우편을 지운다.
+	Email *string   `json:"email,omitempty"`
+	Tags  *[]string `json:"tags,omitempty"`
 }
 
 // ProfileSaveResponse는 PUT /api/profile의 응답이다.
