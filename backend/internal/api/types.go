@@ -349,6 +349,8 @@ type Preferences struct {
 	// WallpaperImage는 이 사용자가 올린 바탕화면 이미지의 정보다. 올리지 않았으면 없다.
 	// 설정 파일에 저장하지 않고 응답할 때 이미지 저장소에서 붙인다.
 	WallpaperImage *ImageInfo `json:"wallpaperImage,omitempty"`
+	// AvatarImage는 이 사용자의 프로필 사진 정보다. 없으면 기본 아바타를 그린다. WallpaperImage처럼 응답할 때만 붙인다.
+	AvatarImage *ImageInfo `json:"avatarImage,omitempty"`
 }
 
 // 테마. AppearancePrefs.Theme, SiteDefaults.Theme에 들어간다.

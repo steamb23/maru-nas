@@ -53,10 +53,19 @@ func SiteImage(name string) (ImageKey, bool) {
 
 // UserWallpaper는 사용자가 올린 바탕화면 이미지 자리다. 사용자 이름은 fileName으로 인코딩한다.
 func UserWallpaper(username string) (ImageKey, error) {
+	return userImage(username, "wallpaper")
+}
+
+// UserAvatar는 사용자의 프로필 사진 자리다.
+func UserAvatar(username string) (ImageKey, error) {
+	return userImage(username, "avatar")
+}
+
+func userImage(username, name string) (ImageKey, error) {
 	if username == "" {
 		return ImageKey{}, errors.New("preferences: empty username")
 	}
-	return ImageKey{dir: "users/" + fileName(username), name: "wallpaper"}, nil
+	return ImageKey{dir: "users/" + fileName(username), name: name}, nil
 }
 
 // imageExts는 받는 이미지 형식과 저장 파일 확장자다. SVG는 스크립트를 품을 수 있어 받지 않는다.

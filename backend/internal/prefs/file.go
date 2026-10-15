@@ -92,14 +92,14 @@ func (s *FileStore) update(username string, apply func(*api.Preferences)) error 
 	doc.Version = fileVersion
 	apply(&doc.Preferences)
 	// 응답할 때 붙이는 값은 저장하지 않는다.
-	doc.WallpaperImage = nil
+	doc.WallpaperImage, doc.AvatarImage = nil, nil
 	return writeAtomic(path, doc)
 }
 
 // read는 사용자 설정 파일을 읽는다(readJSON).
 func (s *FileStore) read(path string) (fileDoc, error) {
 	doc, err := readJSON[fileDoc](path)
-	doc.WallpaperImage = nil
+	doc.WallpaperImage, doc.AvatarImage = nil, nil
 	return doc, err
 }
 

@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 
 	"onmaru/backend/internal/api"
@@ -300,5 +301,25 @@ func TestAppearanceRoundTrip(t *testing.T) {
 				t.Error("stored value changed")
 			}
 		})
+	}
+}
+
+func TestFileStoreDoesNotStoreImageInfo(t *testing.T) {
+	// 이미지 정보(wallpaperImage, avatarImage)는 응답할 때만 붙이는 값이라 파일에 저장하지 않는다.
+	dir := t.TempDir()
+	s, _ := NewFileStore(dir)
+	path := filepath.Join(dir, "users", "alice.json")
+	if err := os.WriteFile(path, []byte(`{"version":1,"wallpaperImage":{"rev":"a"},"avatarImage":{"rev":"b"}}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if p, err := s.Get("alice"); err != nil || p.WallpaperImage != nil || p.AvatarImage != nil {
+		t.Fatalf("read: %+v, %v", p, err)
+	}
+	if err := s.SetDrawer("alice", api.DrawerPrefs{Sort: api.DrawerSortName}); err != nil {
+		t.Fatal(err)
+	}
+	b, _ := os.ReadFile(path)
+	if strings.Contains(string(b), "Image") {
+		t.Errorf("file = %s", b)
 	}
 }

@@ -208,7 +208,7 @@ func (h *handler) putSiteImage(w http.ResponseWriter, r *http.Request, _ auth.Se
 	if !ok {
 		return
 	}
-	info, ok := h.putImage(w, r, key)
+	info, ok := h.putImage(w, r, key, maxImageBytes)
 	if !ok {
 		return
 	}

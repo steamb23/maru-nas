@@ -523,6 +523,10 @@ export interface Preferences {
    * 설정 파일에 저장하지 않고 응답할 때 이미지 저장소에서 붙인다.
    */
   wallpaperImage?: ImageInfo;
+  /**
+   * AvatarImage는 이 사용자의 프로필 사진 정보다. 없으면 기본 아바타를 그린다. WallpaperImage처럼 응답할 때만 붙인다.
+   */
+  avatarImage?: ImageInfo;
 }
 /**
  * ThemeAuto는 브라우저(OS)의 밝은·어두운 모드 설정을 따른다.

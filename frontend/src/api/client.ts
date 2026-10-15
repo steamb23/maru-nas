@@ -345,7 +345,8 @@ export function isPreferences(v: unknown): v is Preferences {
     isOptional(v.shortcuts, (x) => isArrayOf(x, isShortcut)) &&
     isOptional(v.drawer, isDrawerPrefs) &&
     isOptional(v.appearance, isAppearancePrefs) &&
-    isOptional(v.wallpaperImage, isImageInfo)
+    isOptional(v.wallpaperImage, isImageInfo) &&
+    isOptional(v.avatarImage, isImageInfo)
   )
 }
 

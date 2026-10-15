@@ -18,7 +18,10 @@ const maxPreferencesBodyBytes = 64 << 10
 func (h *handler) preferences(w http.ResponseWriter, _ *http.Request, s auth.Session) {
 	p, err := h.Prefs.Get(s.Username)
 	if err == nil {
-		p.WallpaperImage, err = h.userImageInfo(s.Username)
+		p.WallpaperImage, err = h.userImageInfo(prefs.UserWallpaper, s.Username)
+	}
+	if err == nil {
+		p.AvatarImage, err = h.userImageInfo(prefs.UserAvatar, s.Username)
 	}
 	if err != nil {
 		log.Printf("preferences: read: %v", err)
@@ -28,8 +31,9 @@ func (h *handler) preferences(w http.ResponseWriter, _ *http.Request, s auth.Ses
 	writeJSON(w, http.StatusOK, p)
 }
 
-func (h *handler) userImageInfo(username string) (*api.ImageInfo, error) {
-	key, err := prefs.UserWallpaper(username)
+// userImageInfo는 사용자 이미지 자리(slot: prefs.UserWallpaper 등)의 정보다. 없으면 nil.
+func (h *handler) userImageInfo(slot func(string) (prefs.ImageKey, error), username string) (*api.ImageInfo, error) {
+	key, err := slot(username)
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +103,7 @@ func (h *handler) putWallpaperImage(w http.ResponseWriter, r *http.Request, s au
 		writeError(w, http.StatusInternalServerError, "", "failed to save image")
 		return
 	}
-	info, ok := h.putImage(w, r, key)
+	info, ok := h.putImage(w, r, key, maxImageBytes)
 	if !ok {
 		return
 	}
@@ -204,4 +208,38 @@ func (h *handler) setDrawer(w http.ResponseWriter, r *http.Request, s auth.Sessi
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// avatarImage는 로그인한 사용자의 프로필 사진을 보낸다. 자기 사진만 받는다.
+func (h *handler) avatarImage(w http.ResponseWriter, r *http.Request, s auth.Session) {
+	key, err := prefs.UserAvatar(s.Username)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "", "failed to read image")
+		return
+	}
+	h.serveImage(w, r, key)
+}
+
+// putAvatarImage는 프로필 사진을 바꾼다. 브라우저가 잘라 줄인 이미지를 받는다(maxAvatarBytes 이하). 응답은 이미지 정보다.
+func (h *handler) putAvatarImage(w http.ResponseWriter, r *http.Request, s auth.Session) {
+	key, err := prefs.UserAvatar(s.Username)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "", "failed to save image")
+		return
+	}
+	if info, ok := h.putImage(w, r, key, maxAvatarBytes); ok {
+		writeJSON(w, http.StatusOK, info)
+	}
+}
+
+// deleteAvatarImage는 프로필 사진을 지운다. 이후 기본 아바타를 그린다.
+func (h *handler) deleteAvatarImage(w http.ResponseWriter, _ *http.Request, s auth.Session) {
+	key, err := prefs.UserAvatar(s.Username)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "", "failed to delete image")
+		return
+	}
+	if h.deleteImage(w, key) {
+		w.WriteHeader(http.StatusNoContent)
+	}
 }
