@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <!-- 온마루 로고(둥근 타일). 열린 대청마루를 한 점 투시(소실점 32,30)로 보고, 문턱 앞에 3단 NAS가 선 모습이다.
+       빛은 개구부(x 12..52, y 16..40)에서 들어온다. NAS 앞면(x 16..48, y 24..52)의 여백·베이·틈은 모두 4단위라
+       16px에서도 단이 한 픽셀 줄로 갈린다. 상태 LED만 따뜻한 색(#f5a524)이다. 각진 타일은 onmaru-square.svg -->
+  <defs>
+    <clipPath id="onmaru-tile"><rect x="4" y="4" width="56" height="56" rx="14"/></clipPath>
+    <linearGradient id="onmaru-wall" x1="4" y1="0" x2="60" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#3174e8"/><stop offset="0.143" stop-color="#468cf9"/><stop offset="0.857" stop-color="#468cf9"/><stop offset="1" stop-color="#3174e8"/></linearGradient>
+    <linearGradient id="onmaru-ceil" x1="0" y1="4" x2="0" y2="16" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#1e4eb5"/><stop offset="1" stop-color="#2b63d3"/></linearGradient>
+    <linearGradient id="onmaru-floor" x1="0" y1="40" x2="0" y2="60" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#bfd6ff"/><stop offset="1" stop-color="#9fc0fd"/></linearGradient>
+    <linearGradient id="onmaru-sky" x1="0" y1="16" x2="0" y2="40" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#f1f7ff"/><stop offset="1" stop-color="#ffffff"/></linearGradient>
+    <linearGradient id="onmaru-nas" x1="0" y1="24" x2="0" y2="52" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#4a8ef8"/><stop offset="0.035" stop-color="#2a62d0"/><stop offset="0.07" stop-color="#2257c2"/><stop offset="1" stop-color="#1a479f"/></linearGradient>
+    <linearGradient id="onmaru-shadow" x1="0" y1="52" x2="0" y2="54" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#8cb2fa"/><stop offset="1" stop-color="#9fc0fd"/></linearGradient>
+    <linearGradient id="onmaru-bay" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f7faff"/><stop offset="1" stop-color="#d2e2ff"/></linearGradient>
+    <radialGradient id="onmaru-spill" cx="32" cy="40" r="28" gradientUnits="userSpaceOnUse" gradientTransform="translate(0 22) scale(1 0.45)"><stop offset="0" stop-color="#ffffff" stop-opacity="0.75"/><stop offset="1" stop-color="#ffffff" stop-opacity="0"/></radialGradient>
+    <radialGradient id="onmaru-vignette" cx="32" cy="30" r="40" gradientUnits="userSpaceOnUse"><stop offset="0.5" stop-color="#0b2a66" stop-opacity="0"/><stop offset="1" stop-color="#0b2a66" stop-opacity="0.13"/></radialGradient>
+  </defs>
+  <g clip-path="url(#onmaru-tile)">
+    <!-- 옆벽, 천장, 마루 바닥 -->
+    <rect x="4" y="4" width="56" height="56" fill="url(#onmaru-wall)"/>
+    <polygon points="12,16 52,16 152,-54 -88,-54" fill="url(#onmaru-ceil)"/>
+    <polygon points="12,40 52,40 152,90 -88,90" fill="url(#onmaru-floor)"/>
+    <polygon points="12,40 52,40 152,90 -88,90" fill="url(#onmaru-spill)"/>
+    <rect x="4" y="4" width="56" height="56" fill="url(#onmaru-vignette)"/>
+    <!-- 열린 앞면(밝은 하늘) -->
+    <rect x="12" y="16" width="40" height="24" fill="url(#onmaru-sky)"/>
+    <!-- NAS: 그림자, 앞면, 가로 드라이브 베이 3단(손잡이, 베이 LED), 상태 LED -->
+    <polygon points="16,52 48,52 49.45,54 14.55,54" fill="url(#onmaru-shadow)"/>
+    <rect x="16" y="24" width="32" height="28" rx="1" fill="url(#onmaru-nas)"/>
+    <g fill="url(#onmaru-bay)"><rect x="20" y="28" width="24" height="4" rx="0.6"/><rect x="20" y="36" width="24" height="4" rx="0.6"/><rect x="20" y="44" width="24" height="4" rx="0.6"/></g>
+    <path d="M21.5 29.5h6v1h-6ZM21.5 37.5h6v1h-6ZM21.5 45.5h6v1h-6Z" fill="#3c84f7"/>
+    <path d="M42 29.2a0.8 0.8 0 1 1 0 1.6a0.8 0.8 0 1 1 0-1.6ZM42 37.2a0.8 0.8 0 1 1 0 1.6a0.8 0.8 0 1 1 0-1.6ZM42 45.2a0.8 0.8 0 1 1 0 1.6a0.8 0.8 0 1 1 0-1.6Z" fill="#3c84f7"/>
+    <circle cx="44.5" cy="26" r="1.2" fill="#f5a524"/>
+    <!-- 타일 안쪽 가장자리 음영 -->
+    <rect x="4.5" y="4.5" width="55" height="55" rx="13.5" fill="none" stroke="#0b2a66" stroke-opacity="0.08"/>
+  </g>
+</svg>
