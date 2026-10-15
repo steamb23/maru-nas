@@ -33,6 +33,7 @@
 @import './shell/TileDivider.css';
 @import './shell/PlaceholderWindow.css';
 @import './shell/Taskbar.css';
+@import './shell/AppDrawer.css';
 @import './shell/Clock.css';
 @import './shell/ProfileMenu.css';
 @import './shell/ContextMenu.css';

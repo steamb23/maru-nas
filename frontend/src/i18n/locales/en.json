@@ -96,7 +96,13 @@
   "shortcuts": {
     "open": "Open",
     "add": "Add shortcut",
-    "remove": "Remove shortcut"
+    "remove": "Remove shortcut",
+    "addToDesktop": "Add shortcut to desktop"
+  },
+  "drawer": {
+    "title": "All apps",
+    "search": "Search apps",
+    "empty": "No matching apps"
   },
   "storage": {
     "root": "System",

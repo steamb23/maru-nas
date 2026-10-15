@@ -17,8 +17,8 @@ import { animationsEnabled } from './useWindowAnimation'
 import { CLOSE_EASING, EASING } from './windowAnim'
 
 // 데스크톱에서 움직이는 부분. 배경(.desktop)은 그대로 둔다.
-// 작업표시줄의 backdrop-filter가 제대로 보이도록 둘을 한 부모로 묶지 않고 따로 움직인다.
-const DESKTOP_PARTS = '.desktop-area, .taskbar'
+// 작업표시줄과 "모든 앱" 화면의 backdrop-filter가 제대로 보이도록 한 부모로 묶지 않고 따로 움직인다.
+const DESKTOP_PARTS = '.desktop-area, .app-drawer, .taskbar'
 
 function originOf(el: Element): string {
   const r = el.getBoundingClientRect()

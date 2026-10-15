@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { IconImage } from '../icons/IconImage'
 import { getApp } from '../windows/apps'
 import { type WindowState, selectActiveId, useWindowStore } from '../windows/store'
+import { APP_DRAWER_ID, useAppDrawerStore } from './appDrawerStore'
 import { Clock } from './Clock'
 import { ProfileMenu } from './ProfileMenu'
 import { TASK_ENTER_MS, TASK_LEAVE_MS, withLeaving } from './taskbarAnim'
@@ -22,7 +23,9 @@ const DRAG_THRESHOLD = 4
 const SETTLE_MS = 200
 
 // 작업표시줄 버튼: 활성 창은 최소화, 그 밖의 창은 복원해 맨 앞으로. 타일 그룹의 창이면 짝 창도 함께 앞으로 온다.
+// "모든 앱" 화면이 열려 있으면 닫는다(키보드로 누른 경우. 포인터는 화면 바깥 누르기로 이미 닫힌다).
 function onTaskClick(w: WindowState, active: boolean) {
+  useAppDrawerStore.getState().close()
   if (active && !w.minimized) minimize(w.id)
   else raiseGroup(w.id)
 }
@@ -97,6 +100,9 @@ export function Taskbar({ inert = false }: { inert?: boolean }) {
   const { t } = useTranslation()
   const windows = useWindowStore((s) => s.windows)
   const activeId = useWindowStore(selectActiveId)
+  const drawerOpen = useAppDrawerStore((s) => s.open)
+  // "모든 앱" 버튼을 마지막으로 누른 포인터 종류. 터치로 열면 검색 상자에 포커스하지 않는다.
+  const launcherPointer = useRef('')
   const listRef = useRef<HTMLUListElement>(null)
   // 닫힌 창의 버튼은 저장소에서 바로 지워지지만, 퇴장 애니메이션이 끝나 onLeft가 불릴 때까지
   // 원래 자리에 마지막 상태로 남긴다.
@@ -277,6 +283,26 @@ export function Taskbar({ inert = false }: { inert?: boolean }) {
   return (
     <div className="taskbar-dock" inert={inert}>
       <nav className="taskbar" aria-label={t('taskbar.label')}>
+        {/* "모든 앱" 버튼. 창 버튼 목록(드래그 정렬이 자식 순서를 잰다) 밖에 둔다. */}
+        <button
+          type="button"
+          className="taskbar-launcher"
+          aria-label={t('drawer.title')}
+          title={t('drawer.title')}
+          aria-haspopup="dialog"
+          aria-expanded={drawerOpen}
+          aria-controls={drawerOpen ? APP_DRAWER_ID : undefined}
+          onPointerDown={(e) => {
+            launcherPointer.current = e.pointerType
+          }}
+          onClick={() => {
+            const viaTouch = launcherPointer.current === 'touch'
+            launcherPointer.current = ''
+            useAppDrawerStore.getState().toggle(viaTouch)
+          }}
+        >
+          <IconImage name="view-app-grid-symbolic" size={20} />
+        </button>
         <ul ref={listRef} className="taskbar-items">
           {renderIds.map((id) => {
             const ghost = leaving.get(id)

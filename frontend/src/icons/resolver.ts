@@ -5,6 +5,7 @@
 // 실행 파일에 들어가므로, 아이콘을 쓸 때마다 여기에 한 줄씩 추가한다.
 
 import documentOpen from '@colloid/actions/symbolic/document-open-symbolic.svg?url'
+import editFind from '@colloid/actions/symbolic/edit-find-symbolic.svg?url'
 import listAdd from '@colloid/actions/symbolic/list-add-symbolic.svg?url'
 import listRemove from '@colloid/actions/symbolic/list-remove-symbolic.svg?url'
 import mediaPlaybackStart from '@colloid/actions/symbolic/media-playback-start-symbolic.svg?url'
@@ -13,6 +14,7 @@ import objectSelect from '@colloid/actions/symbolic/object-select-symbolic.svg?u
 import panEnd from '@colloid/actions/symbolic/pan-end-symbolic.svg?url'
 import panStart from '@colloid/actions/symbolic/pan-start-symbolic.svg?url'
 import systemLogOut from '@colloid/actions/symbolic/system-log-out-symbolic.svg?url'
+import viewAppGrid from '@colloid/actions/symbolic/view-app-grid-symbolic.svg?url'
 import viewRefresh from '@colloid/actions/symbolic/view-refresh-symbolic.svg?url'
 import windowClose from '@colloid/actions/symbolic/window-close-symbolic.svg?url'
 import windowMaximize from '@colloid/actions/symbolic/window-maximize-symbolic.svg?url'
@@ -53,6 +55,8 @@ const ICONS = {
   'media-playback-start-symbolic': { url: mediaPlaybackStart, kind: 'symbolic' },
   'media-playback-stop-symbolic': { url: mediaPlaybackStop, kind: 'symbolic' },
   'view-refresh-symbolic': { url: viewRefresh, kind: 'symbolic' },
+  'view-app-grid-symbolic': { url: viewAppGrid, kind: 'symbolic' },
+  'edit-find-symbolic': { url: editFind, kind: 'symbolic' },
   'preferences-desktop-locale-symbolic': { url: preferencesDesktopLocale, kind: 'symbolic' },
   'avatar-default-symbolic': { url: avatarDefault, kind: 'symbolic' },
   'utilities-system-monitor': { url: utilitiesSystemMonitor, kind: 'color' },

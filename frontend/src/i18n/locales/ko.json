@@ -96,7 +96,13 @@
   "shortcuts": {
     "open": "열기",
     "add": "바로가기 추가",
-    "remove": "바로가기 제거"
+    "remove": "바로가기 제거",
+    "addToDesktop": "바탕화면에 바로가기 추가"
+  },
+  "drawer": {
+    "title": "모든 앱",
+    "search": "앱 검색",
+    "empty": "일치하는 앱 없음"
   },
   "storage": {
     "root": "시스템",

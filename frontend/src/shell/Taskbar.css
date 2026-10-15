@@ -24,6 +24,26 @@
   gap: 8px;
 }
 
+/* "모든 앱" 버튼. 작업표시줄 왼쪽 끝에 고정된다. */
+.taskbar-launcher {
+  display: grid;
+  flex: none;
+  place-items: center;
+  height: 100%;
+  aspect-ratio: 1;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.taskbar-launcher:hover,
+.taskbar-launcher[aria-expanded='true'] {
+  background: var(--hover-bg);
+}
+
 .taskbar-items {
   display: flex;
   flex: 1;

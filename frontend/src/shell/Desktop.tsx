@@ -1,9 +1,12 @@
-// 데스크톱 셸: 바탕화면 바로가기, 위젯 레이어, 창 레이어, 작업표시줄, 컨텍스트 메뉴, 데스크톱 범위 모달.
+// 데스크톱 셸: 바탕화면 바로가기, 위젯 레이어, 창 레이어, "모든 앱" 화면, 작업표시줄, 컨텍스트 메뉴,
+// 데스크톱 범위 모달.
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { useShortcutStore } from '../shortcuts/store'
 import type { Size } from '../windows/geometry'
 import { type WindowState, type WindowStore, stableOrder, useWindowStore } from '../windows/store'
+import { AppDrawer } from './AppDrawer'
+import { useAppDrawerStore } from './appDrawerStore'
 import { ContextMenu } from './ContextMenu'
 import { DialogOutlet } from './DialogOutlet'
 import { type DesktopShortcutsHandle, DesktopShortcuts } from './DesktopShortcuts'
@@ -37,14 +40,17 @@ export function Desktop() {
     ],
     accept: (e) => e.target === e.currentTarget || e.target === iconsRef.current,
   })
-  // 데스크톱 범위 모달. 열려 있으면 창·위젯·아이콘·작업표시줄을 모두 막고, 열린 컨텍스트 메뉴와 진행 중인
-  // 바로가기 끌기는 끝낸다.
+  // 데스크톱 범위 모달. 열려 있으면 창·위젯·아이콘·작업표시줄을 모두 막고, 열린 컨텍스트 메뉴와 "모든 앱" 화면,
+  // 진행 중인 바로가기 끌기는 끝낸다.
   const { setHost: setModalHost, layer: modalLayer, blocked } = useModalHost()
   useEffect(() => {
     if (!blocked) return
     useContextMenuStore.getState().close()
+    useAppDrawerStore.getState().close()
     shortcutsRef.current?.cancelDrag()
   }, [blocked])
+  // "모든 앱" 화면이 열려 있으면 그 뒤의 데스크톱 영역(창·위젯·아이콘)은 입력을 받지 않는다. 작업표시줄은 그대로 쓴다.
+  const drawerOpen = useAppDrawerStore((s) => s.open)
   // 데스크톱 영역(작업표시줄 제외) 크기. 창 위치 제한의 기준이다.
   const [bounds, setBounds] = useState<Size>(() => ({ width: window.innerWidth, height: window.innerHeight }))
   // 창을 옮길 때마다 Desktop 전체가 다시 그려지지 않도록 id 목록만 구독한다.
@@ -82,7 +88,7 @@ export function Desktop() {
   return (
     <DesktopModalContext value={modalLayer}>
       <div className="desktop" ref={rootRef}>
-        <div className="desktop-area" ref={areaRef} inert={blocked} {...desktopMenu.handlers}>
+        <div className="desktop-area" ref={areaRef} inert={blocked || drawerOpen} {...desktopMenu.handlers}>
           <DesktopShortcuts bounds={bounds} listRef={iconsRef} ref={shortcutsRef} />
           <WidgetLayer bounds={bounds} iconsRef={iconsRef} iconsReady={iconsReady} ref={widgetsRef} />
           <TileDivider bounds={bounds} />
@@ -90,6 +96,7 @@ export function Desktop() {
             <Window key={id} id={id} bounds={bounds} closingState={closing.get(id)} onClosed={onClosed} />
           ))}
         </div>
+        <AppDrawer bounds={bounds} />
         <Taskbar inert={blocked} />
         <ContextMenu />
         <div className="modal-host modal-host-desktop" ref={setModalHost} />
