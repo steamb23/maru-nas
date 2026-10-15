@@ -221,6 +221,12 @@
     "ok": "OK",
     "cancel": "Cancel"
   },
+  "linkNotice": {
+    "title": "Open in a new tab",
+    "workbench": "OMV Workbench opens in a new browser tab. The first time, sign in to OMV again in that tab.",
+    "dontShowAgain": "Don't show this again",
+    "open": "Open"
+  },
   "actions": {
     "working": "Working…",
     "dismiss": "Dismiss",

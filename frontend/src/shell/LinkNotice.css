@@ -1,0 +1,16 @@
+/* 링크 앱 열기 안내(LinkNotice.tsx)의 "다음에 알리지 않음" */
+.link-notice-skip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  margin-top: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.link-notice-skip input {
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}

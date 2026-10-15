@@ -221,6 +221,12 @@
     "ok": "확인",
     "cancel": "취소"
   },
+  "linkNotice": {
+    "title": "새 탭에서 열기",
+    "workbench": "OMV 워크벤치는 브라우저의 새 탭에서 열립니다. 처음 열 때는 그 탭에서 OMV에 다시 로그인해야 합니다.",
+    "dontShowAgain": "다음에 알리지 않음",
+    "open": "열기"
+  },
   "actions": {
     "working": "처리 중…",
     "dismiss": "닫기",

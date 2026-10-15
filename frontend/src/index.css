@@ -38,6 +38,7 @@
 @import './shell/ProfileMenu.css';
 @import './shell/ContextMenu.css';
 @import './shell/Modal.css';
+@import './shell/LinkNotice.css';
 @import './shell/LanguageSelect.css';
 
 /* 로그인 */
