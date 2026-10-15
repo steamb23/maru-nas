@@ -82,6 +82,11 @@ function MenuRoot({ menu, closing, onClosed }: RootProps) {
       fill: 'forwards',
     })
     anim.onfinish = onClosed
+    // 닫는 도중에 새 메뉴가 열리면 이 메뉴는 바로 사라진다. 요소가 문서에서 빠져도 애니메이션은 끝까지 돌아
+    // onfinish가 불리므로, 그대로 두면 새 메뉴를 지워 버린다.
+    return () => {
+      anim.onfinish = null
+    }
   }, [closing, onClosed])
 
   // 메뉴 밖을 누르거나, 브라우저 창 크기가 바뀌거나 포커스를 잃으면 닫는다. 누른 곳의 동작은 그대로 둔다.
