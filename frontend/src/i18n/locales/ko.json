@@ -34,7 +34,8 @@
     "retry": "지금 다시 연결"
   },
   "desktop": {
-    "label": "바탕화면"
+    "label": "바탕화면",
+    "openScreenSettings": "화면 설정 열기"
   },
   "window": {
     "minimize": "최소화",

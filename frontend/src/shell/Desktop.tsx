@@ -10,6 +10,7 @@ import { type WindowState, type WindowStore, stableOrder, useWindowStore } from 
 import { AppDrawer } from './AppDrawer'
 import { useAppDrawerStore } from './appDrawerStore'
 import { ContextMenu } from './ContextMenu'
+import type { ContextMenuItem } from './contextMenu'
 import { DialogOutlet } from './DialogOutlet'
 import { type DesktopShortcutsHandle, DesktopShortcuts } from './DesktopShortcuts'
 import { Taskbar } from './Taskbar'
@@ -36,11 +37,22 @@ export function Desktop() {
   const shortcutsRef = useRef<DesktopShortcutsHandle>(null)
   // 바탕화면 빈 곳(아이콘 사이 포함)의 우클릭 메뉴. 창·위젯·아이콘 위에서는 열지 않는다.
   // 항목은 기능을 가진 쪽이 만든다: "바로가기 추가 ▸"는 바로가기, "위젯 추가 ▸"는 위젯 레이어.
+  // 맨 아래에 구분선을 두고 설정의 화면 페이지를 여는 항목을 둔다.
   const desktopMenu = useContextMenuTrigger({
-    items: () => [
-      ...(shortcutsRef.current?.desktopMenuItems() ?? []),
-      ...(widgetsRef.current?.desktopMenuItems() ?? []),
-    ],
+    items: () => {
+      const add = [
+        ...(shortcutsRef.current?.desktopMenuItems() ?? []),
+        ...(widgetsRef.current?.desktopMenuItems() ?? []),
+      ]
+      const settings: ContextMenuItem = {
+        kind: 'action',
+        id: 'screen-settings',
+        labelKey: 'desktop.openScreenSettings',
+        icon: 'preferences-desktop-appearance-symbolic',
+        onSelect: () => openSettings('screen'),
+      }
+      return add.length > 0 ? [...add, { kind: 'separator', id: 'screen-settings-separator' }, settings] : [settings]
+    },
     accept: (e) => e.target === e.currentTarget || e.target === iconsRef.current,
   })
   // 데스크톱 범위 모달. 열려 있으면 창·위젯·아이콘·작업표시줄을 모두 막고, 열린 컨텍스트 메뉴와 "모든 앱" 화면,

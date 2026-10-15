@@ -34,7 +34,8 @@
     "retry": "Reconnect now"
   },
   "desktop": {
-    "label": "Desktop"
+    "label": "Desktop",
+    "openScreenSettings": "Open screen settings"
   },
   "window": {
     "minimize": "Minimize",
