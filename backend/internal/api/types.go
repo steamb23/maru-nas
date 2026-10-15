@@ -575,6 +575,18 @@ type ProfileResponse struct {
 	ReadOnlyReason string `json:"readOnlyReason,omitempty" tstype:"'system' | 'locked'"`
 }
 
+// ProfileRequest는 PUT /api/profile의 요청 본문이다. 계정 설명만 바꾼다(전자 우편 등은 OMV에서 바꾼다).
+type ProfileRequest struct {
+	Comment *string `json:"comment"`
+}
+
+// ProfileSaveResponse는 PUT /api/profile의 응답이다.
+type ProfileSaveResponse struct {
+	// Applied는 OMV 적용까지 끝났는지다. 일반 사용자는 적용 권한이 없어 false이며, OMV에 적용 대기가 남는다
+	// (관리자가 OMV 웹 UI에서 적용한다). 바꿀 것이 없었으면 true다.
+	Applied bool `json:"applied"`
+}
+
 // AboutResponse는 GET /api/about의 응답이다. 설정 앱의 정보 페이지가 보여 준다.
 type AboutResponse struct {
 	// Version은 온마루 버전이다.
@@ -661,13 +673,15 @@ const (
 	ErrImageTooLarge = "image_too_large"
 	// ErrUnsupportedImage는 올린 파일이 받는 이미지 형식(PNG, JPEG, WebP)이 아니라는 뜻이다.
 	ErrUnsupportedImage = "unsupported_image"
+	// ErrProfileReadOnly는 이 계정의 정보를 바꿀 수 없다는 뜻이다(시스템 계정, OMV에서 수정을 막은 계정).
+	ErrProfileReadOnly = "profile_readonly"
 )
 
 // ErrorResponse는 2xx가 아닌 상태 코드와 함께 반환된다.
 type ErrorResponse struct {
 	Error string `json:"error"`
 	// Code는 화면에서 분기할 때 쓰는 오류 종류다. 없을 수 있다.
-	Code string `json:"code,omitempty" tstype:"'invalid_credentials' | 'rate_limited' | 'challenge_failed' | 'challenge_expired' | 'omv_unavailable' | 'unauthorized' | 'bad_request' | 'rpc_forbidden' | 'admin_required' | 'plugin_missing' | 'omv_error' | 'action_busy' | 'action_failed' | 'action_timeout' | 'config_dirty' | 'image_too_large' | 'unsupported_image'"`
+	Code string `json:"code,omitempty" tstype:"'invalid_credentials' | 'rate_limited' | 'challenge_failed' | 'challenge_expired' | 'omv_unavailable' | 'unauthorized' | 'bad_request' | 'rpc_forbidden' | 'admin_required' | 'plugin_missing' | 'omv_error' | 'action_busy' | 'action_failed' | 'action_timeout' | 'config_dirty' | 'image_too_large' | 'unsupported_image' | 'profile_readonly'"`
 	// RetryAfterSeconds는 rate_limited일 때 다시 시도할 수 있기까지 남은 초다.
 	RetryAfterSeconds int `json:"retryAfterSeconds,omitempty"`
 }

@@ -55,6 +55,7 @@ const ERROR_CODES: readonly ErrorCode[] = [
   'config_dirty',
   'image_too_large',
   'unsupported_image',
+  'profile_readonly',
 ]
 
 export class ApiError extends Error {

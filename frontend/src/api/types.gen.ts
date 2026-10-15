@@ -843,6 +843,22 @@ export interface ProfileResponse {
   readOnlyReason?: 'system' | 'locked';
 }
 /**
+ * ProfileRequest는 PUT /api/profile의 요청 본문이다. 계정 설명만 바꾼다(전자 우편 등은 OMV에서 바꾼다).
+ */
+export interface ProfileRequest {
+  comment?: string;
+}
+/**
+ * ProfileSaveResponse는 PUT /api/profile의 응답이다.
+ */
+export interface ProfileSaveResponse {
+  /**
+   * Applied는 OMV 적용까지 끝났는지다. 일반 사용자는 적용 권한이 없어 false이며, OMV에 적용 대기가 남는다
+   * (관리자가 OMV 웹 UI에서 적용한다). 바꿀 것이 없었으면 true다.
+   */
+  applied: boolean;
+}
+/**
  * AboutResponse는 GET /api/about의 응답이다. 설정 앱의 정보 페이지가 보여 준다.
  */
 export interface AboutResponse {
@@ -993,6 +1009,10 @@ export const ErrImageTooLarge = "image_too_large";
  */
 export const ErrUnsupportedImage = "unsupported_image";
 /**
+ * ErrProfileReadOnly는 이 계정의 정보를 바꿀 수 없다는 뜻이다(시스템 계정, OMV에서 수정을 막은 계정).
+ */
+export const ErrProfileReadOnly = "profile_readonly";
+/**
  * ErrorResponse는 2xx가 아닌 상태 코드와 함께 반환된다.
  */
 export interface ErrorResponse {
@@ -1000,7 +1020,7 @@ export interface ErrorResponse {
   /**
    * Code는 화면에서 분기할 때 쓰는 오류 종류다. 없을 수 있다.
    */
-  code?: 'invalid_credentials' | 'rate_limited' | 'challenge_failed' | 'challenge_expired' | 'omv_unavailable' | 'unauthorized' | 'bad_request' | 'rpc_forbidden' | 'admin_required' | 'plugin_missing' | 'omv_error' | 'action_busy' | 'action_failed' | 'action_timeout' | 'config_dirty' | 'image_too_large' | 'unsupported_image';
+  code?: 'invalid_credentials' | 'rate_limited' | 'challenge_failed' | 'challenge_expired' | 'omv_unavailable' | 'unauthorized' | 'bad_request' | 'rpc_forbidden' | 'admin_required' | 'plugin_missing' | 'omv_error' | 'action_busy' | 'action_failed' | 'action_timeout' | 'config_dirty' | 'image_too_large' | 'unsupported_image' | 'profile_readonly';
   /**
    * RetryAfterSeconds는 rate_limited일 때 다시 시도할 수 있기까지 남은 초다.
    */

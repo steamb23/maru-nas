@@ -57,37 +57,48 @@ func (h *handler) addonAction(w http.ResponseWriter, r *http.Request, s auth.Ses
 	caller := &rpcCaller{h: h, s: s, addon: id, clientIP: clientIP(r), writes: true}
 	err := act.Run(ctx, addons.ActionRequest{Admin: s.Admin, Target: req.Target, RPC: caller})
 
-	var ae *addons.ActionError
-	result := "ok"
-	switch {
-	case caller.unauthorized.Load():
-		result = "unauthorized"
-	case err == nil:
-	case errors.As(err, &ae):
-		result = ae.Code
-	case errors.Is(err, addons.ErrInvalidTarget):
-		result = api.ErrBadRequest
-	case errors.Is(err, addons.ErrActionTimeout), errors.Is(ctx.Err(), context.DeadlineExceeded):
-		result = api.ErrActionTimeout
-	case errors.Is(err, addons.ErrActionFailed):
-		result = api.ErrActionFailed
-	case caller.failed.Load():
-		result = api.ErrOMVError
-	default:
-		result = "error"
-	}
+	result, ae := actionOutcome(ctx, err, caller)
 	// 대상은 브라우저가 보낸 값이므로 %q로 남긴다(로그 줄 바꿈 주입 방지).
 	log.Printf("action: user=%q addon=%s action=%s target=%q result=%s", s.Username, id, name, req.Target, result)
 	if err != nil {
 		log.Printf("action %s/%s: %v", id, name, err)
 	}
+	if result == "ok" {
+		w.Header().Set("Cache-Control", "no-store")
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+	h.writeActionFailure(w, r, s, result, ae)
+}
 
+// actionOutcome은 조작(애드온 조작, 프로필 저장)의 결과를 로그·응답에 쓸 이름으로 정한다.
+// 성공이면 "ok", ActionError면 그 코드(ae에 담김), 나머지는 api 오류 코드 또는 "unauthorized"·"error"다.
+func actionOutcome(ctx context.Context, err error, caller *rpcCaller) (string, *addons.ActionError) {
+	var ae *addons.ActionError
+	switch {
+	case caller.unauthorized.Load():
+		return "unauthorized", nil
+	case err == nil:
+		return "ok", nil
+	case errors.As(err, &ae):
+		return ae.Code, ae
+	case errors.Is(err, addons.ErrInvalidTarget):
+		return api.ErrBadRequest, nil
+	case errors.Is(err, addons.ErrActionTimeout), errors.Is(ctx.Err(), context.DeadlineExceeded):
+		return api.ErrActionTimeout, nil
+	case errors.Is(err, addons.ErrActionFailed):
+		return api.ErrActionFailed, nil
+	case caller.failed.Load():
+		return api.ErrOMVError, nil
+	}
+	return "error", nil
+}
+
+// writeActionFailure는 성공이 아닌 조작 결과(actionOutcome)의 응답을 쓴다.
+func (h *handler) writeActionFailure(w http.ResponseWriter, r *http.Request, s auth.Session, result string, ae *addons.ActionError) {
 	switch result {
 	case "unauthorized":
 		h.expire(w, r, s)
-	case "ok":
-		w.Header().Set("Cache-Control", "no-store")
-		w.WriteHeader(http.StatusNoContent)
 	case api.ErrBadRequest:
 		writeError(w, http.StatusBadRequest, api.ErrBadRequest, "invalid action target")
 	case api.ErrActionTimeout:

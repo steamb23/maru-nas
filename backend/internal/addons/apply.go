@@ -20,7 +20,7 @@ var applyLock = make(chan struct{}, 1)
 //  1. Config.isDirty: OMV에 적용하지 않은 변경이 있으면 아무것도 바꾸지 않고 거절한다(409 config_dirty).
 //     적용은 표시된 모든 모듈을 배포하므로, 사용자가 workbench에서 만들다 만 변경을 대신 배포하지 않기 위해서다
 //  2. change: 설정을 바꾼다. 바꿀 것이 없으면(이미 원하는 값) false를 돌려주고, 그러면 적용하지 않는다.
-//     OMV가 저장을 거절한 오류는 change가 ErrActionFailed로 감싸 돌려준다
+//     change의 오류는 그대로 돌려준다(서비스 켜기·끄기는 OMV가 저장을 거절하면 ErrActionFailed로 감싼다)
 //  3. Config.applyChangesBg({modules: [], force: false}): 1에서 비어 있음을 확인했으므로 이번 변경과 OMV가
 //     함께 표시한 모듈만 배포된다. 1과 2 사이에 다른 곳에서 바뀐 변경이 섞일 수 있는 것은 받아들인다
 //  4. WaitBg로 끝날 때까지 기다린다

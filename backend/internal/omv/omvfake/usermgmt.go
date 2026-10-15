@@ -21,6 +21,13 @@ func (s *Server) User(username string) (User, bool) {
 	return u, ok
 }
 
+// PutUser는 계정 하나를 넣거나 바꾼다(수정 금지 계정 등을 테스트할 때).
+func (s *Server) PutUser(u User) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.users[u.Name] = u
+}
+
 // handleUserMgmt는 UserMgmt RPC를 처리한다. 모르는 메서드면 ok가 false다. s.mu를 쥔 채로 부른다.
 func (s *Server) handleUserMgmt(sess *session, method string, params json.RawMessage) (any, *rpcError, bool) {
 	switch method {
