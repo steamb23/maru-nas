@@ -94,6 +94,7 @@
   - 항상 `updatelastaccess=false`로 부른다. 위젯 주기 요청이 OMV 세션을 연장하면 안 된다
   - OMV 401이면 provider가 오류를 삼켜도 대시보드 세션을 지우고 401로 응답한다. 404(RPC 서비스 없음)면 플러그인 감지를 다시 하게 한다
 - 서버(`internal/server/addondata.go`)는 capability를 먼저 확인한다(403 `admin_required`/`plugin_missing`, OMV에 보내지 않음). `Fetch`가 실패하면 OMV 호출 실패는 502 `omv_error`, 그 밖은 500
+- 세션 사이 캐시: SMART는 `smart.Cache`(하루 한 번), 서비스·컨테이너는 `addons.SharedCache`(5초, 동시 요청은 OMV 호출 하나를 함께 기다림, 조작 뒤 `Invalidate`). 사용자와 무관한 결과에만 쓴다. 프론트의 `refresh()`가 `?refresh=1`을 보내면 건너뛴다
 - 응답은 모두 `api.AddonSources`(`sources`: 값을 보탠 provider, `failedSources`: 쓸 수 있었지만 실패한 provider)를 품는다. 일부 출처만 실패하면 나머지 값으로 응답하고, 모두 실패했을 때만 오류로 본다
 - 프론트: `fetchAddon(id, guard, {refresh})`(`api/client.ts`)와 응답 형태 검사(`api/guards.ts`), 엔드포인트별 공유 폴러 `createSharedPoll`과 그것에 붙는 훅 `usePolledData`(`refresh()` 포함, 결과는 같은 엔드포인트의 모든 보기가 받는다)
 

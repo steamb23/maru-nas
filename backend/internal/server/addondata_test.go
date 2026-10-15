@@ -199,6 +199,54 @@ func TestAddonDataBuiltinContainers(t *testing.T) {
 	}
 }
 
+// 컨테이너 목록은 세션 사이에 잠깐 함께 쓴다. 새로고침과 조작 뒤에는 OMV에 다시 묻는다.
+func TestAddonDataContainersSharedCache(t *testing.T) {
+	e, _, _ := newDataEnv(t, containers.New())
+	e.fake.SetBgPolls(0)
+	listCalls := func() int {
+		n := 0
+		for _, c := range e.fake.Calls() {
+			if c.Method == "getContainers" {
+				n++
+			}
+		}
+		return n
+	}
+	state := func(b *browser, name string) string {
+		t.Helper()
+		r := b.do(http.MethodGet, "/api/addons/containers", nil)
+		wantStatus(t, r, http.StatusOK)
+		for _, c := range decode[api.ContainersResponse](t, r).Containers {
+			if c.Name == name {
+				return c.State
+			}
+		}
+		t.Fatalf("container %s not found", name)
+		return ""
+	}
+
+	user := e.browser()
+	wantStatus(t, user.login("user", "user"), http.StatusOK)
+	admin := e.browser()
+	wantStatus(t, admin.login("admin", "admin"), http.StatusOK)
+	if s := state(user, "web"); s != "running" {
+		t.Fatalf("web state %s", s)
+	}
+	state(admin, "web")
+	if n := listCalls(); n != 1 {
+		t.Errorf("getContainers calls = %d, want 1", n)
+	}
+	wantStatus(t, admin.do(http.MethodGet, "/api/addons/containers?refresh=1", nil), http.StatusOK)
+	if n := listCalls(); n != 2 {
+		t.Errorf("getContainers calls after refresh = %d, want 2", n)
+	}
+
+	wantStatus(t, act(admin, "containers", "stop", "web"), http.StatusNoContent)
+	if s := state(user, "web"); s != "exited" {
+		t.Errorf("web state %s after stop, want exited (cache not invalidated)", s)
+	}
+}
+
 // SMART는 관리자만 쓰고, 결과를 세션 사이에 함께 써서 OMV(smartctl)를 다시 부르지 않는다.
 func TestAddonDataBuiltinSmart(t *testing.T) {
 	cache := smart.NewCache(0, 0)

@@ -53,6 +53,13 @@ var Manifest = api.Manifest{
 	},
 }
 
+// 목록은 사용자와 무관하므로(Compose.getContainers는 모든 사용자, 결과 같음) 세션 사이에 cacheTTL 동안 함께 쓴다.
+// OMV가 PHP에서 docker CLI를 실행하므로 탭·사용자마다 부르지 않게 하기 위해서다.
+const (
+	cacheTTL     = 5 * time.Second
+	fetchTimeout = 20 * time.Second
+)
+
 // actionTimeout은 조작 하나를 기다리는 시간이다. docker stop은 컨테이너의 종료 유예 시간(기본 10초,
 // compose의 stop_grace_period로 늘릴 수 있음)만큼 걸린다.
 const actionTimeout = 2 * time.Minute
@@ -64,22 +71,25 @@ func (compose) Requires() api.Requirements {
 	return api.Requirements{Plugins: []string{composePlugin}}
 }
 
-// New는 컨테이너 애드온을 반환한다.
+// New는 컨테이너 애드온을 반환한다. 부를 때마다 새 캐시를 만든다.
 func New() addons.Addon {
+	cache := addons.NewSharedCache[api.ContainersResponse](cacheTTL, fetchTimeout)
 	return addons.Addon{
 		Manifest:  Manifest,
 		Providers: []addons.Provider{compose{}},
 		Fetch: func(ctx context.Context, req addons.Request) (any, error) {
-			raw, err := req.RPC.Call(ctx, "Compose", "getContainers", nil)
-			if err != nil {
-				return nil, err
-			}
-			return ParseContainers(raw)
+			return cache.Get(ctx, req.Refresh, func(ctx context.Context) (api.ContainersResponse, error) {
+				raw, err := req.RPC.Call(ctx, "Compose", "getContainers", nil)
+				if err != nil {
+					return api.ContainersResponse{}, err
+				}
+				return ParseContainers(raw)
+			})
 		},
 		Actions: map[string]addons.Action{
-			"start":   {Timeout: actionTimeout, Run: command("start")},
-			"stop":    {Timeout: actionTimeout, Run: command("stop")},
-			"restart": {Timeout: actionTimeout, Run: command("restart")},
+			"start":   {Timeout: actionTimeout, Run: command("start", cache)},
+			"stop":    {Timeout: actionTimeout, Run: command("stop", cache)},
+			"restart": {Timeout: actionTimeout, Run: command("restart", cache)},
 		},
 	}
 }
@@ -94,7 +104,8 @@ var namePattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$`)
 // 셸에서 실행한다(compose.inc, OMV\System\Process::getCommandLine). 그래서 command는 고정값만 쓰고,
 // id는 형식을 검사한 뒤 지금 목록에 있는 이름인지까지 확인한다. command2는 workbench처럼 빈 문자열로
 // 보낸다(빠지면 PHP 경고). 명령은 OMV 백그라운드 작업으로 돌므로 끝날 때까지 기다린다.
-func command(cmd string) func(context.Context, addons.ActionRequest) error {
+// 대상 확인에는 캐시가 아니라 지금 목록을 쓰고, 끝나면(실패해도) 캐시를 비운다.
+func command(cmd string, cache *addons.SharedCache[api.ContainersResponse]) func(context.Context, addons.ActionRequest) error {
 	return func(ctx context.Context, req addons.ActionRequest) error {
 		name := req.Target
 		if !namePattern.MatchString(name) {
@@ -111,6 +122,7 @@ func command(cmd string) func(context.Context, addons.ActionRequest) error {
 		if !slices.ContainsFunc(list.Containers, func(c api.Container) bool { return c.Name == name }) {
 			return addons.ErrInvalidTarget
 		}
+		defer cache.Invalidate()
 		var filename string
 		params := map[string]string{"command": cmd, "command2": "", "id": name}
 		if err := addons.CallInto(ctx, req.RPC, "Compose", "doContainerCommand", params, &filename); err != nil {

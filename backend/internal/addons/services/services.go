@@ -80,6 +80,13 @@ var adapters = map[string]adapter{
 	"rsyncd": {service: "Rsyncd", get: "getSettings", set: "setSettings", fields: []string{"enable", "port", "extraoptions"}},
 }
 
+// 상태는 사용자와 무관하므로(관리자 전용, 결과 같음) 세션 사이에 cacheTTL 동안 함께 쓴다.
+// OMV가 모듈마다 systemctl을 실행하므로 탭·사용자마다 부르지 않게 하기 위해서다.
+const (
+	cacheTTL     = 5 * time.Second
+	fetchTimeout = 20 * time.Second
+)
+
 // actionTimeout은 켜기·끄기 하나를 기다리는 시간이다. 설정 적용(Salt 배포)은 수십 초 걸릴 수 있다.
 const actionTimeout = 3 * time.Minute
 
@@ -88,21 +95,24 @@ type provider struct{}
 func (provider) Name() string               { return Source }
 func (provider) Requires() api.Requirements { return api.Requirements{Admin: true} }
 
-// New는 서비스 애드온을 반환한다.
+// New는 서비스 애드온을 반환한다. 부를 때마다 새 캐시를 만든다.
 func New() addons.Addon {
+	cache := addons.NewSharedCache[api.ServicesResponse](cacheTTL, fetchTimeout)
 	return addons.Addon{
 		Manifest:  Manifest,
 		Providers: []addons.Provider{provider{}},
 		Fetch: func(ctx context.Context, req addons.Request) (any, error) {
-			raw, err := req.RPC.Call(ctx, "Services", "getStatus", nil)
-			if err != nil {
-				return nil, err
-			}
-			return ParseStatus(raw)
+			return cache.Get(ctx, req.Refresh, func(ctx context.Context) (api.ServicesResponse, error) {
+				raw, err := req.RPC.Call(ctx, "Services", "getStatus", nil)
+				if err != nil {
+					return api.ServicesResponse{}, err
+				}
+				return ParseStatus(raw)
+			})
 		},
 		Actions: map[string]addons.Action{
-			"enable":  {Timeout: actionTimeout, Run: toggle(true)},
-			"disable": {Timeout: actionTimeout, Run: toggle(false)},
+			"enable":  {Timeout: actionTimeout, Run: toggle(true, cache)},
+			"disable": {Timeout: actionTimeout, Run: toggle(false, cache)},
 		},
 	}
 }
@@ -124,8 +134,8 @@ var toggleLock = make(chan struct{}, 1)
 //  5. WaitBg로 끝날 때까지 기다린다
 //
 // 3이나 4·5가 실패하면 ErrActionFailed다. 3이 성공하고 적용이 실패하면 설정은 바뀐 채 적용 대기로 남는다
-// (OMV workbench에 적용 대기 표시가 뜬다).
-func toggle(enable bool) func(context.Context, addons.ActionRequest) error {
+// (OMV workbench에 적용 대기 표시가 뜬다). 설정을 바꾸기 시작했으면 끝난 뒤(실패해도) 상태 캐시를 비운다.
+func toggle(enable bool, cache *addons.SharedCache[api.ServicesResponse]) func(context.Context, addons.ActionRequest) error {
 	return func(ctx context.Context, req addons.ActionRequest) error {
 		a, ok := adapters[req.Target]
 		if !ok {
@@ -168,6 +178,7 @@ func toggle(enable bool) func(context.Context, addons.ActionRequest) error {
 			params[f] = v
 		}
 		params["enable"] = json.RawMessage(fmt.Sprint(enable))
+		defer cache.Invalidate()
 		if _, err := req.RPC.Call(ctx, a.service, a.set, params); err != nil {
 			// OMV가 설정을 거절했다(SMB의 호스트 이름 길이 제한 등).
 			return fmt.Errorf("%w: %w", addons.ErrActionFailed, err)
