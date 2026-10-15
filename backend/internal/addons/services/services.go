@@ -6,7 +6,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"slices"
 	"strings"
 	"time"
@@ -117,78 +116,53 @@ func New() addons.Addon {
 	}
 }
 
-// toggleLock은 이 백엔드의 켜기·끄기를 하나씩 실행하게 한다. 적용(4~5)이 끝나기 전에는 OMV가 적용 대기로
-// 표시하므로, 겹쳐 실행하면 뒤의 요청이 앞 요청의 변경 때문에 config_dirty로 거절된다. 뒤의 요청은 앞의 것이 끝날
-// 때까지 기다린다(기다리는 시간도 Timeout에 들어간다). 이 프로세스 안의 조작만 막으며, 그사이 workbench에서
-// 만든 변경은 아래 경쟁 조건과 같다.
-var toggleLock = make(chan struct{}, 1)
-
 // toggle은 서비스를 켜거나 끄는 조작이다. OMV workbench에서 서비스 설정의 "사용"을 바꾸고 적용하는 것과 같다.
+// 적용 대기 확인, 적용, 기다리기는 addons.ApplyChange가 하고(같은 백엔드의 다른 적용과 하나씩 실행), 여기서는 설정만 바꾼다.
 //
-//  1. Config.isDirty: OMV에 적용하지 않은 변경이 있으면 아무것도 바꾸지 않고 거절한다(409 config_dirty).
-//     적용은 표시된 모든 모듈을 배포하므로, 사용자가 workbench에서 만들다 만 변경을 대신 배포하지 않기 위해서다
-//  2. get: 이미 원하는 값이면 바로 성공한다
-//  3. set: get 결과에서 set 스키마의 속성만 골라 enable만 바꿔 보낸다
-//  4. Config.applyChangesBg({modules: [], force: false}): 1에서 비어 있음을 확인했으므로 이번 변경과 OMV가
-//     함께 표시한 모듈만 배포된다. 1과 3 사이에 다른 곳에서 바뀐 변경이 섞일 수 있는 것은 받아들인다
-//  5. WaitBg로 끝날 때까지 기다린다
+//  1. get: 이미 원하는 값이면 바꾸지 않는다(적용도 하지 않음)
+//  2. set: get 결과에서 set 스키마의 속성만 골라 enable만 바꿔 보낸다
 //
-// 3이나 4·5가 실패하면 ErrActionFailed다. 3이 성공하고 적용이 실패하면 설정은 바뀐 채 적용 대기로 남는다
-// (OMV workbench에 적용 대기 표시가 뜬다). 설정을 바꾸기 시작했으면 끝난 뒤(실패해도) 상태 캐시를 비운다.
+// set이 실패하면 ErrActionFailed다. 설정을 바꾸기 시작했으면 끝난 뒤(실패해도) 상태 캐시를 비운다.
 func toggle(enable bool, cache *addons.SharedCache[api.ServicesResponse]) func(context.Context, addons.ActionRequest) error {
 	return func(ctx context.Context, req addons.ActionRequest) error {
 		a, ok := adapters[req.Target]
 		if !ok {
 			return addons.ErrInvalidTarget
 		}
-		select {
-		case toggleLock <- struct{}{}:
-			defer func() { <-toggleLock }()
-		case <-ctx.Done():
-			return addons.ErrActionTimeout
-		}
-		var dirty bool
-		if err := addons.CallInto(ctx, req.RPC, "Config", "isDirty", map[string]any{}, &dirty); err != nil {
-			return err
-		}
-		if dirty {
-			return &addons.ActionError{
-				Status:  http.StatusConflict,
-				Code:    api.ErrConfigDirty,
-				Message: "omv has pending configuration changes",
+		touched := false
+		defer func() {
+			if touched {
+				cache.Invalidate()
 			}
-		}
-		var current map[string]json.RawMessage
-		if err := addons.CallInto(ctx, req.RPC, a.service, a.get, nil, &current); err != nil {
-			return err
-		}
-		var on flag
-		if err := json.Unmarshal(current["enable"], &on); err != nil {
-			return fmt.Errorf("%s.%s: enable: %w", a.service, a.get, err)
-		}
-		if bool(on) == enable {
-			return nil
-		}
-		params := make(map[string]json.RawMessage, len(a.fields))
-		for _, f := range a.fields {
-			v, ok := current[f]
-			if !ok {
-				return fmt.Errorf("%s.%s: missing field %q", a.service, a.get, f)
+		}()
+		return addons.ApplyChange(ctx, req.RPC, func(ctx context.Context) (bool, error) {
+			var current map[string]json.RawMessage
+			if err := addons.CallInto(ctx, req.RPC, a.service, a.get, nil, &current); err != nil {
+				return false, err
 			}
-			params[f] = v
-		}
-		params["enable"] = json.RawMessage(fmt.Sprint(enable))
-		defer cache.Invalidate()
-		if _, err := req.RPC.Call(ctx, a.service, a.set, params); err != nil {
-			// OMV가 설정을 거절했다(SMB의 호스트 이름 길이 제한 등).
-			return fmt.Errorf("%w: %w", addons.ErrActionFailed, err)
-		}
-		var filename string
-		apply := map[string]any{"modules": []string{}, "force": false}
-		if err := addons.CallInto(ctx, req.RPC, "Config", "applyChangesBg", apply, &filename); err != nil {
-			return fmt.Errorf("%w: %w", addons.ErrActionFailed, err)
-		}
-		return addons.WaitBg(ctx, req.RPC, filename, addons.BgPollInterval)
+			var on flag
+			if err := json.Unmarshal(current["enable"], &on); err != nil {
+				return false, fmt.Errorf("%s.%s: enable: %w", a.service, a.get, err)
+			}
+			if bool(on) == enable {
+				return false, nil
+			}
+			params := make(map[string]json.RawMessage, len(a.fields))
+			for _, f := range a.fields {
+				v, ok := current[f]
+				if !ok {
+					return false, fmt.Errorf("%s.%s: missing field %q", a.service, a.get, f)
+				}
+				params[f] = v
+			}
+			params["enable"] = json.RawMessage(fmt.Sprint(enable))
+			touched = true
+			if _, err := req.RPC.Call(ctx, a.service, a.set, params); err != nil {
+				// OMV가 설정을 거절했다(SMB의 호스트 이름 길이 제한 등).
+				return false, fmt.Errorf("%w: %w", addons.ErrActionFailed, err)
+			}
+			return true, nil
+		})
 	}
 }
 
