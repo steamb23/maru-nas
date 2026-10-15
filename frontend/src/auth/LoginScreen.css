@@ -21,12 +21,43 @@
   backdrop-filter: blur(16px);
 }
 
+/* 로고 오른쪽에 이름을 크게, 그 아래 태그라인을 작게 둔다. */
+.login-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  margin-bottom: 4px;
+}
+
 /* 로고는 64칸 격자로 그렸으므로 1.25배인 80px로 그려 4칸 단위 선이 정수 픽셀(5px)에 맞게 한다.
    여백을 뺀 타일은 70px쯤이다. */
 .login-logo {
   display: block;
+  flex: none;
   width: 80px;
   height: 80px;
+}
+
+.login-brand-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.login-brand-name {
+  margin: 0;
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.login-tagline {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text-muted);
 }
 
 .login-title {
