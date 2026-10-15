@@ -44,6 +44,11 @@
     "close": "닫기",
     "placeholder": "준비 중"
   },
+  "view": {
+    "loadFailed": "화면을 불러오지 못했습니다. 페이지를 새로 고친 뒤 다시 시도해 주세요.",
+    "loadFailedShort": "불러오지 못함",
+    "reload": "페이지 새로 고침"
+  },
   "taskbar": {
     "label": "작업표시줄",
     "restore": "복원",

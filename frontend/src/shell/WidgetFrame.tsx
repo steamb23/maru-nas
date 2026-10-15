@@ -25,6 +25,7 @@ import { isAddonApp } from '../windows/apps'
 import { useWindowStore } from '../windows/store'
 import type { ContextMenuItem } from './contextMenu'
 import { type DragDelta, usePointerDrag } from './usePointerDrag'
+import { ViewBoundary } from './ViewBoundary'
 import { mergeHandlers, useContextMenuTrigger } from './useContextMenuTrigger'
 import { animationsEnabled } from './useWindowAnimation'
 import { WidgetPreview, type WidgetPreviewHandle } from './WidgetPreview'
@@ -246,7 +247,9 @@ export function WidgetFrame({
           {notice ? (
             <AddonUnavailable reason={notice} plugins={plugins} compact />
           ) : (
-            <View active={pageVisible} size={{ cols: placement.cols, rows: placement.rows }} />
+            <ViewBoundary compact>
+              <View active={pageVisible} size={{ cols: placement.cols, rows: placement.rows }} />
+            </ViewBoundary>
           )}
         </div>
         {resizable &&

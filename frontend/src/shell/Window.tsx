@@ -18,6 +18,7 @@ import { TileResizeHandle } from './TileResizeHandle'
 import { type WindowModalLayer, WindowModalContext, useModalHost } from './modalScope'
 import { useContextMenuTrigger } from './useContextMenuTrigger'
 import { useWindowAnimation } from './useWindowAnimation'
+import { ViewBoundary } from './ViewBoundary'
 import { titlebarMenuItems } from './windowMenu'
 
 // ClosingWindow는 저장소에서 지워진(닫힌) 창의 마지막 상태와, 그때의 타일 그룹 비율이다.
@@ -75,7 +76,13 @@ const WindowBody = memo(function WindowBody({
 }) {
   const View = isAddonApp(appId) ? ADDON_VIEWS[appId].Window : isShellApp(appId) ? SHELL_VIEWS[appId] : null
   if (notice) return <AddonUnavailable reason={notice} plugins={requiredPlugins(appId)} />
-  return View ? <View active={active} /> : <PlaceholderWindow />
+  return View ? (
+    <ViewBoundary>
+      <View active={active} />
+    </ViewBoundary>
+  ) : (
+    <PlaceholderWindow />
+  )
 })
 
 export function Window({ id, bounds, closingState, onClosed }: Props) {

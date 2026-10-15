@@ -293,10 +293,12 @@
 - 프론트엔드
   - `frontend/src/addons/<id>/`: 보기 컴포넌트(창, 위젯)와 데이터 훅
   - `frontend/src/addons/registry.ts`: 애드온 id별 보기 컴포넌트(`ADDON_VIEWS`). manifest가 선언한 보기마다 `Window`·`Widget` 컴포넌트가 있어야 한다(tsc가 검사)
+    - 보기는 `lazyView`(`React.lazy`)로 등록해 보기마다 청크가 나뉜다. 바탕화면에 놓거나 연 애드온의 코드만 내려받고, 진입 청크는 애드온 수와 함께 커지지 않는다. 그리는 쪽(`Window`의 `WindowBody`, `WidgetFrame`)은 `shell/ViewBoundary`로 감싼다
   - `frontend/src/widgets/`: 위젯 그리드·배치 계산(`grid.ts`, `layout.ts`), 위젯 목록(`catalog.ts`), 저장 배치 저장소(`store.ts`). 창의 `src/windows/`와 서로 import하지 않는다
   - `frontend/src/addons/common/`: 애드온이 함께 쓰는 `poller.ts`, `format.ts`
   - `windows/apps.ts`는 창 보기가 있는 애드온을 manifest에서 만들고 준비 중 앱과 합친다. 준비 중 앱과 같은 id의 애드온을 만들면 준비 중 앱을 지운다
 - 별도 패키지, 런타임 로딩, Go `plugin` 패키지는 쓰지 않는다
+  - `lazyView`의 지연 로딩은 이 정적 목록 안의 일이다. 목록과 `AddonId`는 컴파일 타임에 정해지고, 빌드에 들어간 보기 코드를 내려받는 시점만 늦춘다
 
 ### manifest 원본과 id 일치 검사
 
@@ -316,7 +318,7 @@
    - 입력부(`fs.FS`, RPC 클라이언트)를 주입받게 한다
    - `testdata/`에 합성한 픽스처로 테스트한다. 식별 정보(시리얼, MAC, IP, 호스트 이름, 사용자 이름)는 가짜 값으로 바꾼다
 5. `Addon.Fetch`로 응답을 만들고(OMV는 `Request.RPC`로만), 응답 구조체는 `api.AddonSources`를 품게 해 `internal/api`에 추가한다. 입력은 `builtin.Deps`·`HostDeps`에 두고 `builtin.New`에 등록한 뒤 `make types`를 실행한다(`types.gen.ts`, `manifests.gen.ts`). OMV RPC를 쓰면 `omvfake`에 합성 응답을 추가한다
-6. 프론트 보기 컴포넌트(창, 위젯)를 만들어 `addons/registry.ts`에 등록한다. 같은 id의 준비 중 앱이 있으면 지운다
+6. 프론트 보기 컴포넌트(창, 위젯)를 만들어 `addons/registry.ts`에 `lazyView`로 등록한다(정적 import 금지, 진입 청크에 들어간다). 같은 id의 준비 중 앱이 있으면 지운다
    - capability가 없을 때의 안내는 창·위젯 틀(`AddonUnavailable`, 위젯은 `compact`)이 처리한다. 보기 컴포넌트는 "연결 끊김" 상태를 처리한다
    - 주기 요청은 `poller.ts` 방식을 따르고 보기의 `active`가 false면 멈춘다. 위젯은 로그인한 동안 계속 떠 있으므로 갱신 주기를 창보다 길게 잡는다
    - 위젯 보기는 `size`(칸)를 받는다. manifest의 최소 크기부터 최대 크기까지, 한국어·영어 모두 내용이 넘치지 않는지 브라우저에서 잰다

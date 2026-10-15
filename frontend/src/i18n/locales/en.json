@@ -44,6 +44,11 @@
     "close": "Close",
     "placeholder": "Coming soon"
   },
+  "view": {
+    "loadFailed": "Couldn't load this screen. Reload the page and try again.",
+    "loadFailedShort": "Couldn't load",
+    "reload": "Reload page"
+  },
   "taskbar": {
     "label": "Taskbar",
     "restore": "Restore",
