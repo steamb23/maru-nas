@@ -2,6 +2,7 @@
 import { type FormEvent, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import lockupUrl from '../assets/logo/onmaru-lockup.svg?url'
+import { BRAND_NAME, BRAND_ROMANIZED, BRAND_TAGLINE } from '../brand'
 import { useLanguage } from '../i18n'
 import { LanguageSelect } from '../shell/LanguageSelect'
 import { enterLogin } from '../shell/screenTransition'
@@ -17,12 +18,6 @@ const { login, verify, cancelChallenge, restore } = useAuthStore.getState()
 // OFFLINE_RETRY_MS마다 백엔드 연결을 다시 시도한다.
 const OFFLINE_RETRY_MS = 5000
 
-// 로그인 화면의 브랜드 영역은 현지화하지 않는다. 이름은 모든 언어에서 묶음 로고(한글 "온마루"와 로마자 표기)로
-// 보여 주고 대체 텍스트도 같게 둔다. 태그라인은 영어 원문이다. 태그라인의 desktop-like는 하이픈 뒤에서
-// 줄이 끊기지 않게 하이픈 뒤에 U+2060(단어 결합 문자)을 둔다.
-const BRAND_NAME = '온마루'
-const BRAND_ROMANIZED = 'Onmaru'
-const BRAND_TAGLINE = 'A suspiciously normal desktop-⁠like dashboard for openmediavault.'
 
 // useCountdown은 잠금이 끝나는 시각(ms)까지 남은 초를 1초마다 갱신한다. 지나면 0이다.
 // lock(초)을 부르면 지금부터 카운트다운을 시작한다.

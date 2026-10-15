@@ -259,6 +259,25 @@
       "defaultScreen": "Default screen",
       "server": "Server",
       "about": "About"
+    },
+    "about": {
+      "build": "Version information",
+      "version": "Version",
+      "commit": "Commit",
+      "modified": "Modified",
+      "commitTime": "Commit date",
+      "goVersion": "Go version",
+      "notRecorded": "Not recorded",
+      "loadFailed": "Couldn't load the version information.",
+      "license": "License",
+      "licenseText": "Onmaru is free software distributed under the GNU General Public License v3.0.",
+      "notices": "Open source notices",
+      "noticesIntro": "Onmaru includes the following third-party software and assets.",
+      "notes": {
+        "omvLogo": "Used only to refer to openmediavault itself. This does not imply endorsement.",
+        "pretendard": "Used for the lettering in the Onmaru logo, converted to outlines.",
+        "go": "Standard library compiled into the backend."
+      }
     }
   }
 }

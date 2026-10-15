@@ -1,0 +1,61 @@
+/* 설정의 정보 페이지(AboutPage.tsx). */
+.about {
+  max-width: 720px;
+}
+
+.about-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+/* 묶음 로고는 64칸 격자로 그렸으므로 16px의 배수 높이로 그린다(icons.md). */
+.about-lockup {
+  height: 48px;
+}
+
+.about-tagline {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.about-value {
+  font-variant-numeric: tabular-nums;
+}
+
+.about-badge {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--hover-bg);
+  font-size: 12px;
+  white-space: nowrap;
+  color: var(--text-muted);
+}
+
+.about-text,
+.about-error {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.about-error {
+  color: var(--text-muted);
+}
+
+.about-link {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.about-link:hover,
+.about-link:focus-visible {
+  text-decoration: underline;
+}
+
+.about-note {
+  display: block;
+  margin-top: 2px;
+}

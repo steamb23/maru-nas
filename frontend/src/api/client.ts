@@ -1,4 +1,5 @@
 import type {
+  AboutResponse,
   ActionRequest,
   AddonCapability,
   CapabilitiesResponse,
@@ -15,7 +16,7 @@ import type {
   WidgetPlacement,
   WidgetsRequest,
 } from './types.gen'
-import { isArrayOf, isNum, isObj, isOptional, isStr } from './guards'
+import { isArrayOf, isBool, isNum, isObj, isOptional, isStr } from './guards'
 
 // BASE_URL은 Vite base 설정값이다. 개발 서버는 '/', 빌드는 './'(문서 URL 기준 상대 경로)다.
 const API_BASE = `${import.meta.env.BASE_URL}api`
@@ -298,6 +299,24 @@ export function isPreferences(v: unknown): v is Preferences {
     isOptional(v.shortcuts, (x) => isArrayOf(x, isShortcut)) &&
     isOptional(v.drawer, isDrawerPrefs)
   )
+}
+
+export function isAboutResponse(v: unknown): v is AboutResponse {
+  return (
+    isObj(v) &&
+    isStr(v.version) &&
+    isStr(v.goVersion) &&
+    isOptional(v.revision, isStr) &&
+    isOptional(v.revisionTime, isStr) &&
+    isOptional(v.modified, isBool)
+  )
+}
+
+// fetchAbout은 온마루 버전과 빌드 정보다(설정의 정보 페이지).
+export async function fetchAbout(signal?: AbortSignal): Promise<AboutResponse> {
+  const data = await getJSON('/about', { signal })
+  if (!isAboutResponse(data)) throw new Error('/about: unexpected response shape')
+  return data
 }
 
 // 진행 중인 설정 요청. 동시에 부른 fetchPreferences는 이 요청 하나를 함께 기다린다.

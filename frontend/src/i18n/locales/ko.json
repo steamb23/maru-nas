@@ -259,6 +259,25 @@
       "defaultScreen": "기본 화면",
       "server": "서버",
       "about": "정보"
+    },
+    "about": {
+      "build": "버전 정보",
+      "version": "버전",
+      "commit": "커밋",
+      "modified": "수정됨",
+      "commitTime": "커밋 날짜",
+      "goVersion": "Go 버전",
+      "notRecorded": "기록 없음",
+      "loadFailed": "버전 정보를 불러오지 못했습니다.",
+      "license": "라이선스",
+      "licenseText": "온마루는 GNU General Public License v3.0에 따라 배포되는 자유 소프트웨어입니다.",
+      "notices": "오픈 소스 고지",
+      "noticesIntro": "온마루에는 다음 제3자 소프트웨어와 에셋이 들어 있습니다.",
+      "notes": {
+        "omvLogo": "openmediavault 자체를 가리킬 때만 씁니다. 보증이나 제휴를 뜻하지 않습니다.",
+        "pretendard": "온마루 로고의 글자에 썼으며 윤곽선으로 바꿔 넣었습니다.",
+        "go": "백엔드 실행 파일에 표준 라이브러리가 들어 있습니다."
+      }
     }
   }
 }
