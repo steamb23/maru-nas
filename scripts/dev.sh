@@ -31,6 +31,8 @@ export ONMARU_LISTEN="${ONMARU_LISTEN:-127.0.0.1:8090}"
 if [[ $fake == 1 ]]; then
   export FAKEOMV_LISTEN="${FAKEOMV_LISTEN:-127.0.0.1:8091}"
   export ONMARU_OMV_URL="http://$FAKEOMV_LISTEN"
+  # "OMV 워크벤치" 링크 앱은 가짜 OMV의 안내 페이지를 연다. 루프백 주소라 NAS 안의 브라우저에서만 열린다.
+  export ONMARU_WORKBENCH_URL="http://$FAKEOMV_LISTEN/"
 fi
 # 사용자 설정(위젯 배치)은 저장소 안 .dev-state에 둔다. 가짜 계정과 실제 계정의 이름이 겹칠 수 있으므로 나눈다.
 export ONMARU_STATE_DIR="${ONMARU_STATE_DIR:-$root/.dev-state/$([[ $fake == 1 ]] && echo fake || echo real)}"
@@ -70,7 +72,7 @@ if [[ $fake == 1 ]]; then
   pids+=($!)
 fi
 
-echo "[dev] backend: http://$ONMARU_LISTEN (omv: ${ONMARU_OMV_URL:-http://127.0.0.1})"
+echo "[dev] backend: http://$ONMARU_LISTEN (omv: ${ONMARU_OMV_URL:-http://127.0.0.1}, workbench: ${ONMARU_WORKBENCH_URL:-off})"
 (cd "$root/backend" && exec setsid go run ./cmd/onmaru) &
 pids+=($!)
 
