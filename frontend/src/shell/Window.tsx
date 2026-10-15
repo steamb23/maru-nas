@@ -5,13 +5,14 @@ import { AddonUnavailable } from '../addons/AddonUnavailable'
 import { type UnavailableReason, appAccess, requiredPlugins, useCapabilitiesStore } from '../addons/capabilities'
 import { usePageVisible } from '../addons/common/usePageVisible'
 import { ADDON_VIEWS } from '../addons/registry'
-import { type WindowAppId, getWindowApp, isAddonApp } from '../windows/apps'
+import { type WindowAppId, getWindowApp, isAddonApp, isShellApp } from '../windows/apps'
 import { type Point, type Rect, type Size, clampPosition, restoreGrab } from '../windows/geometry'
 import { type WindowState, selectActiveId, useWindowStore } from '../windows/store'
 import { type TileZone, layoutOf, tileRect, tileZoneAt } from '../windows/tiling'
 import { DialogOutlet } from './DialogOutlet'
 import { PlaceholderWindow } from './PlaceholderWindow'
 import { ResizeHandles } from './ResizeHandles'
+import { SHELL_VIEWS } from './shellViews'
 import { TilePreview } from './TilePreview'
 import { TileResizeHandle } from './TileResizeHandle'
 import { type WindowModalLayer, WindowModalContext, useModalHost } from './modalScope'
@@ -72,7 +73,7 @@ const WindowBody = memo(function WindowBody({
   notice: UnavailableReason | null
   active: boolean
 }) {
-  const View = isAddonApp(appId) ? ADDON_VIEWS[appId].Window : null
+  const View = isAddonApp(appId) ? ADDON_VIEWS[appId].Window : isShellApp(appId) ? SHELL_VIEWS[appId] : null
   if (notice) return <AddonUnavailable reason={notice} plugins={requiredPlugins(appId)} />
   return View ? <View active={active} /> : <PlaceholderWindow />
 })

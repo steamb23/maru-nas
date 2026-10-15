@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { MANIFESTS } from '../addons/manifests.gen'
-import { APP_IDS, type WindowAppId, getApp, getWindowApp, isAddonApp, isAppId, isLinkApp } from './apps'
+import { APP_IDS, type WindowAppId, getApp, getWindowApp, isAddonApp, isAppId, isLinkApp, isShellApp } from './apps'
 import { MIN_HEIGHT, MIN_WIDTH } from './geometry'
 
 const windowAppIds = APP_IDS.filter((id): id is WindowAppId => !isLinkApp(id))
@@ -36,11 +36,22 @@ describe('애드온 앱', () => {
     for (const id of others) expect(Object.hasOwn(MANIFESTS, id)).toBe(false)
   })
 
-  it('애드온 앱, 준비 중 앱, 링크 앱 순서로 놓인다', () => {
+  it('애드온 앱, 준비 중 앱, 셸 앱, 링크 앱 순서로 놓인다', () => {
     const windowAddons = Object.values(MANIFESTS)
       .filter((m) => 'window' in m.views)
       .map((m) => m.id)
-    expect(APP_IDS).toEqual([...windowAddons, 'files', 'workbench'])
+    expect(APP_IDS).toEqual([...windowAddons, 'files', 'settings', 'workbench'])
+  })
+})
+
+describe('셸 앱', () => {
+  it('설정은 셸이 그리는 창 앱이다', () => {
+    expect(isShellApp('settings')).toBe(true)
+    expect(isAddonApp('settings')).toBe(false)
+    expect(isLinkApp('settings')).toBe(false)
+    expect(getApp('settings').kind).toBe('shell')
+    expect(isShellApp('files')).toBe(false)
+    expect(isShellApp('workbench')).toBe(false)
   })
 })
 

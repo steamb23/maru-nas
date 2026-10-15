@@ -49,15 +49,35 @@
   pointer-events: none;
 }
 
+/* 머리글은 설정의 화면 페이지를 여는 버튼이다. */
 .profile-menu-header {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 8px 10px;
+  width: 100%;
+  margin-bottom: 4px;
+  padding: 8px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.profile-menu-header:hover,
+.profile-menu-header:focus-visible {
+  background: var(--hover-bg);
+  outline: none;
+}
+
+.profile-menu-header-chevron {
+  margin-left: auto;
+  color: var(--text-muted);
 }
 
 .profile-menu-user {
   display: flex;
+  flex: 1;
   flex-direction: column;
   min-width: 0;
 }

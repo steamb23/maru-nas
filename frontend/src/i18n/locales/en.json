@@ -56,7 +56,8 @@
     "roleUser": "User",
     "logout": "Sign out",
     "logoutConfirm": "Sign out? All open windows will be closed.",
-    "openWorkbench": "Open OMV Workbench"
+    "openWorkbench": "Open OMV Workbench",
+    "openSettings": "Open settings"
   },
   "apps": {
     "systemInfo": "System Information",
@@ -67,7 +68,8 @@
     "containers": "Containers",
     "smart": "Disk Health",
     "services": "Services",
-    "workbench": "OMV Workbench"
+    "workbench": "OMV Workbench",
+    "settings": "Settings"
   },
   "sysinfo": {
     "disconnected": "Disconnected — reconnecting…",
@@ -241,6 +243,22 @@
       "plugin_missing": "The required OpenMediaVault plugin is not installed.",
       "omv_error": "Could not reach OpenMediaVault.",
       "unknown": "The request failed."
+    }
+  },
+  "settings": {
+    "nav": "Settings sections",
+    "showNav": "Show sections",
+    "groups": {
+      "user": "User",
+      "admin": "Administration"
+    },
+    "pages": {
+      "screen": "Screen",
+      "general": "General",
+      "loginScreen": "Login screen",
+      "defaultScreen": "Default screen",
+      "server": "Server",
+      "about": "About"
     }
   }
 }

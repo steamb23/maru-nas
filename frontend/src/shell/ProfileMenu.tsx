@@ -7,6 +7,7 @@ import { useAuthStore } from '../auth/store'
 import { setLanguage, useLanguage } from '../i18n'
 import { SUPPORTED_LANGUAGES, languageName } from '../i18n/languages'
 import { IconImage } from '../icons/IconImage'
+import type { SettingsPageId } from '../settings/pages'
 import { useDialogs } from './dialogPresets'
 import { openLink } from './launchApp'
 import {
@@ -35,7 +36,8 @@ export function ProfileAvatar({ size }: { user: SessionInfo; size: number }) {
   )
 }
 
-export function ProfileMenu() {
+// onOpenSettings는 설정 창을 그 페이지로 연다. 창 위치 계산에 데스크톱 크기가 필요해 Desktop이 넘긴다.
+export function ProfileMenu({ onOpenSettings }: { onOpenSettings: (page: SettingsPageId) => void }) {
   const { t } = useTranslation()
   const lang = useLanguage()
   const user = useAuthStore((s) => s.user)
@@ -217,13 +219,24 @@ export function ProfileMenu() {
           inert={closing}
           onKeyDown={onMenuKeyDown}
         >
-          <div className="profile-menu-header">
+          {/* 머리글을 누르면 설정의 화면 페이지를 연다. 화살표로 옮겨 갈 수 있게 메뉴 항목으로 둔다. */}
+          <button
+            type="button"
+            role="menuitem"
+            className="profile-menu-header"
+            title={t('profile.openSettings')}
+            onClick={() => {
+              close(false)
+              onOpenSettings('screen')
+            }}
+          >
             <ProfileAvatar user={user} size={36} />
-            <div className="profile-menu-user">
+            <span className="profile-menu-user">
               <span className="profile-menu-name">{user.username}</span>
               <span className="profile-menu-role">{user.admin ? t('profile.roleAdmin') : t('profile.roleUser')}</span>
-            </div>
-          </div>
+            </span>
+            <IconImage name="pan-end-symbolic" size={16} className="profile-menu-header-chevron" />
+          </button>
           {groups.map((group) => (
             <div key={group[0].group} className="profile-menu-group" role="group">
               {group.map((item) =>

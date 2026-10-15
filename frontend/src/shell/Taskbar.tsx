@@ -2,6 +2,7 @@ import { type PointerEvent, type TransitionEvent, useEffect, useLayoutEffect, us
 import { flushSync } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { IconImage } from '../icons/IconImage'
+import type { SettingsPageId } from '../settings/pages'
 import { getApp } from '../windows/apps'
 import { type WindowState, selectActiveId, useWindowStore } from '../windows/store'
 import { APP_DRAWER_ID, useAppDrawerStore } from './appDrawerStore'
@@ -98,7 +99,14 @@ const sameIds = (a: readonly string[], b: readonly WindowState[]) =>
   a.length === b.length && a.every((id, i) => id === b[i].id)
 
 // inert이면 작업표시줄 전체가 입력을 받지 않는다(데스크톱 범위 모달이 열려 있을 때).
-export function Taskbar({ inert = false }: { inert?: boolean }) {
+// onOpenSettings는 프로필 메뉴 머리글이 설정 창을 열 때 부른다.
+export function Taskbar({
+  inert = false,
+  onOpenSettings,
+}: {
+  inert?: boolean
+  onOpenSettings: (page: SettingsPageId) => void
+}) {
   const { t } = useTranslation()
   const windows = useWindowStore((s) => s.windows)
   const activeId = useWindowStore(selectActiveId)
@@ -367,7 +375,7 @@ export function Taskbar({ inert = false }: { inert?: boolean }) {
         {/* 트레이: 시계, 그리고 오른쪽 끝에 고정된 프로필 메뉴 */}
         <div className="taskbar-tray">
           <Clock />
-          <ProfileMenu />
+          <ProfileMenu onOpenSettings={onOpenSettings} />
         </div>
       </nav>
     </div>

@@ -56,7 +56,8 @@
     "roleUser": "사용자",
     "logout": "로그아웃",
     "logoutConfirm": "로그아웃할까요? 열려 있는 창은 모두 닫힙니다.",
-    "openWorkbench": "OMV 워크벤치 열기"
+    "openWorkbench": "OMV 워크벤치 열기",
+    "openSettings": "설정 열기"
   },
   "apps": {
     "systemInfo": "시스템 정보",
@@ -67,7 +68,8 @@
     "containers": "컨테이너",
     "smart": "디스크 건강",
     "services": "서비스",
-    "workbench": "OMV 워크벤치"
+    "workbench": "OMV 워크벤치",
+    "settings": "설정"
   },
   "sysinfo": {
     "disconnected": "연결 끊김 — 다시 연결하는 중…",
@@ -241,6 +243,22 @@
       "plugin_missing": "필요한 OpenMediaVault 플러그인이 설치되어 있지 않습니다.",
       "omv_error": "OpenMediaVault에 연결할 수 없습니다.",
       "unknown": "요청이 실패했습니다."
+    }
+  },
+  "settings": {
+    "nav": "설정 메뉴",
+    "showNav": "메뉴 보기",
+    "groups": {
+      "user": "사용자",
+      "admin": "관리"
+    },
+    "pages": {
+      "screen": "화면",
+      "general": "일반",
+      "loginScreen": "로그인 화면",
+      "defaultScreen": "기본 화면",
+      "server": "서버",
+      "about": "정보"
     }
   }
 }

@@ -2,6 +2,8 @@
 // 데스크톱 범위 모달.
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
+import type { SettingsPageId } from '../settings/pages'
+import { useSettingsNavStore } from '../settings/navStore'
 import { useShortcutStore } from '../shortcuts/store'
 import type { Size } from '../windows/geometry'
 import { type WindowState, type WindowStore, stableOrder, useWindowStore } from '../windows/store'
@@ -13,6 +15,7 @@ import { type DesktopShortcutsHandle, DesktopShortcuts } from './DesktopShortcut
 import { Taskbar } from './Taskbar'
 import { TileDivider } from './TileDivider'
 import { type WidgetLayerHandle, WidgetLayer } from './WidgetLayer'
+import { launchApp } from './launchApp'
 import { enterDesktop } from './screenTransition'
 import { type ClosingWindow, Window } from './Window'
 import { useContextMenuStore } from './contextMenuStore'
@@ -83,6 +86,12 @@ export function Desktop() {
     return () => ro.disconnect()
   }, [])
 
+  // 설정 창을 그 페이지로 연다. 이미 열려 있으면 페이지만 바꾸고 앞으로 가져온다.
+  const openSettings = (page: SettingsPageId) => {
+    useSettingsNavStore.getState().show(page)
+    launchApp('settings', bounds)
+  }
+
   // 로그인하거나 세션을 복원해 처음 그려질 때 내용이 커지며 나타난다.
   useLayoutEffect(() => enterDesktop(rootRef.current), [])
 
@@ -98,7 +107,7 @@ export function Desktop() {
           ))}
         </div>
         <AppDrawer bounds={bounds} shortcuts={shortcutsRef} />
-        <Taskbar inert={blocked} />
+        <Taskbar inert={blocked} onOpenSettings={openSettings} />
         <ContextMenu />
         <div className="modal-host modal-host-desktop" ref={setModalHost} />
         <DialogOutlet scope={DESKTOP_SCOPE} />

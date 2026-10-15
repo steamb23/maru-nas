@@ -2,7 +2,7 @@
    Vite가 빌드할 때 아래 순서대로 한 파일로 합친다. 컴포넌트는 CSS를 직접 import하지 않는다.
 
    CSS 파일 위치:
-   1. 컴포넌트 폴더(shell/, auth/, icons/, addons/ 루트): 클래스를 그리는 컴포넌트와 같은 이름으로 옆에 둔다.
+   1. 컴포넌트 폴더(shell/, auth/, icons/, settings/, addons/ 루트): 클래스를 그리는 컴포넌트와 같은 이름으로 옆에 둔다.
       Taskbar.tsx → Taskbar.css
    2. 애드온 폴더(addons/<id>/, addons/common/): 폴더 이름의 파일 하나에 창·위젯 스타일을 함께 둔다.
       addons/network/ → network.css
@@ -54,3 +54,6 @@
 @import './addons/smart/smart.css';
 @import './addons/system-info/system-info.css';
 @import './addons/temperature/temperature.css';
+
+/* 설정 앱. 애드온 공통 클래스(.addon-button 등)를 함께 쓰므로 그 뒤에 둔다. */
+@import './settings/SettingsWindow.css';
