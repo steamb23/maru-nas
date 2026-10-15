@@ -124,6 +124,15 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 - 테스트 픽스처(`testdata/` 등)에는 합성한 값만 쓴다. 이 NAS에서 뽑은 원본 출력을 그대로 넣지 않으며, 디스크 시리얼·MAC·IP·호스트 이름·사용자 이름 같은 식별 정보는 가짜 값으로 바꾼다
 - 코드 주석은 한국어로 쓴다. 식별자·로그·에러 메시지는 영어를 유지한다
 
+## 버전
+
+- SemVer `0.y.z`. 원본은 `backend/internal/buildinfo`의 `Version` 상수 하나이고, OMV User-Agent와 정보 페이지(`/api/about`)가 이 값을 쓴다. `frontend/package.json`의 버전은 쓰지 않는다
+- 기준은 업그레이드할 때 사용자가 할 일이 있는지다
+  - 마이너(`0.y.0`): 새 기능·앱, 플래그·`install.sh` 설정 추가, 상태 디렉터리 형식 변경(`users/*.json`·`site.json`의 `version`, 이전 형식을 읽는 변환도 함께), 프록시 설정·지원 OMV 버전처럼 업그레이드 때 손봐야 하는 변경
+  - 패치(`0.y.z`): 버그 수정, 번역·문구·문서 수정. 설정과 저장 형식은 그대로일 때
+  - `1.0.0`: 깃허브에 공개하면서 설치·업그레이드 방법과 상태 디렉터리 형식의 호환을 약속할 수 있을 때
+- 커밋마다 올리지 않는다(정보 페이지에 커밋 해시가 나온다). 올릴 때는 버전 커밋 하나를 만들고, 공개 배포부터는 그 커밋에 `v<버전>` 태그를 붙인다
+
 ## 나중에 확인할 것
 
 - provider 내부 RPC 경로(`GET /api/addons/{id}` → OMV)를 실제 OMV로 확인한다: 컨테이너(`Compose.getContainers`), SMART(`Smart.getList`, 관리자), cputemp(hwmon에 CPU 센서가 없을 때만). 지금은 Go 테스트(omvfake)로만 검증했다. `/api/rpc` 중계 통과 경로도 아직 실제 OMV로 확인하지 않았다
