@@ -29,6 +29,12 @@
   color: #fff;
 }
 
+/* 프로필 사진(ProfileAvatar). 크기는 width·height 속성으로 정한다. */
+.profile-avatar-image {
+  display: block;
+  object-fit: cover;
+}
+
 /* 작업표시줄이 화면 아래에 있으므로 버튼 위로, 오른쪽 끝에 맞춰 연다.
    작업표시줄의 backdrop-filter 안에서는 겹친 블러가 제대로 보이지 않아 불투명 배경을 쓴다. */
 .profile-menu {

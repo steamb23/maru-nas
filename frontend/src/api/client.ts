@@ -13,6 +13,9 @@ import type {
   LoginResponse,
   OverridableSetting,
   Preferences,
+  ProfileRequest,
+  ProfileResponse,
+  ProfileSaveResponse,
   RuntimeSetting,
   ServerOverrides,
   ServerSettings,
@@ -511,4 +514,46 @@ export async function fetchServerSettings(signal?: AbortSignal): Promise<ServerS
 export async function saveServerSettings(server: ServerOverrides): Promise<void> {
   const body: ServerSettingsRequest = { server: { ...server } }
   await request('PUT', '/site/server', { body })
+}
+
+// avatarImageUrl은 프로필 사진 주소다. 리비전을 붙여 사진이 바뀌면 브라우저가 새로 받게 한다.
+export function avatarImageUrl(rev: string): string {
+  return `${API_BASE}/preferences/avatar-image?v=${encodeURIComponent(rev)}`
+}
+
+// uploadAvatarImage는 프로필 사진을 바꾼다. 브라우저에서 잘라 줄인 이미지를 보낸다(백엔드 상한 2MiB).
+export function uploadAvatarImage(image: Blob): Promise<ImageInfo> {
+  return putImage('/preferences/avatar-image', image)
+}
+
+// deleteAvatarImage는 프로필 사진을 지운다.
+export async function deleteAvatarImage(): Promise<void> {
+  await request('DELETE', '/preferences/avatar-image')
+}
+
+export function isProfileResponse(v: unknown): v is ProfileResponse {
+  return (
+    isObj(v) &&
+    isStr(v.username) &&
+    isOptional(v.email, isStr) &&
+    isOptional(v.comment, isStr) &&
+    isOptional(v.groups, (x) => isArrayOf(x, isStr)) &&
+    isOptional(v.systemAccount, isBool) &&
+    isOptional(v.readOnlyReason, (x) => isOneOf(x, ['system', 'locked'] as const))
+  )
+}
+
+// fetchProfile은 로그인한 사용자 자신의 OMV 계정 정보다(설정의 프로필 페이지).
+export async function fetchProfile(signal?: AbortSignal): Promise<ProfileResponse> {
+  const data = await getJSON('/profile', { signal })
+  if (!isProfileResponse(data)) throw new Error('/profile: unexpected response shape')
+  return data
+}
+
+// saveProfileComment는 계정 설명을 바꾼다. applied가 false면 OMV에 적용 대기가 남았다(일반 사용자).
+export async function saveProfileComment(comment: string): Promise<ProfileSaveResponse> {
+  const body: ProfileRequest = { comment }
+  const data = await (await request('PUT', '/profile', { body })).json()
+  if (!isObj(data) || !isBool(data.applied)) throw new Error('/profile: unexpected response shape')
+  return { applied: data.applied }
 }

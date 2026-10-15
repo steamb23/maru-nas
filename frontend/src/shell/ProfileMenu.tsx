@@ -1,9 +1,11 @@
 // 작업표시줄 오른쪽 끝의 프로필 버튼과 메뉴.
 import { type KeyboardEvent, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { avatarImageUrl } from '../api/client'
 import type { SessionInfo } from '../api/types.gen'
 import { useCapabilitiesStore } from '../addons/capabilities'
 import { useAuthStore } from '../auth/store'
+import { useAvatarStore } from '../profile/store'
 import { setLanguage, useLanguage } from '../i18n'
 import { SUPPORTED_LANGUAGES, languageName } from '../i18n/languages'
 import { IconImage } from '../icons/IconImage'
@@ -26,9 +28,26 @@ const { logout } = useAuthStore.getState()
 
 // 메뉴는 프로필 버튼 쪽(오른쪽 아래, ProfileMenu.css의 transform-origin)에서 나타나고 사라진다(menuAnim.ts).
 
-// ProfileAvatar는 사용자 아바타다. 지금은 기본 아이콘만 그린다.
-// 나중에 개인 설정에서 이미지·이니셜로 바꿀 수 있도록 아바타 그리기는 여기에만 둔다.
+// ProfileAvatar는 사용자 아바타다. 프로필 사진이 있으면 원형으로 그리고, 없거나 받지 못하면 기본 아이콘을 그린다.
+// 아바타 그리기는 여기에만 둔다(작업표시줄, 프로필 메뉴, 설정 사이드바, 프로필 페이지).
 export function ProfileAvatar({ size }: { user: SessionInfo; size: number }) {
+  const image = useAvatarStore((s) => s.image)
+  const url = image ? avatarImageUrl(image.rev) : null
+  // 받지 못한 사진 주소. 같은 주소는 다시 시도하지 않고 기본 아이콘을 그린다.
+  const [broken, setBroken] = useState<string | null>(null)
+  if (url && broken !== url) {
+    return (
+      <img
+        className="profile-avatar profile-avatar-image"
+        src={url}
+        width={size}
+        height={size}
+        alt=""
+        draggable={false}
+        onError={() => setBroken(url)}
+      />
+    )
+  }
   return (
     <span className="profile-avatar" style={{ width: size, height: size }}>
       <IconImage name="avatar-default-symbolic" size={Math.round(size * 0.6)} />

@@ -4,6 +4,7 @@ import { setUnauthorizedHandler } from './api/client'
 import { useAppearanceLoader, useAppliedTheme, useSiteInfoLoader, useWallpaperView } from './appearance/useAppearance'
 import { LoginScreen, OfflineScreen } from './auth/LoginScreen'
 import { useAuthStore } from './auth/store'
+import { useAvatarLoader } from './profile/useAvatar'
 import { useSessionKeeper } from './auth/useSessionKeeper'
 import { Desktop } from './shell/Desktop'
 import { installNativeGuard } from './shell/nativeGuard'
@@ -16,6 +17,7 @@ function SignedIn() {
   useSessionKeeper()
   useCapabilities()
   useAppearanceLoader()
+  useAvatarLoader()
   return <Desktop />
 }
 
