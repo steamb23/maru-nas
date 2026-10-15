@@ -556,6 +556,14 @@ install_service() {
 
   check_port_free "$listen"
 
+  # 업그레이드에서 수신 주소와 서비스 사용자가 그대로면 리버스 프록시 설정도 그대로 맞으므로 안내를 줄인다.
+  # 파일을 다시 쓰기 전에 기존 값과 비교한다.
+  local proxy_unchanged=no
+  if (( UPGRADE )) && [[ -f $UNIT_FILE && $(env_get ONMARU_LISTEN) == "$listen" &&
+    $(sed -n '/^User=/{s///p;q}' "$UNIT_FILE") == "$user" ]]; then
+    proxy_unchanged=yes
+  fi
+
   info "$(t "Installing $BIN_DST" "$BIN_DST 설치")"
   install -o root -g root -m 0755 "$BIN_SRC" "$BIN_DST"
 
@@ -627,7 +635,7 @@ EOF
   fi
 
   health_check "$listen"
-  next_steps "$listen" "$group"
+  next_steps "$listen" "$group" "$proxy_unchanged"
 }
 
 # check_port_free: TCP 수신이면 다른 프로세스(예: make dev의 백엔드)가 포트를 쓰고 있는지 미리 알린다.
@@ -683,10 +691,15 @@ health_check() {
   warn "$(t "health check failed. See: journalctl -u $SERVICE -e" "상태 확인 실패. 로그: journalctl -u $SERVICE -e")"
 }
 
+# next_steps LISTEN GROUP PROXY_UNCHANGED(yes|no): 끝난 뒤의 안내. 리버스 프록시 설정이 그대로 맞으면
+# (수신 주소·서비스 사용자를 바꾸지 않은 업그레이드) 로그 위치만 알린다.
 next_steps() {
-  local listen=$1 group=$2
+  local listen=$1 group=$2 proxy_unchanged=${3:-no}
   echo
   info "$(t "Done. Logs: journalctl -u $SERVICE -f" "완료. 로그: journalctl -u $SERVICE -f")"
+  if [[ $proxy_unchanged == yes ]]; then
+    return
+  fi
   t "Next: point your reverse proxy (HTTPS) at onmaru. See README.md, 'Reverse proxy'." \
     "다음 단계: 리버스 프록시(HTTPS)가 onmaru를 가리키게 설정하세요. README.md의 '리버스 프록시'를 참고하세요."
   echo
