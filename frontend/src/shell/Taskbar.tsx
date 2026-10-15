@@ -18,7 +18,7 @@ const { closeMany, minimize, raiseGroup, reorder, restore, toggleMaximize } = us
 
 // 이 거리 이상 가로로 끌어야 드래그로 본다. 그보다 짧으면 클릭이다.
 const DRAG_THRESHOLD = 4
-// index.css의 작업표시줄 li 전환 시간과 맞춘다. transitionend를 놓쳤을 때의 대비용이다.
+// Taskbar.css의 작업표시줄 li 전환 시간과 맞춘다. transitionend를 놓쳤을 때의 대비용이다.
 const SETTLE_MS = 200
 
 // 작업표시줄 버튼: 활성 창은 최소화, 그 밖의 창은 복원해 맨 앞으로. 타일 그룹의 창이면 짝 창도 함께 앞으로 온다.

@@ -1,0 +1,14 @@
+/* 로그인 대기 이스터에그(auth/easterEgg). 로그인 카드 뒤 배경을 덮고, 포인터는 받되 포커스는 받지 않는다.
+   바탕화면이 조금 비치도록 완전히 검게 덮지 않는다. 캔버스는 투명하게 두고 효과만 그린다. */
+.easter-egg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background: rgb(0 0 0 / 0.9);
+}
+
+.easter-egg canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}

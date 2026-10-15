@@ -1,0 +1,6 @@
+.taskbar-clock {
+  padding: 0 8px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  cursor: default;
+}

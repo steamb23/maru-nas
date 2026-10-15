@@ -1,0 +1,141 @@
+.profile {
+  position: relative;
+  height: 100%;
+}
+
+.profile-button {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  aspect-ratio: 1;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  cursor: pointer;
+}
+
+.profile-button:hover,
+.profile-button[aria-expanded='true'] {
+  background: var(--hover-bg);
+}
+
+.profile-avatar {
+  display: grid;
+  flex: none;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+}
+
+/* 작업표시줄이 화면 아래에 있으므로 버튼 위로, 오른쪽 끝에 맞춰 연다.
+   작업표시줄의 backdrop-filter 안에서는 겹친 블러가 제대로 보이지 않아 불투명 배경을 쓴다. */
+.profile-menu {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + var(--float-gap) + 4px);
+  min-width: 220px;
+  padding: 6px;
+  border: 1px solid var(--window-border);
+  border-radius: 10px;
+  background: var(--window-bg);
+  box-shadow: 0 8px 28px rgb(0 0 0 / 0.3);
+  /* 열기·닫기 애니메이션이 프로필 버튼 쪽에서 커지고 줄어들게 한다. */
+  transform-origin: right bottom;
+}
+
+.profile-menu.closing {
+  pointer-events: none;
+}
+
+.profile-menu-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 8px 10px;
+}
+
+.profile-menu-user {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.profile-menu-name {
+  overflow: hidden;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.profile-menu-role {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.profile-menu-group {
+  display: flex;
+  flex-direction: column;
+  padding-top: 6px;
+  border-top: 1px solid var(--window-border);
+}
+
+.profile-menu-group + .profile-menu-group {
+  margin-top: 6px;
+}
+
+.profile-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.profile-menu-item:hover,
+.profile-menu-item:focus-visible {
+  background: var(--hover-bg);
+  outline: none;
+}
+
+/* 언어 하위 메뉴. 프로필 메뉴가 화면 오른쪽 끝에 있으므로 메뉴 왼쪽에, 항목의 아래 변에 맞춰 연다. */
+.profile-submenu-anchor {
+  position: relative;
+}
+
+.profile-menu.profile-submenu {
+  right: calc(100% + 12px);
+  bottom: -6px;
+  min-width: 160px;
+}
+
+.profile-menu-item[aria-expanded='true'] {
+  background: var(--hover-bg);
+}
+
+.profile-menu-chevron {
+  margin-left: -4px;
+  margin-right: -6px;
+  color: var(--text-muted);
+}
+
+.profile-menu-value {
+  margin-left: auto;
+  padding-left: 12px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.profile-menu-check {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+}

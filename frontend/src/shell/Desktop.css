@@ -1,0 +1,29 @@
+.desktop {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: linear-gradient(160deg, #2b5876 0%, #4e4376 100%);
+}
+
+/* 창 영역. 크기는 창 위치 제한과 최대화의 기준이며 작업표시줄 자리는 뺀다.
+   창은 작업표시줄 아래로 내려가도 잘리지 않고 작업표시줄 뒤로 지나간다(화면 가장자리에서는 .desktop이 자른다).
+   isolation으로 창의 z-index가 작업표시줄을 넘지 못하게 한다. */
+.desktop-area {
+  position: absolute;
+  inset: 0 0 var(--taskbar-reserve) 0;
+  isolation: isolate;
+}
+
+.desktop-icons {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-rows: repeat(auto-fill, 92px);
+  gap: 8px;
+  max-height: calc(100% - 24px);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}

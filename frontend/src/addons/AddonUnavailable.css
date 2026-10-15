@@ -1,0 +1,19 @@
+.addon-unavailable {
+  max-width: 32em;
+  padding: 16px;
+  text-align: center;
+}
+
+.addon-unavailable p {
+  margin: 0.4em 0;
+}
+
+/* 위젯 안의 짧은 안내 */
+.placeholder.compact {
+  height: 100%;
+}
+
+.placeholder.compact .addon-unavailable {
+  padding: 0 10px 10px;
+  font-size: 12px;
+}

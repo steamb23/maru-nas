@@ -21,7 +21,7 @@ import { CLOSE_EASING, EASING } from './windowAnim'
 
 const { logout } = useAuthStore.getState()
 
-// 메뉴는 프로필 버튼 쪽(오른쪽 아래, index.css의 transform-origin)에서 나타나고 사라진다(menuAnim.ts).
+// 메뉴는 프로필 버튼 쪽(오른쪽 아래, ProfileMenu.css의 transform-origin)에서 나타나고 사라진다(menuAnim.ts).
 
 // ProfileAvatar는 사용자 아바타다. 지금은 기본 아이콘만 그린다.
 // 나중에 개인 설정에서 이미지·이니셜로 바꿀 수 있도록 아바타 그리기는 여기에만 둔다.

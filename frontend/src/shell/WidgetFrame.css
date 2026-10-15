@@ -1,0 +1,63 @@
+/* 위치·크기는 widgets/grid.ts의 cellToPx가 계산해 인라인으로 지정한다. */
+.widget {
+  position: absolute;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--window-border);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--window-bg) 82%, transparent);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.2);
+  backdrop-filter: blur(12px);
+  pointer-events: auto;
+  touch-action: none;
+  /* 놓기 애니메이션(shell/widgetPreviewAnim.ts)의 transform 기준점 */
+  transform-origin: 0 0;
+}
+
+.widget.opens-window {
+  cursor: pointer;
+}
+
+.widget:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 70%, transparent);
+  outline-offset: 2px;
+}
+
+.widget.drag,
+.widget.resize {
+  z-index: 3;
+  box-shadow: 0 12px 36px rgb(0 0 0 / 0.4);
+}
+
+.widget.drag {
+  cursor: grabbing;
+}
+
+.widget-title {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  color: var(--text-muted);
+}
+
+.widget-title h2 {
+  overflow: hidden;
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.widget-body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* 크기 조절 핸들은 창과 같은 .resize-handle(변 6px, 모서리 14px)을 쓴다. 안쪽은 옮기는 손잡이로 남는다. */

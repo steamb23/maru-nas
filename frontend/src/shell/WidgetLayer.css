@@ -1,0 +1,12 @@
+/* 바탕화면 위젯 레이어. 바탕화면 아이콘 위, 창 아래에 놓인다. 빈 곳의 클릭은 바탕화면으로 지나간다.
+   위젯을 끌거나 크기를 바꾸는 동안에는 창 위로 올라와(raised) 열린 창에 가려지지 않는다. */
+.widget-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.widget-layer.raised {
+  z-index: 1000000;
+}

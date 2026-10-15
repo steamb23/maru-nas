@@ -5,6 +5,7 @@ paths:
   - "frontend/src/widgets/**"
   - "frontend/src/App.tsx"
   - "frontend/src/index.css"
+  - "frontend/src/base.css"
 ---
 
 # 데스크톱 셸과 창 시스템

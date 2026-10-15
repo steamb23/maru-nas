@@ -9,7 +9,7 @@ export const WINDOW_ANIMATIONS = true
 
 // 최대화·타일링 전환 시간
 export const MAXIMIZE_MS = 200
-// 최대화·타일링 애니메이션은 창 틀만 늘어나 보이도록 창 내용(index.css의 --window-content-opacity)을 숨겼다가,
+// 최대화·타일링 애니메이션은 창 틀만 늘어나 보이도록 창 내용(Window.css의 --window-content-opacity)을 숨겼다가,
 // 전체 시간의 이 비율 지점부터 끝까지 페이드인한다. 이때는 틀이 거의 제 크기라 내용이 늘어나 보이지 않는다.
 export const CONTENT_FADE_START = 0.35
 export const MINIMIZE_MS = 220

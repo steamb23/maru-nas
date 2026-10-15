@@ -1,0 +1,126 @@
+.auth-screen {
+  display: grid;
+  place-items: center;
+  padding: 16px;
+}
+
+.login-card {
+  /* 로그인 대기 이스터에그(.easter-egg)보다 위에 그린다. */
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: min(360px, 100%);
+  padding: 28px 28px 20px;
+  border: 1px solid var(--window-border);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--window-bg) 92%, transparent);
+  box-shadow: 0 16px 48px rgb(0 0 0 / 0.35);
+  backdrop-filter: blur(16px);
+}
+
+.login-avatar {
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+}
+
+.login-title {
+  margin: 0 0 4px;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.login-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.login-field input {
+  padding: 9px 10px;
+  border: 1px solid var(--window-border);
+  border-radius: 8px;
+  background: var(--window-bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+}
+
+.login-field input:focus {
+  border-color: var(--accent);
+  outline: 2px solid color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.login-submit,
+.login-secondary {
+  padding: 9px 12px;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.login-submit {
+  margin-top: 4px;
+  background: var(--accent);
+  color: #fff;
+}
+
+.login-submit:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.login-secondary {
+  background: var(--hover-bg);
+}
+
+.login-error,
+.login-notice,
+.login-hint {
+  width: 100%;
+  margin: 0;
+  font-size: 13px;
+}
+
+.login-error,
+.login-notice {
+  padding: 8px 12px;
+  border-radius: 6px;
+}
+
+.login-error {
+  background: light-dark(#fde8e8, #4a2224);
+  color: light-dark(#b42318, #ffb4ab);
+}
+
+.login-notice {
+  background: light-dark(#e8f0fe, #1f3350);
+  color: light-dark(#1a4fa0, #b3d1ff);
+}
+
+.login-hint {
+  color: var(--text-muted);
+}
+
+.login-footnote {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}

@@ -12,12 +12,12 @@ export interface Point {
 
 export interface Rect extends Point, Size {}
 
-// Window.tsx의 제목 표시줄 높이와 맞춰야 한다(index.css의 --titlebar-height).
+// Window.tsx의 제목 표시줄 높이와 맞춰야 한다(base.css의 --titlebar-height).
 export const TITLEBAR_HEIGHT = 36
-// 최대화·타일링한 창이 화면 가장자리·서로와 두는 간격(index.css의 --float-gap).
+// 최대화·타일링한 창이 화면 가장자리·서로와 두는 간격(base.css의 --float-gap).
 export const FLOAT_GAP = 8
 // 창을 좌우로 화면 밖에 끌어도 제목 표시줄이 이만큼은 화면에 남는다.
-// 왼쪽으로 밀면 오른쪽 끝의 창 버튼 영역(index.css의 .win-btn 30px × 3 + 간격 + 여백 ≈ 98px)만
+// 왼쪽으로 밀면 오른쪽 끝의 창 버튼 영역(shell/Window.css의 .win-btn 30px × 3 + 간격 + 여백 ≈ 98px)만
 // 남게 되는데, 버튼 위에서는 드래그가 시작되지 않으므로 그보다 넉넉히 잡는다.
 export const MIN_VISIBLE = 150
 // 모든 창 공통 최소 크기(하한). 앱별 최소 크기도 이보다 작아질 수 없다.

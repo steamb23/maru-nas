@@ -1,0 +1,21 @@
+.svc-widget {
+  gap: 6px;
+}
+
+.svc-counts {
+  gap: 10px;
+  font-weight: 600;
+}
+
+/* 좁은 위젯에서도 개수 요약은 한 줄에 둔다. */
+.svc-counts > span {
+  overflow: hidden;
+  min-width: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* .addon-hint의 음수 위 여백은 바로 위 요소에 붙이는 설명용이다. 목록 아래에서는 띄운다. */
+.svc-hint {
+  margin: 0;
+}

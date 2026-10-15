@@ -1,0 +1,85 @@
+/* 우클릭 메뉴(shell/ContextMenu.tsx). 위치와 열기 애니메이션 기준점은 contextMenu.ts가 계산해 인라인으로 지정한다.
+   창·작업표시줄보다 위에 뜬다. 모양은 프로필 메뉴와 맞춘다. */
+.context-menu {
+  position: fixed;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  min-width: 200px;
+  /* 주변 바탕화면 문구(아이콘 이름, 위젯)와 맞춘다. 프로필 메뉴는 기본 크기(14px)를 유지한다. */
+  font-size: 12px;
+  max-width: 320px;
+  padding: 6px;
+  border: 1px solid var(--window-border);
+  border-radius: 10px;
+  background: var(--window-bg);
+  box-shadow: 0 8px 28px rgb(0 0 0 / 0.3);
+  outline: none;
+}
+
+.context-menu.closing {
+  pointer-events: none;
+}
+
+.context-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 5px 8px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.context-menu-item:hover,
+.context-menu-item:focus-visible,
+.context-menu-item[aria-expanded='true'] {
+  background: var(--hover-bg);
+  outline: none;
+}
+
+.context-menu-item[aria-disabled='true'] {
+  color: var(--text-muted);
+  cursor: default;
+}
+
+.context-menu-item[aria-disabled='true'] .context-menu-icon {
+  opacity: 0.6;
+}
+
+/* 아이콘이 없는 항목도 글자 줄이 맞도록 자리를 둔다. */
+.context-menu-icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+}
+
+.context-menu-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.context-menu-detail {
+  margin-left: auto;
+  padding-left: 16px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.context-menu-chevron {
+  margin-left: auto;
+  margin-right: -4px;
+  color: var(--text-muted);
+}
+
+.context-menu-separator {
+  height: 1px;
+  margin: 6px 4px;
+  background: var(--window-border);
+}

@@ -1,0 +1,125 @@
+/* 작업표시줄 자리. 패널 바깥의 빈 곳은 클릭이 아래의 창·바탕화면으로 지나가게 한다. */
+.taskbar-dock {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1;
+  height: var(--taskbar-reserve);
+  pointer-events: none;
+}
+
+/* KDE Plasma식 떠 있는 패널. 최대화된 창이 있어도 떠 있다. */
+.taskbar {
+  position: absolute;
+  inset: 0 var(--float-gap) var(--float-gap);
+  padding: 4px 8px;
+  border: 1px solid var(--window-border);
+  border-radius: 12px;
+  background: var(--taskbar-bg);
+  box-shadow: 0 6px 24px rgb(0 0 0 / 0.25);
+  backdrop-filter: blur(12px);
+  pointer-events: auto;
+  display: flex;
+  gap: 8px;
+}
+
+.taskbar-items {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  gap: 4px;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* 작업표시줄 버튼 드래그 정렬. 순서는 드래그를 놓은 뒤에 바뀌고, 그 전까지는 transform으로만 움직인다.
+   전환 효과는 부모가 아닌 각 li의 클래스에 둔다. 순서를 반영할 때 li의 transform과 클래스는 함께
+   바뀌지만 부모 클래스는 나중에 바뀌어, 그 사이 스타일 계산이 끼면 transform 해제가 애니메이션된다.
+   전환 시간은 shell/Taskbar.tsx의 SETTLE_MS와 맞춘다. */
+.taskbar-items > li.shifting,
+.taskbar-items > li.settling {
+  transition: transform 200ms ease;
+}
+
+.taskbar-items > li.dragging {
+  position: relative;
+  z-index: 1;
+}
+
+.task {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 100%;
+  max-width: 200px;
+  padding: 0 10px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  cursor: pointer;
+  /* 터치로 끌 때 브라우저가 포인터를 스크롤용으로 가져가지 않게 한다. */
+  touch-action: none;
+  transition:
+    background-color 120ms ease,
+    opacity 200ms ease;
+}
+
+.task:hover {
+  background: var(--hover-bg);
+}
+
+.task.active {
+  background: var(--hover-bg);
+}
+
+/* 활성 창은 긴 밑줄, 열려 있는 창은 짧은 점으로 표시한다. */
+.task::after {
+  content: '';
+  position: absolute;
+  bottom: 1px;
+  left: 50%;
+  width: 6px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--text-muted);
+  translate: -50% 0;
+  transition:
+    width 200ms ease,
+    background-color 200ms ease;
+}
+
+.task.active::after {
+  width: 18px;
+  background: var(--accent);
+}
+
+.task.minimized {
+  opacity: 0.65;
+}
+
+/* 버튼 상태 전환(배경, 활성 표시, 최소화 흐림)은 동작 줄이기 설정이면 끈다. */
+@media (prefers-reduced-motion: reduce) {
+  .task,
+  .task::after {
+    transition: none;
+  }
+}
+
+.task-title {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* 트레이: 창 목록이 늘어나도 줄어들지 않고 오른쪽 끝에 붙어 있다. */
+.taskbar-tray {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  height: 100%;
+}

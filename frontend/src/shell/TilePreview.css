@@ -1,0 +1,22 @@
+/* 창을 끄는 동안 놓으면 들어갈 자리를 보여 주는 가이드. 창과 같은 모양으로 떠 있다.
+   바탕화면과 창 위에 모두 겹치므로 색 구성표와 관계없이 밝은 회색 반투명으로 둔다. */
+.tile-preview {
+  position: absolute;
+  border: 1px solid rgb(255 255 255 / 0.25);
+  border-radius: 10px;
+  background: rgb(232 234 238 / 0.15);
+  box-shadow: 0 6px 24px rgb(0 0 0 / 0.25);
+  backdrop-filter: blur(12px);
+  pointer-events: none;
+}
+
+.tile-preview.animated {
+  animation: tile-preview-in 150ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+@keyframes tile-preview-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}

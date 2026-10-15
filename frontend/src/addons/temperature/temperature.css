@@ -1,0 +1,31 @@
+.temp-widget {
+  gap: 6px;
+}
+
+.temp-sensors {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 2px 16px;
+  margin: 2px 0 0;
+}
+
+.temp-sensor {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.temp-sensor dt {
+  overflow: hidden;
+  color: var(--text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.temp-sensor dd {
+  flex: none;
+  margin: 0;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}

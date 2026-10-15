@@ -1,6 +1,6 @@
 // 브라우저 기본 동작 제한. 데스크톱 앱처럼 보이도록 텍스트·이미지 드래그와 브라우저 컨텍스트 메뉴를
 // 막고, 선택 허용 영역(.selectable 하위)과 텍스트 입력 요소에서만 허용한다.
-// 텍스트 선택 자체는 index.css의 user-select로 같은 범위에 맞춰 제한한다.
+// 텍스트 선택 자체는 base.css의 user-select로 같은 범위에 맞춰 제한한다.
 
 // 선택 허용 영역을 표시하는 클래스. 텍스트 선택이 꼭 필요한 영역에만 붙인다.
 export const SELECTABLE_CLASS = 'selectable'

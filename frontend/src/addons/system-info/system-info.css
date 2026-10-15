@@ -1,0 +1,137 @@
+.sysinfo {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+}
+
+.sysinfo-banner {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: light-dark(#fde8e8, #4a2224);
+  color: light-dark(#b42318, #ffb4ab);
+  font-weight: 600;
+}
+
+.sysinfo-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 0;
+  transition: opacity 0.2s;
+}
+
+/* 연결이 끊기면 마지막 값을 흐리게 보여 준다. */
+.sysinfo-list.stale {
+  opacity: 0.45;
+}
+
+.sysinfo-row dt {
+  margin-bottom: 4px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.sysinfo-row dd {
+  margin: 0;
+}
+
+.sysinfo-value {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+}
+
+.sysinfo-detail {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.sysinfo-bar {
+  height: 8px;
+  margin-top: 6px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: var(--hover-bg);
+}
+
+.sysinfo-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  background: var(--accent);
+  transition: width 0.4s ease-out;
+}
+
+.sysinfo-widget {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-evenly;
+  gap: 6px;
+  height: 100%;
+  padding: 0 12px 10px;
+  transition: opacity 0.2s;
+}
+
+/* 연결이 끊기면 마지막 값을 흐리게 보여 준다(상태 문구는 흐리게 하지 않는다). */
+.sysinfo-widget.stale .sysinfo-widget-meter {
+  opacity: 0.45;
+}
+
+.sysinfo-widget-line {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.sysinfo-widget-label {
+  flex: none;
+  color: var(--text-muted);
+}
+
+.sysinfo-widget-line .sysinfo-detail {
+  overflow: hidden;
+  flex: 1;
+  min-width: 0;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sysinfo-widget-value {
+  margin-left: auto;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.sysinfo-widget-line .sysinfo-detail + .sysinfo-widget-value {
+  margin-left: 0;
+}
+
+.sysinfo-widget-uptime {
+  overflow: hidden;
+  margin-left: auto;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 좁은 위젯에서는 라벨 아래에 값을 둔다. */
+.sysinfo-widget-line.stacked {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+}
+
+.sysinfo-widget-line.stacked .sysinfo-widget-uptime {
+  margin-left: 0;
+}
+
+.sysinfo-widget .sysinfo-bar {
+  height: 6px;
+  margin-top: 4px;
+}

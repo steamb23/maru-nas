@@ -1,0 +1,71 @@
+/* 크기 조절 핸들. 창 테두리 안쪽에 겹쳐 놓으므로 제목 표시줄 위쪽 가장자리도 크기 조절 영역이 된다.
+   위젯(.widget)도 같은 핸들을 쓴다. */
+.resize-handle {
+  position: absolute;
+  z-index: 1;
+  touch-action: none;
+}
+
+.resize-n,
+.resize-s {
+  left: 14px;
+  right: 14px;
+  height: 6px;
+  cursor: ns-resize;
+}
+
+.resize-e,
+.resize-w {
+  top: 14px;
+  bottom: 14px;
+  width: 6px;
+  cursor: ew-resize;
+}
+
+.resize-n {
+  top: 0;
+}
+
+.resize-s {
+  bottom: 0;
+}
+
+.resize-e {
+  right: 0;
+}
+
+.resize-w {
+  left: 0;
+}
+
+.resize-ne,
+.resize-nw,
+.resize-se,
+.resize-sw {
+  width: 14px;
+  height: 14px;
+}
+
+.resize-nw {
+  top: 0;
+  left: 0;
+  cursor: nwse-resize;
+}
+
+.resize-se {
+  right: 0;
+  bottom: 0;
+  cursor: nwse-resize;
+}
+
+.resize-ne {
+  top: 0;
+  right: 0;
+  cursor: nesw-resize;
+}
+
+.resize-sw {
+  bottom: 0;
+  left: 0;
+  cursor: nesw-resize;
+}

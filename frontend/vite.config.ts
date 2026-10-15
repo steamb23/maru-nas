@@ -47,6 +47,8 @@ export default defineConfig(({ mode }) => {
     },
     test: {
       environment: 'node',
+      // Vitest는 CSS를 빈 문자열로 바꾼다. import 목록을 검사하는 styles.test.ts만 index.css 원문을 읽는다.
+      css: { include: [/\/src\/index\.css/] },
     },
   }
 })

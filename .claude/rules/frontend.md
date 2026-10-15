@@ -11,4 +11,14 @@ paths:
 - `src/api/types.gen.ts`, `src/addons/manifests.gen.ts`는 생성물이다. 직접 수정하지 말고 `make types`로 다시 만든다
 - 컴포넌트 테스트용 DOM 환경(jsdom 등)은 쓰지 않는다. 로직은 DOM 없는 순수 함수·저장소로 분리해 node 환경의 Vitest로 테스트하고, 화면 동작은 브라우저에서 확인한다
 - 주기 요청은 `src/addons/common/poller.ts` 방식을 따른다(응답 후 다음 요청 예약, 중첩 없음). 탭이 보이지 않으면 멈춘다(창·위젯 틀이 `usePageVisible`을 보기의 `active`에 넣는다)
-- 텍스트 선택·드래그·브라우저 컨텍스트 메뉴는 기본 금지다(`shell/nativeGuard.ts`, `index.css`의 `user-select`). `selectable` 클래스는 텍스트 선택이 꼭 필요한 영역에만 붙인다. 현황 수치는 선택 불가로 둔다. 텍스트 입력 요소는 자동 허용된다
+- 텍스트 선택·드래그·브라우저 컨텍스트 메뉴는 기본 금지다(`shell/nativeGuard.ts`, `base.css`의 `user-select`). `selectable` 클래스는 텍스트 선택이 꼭 필요한 영역에만 붙인다. 현황 수치는 선택 불가로 둔다. 텍스트 입력 요소는 자동 허용된다
+
+## CSS 배치
+
+- 일반 전역 CSS다(CSS Modules 아님). 진입점은 `src/index.css` 하나이고 주석과 `@import` 목록만 둔다. 컴포넌트는 CSS를 직접 import하지 않는다(적용 순서를 모듈 그래프가 아니라 이 목록이 정하게)
+- 파일 위치는 클래스를 보고 짐작할 수 있게 정한다
+  1. 컴포넌트 폴더(`shell/`, `auth/`, `icons/`, `addons/` 루트): 클래스를 그리는 컴포넌트와 같은 이름으로 옆에 둔다(`Taskbar.tsx` → `Taskbar.css`)
+  2. 애드온 폴더(`addons/<id>/`, `addons/common/`): 폴더 이름의 파일 하나에 창·위젯 스타일을 함께 둔다(`addons/network/network.css`). 쓸 스타일이 없으면 만들지 않는다
+  3. 여러 곳이 쓰는 클래스는 주인(이름 접두사를 가진 쪽) 파일 한 곳에만 둔다. 애드온 공통 클래스(`.addon-*`, `.widget-line` 등, `.status-dot`, `.row-*`)는 `addons/common/common.css`
+  - 전역 토대(디자인 토큰, reset, `user-select`)는 `src/base.css`
+- 같은 명시도로 덮어쓰는 규칙은 덮이는 쪽보다 뒤 파일에 둔다(`index.css`의 import 순서: base → shell → auth → 애드온 공통 → 애드온별). 새 CSS 파일은 `index.css`에 반드시 추가한다. `src/styles.test.ts`가 빠진 파일을 잡는다

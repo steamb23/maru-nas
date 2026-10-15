@@ -1,0 +1,19 @@
+.smart-widget {
+  gap: 6px;
+}
+
+.smart-summary {
+  font-weight: 600;
+}
+
+.smart-checked {
+  margin-top: auto;
+  font-size: 11px;
+}
+
+.smart-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}

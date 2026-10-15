@@ -1,0 +1,59 @@
+:root {
+  font-family: system-ui, sans-serif;
+  font-size: 14px;
+  color-scheme: light dark;
+
+  /* windows/geometry.ts의 TITLEBAR_HEIGHT와 맞춘다. */
+  --titlebar-height: 36px;
+  /* 떠 있는 작업표시줄과 최대화·타일 창이 화면 가장자리·서로와 두는 간격.
+     최대화·타일 창 배치는 windows/geometry.ts의 FLOAT_GAP으로 계산하므로 함께 바꾼다. */
+  --float-gap: 8px;
+  /* 작업표시줄 패널 두께와, 창 영역에서 빼는 높이 */
+  --taskbar-height: 44px;
+  --taskbar-reserve: calc(var(--taskbar-height) + var(--float-gap));
+
+  --accent: #3c84f7;
+  --text: light-dark(#1f2328, #e6e8eb);
+  --text-muted: light-dark(#5b636e, #9aa3ad);
+  --window-bg: light-dark(#ffffff, #23262b);
+  --window-border: light-dark(rgb(0 0 0 / 0.14), rgb(255 255 255 / 0.12));
+  --titlebar-bg: light-dark(#eef0f3, #2d3137);
+  --titlebar-active-bg: light-dark(#e1e6ee, #353a42);
+  --taskbar-bg: light-dark(rgb(246 247 249 / 0.88), rgb(28 30 34 / 0.88));
+  --hover-bg: light-dark(rgb(0 0 0 / 0.07), rgb(255 255 255 / 0.1));
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+/* 텍스트 선택은 기본 금지하고 선택 허용 영역과 입력 요소에서만 허용한다.
+   드래그·컨텍스트 메뉴 제한(shell/nativeGuard.ts)과 범위를 맞춘다. */
+body {
+  margin: 0;
+  overflow: hidden;
+  color: var(--text);
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.selectable,
+input,
+textarea,
+[contenteditable]:not([contenteditable='false']) {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}

@@ -50,7 +50,7 @@ export interface Rect extends Point, Size {}
 
 // 메뉴가 화면 가장자리와 두는 최소 간격
 export const MENU_MARGIN = 8
-// 하위 메뉴와 상위 메뉴 사이 간격, 상위 메뉴의 안쪽 여백(index.css의 .context-menu padding)
+// 하위 메뉴와 상위 메뉴 사이 간격, 상위 메뉴의 안쪽 여백(ContextMenu.css의 .context-menu padding)
 export const SUBMENU_GAP = 4
 export const MENU_PADDING = 6
 

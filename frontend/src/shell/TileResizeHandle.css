@@ -1,0 +1,5 @@
+/* 타일 창의 안쪽 변 핸들. 위아래 모서리 핸들이 없으므로 변 전체를 쓴다. */
+.resize-handle.tile-resize {
+  top: 0;
+  bottom: 0;
+}

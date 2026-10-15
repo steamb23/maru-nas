@@ -1,0 +1,24 @@
+/* 좌우 타일 그룹 사이 간격. 끌어서 두 창의 너비를 함께 바꾼다. 평소에는 비어 보이고,
+   올리거나 끄는 동안 가운데에 손잡이 막대를 보여 준다. */
+.tile-divider {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  cursor: ew-resize;
+  touch-action: none;
+}
+
+.tile-divider-grip {
+  width: 4px;
+  height: 40px;
+  border-radius: 2px;
+  background: rgb(255 255 255 / 0.7);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.35);
+  opacity: 0;
+  transition: opacity 120ms;
+}
+
+.tile-divider:hover .tile-divider-grip,
+.tile-divider.dragging .tile-divider-grip {
+  opacity: 1;
+}

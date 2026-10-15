@@ -1,0 +1,31 @@
+.desktop-icon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 88px;
+  height: 92px;
+  padding: 8px 4px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: none;
+  color: #fff;
+  cursor: pointer;
+}
+
+.desktop-icon:hover {
+  background: rgb(255 255 255 / 0.14);
+}
+
+.desktop-icon:focus-visible {
+  outline: none;
+  border-color: rgb(255 255 255 / 0.6);
+  background: rgb(255 255 255 / 0.2);
+}
+
+.desktop-icon-label {
+  font-size: 12px;
+  line-height: 1.3;
+  text-align: center;
+  text-shadow: 0 1px 3px rgb(0 0 0 / 0.7);
+}

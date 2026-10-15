@@ -309,6 +309,7 @@
    - capability가 없을 때의 안내는 창·위젯 틀(`AddonUnavailable`, 위젯은 `compact`)이 처리한다. 보기 컴포넌트는 "연결 끊김" 상태를 처리한다
    - 주기 요청은 `poller.ts` 방식을 따르고 보기의 `active`가 false면 멈춘다. 위젯은 로그인한 동안 계속 떠 있으므로 갱신 주기를 창보다 길게 잡는다
    - 위젯 보기는 `size`(칸)를 받는다. manifest의 최소 크기부터 최대 크기까지, 한국어·영어 모두 내용이 넘치지 않는지 브라우저에서 잰다
+   - 공통 클래스(`addons/common/common.css`)로 부족한 스타일만 `addons/<id>/<id>.css`에 두고 `src/index.css`의 애드온 import 목록에 알파벳순으로 넣는다(`.claude/rules/frontend.md`의 "CSS 배치")
 7. 아이콘은 리졸버 매핑 테이블에 추가한다
 8. `make check`, `make build`
 

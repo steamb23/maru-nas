@@ -3,7 +3,7 @@
 import type { Rect } from '../windows/geometry'
 import { flipTransform } from './windowAnim'
 
-// 등장: 타일링 가이드(index.css의 tile-preview-in)와 같은 비율에서 커진다. 커지는 동작은 스프링이 한다.
+// 등장: 타일링 가이드(TilePreview.css의 tile-preview-in)와 같은 비율에서 커진다. 커지는 동작은 스프링이 한다.
 export const PREVIEW_ENTER_SCALE = 0.96
 // 가이드 스프링의 고유 진동수(1/s). 임계 감쇠라 넘치지 않으며, 약 120ms에 거리의 95%를 따라간다.
 export const PREVIEW_SPRING = 40

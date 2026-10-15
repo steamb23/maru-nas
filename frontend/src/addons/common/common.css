@@ -1,0 +1,368 @@
+/* 위젯 안의 짧은 상태 표시(연결 끊김 등) */
+.widget-status {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: light-dark(#b42318, #ffb4ab);
+}
+
+/* 위젯 본문의 세로 목록. 아래 여백(10px)은 addons/common/widgetRows.ts와 맞춘다. */
+.addon-widget {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  height: 100%;
+  padding: 2px 12px 10px;
+  overflow: hidden;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 연결이 끊기면 마지막 값을 흐리게 보여 준다(상태 문구는 흐리게 하지 않는다). */
+.addon-widget.stale > :not(.widget-status) {
+  opacity: 0.45;
+}
+
+.widget-item {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.widget-line {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  line-height: 20px;
+}
+
+.widget-name {
+  overflow: hidden;
+  flex: 0 1 auto;
+  min-width: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.widget-detail {
+  overflow: hidden;
+  flex: 1 1 0;
+  min-width: 0;
+  color: var(--text-muted);
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.widget-value {
+  flex: none;
+  margin-left: auto;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.widget-detail + .widget-value {
+  margin-left: 0;
+}
+
+.widget-more,
+.widget-empty {
+  flex: none;
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.addon-window {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+}
+
+.addon-banner {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: light-dark(#fde8e8, #4a2224);
+  color: light-dark(#b42318, #ffb4ab);
+  font-weight: 600;
+}
+
+.addon-banner.notice {
+  background: light-dark(#fff4e0, #47381c);
+  color: light-dark(#8a5300, #ffd8a0);
+  font-weight: 400;
+}
+
+.addon-empty {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.addon-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  transition: opacity 0.2s;
+}
+
+.addon-list.stale {
+  opacity: 0.45;
+}
+
+.addon-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--window-border);
+  border-radius: 8px;
+}
+
+.addon-card-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.addon-card-title {
+  overflow: hidden;
+  min-width: 0;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.addon-card-value {
+  flex: none;
+  margin-left: auto;
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.addon-card-sub {
+  overflow: hidden;
+  font-size: 12px;
+  color: var(--text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.addon-section-title {
+  margin: 4px 0 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.addon-hint {
+  margin: -6px 0 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.badge {
+  flex: none;
+  padding: 0 6px;
+  border-radius: 4px;
+  background: var(--hover-bg);
+  font-size: 11px;
+  line-height: 18px;
+  color: var(--text-muted);
+}
+
+.meter {
+  height: 6px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--hover-bg);
+}
+
+.addon-card .meter {
+  height: 8px;
+  margin: 2px 0;
+  border-radius: 4px;
+}
+
+.meter-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+  transition: width 0.4s ease-out;
+}
+
+.meter-fill.warn {
+  background: #e8a317;
+}
+
+.meter-fill.crit {
+  background: #d93025;
+}
+
+.level-warn {
+  color: light-dark(#a35f00, #f5b54a);
+}
+
+.level-crit {
+  color: light-dark(#c5221f, #ff8a80);
+}
+
+.widget-detail-line {
+  color: var(--text-muted);
+}
+
+.status-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  align-self: center;
+}
+
+.status-dot.ok {
+  background: #2e9e4f;
+}
+
+.status-dot.warn {
+  background: #e8a317;
+}
+
+.status-dot.crit {
+  background: #d93025;
+}
+
+.status-dot.idle {
+  background: color-mix(in srgb, var(--text-muted) 60%, transparent);
+}
+
+.status-dot.normal {
+  background: #2e9e4f;
+}
+
+.level-ok {
+  color: light-dark(#1e7d3c, #7ad48f);
+}
+
+.addon-button {
+  flex: none;
+  padding: 5px 12px;
+  border: none;
+  border-radius: 6px;
+  background: var(--hover-bg);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.addon-button:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.addon-button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.addon-button.danger {
+  background: light-dark(#d93025, #c5352b);
+  color: #fff;
+}
+
+.addon-button.danger:hover:not(:disabled) {
+  background: light-dark(#b9271d, #dd4a3f);
+}
+
+.addon-button.primary {
+  background: var(--accent);
+  color: #fff;
+}
+
+.addon-button.primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 85%, #000);
+}
+
+.row-actions {
+  display: flex;
+  flex: none;
+  justify-content: flex-end;
+  gap: 2px;
+}
+
+.row-action-button {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.row-action-button:hover,
+.row-action-button.pressed {
+  background: var(--hover-bg);
+  color: var(--text);
+}
+
+.row-actions-progress {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.row-actions-spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid color-mix(in srgb, var(--text-muted) 35%, transparent);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: row-spin 0.8s linear infinite;
+}
+
+@keyframes row-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .row-actions-spinner {
+    animation-duration: 2.4s;
+  }
+}
+
+/* 실패 문구는 행 아래 줄을 차지한다(행 li는 flex-wrap). */
+.row-error {
+  display: flex;
+  flex-basis: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  font-size: 13px;
+  background: light-dark(#fde8e8, #4a2224);
+  color: light-dark(#b42318, #ffb4ab);
+}
+
+.row-error .row-action-button {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  color: inherit;
+}
