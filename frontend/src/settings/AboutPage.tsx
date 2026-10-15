@@ -51,7 +51,7 @@ export function AboutPage() {
               <span className="about-value selectable" title={about?.revision}>
                 {about ? (about.revision ? shortRevision(about.revision) : notRecorded) : '…'}
               </span>
-              {about?.modified && <span className="about-badge">{t('settings.about.modified')}</span>}
+              {about?.modified && <span className="settings-badge">{t('settings.about.modified')}</span>}
             </SettingsRow>
             <SettingsRow label={t('settings.about.commitTime')}>
               <span className="about-value">{about ? (revisionTime ?? notRecorded) : '…'}</span>
@@ -84,7 +84,7 @@ export function AboutPage() {
                 </>
               }
             >
-              <span className="about-badge">{n.license}</span>
+              <span className="settings-badge">{n.license}</span>
             </SettingsRow>
           ))}
         </SettingsCard>

@@ -26,15 +26,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-.about-badge {
-  padding: 1px 8px;
-  border-radius: 999px;
-  background: var(--hover-bg);
-  font-size: 12px;
-  white-space: nowrap;
-  color: var(--text-muted);
-}
-
 .about-text,
 .about-error {
   margin: 0;

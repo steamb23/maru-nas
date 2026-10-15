@@ -107,8 +107,8 @@ export function ServerPage() {
                   description={<code className="server-code selectable">{r.env}</code>}
                 >
                   <code className="server-value selectable">{r.value === '' ? t('settings.server.empty') : r.value}</code>
-                  <span className="about-badge">{t(SOURCE_LABELS[r.source])}</span>
-                  {overridden && <span className="about-badge server-overridden">{t('settings.server.overriddenBadge')}</span>}
+                  <span className="settings-badge">{t(SOURCE_LABELS[r.source])}</span>
+                  {overridden && <span className="settings-badge server-overridden">{t('settings.server.overriddenBadge')}</span>}
                 </SettingsRow>
               )
             })}

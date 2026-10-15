@@ -153,3 +153,13 @@
   outline: 2px solid color-mix(in srgb, var(--accent) 45%, transparent);
   outline-offset: 1px;
 }
+
+/* 짧은 꼬리표(라이선스, 값의 출처 등) */
+.settings-badge {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--hover-bg);
+  font-size: 12px;
+  white-space: nowrap;
+  color: var(--text-muted);
+}

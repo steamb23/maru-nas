@@ -22,13 +22,14 @@ import { useAppearanceStore } from './store'
 import { effectiveTheme } from './theme'
 import { DEFAULT_VIEW, type WallpaperView, imageUrlOf, resolveWallpaper } from './wallpapers'
 
-// useSiteInfo는 공개 전역 정보를 앱이 시작할 때와 로그인·로그아웃할 때 불러온다.
+// useSiteInfoLoader는 공개 전역 정보를 앱이 시작할 때와 로그인 화면·데스크톱으로 넘어갈 때마다 불러온다
+// (연결 끊김 화면에서 돌아온 경우 포함). 세션 확인·연결 끊김·2차 인증 중에는 다시 부르지 않는다.
 export function useSiteInfoLoader() {
   const status = useAuthStore((s) => s.status)
-  const signedIn = status === 'loggedIn'
+  const screen = status === 'loggedIn' || status === 'loggedOut' ? status : null
   useEffect(() => {
     void useSiteStore.getState().load()
-  }, [signedIn])
+  }, [screen])
 }
 
 // useAppearanceLoader는 로그인한 동안 사용자 화면 설정을 불러오고, 실패하면 다시 시도한다. SignedIn에서 부른다.
