@@ -14,6 +14,7 @@ import (
 	"onmaru/backend/internal/addons"
 	"onmaru/backend/internal/api"
 	"onmaru/backend/internal/auth"
+	"onmaru/backend/internal/buildinfo"
 	"onmaru/backend/internal/omv"
 	"onmaru/backend/internal/prefs"
 )
@@ -84,6 +85,8 @@ type handler struct {
 	Config
 	// actions는 진행 중인 애드온 조작이다.
 	actions *inflight
+	// about은 실행 파일의 버전·빌드 정보다. 실행 중에 바뀌지 않으므로 시작할 때 한 번 읽는다.
+	about api.AboutResponse
 }
 
 // New는 루트 핸들러를 반환한다. /api/ 밖의 요청은 cfg.Static이 처리한다.
@@ -115,7 +118,7 @@ func New(cfg Config) http.Handler {
 	if cfg.Prefs == nil {
 		cfg.Prefs = prefs.NewMemoryStore()
 	}
-	h := &handler{Config: cfg, actions: newInflight()}
+	h := &handler{Config: cfg, actions: newInflight(), about: buildinfo.Read()}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/health", func(w http.ResponseWriter, _ *http.Request) {
@@ -128,6 +131,7 @@ func New(cfg Config) http.Handler {
 	mux.HandleFunc("POST /api/session/activity", h.requireSession(h.activity))
 	mux.HandleFunc("GET /api/system", h.requireSession(h.system))
 	mux.HandleFunc("GET /api/capabilities", h.requireSession(h.capabilities))
+	mux.HandleFunc("GET /api/about", h.requireSession(h.aboutInfo))
 	mux.HandleFunc("GET /api/addons/{id}", h.requireSession(h.addonData))
 	mux.HandleFunc("POST /api/addons/{id}/actions/{action}", h.requireSession(h.addonAction))
 	mux.HandleFunc("POST /api/rpc", h.requireSession(h.rpc))
@@ -158,6 +162,11 @@ func (h *handler) capabilities(w http.ResponseWriter, _ *http.Request, s auth.Se
 	resp := h.Addons.Capabilities(h.Plugins.Plugins(), s.Admin)
 	resp.WorkbenchURL = h.WorkbenchURL
 	writeJSON(w, http.StatusOK, resp)
+}
+
+// aboutInfo는 온마루 버전과 빌드 정보다. 로그인한 사용자는 누구나 본다.
+func (h *handler) aboutInfo(w http.ResponseWriter, _ *http.Request, _ auth.Session) {
+	writeJSON(w, http.StatusOK, h.about)
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) {

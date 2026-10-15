@@ -581,6 +581,31 @@ export interface WidgetsRequest {
   widgets: WidgetPlacement[];
 }
 /**
+ * AboutResponse는 GET /api/about의 응답이다. 설정 앱의 정보 페이지가 보여 준다.
+ */
+export interface AboutResponse {
+  /**
+   * Version은 온마루 버전이다.
+   */
+  version: string;
+  /**
+   * Revision은 빌드한 git 커밋(전체 해시)이다. go run이나 저장소 밖 빌드에는 없다.
+   */
+  revision?: string;
+  /**
+   * RevisionTime은 그 커밋의 시각(RFC 3339)이다.
+   */
+  revisionTime?: string;
+  /**
+   * Modified는 커밋하지 않은 변경이 있는 작업 트리에서 빌드했는지다.
+   */
+  modified?: boolean;
+  /**
+   * GoVersion은 빌드한 Go 버전이다.
+   */
+  goVersion: string;
+}
+/**
  * LoginRequest는 POST /api/login의 요청 본문이다.
  */
 export interface LoginRequest {

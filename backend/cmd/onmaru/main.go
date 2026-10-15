@@ -25,6 +25,7 @@ import (
 	"onmaru/backend/internal/addons"
 	"onmaru/backend/internal/addons/builtin"
 	"onmaru/backend/internal/addons/smart"
+	"onmaru/backend/internal/buildinfo"
 	"onmaru/backend/internal/omv"
 	"onmaru/backend/internal/prefs"
 	"onmaru/backend/internal/server"
@@ -32,7 +33,7 @@ import (
 )
 
 // userAgent는 OMV를 호출할 때 쓰는 고정 User-Agent다. OMV는 세션을 User-Agent에 묶는다.
-const userAgent = "onmaru/0.2"
+const userAgent = "onmaru/" + buildinfo.Version
 
 func main() {
 	listen := flag.String("listen", cmp.Or(os.Getenv("ONMARU_LISTEN"), "127.0.0.1:8090"),
