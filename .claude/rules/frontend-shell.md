@@ -11,7 +11,7 @@ paths:
 
 # 데스크톱 셸과 창 시스템
 
-`src/windows/`(창 저장소·앱 목록·위치 제한·타일링), `src/widgets/`(위젯 그리드·배치·저장소), `src/shortcuts/`(바로가기 목록·저장소), `src/shell/`의 `*Anim.ts`, `taskbarDrag.ts`, `clock.ts`, `profileMenu.ts`, `contextMenu.ts`, `contextMenuStore.ts`, `windowMenu.ts`, `menuNav.ts`, `modalStack.ts`, `dialogs.ts`는 DOM에 의존하지 않는 계산 모듈이다. 컴포넌트는 이 결과를 그리기만 한다.
+`src/windows/`(창 저장소·앱 목록·위치 제한·타일링), `src/widgets/`(위젯 그리드·배치·저장소), `src/shortcuts/`(바로가기 목록·저장소), `src/shell/`의 `*Anim.ts`, `taskbarDrag.ts`, `clock.ts`, `profileMenu.ts`, `contextMenu.ts`, `contextMenuStore.ts`, `windowMenu.ts`, `menuNav.ts`, `modalStack.ts`, `dialogs.ts`, `appDrawerStore.ts`, `gridNav.ts`, `appSearch.ts`, `hangul.ts`는 DOM에 의존하지 않는 계산 모듈이다. 컴포넌트는 이 결과를 그리기만 한다.
 
 ## 창 순서와 DOM
 
@@ -30,6 +30,28 @@ paths:
 - 끄는 동안 위치·크기는 렌더링 없이 요소 style을 직접 바꾼다. 끝나면 지우지 말고 지금 자리의 값으로 되돌린다(React는 값이 바뀌지 않은 style을 다시 넣지 않는다)
 - 포인터 끌기 공통 처리는 `usePointerDrag`(임계 거리, pointer capture, 취소)를 쓴다. 창(`Window.tsx`)의 끌기 코드는 아직 이 훅으로 옮기지 않았다
 - 가이드(`WidgetPreview`)는 타일링 가이드와 같은 모양(`.tile-preview`)을 쓰고, 칸이 바뀌면 임계 감쇠 스프링으로 따라간다(`widgetPreviewAnim.ts`). 끄는 동안 렌더 없이 핸들(`moveTo`)로 움직이고, 놓을 수 없는 자리에서는 숨기기만 한다
+
+## 바로가기와 모든 앱
+
+- 바탕화면에는 사용자가 고른 바로가기만 놓는다(`DesktopShortcuts`). 모든 앱은 작업표시줄 왼쪽 끝 버튼으로 여는 "모든 앱" 화면(`AppDrawer`)에 있다. 화면 용어는 "바로가기"(붙여 씀)와 "모든 앱", 코드 이름은 `shortcut`과 `AppDrawer`다
+- 목록은 `shortcuts/store.ts`(사용자별 `/api/preferences`의 `shortcuts`, 불러오기·저장 방식은 위젯 저장소와 같다), 순서 계산은 `shortcuts/list.ts`, 칸 계산은 `shortcuts/layout.ts`가 한다
+  - 저장 목록에는 지금 보이지 않는 앱(일반 사용자의 관리자 전용 앱)도 남긴다. 화면 순서와 놓을 자리는 보이는 목록 기준이며(`placeShortcut`), 보이지 않는 앱은 서로의 순서를 지킨다
+  - 한 번도 저장하지 않았으면 기본 목록(시스템 정보·파일·저장소), 모두 지웠으면 빈 바탕화면이다. 모르는 앱 id는 불러올 때 뺀다
+- 배치는 왼쪽 위부터 위에서 아래로, 넘치면 다음 열이다(`grid-auto-flow: column`). `layout.ts`의 상수와 `rowsPerColumn`은 CSS(`.desktop-icons`, `.desktop-icon`)와 맞춘다
+- 위젯 레이어는 바로가기를 불러온 뒤(`iconsReady`)에 그린다. 먼저 그리면 아이콘 목록 너비가 0이라 위젯이 아이콘 자리에 놓였다가 밀려난다
+- 메뉴: 바로가기 → "열기"·"바로가기 제거", 빈 바탕화면 → "바로가기 추가 ▸"(이미 있는 앱은 체크·비활성), 서랍 타일 → "열기"·"바탕화면에 바로가기 추가" 또는 "바로가기 제거"
+- 끌기(바탕화면 순서 바꾸기, "모든 앱" → 바탕화면)
+  - pointer capture는 누른 요소(바탕화면 아이콘 버튼, 서랍 타일)가 갖는다. 끄는 동안 그 요소를 지우거나 DOM에서 옮기거나 `inert`로 만들지 않는다(capture가 풀려 끌기가 취소된다). `li`의 순서는 놓거나 취소한 뒤 `settle`에서만 바뀐다
+  - 끄는 버튼과 고스트는 렌더 없이 style로 움직이고, 다른 아이콘은 놓을 칸이 바뀔 때만 렌더해 transform으로 비켜 준다(`previewOffsets`, `li.shifting`). 끄는 동안 아이콘 목록은 창 위로 올라온다(`.desktop-icons.raised`)
+  - 놓으면 먼저 목록을 바꾸고 아이콘마다 보이던 자리에서 새 자리로 미끄러지게 한다(FLIP, `slideKeyframes`). 서랍에서 놓은 앱은 고스트 자리에서 들어온다
+  - 데스크톱 영역 밖(작업표시줄)에 놓거나 Esc, 브라우저 창이 포커스를 잃거나, 데스크톱 범위 모달이 열리면(`cancelDrag`) 취소한다. effect·언마운트에서 부르는 취소는 flushSync를 쓰는 `settle`을 microtask로 미룬다
+  - 서랍 타일을 끌면 서랍을 언마운트하지 않고 투명하게만 만들고, 고스트(`DesktopIconFace`)를 서랍 옆에 그린다. 놓을 곳은 좌표로만 판단한다(투명한 서랍이 위에 있어 `elementFromPoint`를 쓸 수 없다). 이미 바탕화면에 있는 앱이면 원래 아이콘은 숨기고(`li.picked`) 칸만 차지한다. 끝나면 서랍을 애니메이션 없이 닫는다(`close(true)`)
+- "모든 앱" 화면
+  - DOM에서 `.desktop-area` 다음, 작업표시줄 앞에 `.desktop` 수준으로 그린다. `nav.taskbar`의 `backdrop-filter`가 위치 기준 상자가 되므로 작업표시줄 안에 둘 수 없다. 창·위젯 위, 작업표시줄·모달·컨텍스트 메뉴 아래다
+  - 열린 동안 `.desktop-area`는 `inert`이고 작업표시줄은 그대로 쓴다. 바깥(배경, 격자의 빈 곳, 작업표시줄의 다른 요소) 누르기, Esc(검색어가 있으면 먼저 지운다), 앱 열기, 작업 버튼 누르기, 데스크톱 범위 모달, 로그아웃이면 닫힌다. 타일 메뉴(`.context-menu`)를 누르는 것은 바깥으로 보지 않고, 메뉴의 Esc는 메뉴만 닫는다(`defaultPrevented`). 가상 키보드 때문에 창 크기 변화로는 닫지 않는다
+  - 열면 검색 상자에 포커스한다(터치로 열었으면 하지 않는다). 격자는 로빙 tabindex이고 화살표 이동은 `gridNav.ts`(첫 줄에서 위 → 검색 상자)다
+  - 검색(`appSearch.ts`)은 지원 언어 모두의 앱 이름과 앱 id로 화면 언어와 무관하게 찾고, 한글은 자모로 풀어 초성과 조합 중인 글자도 맞춘다(`hangul.ts`). 후보는 `i18n.getFixedT(언어)`로 만들므로 모든 언어 번들이 로드되어 있어야 한다(`i18n.md`)
+  - 열기·닫기 애니메이션 값은 `appDrawerAnim.ts`, 열림 상태는 `appDrawerStore.ts`다. 로그인·로그아웃 전환에서 데스크톱과 함께 움직인다(`screenTransition.ts`의 `DESKTOP_PARTS`)
 
 ## 컨텍스트 메뉴
 

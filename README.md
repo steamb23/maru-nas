@@ -26,7 +26,7 @@ OpenMediaVault 8 위에 올리는 데스크톱형 웹 대시보드입니다. 창
 
 - 시스템 사용자를 만들고(기본값 `onmaru`), `bin/onmaru`를 `/usr/local/bin/onmaru`에 설치합니다.
 - 설정 파일 `/etc/default/onmaru`와 systemd 유닛 `/etc/systemd/system/onmaru.service`를 작성한 뒤 서비스를 시작합니다.
-- 사용자 설정(위젯 배치)은 `/var/lib/onmaru`(`StateDirectory=`)에 저장됩니다.
+- 사용자 설정(위젯 배치, 바탕화면 바로가기)은 `/var/lib/onmaru`(`StateDirectory=`)에 저장됩니다.
 
 다시 실행하면 기존 설정을 기본값으로 보여 주며, 업그레이드할 때도 같은 명령을 사용합니다. 설정이 바뀌면 기존 `/etc/default/onmaru`는 `/etc/default/onmaru.bak-<시각>`으로 백업됩니다. 안내 문구는 로캘에 따라 영어 또는 한국어로 표시되며, `--lang en|ko`로 직접 고를 수도 있습니다.
 
@@ -71,7 +71,7 @@ root로 실행했는데 저장소의 소유자가 root가 아니면(`sudo ./inst
 | `-state-dir` | `ONMARU_STATE_DIR`, `STATE_DIRECTORY` | (없음) | 사용자 설정을 저장할 디렉터리입니다(`users/<사용자 이름>.json`). 비워 두면 메모리에만 보관하므로 재시작하면 사라집니다. systemd의 `StateDirectory=`가 `STATE_DIRECTORY`를 넘겨줍니다. |
 | `-smart-refresh-at` | `ONMARU_SMART_REFRESH_AT` | `00:00` | SMART 정보를 하루 한 번 다시 가져오는 기준 시각입니다(`HH:MM`, 서버 로컬 시간). 마지막 조회가 이 시각 이전이면 다음 접속 때 다시 가져옵니다. SMART 조회는 대기 중인 디스크를 깨우므로 자동 주기 조회는 하지 않습니다. |
 
-세션은 백엔드 메모리에만 있으므로 백엔드를 재시작하면 모든 사용자가 다시 로그인해야 합니다. `/var/lib/onmaru`에는 대시보드 자신의 상태만 들어 있으며 OMV 설정과는 관계가 없습니다. 백업할 때 이 디렉터리를 함께 복사하면 사용자별 위젯 배치가 유지됩니다.
+세션은 백엔드 메모리에만 있으므로 백엔드를 재시작하면 모든 사용자가 다시 로그인해야 합니다. `/var/lib/onmaru`에는 대시보드 자신의 상태만 들어 있으며 OMV 설정과는 관계가 없습니다. 백업할 때 이 디렉터리를 함께 복사하면 사용자별 위젯 배치와 바탕화면 바로가기가 유지됩니다.
 
 ## 리버스 프록시
 
