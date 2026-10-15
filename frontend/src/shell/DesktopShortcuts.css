@@ -1,0 +1,15 @@
+/* 바탕화면 바로가기. 왼쪽 위부터 위에서 아래로 채우고 넘치면 다음 열로 간다.
+   크기·간격은 shortcuts/layout.ts의 상수와 맞춘다. */
+.desktop-icons {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-rows: repeat(auto-fill, 92px);
+  gap: 8px;
+  max-height: calc(100% - 24px);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}

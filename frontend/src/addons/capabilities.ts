@@ -11,7 +11,7 @@ import type { AddonManifest } from './types'
 export type UnavailableReason = NonNullable<AddonCapability['reason']>
 
 export interface AppAccess {
-  // 바탕화면 아이콘을 보일지. 관리자 전용 앱은 일반 사용자에게 숨긴다.
+  // 바로가기와 "모든 앱"에 보일지. 관리자 전용 앱은 일반 사용자에게 숨긴다(저장한 바로가기 목록에는 남는다).
   visible: boolean
   // 창 안에 보기 대신 보여 줄 안내. null이면 창 보기를 그대로 그린다.
   notice: UnavailableReason | null
@@ -19,7 +19,7 @@ export interface AppAccess {
 
 const OPEN: AppAccess = { visible: true, notice: null }
 
-// appAccess는 capability로 앱 아이콘과 창 내용을 어떻게 그릴지 정한다.
+// appAccess는 capability로 앱 아이콘(바로가기, "모든 앱")과 창 내용을 어떻게 그릴지 정한다.
 // 관리자 전용(admin_required)은 아이콘을 숨기고, 플러그인 없음(plugin_missing)은 아이콘을 두고
 // 창 안에 안내한다. 이미 열린 창이면 두 경우 모두 창 안에 안내한다.
 export function appAccess(caps: CapabilitiesResponse | null, id: AppId): AppAccess {

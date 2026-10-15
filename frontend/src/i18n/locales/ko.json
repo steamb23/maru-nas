@@ -93,6 +93,11 @@
     "more": "외 {{count}}개",
     "empty": "표시할 항목 없음"
   },
+  "shortcuts": {
+    "open": "열기",
+    "add": "바로가기 추가",
+    "remove": "바로가기 제거"
+  },
   "storage": {
     "root": "시스템",
     "empty": "파일시스템이 없습니다.",

@@ -22,6 +22,8 @@ interface Props {
   bounds: PxSize
   // 바탕화면 아이콘 목록. 이 영역에 걸치는 칸에는 위젯을 놓지 않는다.
   iconsRef: RefObject<HTMLElement | null>
+  // 아이콘 목록이 다 그려졌는지(바로가기를 불러왔거나 실패함). 그 전에는 아이콘 영역을 믿을 수 없어 위젯을 그리지 않는다.
+  iconsReady: boolean
   ref?: Ref<WidgetLayerHandle>
 }
 
@@ -33,7 +35,7 @@ const { load, clear } = useWidgetStore.getState()
 const samePx = (a: PxRect | null, b: PxRect) =>
   a !== null && a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height
 
-export function WidgetLayer({ bounds, iconsRef, ref }: Props) {
+export function WidgetLayer({ bounds, iconsRef, iconsReady, ref }: Props) {
   const { t } = useTranslation()
   const status = useWidgetStore((s) => s.status)
   const placements = useWidgetStore((s) => s.placements)
@@ -54,7 +56,8 @@ export function WidgetLayer({ bounds, iconsRef, ref }: Props) {
     return () => clearTimeout(timer)
   }, [status])
 
-  // 아이콘 목록의 크기는 화면 높이(열 수)와 보이는 아이콘 수에 따라 바뀐다.
+  // 아이콘 목록의 크기는 화면 높이(열 수)와 보이는 아이콘 수에 따라 바뀐다. 바로가기가 처음 그려지면
+  // ResizeObserver를 기다리지 않고 그리기 전에 다시 재서, 위젯이 아이콘 자리에 한 번 비치지 않게 한다.
   useLayoutEffect(() => {
     const el = iconsRef.current
     if (!el) return
@@ -66,7 +69,7 @@ export function WidgetLayer({ bounds, iconsRef, ref }: Props) {
     const ro = new ResizeObserver(measure)
     ro.observe(el)
     return () => ro.disconnect()
-  }, [iconsRef])
+  }, [iconsRef, iconsReady])
 
   const grid = gridSize(bounds)
   const reserved = reservedCells(icons, bounds)
@@ -86,7 +89,7 @@ export function WidgetLayer({ bounds, iconsRef, ref }: Props) {
   // 이미 있는 위젯은 체크 표시와 함께 비활성, 화면에 자리가 없으면 비활성과 이유를 보여 준다.
   useImperativeHandle(ref, () => ({
     desktopMenuItems: () => {
-      if (status !== 'ready') return []
+      if (status !== 'ready' || !iconsReady) return []
       const items = WIDGET_IDS.filter((id) => widgetAccess(caps, id).visible).map((id): ContextMenuAction => {
         const def = getWidget(id)
         const added = placements.some((p) => p.addon === id)
@@ -107,7 +110,7 @@ export function WidgetLayer({ bounds, iconsRef, ref }: Props) {
     },
   }))
 
-  if (status !== 'ready') return null
+  if (status !== 'ready' || !iconsReady) return null
 
   return (
     <div className={raised ? 'widget-layer raised' : 'widget-layer'} aria-label={t('widgets.label')} role="region">

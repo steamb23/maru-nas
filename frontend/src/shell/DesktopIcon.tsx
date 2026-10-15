@@ -1,22 +1,31 @@
+import type { ButtonHTMLAttributes, Ref } from 'react'
 import { useTranslation } from 'react-i18next'
 import { IconImage } from '../icons/IconImage'
 import { type AppId, getApp } from '../windows/apps'
-import type { Size } from '../windows/geometry'
-import { useWindowStore } from '../windows/store'
 
-interface Props {
-  appId: AppId
-  bounds: Size
-}
-
-// DesktopIcon은 한 번 클릭(또는 Enter)으로 앱 창을 연다. 이미 열려 있으면 앞으로 가져온다.
-export function DesktopIcon({ appId, bounds }: Props) {
+// DesktopIconFace는 바탕화면 아이콘의 모양(아이콘과 이름)이다. 끌어 옮기는 고스트도 같은 모양을 쓴다.
+export function DesktopIconFace({ appId }: { appId: AppId }) {
   const { t } = useTranslation()
   const app = getApp(appId)
   return (
-    <button type="button" className="desktop-icon" onClick={() => useWindowStore.getState().open(appId, bounds)}>
+    <>
       <IconImage name={app.icon} size={48} />
       <span className="desktop-icon-label">{t(app.titleKey)}</span>
+    </>
+  )
+}
+
+interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
+  appId: AppId
+  ref?: Ref<HTMLButtonElement>
+}
+
+// DesktopIcon은 바탕화면 바로가기 버튼이다. 누르는 동작(창 열기)과 메뉴·끌기 처리기는 DesktopShortcuts가 준다.
+// data-app으로 메뉴·끌기 처리기가 어느 앱인지 찾는다.
+export function DesktopIcon({ appId, ref, ...rest }: Props) {
+  return (
+    <button ref={ref} type="button" className="desktop-icon" data-app={appId} {...rest}>
+      <DesktopIconFace appId={appId} />
     </button>
   )
 }

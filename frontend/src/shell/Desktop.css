@@ -13,17 +13,3 @@
   inset: 0 0 var(--taskbar-reserve) 0;
   isolation: isolate;
 }
-
-.desktop-icons {
-  position: absolute;
-  top: 12px;
-  left: 12px;
-  display: grid;
-  grid-auto-flow: column;
-  grid-template-rows: repeat(auto-fill, 92px);
-  gap: 8px;
-  max-height: calc(100% - 24px);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}

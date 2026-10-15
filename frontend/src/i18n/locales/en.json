@@ -93,6 +93,11 @@
     "more": "+{{count}} more",
     "empty": "Nothing to show"
   },
+  "shortcuts": {
+    "open": "Open",
+    "add": "Add shortcut",
+    "remove": "Remove shortcut"
+  },
   "storage": {
     "root": "System",
     "empty": "No filesystems found.",
