@@ -34,6 +34,11 @@
   cursor: grabbing;
 }
 
+/* "모든 앱"에서 끌고 있는 앱이 이미 바탕화면에 있으면 고스트가 대신 보인다. */
+.desktop-icons > li.picked {
+  visibility: hidden;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .desktop-icons > li.shifting {
     transition: none;

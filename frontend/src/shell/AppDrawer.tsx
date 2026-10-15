@@ -1,7 +1,8 @@
-// "모든 앱" 화면: 작업표시줄 왼쪽 끝 버튼으로 여는 전체 화면 앱 목록. 검색, 키보드 이동, 바로가기 추가·제거를 한다.
+// "모든 앱" 화면: 작업표시줄 왼쪽 끝 버튼으로 여는 전체 화면 앱 목록. 검색, 키보드 이동, 바로가기 추가·제거,
+// 바탕화면으로 끌어 놓아 바로가기 만들기를 한다.
 // 데스크톱 영역 위, 작업표시줄 아래에 그린다(작업표시줄은 열려 있는 동안에도 쓸 수 있다).
 // 열림 상태는 appDrawerStore, 검색은 appSearch.ts, 격자 이동은 gridNav.ts가 계산한다.
-import { type KeyboardEvent, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { type KeyboardEvent, type RefObject, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { appAccess, useCapabilitiesStore } from '../addons/capabilities'
 import { SUPPORTED_LANGUAGES } from '../i18n/languages'
@@ -9,27 +10,47 @@ import { IconImage } from '../icons/IconImage'
 import { placeShortcut, removeShortcut } from '../shortcuts/list'
 import { useShortcutStore } from '../shortcuts/store'
 import { APP_IDS, type AppId, getApp, isAppId } from '../windows/apps'
-import type { Size } from '../windows/geometry'
+import type { Point, Size } from '../windows/geometry'
 import { useWindowStore } from '../windows/store'
 import {
   DRAWER_CLOSE_MS,
   DRAWER_CONTENT_CLOSE_TO,
   DRAWER_CONTENT_FROM,
+  DRAWER_DRAG_FADE_MS,
   DRAWER_HIDDEN,
   DRAWER_OPEN_MS,
   DRAWER_SHOWN,
+  GHOST_FADE_MS,
+  GHOST_GRAB,
 } from './appDrawerAnim'
 import { APP_DRAWER_ID, useAppDrawerStore } from './appDrawerStore'
 import { searchApps } from './appSearch'
 import type { ContextMenuItem } from './contextMenu'
+import { DesktopIconFace } from './DesktopIcon'
+import type { DesktopShortcutsHandle } from './DesktopShortcuts'
 import { gridNextIndex } from './gridNav'
-import { useContextMenuTrigger } from './useContextMenuTrigger'
+import { usePointerDrag } from './usePointerDrag'
+import { mergeHandlers, useContextMenuTrigger } from './useContextMenuTrigger'
 import { animationsEnabled } from './useWindowAnimation'
 import { CLOSE_EASING, EASING } from './windowAnim'
 
 interface Props {
   // 데스크톱 영역(작업표시줄 제외) 크기. 창을 열 때 쓴다.
   bounds: Size
+  // 바탕화면 바로가기. 타일을 바탕화면으로 끌어 놓을 때 놓을 칸을 보여 주고 넣는다.
+  shortcuts: RefObject<DesktopShortcutsHandle | null>
+}
+
+// 이 거리 이상 끌어야 끌기로 본다. 그 전에 놓으면 클릭(앱 열기)이다. 바탕화면 아이콘과 같다.
+const DRAG_THRESHOLD = 4
+
+// TileDrag는 타일을 누른 순간부터 놓을 때까지의 정보다. 판단은 렌더링이 아닌 이 값으로 한다.
+interface TileDrag {
+  app: AppId
+  // 임계 거리를 넘어 끌기가 시작됐는지
+  started: boolean
+  // 마지막 포인터 위치(화면 좌표)
+  pointer: Point
 }
 
 const GRID_ID = `${APP_DRAWER_ID}-grid`
@@ -55,10 +76,11 @@ function columnsOf(grid: HTMLElement | null): number {
   return items.filter((li) => li.offsetTop === top).length
 }
 
-export function AppDrawer({ bounds }: Props) {
+export function AppDrawer({ bounds, shortcuts }: Props) {
   const { t, i18n } = useTranslation()
   const open = useAppDrawerStore((s) => s.open)
   const viaTouch = useAppDrawerStore((s) => s.viaTouch)
+  const instant = useAppDrawerStore((s) => s.instant)
   const caps = useCapabilitiesStore((s) => s.caps)
   // 닫기 애니메이션 중이면 true. 그동안 화면을 그려 두되 클릭·포커스는 받지 않는다.
   const [closing, setClosing] = useState(false)
@@ -66,9 +88,12 @@ export function AppDrawer({ bounds }: Props) {
   // 키보드로 고를 타일(로빙 tabindex). 검색 결과가 바뀌면 처음으로 돌아간다.
   const [active, setActive] = useState(0)
   const [prevOpen, setPrevOpen] = useState(open)
+  // 끌고 있는 앱. 고스트를 그리고 검색 상자를 잠근다(고스트 위치는 렌더 없이 ghostRef로 옮긴다).
+  const [dragging, setDragging] = useState<AppId | null>(null)
   if (open !== prevOpen) {
     setPrevOpen(open)
-    setClosing(!open && animationsEnabled())
+    setClosing(!open && !instant && animationsEnabled())
+    if (!open) setDragging(null)
     if (open) {
       setQuery('')
       setActive(0)
@@ -78,6 +103,10 @@ export function AppDrawer({ bounds }: Props) {
   const contentRef = useRef<HTMLDivElement>(null)
   const searchRef = useRef<HTMLInputElement>(null)
   const gridRef = useRef<HTMLUListElement>(null)
+  const ghostRef = useRef<HTMLDivElement>(null)
+  const tileDrag = useRef<TileDrag | null>(null)
+  // 끌기·길게 누르기 뒤에 오는 click은 무시한다(앱을 열지 않는다). 다음 누름에서 풀린다.
+  const suppressClick = useRef(false)
 
   // 관리자 전용 앱은 일반 사용자에게 보이지 않는다.
   const include = (id: AppId) => appAccess(caps, id).visible
@@ -100,7 +129,7 @@ export function AppDrawer({ bounds }: Props) {
   useLayoutEffect(() => {
     const root = rootRef.current
     const content = contentRef.current
-    if (!root || !content || !animationsEnabled()) return
+    if (!root || !content || !animationsEnabled() || (!open && instant)) return
     const rootFrom: Keyframe = { opacity: getComputedStyle(root).opacity }
     const cs = getComputedStyle(content)
     const contentFrom: Keyframe = { opacity: cs.opacity, transform: cs.transform }
@@ -121,20 +150,27 @@ export function AppDrawer({ bounds }: Props) {
     return () => {
       anim.onfinish = null
     }
-  }, [open])
+  }, [open, instant])
 
   // 열리면 검색 상자에 포커스한다. 터치로 열었으면 가상 키보드가 화면을 가리지 않게 하지 않는다.
   useLayoutEffect(() => {
     if (open && !viaTouch) searchRef.current?.focus({ preventScroll: true })
   }, [open, viaTouch])
 
+  // endDrag는 타일 끌기를 끝내고 화면을 닫는다(endTileDrag).
+  const endDrag = (dropped: boolean) => {
+    tileDrag.current = null
+    endTileDrag(dropped, shortcuts.current, ghostRef.current)
+  }
+
   // 열려 있는 동안 바깥(배경, 격자의 빈 곳, 작업표시줄의 다른 요소)을 누르면 닫는다. 누른 곳의 동작은 그대로 둔다.
-  // Esc로도 닫는다. 타일 메뉴의 Esc는 메뉴가 처리(preventDefault)하므로 메뉴만 닫힌다.
+  // Esc로도 닫는다(끄는 중이면 끌기를 취소하며 닫는다). 타일 메뉴의 Esc는 메뉴가 처리(preventDefault)하므로
+  // 메뉴만 닫힌다. 끄는 동안 브라우저 창이 포커스를 잃거나 크기가 바뀌면 끌기를 취소한다.
   useEffect(() => {
     if (!open) return
     const onPointerDown = (e: PointerEvent) => {
       const target = e.target as Element
-      if (target.closest(KEEP_OPEN)) return
+      if (tileDrag.current?.started || target.closest(KEEP_OPEN)) return
       // 격자 스크롤 막대를 누른 것이면 닫지 않는다.
       const grid = gridRef.current
       if (target === grid && e.offsetX >= grid.clientWidth) return
@@ -143,19 +179,51 @@ export function AppDrawer({ bounds }: Props) {
     const onKeyDown = (e: globalThis.KeyboardEvent) => {
       if (e.key !== 'Escape' || e.defaultPrevented) return
       e.preventDefault()
-      close()
+      if (tileDrag.current?.started) cancelDrag()
+      else close()
       focusLauncher()
+    }
+    const cancelDrag = () => {
+      if (!tileDrag.current?.started) return
+      tileDrag.current = null
+      suppressClick.current = true
+      endTileDrag(false, shortcuts.current, ghostRef.current)
     }
     document.addEventListener('pointerdown', onPointerDown, true)
     document.addEventListener('keydown', onKeyDown)
+    window.addEventListener('blur', cancelDrag)
+    window.addEventListener('resize', cancelDrag)
     return () => {
       document.removeEventListener('pointerdown', onPointerDown, true)
       document.removeEventListener('keydown', onKeyDown)
+      window.removeEventListener('blur', cancelDrag)
+      window.removeEventListener('resize', cancelDrag)
     }
-  }, [open])
+  }, [open, shortcuts])
+
+  // 끄는 중에 화면이 닫히면(모달) 바탕화면의 미리보기를 지운다.
+  useEffect(() => {
+    if (open || !tileDrag.current) return
+    tileDrag.current = null
+    shortcuts.current?.dragEnd()
+  }, [open, shortcuts])
 
   // 로그아웃·만료로 데스크톱이 사라지면 닫는다(다음 로그인 때 닫힌 상태로 시작하게).
-  useEffect(() => close, [])
+  // 끄는 중이었으면 바탕화면의 미리보기도 지운다.
+  useEffect(
+    () => () => {
+      if (tileDrag.current) shortcuts.current?.dragEnd()
+      tileDrag.current = null
+      close(true)
+    },
+    [shortcuts],
+  )
+
+  // 고스트가 처음 그려지면 포인터 자리에 놓는다. 그 뒤로는 렌더 없이 끌기 처리기가 옮긴다.
+  useLayoutEffect(() => {
+    const p = tileDrag.current
+    if (dragging && p) moveGhost(ghostRef.current, p.pointer)
+  }, [dragging])
 
   // 타일 우클릭·메뉴 키·길게 누르기 메뉴. 대상 앱은 입력을 받은 타일의 data-app이다.
   const menu = useContextMenuTrigger({
@@ -190,8 +258,46 @@ export function AppDrawer({ bounds }: Props) {
     },
   })
 
-  // 길게 눌러 메뉴를 연 누름 뒤에 오는 click은 무시한다(앱을 열지 않는다). 다음 누름에서 풀린다.
-  const suppressClick = useRef(false)
+  // 타일 끌기. 포인터 capture는 누른 타일이 갖고, 타일은 놓을 때까지 그대로 둔다(지우거나 inert로 만들면
+  // capture가 풀린다). 화면만 투명하게 만들어 뒤의 바탕화면을 보이고, 고스트가 포인터를 따라간다.
+  const drag = usePointerDrag({
+    threshold: DRAG_THRESHOLD,
+    onStart: (e) => {
+      suppressClick.current = false
+      const app = e.currentTarget.dataset.app
+      // 바로가기 목록을 불러오지 못했으면 끌어 놓을 수 없다(클릭은 그대로 된다).
+      if (!app || !isAppId(app) || closing || useShortcutStore.getState().status !== 'ready') return false
+      tileDrag.current = { app, started: false, pointer: { x: e.clientX, y: e.clientY } }
+    },
+    onMove: (_d, e) => {
+      const p = tileDrag.current
+      // 길게 눌러 메뉴를 연 누름은 끌기로 이어 가지 않는다.
+      if (!p || menu.openedByPress()) return
+      p.pointer = { x: e.clientX, y: e.clientY }
+      if (!p.started) {
+        p.started = true
+        setDragging(p.app)
+        fadeOut(rootRef.current)
+      } else moveGhost(ghostRef.current, p.pointer)
+      shortcuts.current?.dragOver(p.app, p.pointer)
+    },
+    onEnd: (_moved, _d, e) => {
+      const p = tileDrag.current
+      if (menu.openedByPress()) suppressClick.current = true
+      if (!p?.started) {
+        tileDrag.current = null
+        return
+      }
+      suppressClick.current = true
+      const ghost = ghostRef.current?.getBoundingClientRect()
+      const pointer = { x: e.clientX, y: e.clientY }
+      endDrag(!!ghost && !menu.openedByPress() && !!shortcuts.current?.dropAt(p.app, pointer, ghost))
+    },
+    onCancel: () => {
+      if (tileDrag.current?.started) endDrag(false)
+      else tileDrag.current = null
+    },
+  })
 
   const focusTile = (i: number) => gridRef.current?.querySelectorAll<HTMLElement>('.app-drawer-tile')[i]?.focus()
 
@@ -222,73 +328,106 @@ export function AppDrawer({ bounds }: Props) {
   if (!open && !closing) return null
 
   return (
-    <div
-      id={APP_DRAWER_ID}
-      ref={rootRef}
-      className={closing ? 'app-drawer closing' : 'app-drawer'}
-      role="dialog"
-      aria-label={t('drawer.title')}
-      inert={closing}
-    >
-      <div className="app-drawer-content" ref={contentRef}>
-        <label className="app-drawer-search">
-          <IconImage name="edit-find-symbolic" size={16} />
-          <input
-            ref={searchRef}
-            type="search"
-            value={query}
-            placeholder={t('drawer.search')}
-            aria-label={t('drawer.search')}
-            aria-controls={GRID_ID}
-            autoComplete="off"
-            spellCheck={false}
-            onChange={(e) => {
-              setQuery(e.target.value)
-              setActive(0)
-            }}
-            onKeyDown={onSearchKeyDown}
-          />
-        </label>
-        {results.length === 0 ? (
-          <p className="app-drawer-empty" role="status">
-            {t('drawer.empty')}
-          </p>
-        ) : (
-          <ul id={GRID_ID} ref={gridRef} className="app-drawer-grid" aria-label={t('drawer.title')}>
-            {results.map((id, i) => {
-              const app = getApp(id)
-              return (
-                <li key={id}>
-                  <button
-                    type="button"
-                    className="app-drawer-tile"
-                    data-app={id}
-                    tabIndex={i === activeIndex ? 0 : -1}
-                    {...menu.handlers}
-                    onPointerDown={(e) => {
-                      menu.handlers.onPointerDown(e)
-                      suppressClick.current = false
-                    }}
-                    onPointerUp={(e) => {
-                      menu.handlers.onPointerUp(e)
-                      if (menu.openedByPress()) suppressClick.current = true
-                    }}
-                    onKeyDown={(e) => onTileKeyDown(e, i)}
-                    onFocus={() => setActive(i)}
-                    onClick={() => {
-                      if (suppressClick.current) suppressClick.current = false
-                      else openApp(id)
-                    }}
-                  >
-                    <IconImage name={app.icon} size={64} />
-                    <span className="app-drawer-tile-label">{t(app.titleKey)}</span>
-                  </button>
-                </li>
-              )
-            })}
-          </ul>
-        )}
+    <>
+      <div
+        id={APP_DRAWER_ID}
+        ref={rootRef}
+        className={closing ? 'app-drawer closing' : 'app-drawer'}
+        role="dialog"
+        aria-label={t('drawer.title')}
+        inert={closing}
+      >
+        <div className="app-drawer-content" ref={contentRef}>
+          <label className="app-drawer-search">
+            <IconImage name="edit-find-symbolic" size={16} />
+            <input
+              ref={searchRef}
+              type="search"
+              value={query}
+              placeholder={t('drawer.search')}
+              aria-label={t('drawer.search')}
+              aria-controls={GRID_ID}
+              autoComplete="off"
+              spellCheck={false}
+              readOnly={dragging !== null}
+              onChange={(e) => {
+                setQuery(e.target.value)
+                setActive(0)
+              }}
+              onKeyDown={onSearchKeyDown}
+            />
+          </label>
+          {results.length === 0 ? (
+            <p className="app-drawer-empty" role="status">
+              {t('drawer.empty')}
+            </p>
+          ) : (
+            <ul id={GRID_ID} ref={gridRef} className="app-drawer-grid" aria-label={t('drawer.title')}>
+              {results.map((id, i) => {
+                const app = getApp(id)
+                return (
+                  <li key={id}>
+                    <button
+                      type="button"
+                      className="app-drawer-tile"
+                      data-app={id}
+                      tabIndex={i === activeIndex ? 0 : -1}
+                      {...mergeHandlers(menu.handlers, drag)}
+                      onKeyDown={(e) => onTileKeyDown(e, i)}
+                      onFocus={() => setActive(i)}
+                      onClick={() => {
+                        if (suppressClick.current) suppressClick.current = false
+                        else openApp(id)
+                      }}
+                    >
+                      <IconImage name={app.icon} size={64} />
+                      <span className="app-drawer-tile-label">{t(app.titleKey)}</span>
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+        </div>
       </div>
-    </div>
+      {dragging && (
+        <div ref={ghostRef} className="desktop-icon app-drawer-ghost" aria-hidden="true">
+          <DesktopIconFace appId={dragging} />
+        </div>
+      )}
+    </>
   )
+}
+
+// endTileDrag는 타일 끌기가 끝난 뒤 화면을 닫는다. 화면은 끌기를 시작할 때 이미 사라졌으므로 애니메이션 없이
+// 닫는다. dropped가 아니면(바탕화면 밖에 놓음, 취소) 바탕화면의 미리보기를 지우고 고스트를 흐리게 한 뒤 닫는다.
+function endTileDrag(dropped: boolean, shortcuts: DesktopShortcutsHandle | null, ghost: HTMLElement | null) {
+  if (dropped) {
+    close(true)
+    return
+  }
+  shortcuts?.dragEnd()
+  if (!ghost || !animationsEnabled()) {
+    close(true)
+    return
+  }
+  const anim = ghost.animate([{ opacity: 1 }, { opacity: 0 }], { duration: GHOST_FADE_MS, fill: 'forwards' })
+  anim.onfinish = () => close(true)
+}
+
+// moveGhost는 포인터가 고스트의 잡는 점(GHOST_GRAB)에 오도록 고스트를 옮긴다.
+function moveGhost(ghost: HTMLElement | null, pointer: Point) {
+  if (ghost) ghost.style.transform = `translate(${pointer.x - GHOST_GRAB.x}px, ${pointer.y - GHOST_GRAB.y}px)`
+}
+
+// fadeOut은 끌기를 시작할 때 화면을 지금 투명도에서 흐려지게 해 뒤의 바탕화면을 보인다. 끝난 뒤에도 유지한다.
+function fadeOut(root: HTMLElement | null) {
+  if (!root) return
+  const from: Keyframe = { opacity: getComputedStyle(root).opacity }
+  for (const a of root.getAnimations()) a.cancel()
+  root.animate([from, DRAWER_HIDDEN], {
+    duration: animationsEnabled() ? DRAWER_DRAG_FADE_MS : 0,
+    easing: CLOSE_EASING,
+    fill: 'forwards',
+  })
 }

@@ -1,16 +1,17 @@
 // 바탕화면 바로가기: 사용자가 고른 앱 아이콘을 왼쪽 위부터 열 단위로 놓는다. 위젯 레이어와 창 아래에 그리고,
-// 끄는 동안만 창 위로 올라온다. 끌어서 순서를 바꾼다.
+// 끄는 동안만 창 위로 올라온다. 끌어서 순서를 바꾸고, "모든 앱"에서 끌어 온 앱을 원하는 자리에 끼운다.
 // 목록은 shortcuts/store.ts(사용자별 저장), 순서 계산은 shortcuts/list.ts, 칸 계산은 shortcuts/layout.ts가 한다.
 import { type Ref, type RefObject, useEffect, useImperativeHandle, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { appAccess, useCapabilitiesStore } from '../addons/capabilities'
-import { iconCenter, inBounds, previewOffsets, rowsPerColumn, slotAt } from '../shortcuts/layout'
+import { ICON_HEIGHT, ICON_WIDTH, iconCenter, inBounds, previewOffsets, rowsPerColumn, slotAt } from '../shortcuts/layout'
 import { placeShortcut, removeShortcut, visibleShortcuts } from '../shortcuts/list'
 import { useShortcutStore } from '../shortcuts/store'
 import { APP_IDS, type AppId, getApp, isAppId } from '../windows/apps'
 import type { Point, Rect, Size } from '../windows/geometry'
 import { useWindowStore } from '../windows/store'
+import { GHOST_GRAB } from './appDrawerAnim'
 import type { ContextMenuAction, ContextMenuItem } from './contextMenu'
 import { DesktopIcon } from './DesktopIcon'
 import { usePointerDrag } from './usePointerDrag'
@@ -25,6 +26,14 @@ export interface DesktopShortcutsHandle {
   desktopMenuItems: () => ContextMenuItem[]
   // 진행 중인 끌기를 취소한다(데스크톱 범위 모달이 열릴 때).
   cancelDrag: () => void
+  // "모든 앱"에서 끄는 앱 app의 고스트를 포인터(화면 좌표)가 잡고 있다. 놓을 칸을 비워 보여 준다.
+  // 데스크톱 영역 밖이면 미리보기를 지운다.
+  dragOver: (app: AppId, pointer: Point) => void
+  // 끌던 앱을 놓는다. 데스크톱 영역 안이면 그 칸에 바로가기를 넣고(이미 있으면 옮기고) true,
+  // 밖이면 미리보기만 지우고 false. ghost는 고스트의 화면 자리로, 새 아이콘이 그 자리에서 미끄러져 들어온다.
+  dropAt: (app: AppId, pointer: Point, ghost: Rect) => boolean
+  // 놓지 않고 끝난 끌기의 미리보기를 지운다.
+  dragEnd: () => void
 }
 
 interface Props {
@@ -40,10 +49,21 @@ const RETRY_MS = 10_000
 // 이 거리 이상 끌어야 끌기로 본다. 그 전에 놓으면 클릭(창 열기)이다. 창·위젯과 같다.
 const DRAG_THRESHOLD = 4
 
-// DragView는 끄는 동안 화면에 반영할 미리보기다. from은 끄는 아이콘의 보이는 순서, to는 놓을 칸이다.
+// DragView는 끄는 동안 화면에 반영할 미리보기다. source는 끌기를 시작한 곳(바탕화면 아이콘, "모든 앱" 타일),
+// from은 끄는 앱의 보이는 순서(바탕화면에 없으면 null), to는 놓을 칸(놓을 곳이 없으면 null)이다.
 interface DragView {
-  from: number
-  to: number
+  source: 'desktop' | 'drawer'
+  from: number | null
+  to: number | null
+}
+
+// DrawerDrag는 "모든 앱"에서 끌고 있는 앱과, 시작할 때 잰 바탕화면 정보다.
+interface DrawerDrag {
+  app: AppId
+  from: number | null
+  count: number
+  rows: number
+  to: number | null
 }
 
 // Press는 아이콘을 누른 순간부터 놓을 때까지의 정보다. 포인터 이벤트가 렌더링보다 먼저 이어서 들어올 수
@@ -98,6 +118,7 @@ export function DesktopShortcuts({ bounds, listRef, ref }: Props) {
   const open = (id: AppId) => useWindowStore.getState().open(id, bounds)
 
   const press = useRef<Press | null>(null)
+  const drawerDrag = useRef<DrawerDrag | null>(null)
   const [view, setView] = useState<DragView | null>(null)
   // 끌거나 놓은 아이콘이 제자리로 가는 동안 목록을 창 위로 올린다.
   const [raised, setRaised] = useState(false)
@@ -107,8 +128,9 @@ export function DesktopShortcuts({ bounds, listRef, ref }: Props) {
   const suppressClick = useRef(false)
 
   // settle은 끌기를 끝낸다. next가 있으면 그 목록으로 바꾸고, 아이콘마다 지금 보이는 자리에서 새 자리로
-  // 미끄러지게 한다(FLIP). 순서(li의 DOM 순서)는 여기서만 바뀐다. 끄는 동안 옮기면 pointer capture가 풀린다.
-  const settle = (next: AppId[] | null, dragged: HTMLElement | null) => {
+  // 미끄러지게 한다(FLIP). 새로 들어온 아이콘은 seed 자리(끌던 고스트)에서 출발한다.
+  // 순서(li의 DOM 순서)는 여기서만 바뀐다. 끄는 동안 옮기면 pointer capture가 풀린다.
+  const settle = (next: AppId[] | null, dragged: HTMLElement | null, seed?: { app: AppId; rect: Rect }) => {
     const list = listRef.current
     const buttons = () => (list ? Array.from(list.querySelectorAll<HTMLElement>('.desktop-icon')) : [])
     const before = new Map<string, Rect>()
@@ -116,6 +138,7 @@ export function DesktopShortcuts({ bounds, listRef, ref }: Props) {
       before.set(b.dataset.app ?? '', b.getBoundingClientRect())
       for (const a of b.getAnimations()) a.cancel()
     }
+    if (seed) before.set(seed.app, seed.rect)
     // 목록과 미리보기 해제를 한 번에 그린다. li의 transform과 전환 효과(.shifting)가 함께 빠지므로 튀지 않는다.
     flushSync(() => {
       if (next) update(() => next)
@@ -181,7 +204,7 @@ export function DesktopShortcuts({ bounds, listRef, ref }: Props) {
       const app = button.dataset.app
       const area = listRef.current?.parentElement
       const from = app && isAppId(app) ? visible.indexOf(app) : -1
-      if (!app || !isAppId(app) || !area || from < 0) return false
+      if (!app || !isAppId(app) || !area || from < 0 || drawerDrag.current) return false
       const r = area.getBoundingClientRect()
       press.current = { app, from, button, ids: visible, rows, origin: { x: r.x, y: r.y }, to: from, moved: false }
     },
@@ -193,7 +216,7 @@ export function DesktopShortcuts({ bounds, listRef, ref }: Props) {
         p.moved = true
         for (const a of p.button.getAnimations()) a.cancel()
         setRaised(true)
-        setView({ from: p.from, to: p.from })
+        setView({ source: 'desktop', from: p.from, to: p.from })
       }
       p.button.style.transform = `translate(${d.dx}px, ${d.dy}px)`
       // 영역 밖(작업표시줄 등)이면 놓아도 제자리로 돌아가므로 미리보기도 제자리다.
@@ -204,7 +227,7 @@ export function DesktopShortcuts({ bounds, listRef, ref }: Props) {
         : p.from
       if (to === p.to) return
       p.to = to
-      setView({ from: p.from, to })
+      setView({ source: 'desktop', from: p.from, to })
     },
     onEnd: (moved, _d, e) => {
       const p = press.current
@@ -223,8 +246,9 @@ export function DesktopShortcuts({ bounds, listRef, ref }: Props) {
     },
   })
 
-  // 끄는 동안 Esc를 누르거나 브라우저 창이 포커스를 잃으면 취소한다.
-  const dragging = view !== null
+  // 바탕화면 아이콘을 끄는 동안 Esc를 누르거나 브라우저 창이 포커스를 잃으면 취소한다.
+  // ("모든 앱"에서 끄는 동안은 그쪽이 처리한다.)
+  const dragging = view?.source === 'desktop'
   useEffect(() => {
     if (!dragging) return
     const onKeyDown = (e: KeyboardEvent) => {
@@ -252,8 +276,55 @@ export function DesktopShortcuts({ bounds, listRef, ref }: Props) {
   }
 
   // "바로가기 추가 ▸" 하위 메뉴. 볼 수 있는 앱마다 하나씩, 이미 있는 앱은 체크 표시와 함께 비활성이다.
+  // 데스크톱 영역 기준 좌표와, 고스트를 그 자리에 놓았을 때의 아이콘 가운데
+  const areaPoint = (pointer: Point) => {
+    const r = listRef.current?.parentElement?.getBoundingClientRect()
+    return r ? { x: pointer.x - r.x, y: pointer.y - r.y } : null
+  }
+  const ghostCenter = (local: Point) => ({
+    x: local.x - GHOST_GRAB.x + ICON_WIDTH / 2,
+    y: local.y - GHOST_GRAB.y + ICON_HEIGHT / 2,
+  })
+  const drawerSlot = (d: DrawerDrag, local: Point | null) =>
+    local && inBounds(local, bounds)
+      ? slotAt(ghostCenter(local), d.rows, d.from === null ? d.count : d.count - 1)
+      : null
+
   useImperativeHandle(ref, () => ({
     cancelDrag: cancel,
+    dragOver: (app, pointer) => {
+      if (status !== 'ready' || press.current) return
+      let d = drawerDrag.current
+      if (d?.app !== app) {
+        const from = visible.indexOf(app)
+        d = { app, from: from < 0 ? null : from, count: visible.length, rows, to: null }
+        drawerDrag.current = d
+        setRaised(true)
+      }
+      const to = drawerSlot(d, areaPoint(pointer))
+      if (to === d.to && view) return
+      d.to = to
+      setView({ source: 'drawer', from: d.from, to })
+    },
+    dropAt: (app, pointer, ghost) => {
+      const d = drawerDrag.current
+      drawerDrag.current = null
+      const to = d?.app === app ? drawerSlot(d, areaPoint(pointer)) : null
+      if (!d || to === null) {
+        settle(null, null)
+        return false
+      }
+      const next = placeShortcut(useShortcutStore.getState().apps, app, to, include)
+      // 놓은 앱은 고스트 자리에서 놓을 칸으로 미끄러져 들어온다(이미 바탕화면에 있던 앱도 끄는 동안 숨겨 두었다).
+      settle(next, null, { app, rect: ghost })
+      return true
+    },
+    dragEnd: () => {
+      if (!drawerDrag.current) return
+      drawerDrag.current = null
+      // 언마운트(모달, 로그아웃) 정리에서도 불리므로 flushSync를 쓰는 settle은 microtask로 미룬다.
+      queueMicrotask(() => settle(null, null))
+    },
     desktopMenuItems: () => {
       if (status !== 'ready') return []
       const items = APP_IDS.filter(include).map((id): ContextMenuAction => {
@@ -279,11 +350,13 @@ export function DesktopShortcuts({ bounds, listRef, ref }: Props) {
   return (
     <ul className={raised ? 'desktop-icons raised' : 'desktop-icons'} aria-label={t('desktop.label')} ref={listRef}>
       {visible.map((id, i) => {
-        // 끄는 아이콘은 버튼이 포인터를 따라가므로 li는 그대로 둔다.
-        const dragged = view?.from === i
+        // 바탕화면에서 끄는 아이콘은 버튼이 포인터를 따라가므로 li는 그대로 둔다.
+        // "모든 앱"에서 끄는 앱이 이미 바탕화면에 있으면 고스트가 대신 보이므로 그 아이콘은 숨기고 놓을 칸을 차지한다.
+        const dragged = view?.source === 'desktop' && view.from === i
+        const picked = view?.source === 'drawer' && view.from === i
         const o = offsets && !dragged ? offsets[i] : null
         let className: string | undefined
-        if (view) className = dragged ? 'dragging' : 'shifting'
+        if (view) className = dragged ? 'dragging' : picked ? 'shifting picked' : 'shifting'
         return (
           <li
             key={id}

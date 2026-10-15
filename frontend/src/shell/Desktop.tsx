@@ -96,7 +96,7 @@ export function Desktop() {
             <Window key={id} id={id} bounds={bounds} closingState={closing.get(id)} onClosed={onClosed} />
           ))}
         </div>
-        <AppDrawer bounds={bounds} />
+        <AppDrawer bounds={bounds} shortcuts={shortcutsRef} />
         <Taskbar inert={blocked} />
         <ContextMenu />
         <div className="modal-host modal-host-desktop" ref={setModalHost} />

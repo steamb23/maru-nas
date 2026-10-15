@@ -116,6 +116,16 @@
   color: rgb(255 255 255 / 0.8);
 }
 
+/* 바탕화면으로 끌고 있는 앱. 바탕화면 아이콘(.desktop-icon)과 같은 모양이며 위치는 transform으로 옮긴다.
+   투명해진 "모든 앱" 화면 위, 작업표시줄 아래에 그린다. */
+.app-drawer-ghost {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
 /* 낮은 화면: 위 여백과 타일을 줄인다. */
 @media (max-height: 560px) {
   .app-drawer {

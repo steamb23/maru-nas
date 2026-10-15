@@ -20,6 +20,15 @@ describe('appDrawerStore', () => {
     expect(useAppDrawerStore.getState().open).toBe(false)
   })
 
+  it('애니메이션 없이 닫기를 기억하고 다시 열면 지운다', () => {
+    const s = useAppDrawerStore.getState()
+    s.show()
+    s.close(true)
+    expect(useAppDrawerStore.getState()).toMatchObject({ open: false, instant: true })
+    s.show()
+    expect(useAppDrawerStore.getState()).toMatchObject({ open: true, instant: false })
+  })
+
   it('닫혀 있을 때 close는 상태를 바꾸지 않는다', () => {
     const before = useAppDrawerStore.getState()
     before.close()

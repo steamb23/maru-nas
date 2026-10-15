@@ -9,15 +9,18 @@ interface AppDrawerState {
   open: boolean
   // 터치로 열었는지. 그러면 검색 상자에 포커스하지 않는다(가상 키보드가 화면을 가리지 않게).
   viaTouch: boolean
+  // 닫기 애니메이션 없이 닫았는지. 앱을 바탕화면으로 끌어 놓을 때는 화면이 이미 사라져 있다.
+  instant: boolean
   show: (viaTouch?: boolean) => void
   toggle: (viaTouch?: boolean) => void
-  close: () => void
+  close: (instant?: boolean) => void
 }
 
 export const useAppDrawerStore = create<AppDrawerState>((set, get) => ({
   open: false,
   viaTouch: false,
-  show: (viaTouch = false) => set({ open: true, viaTouch }),
+  instant: false,
+  show: (viaTouch = false) => set({ open: true, viaTouch, instant: false }),
   toggle: (viaTouch = false) => (get().open ? get().close() : get().show(viaTouch)),
-  close: () => set((s) => (s.open ? { open: false } : s)),
+  close: (instant = false) => set((s) => (s.open ? { open: false, instant } : s)),
 }))

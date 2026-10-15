@@ -7,3 +7,10 @@ export const DRAWER_HIDDEN: Keyframe = { opacity: 0 }
 export const DRAWER_CONTENT_FROM: Keyframe = { opacity: 0, transform: 'scale(0.96)' }
 export const DRAWER_CONTENT_CLOSE_TO: Keyframe = { opacity: 0, transform: 'scale(0.98)' }
 export const DRAWER_SHOWN: Keyframe = { opacity: 1, transform: 'none' }
+
+// 앱 타일을 끌기 시작하면 화면이 이 시간 동안 흐려지며 사라진다(뒤의 바탕화면에 놓을 수 있게).
+export const DRAWER_DRAG_FADE_MS = 150
+// 바탕화면 밖에 놓으면 끌던 아이콘(고스트)이 이 시간 동안 흐려지며 사라진다.
+export const GHOST_FADE_MS = 120
+// 포인터가 잡는 고스트의 점(고스트 왼쪽 위 기준). 바탕화면 아이콘(88×92)의 그림 가운데다.
+export const GHOST_GRAB = { x: 44, y: 32 }
