@@ -5,7 +5,7 @@ import { AddonUnavailable } from '../addons/AddonUnavailable'
 import { type UnavailableReason, appAccess, requiredPlugins, useCapabilitiesStore } from '../addons/capabilities'
 import { usePageVisible } from '../addons/common/usePageVisible'
 import { ADDON_VIEWS } from '../addons/registry'
-import { type AppId, getApp, isAddonApp } from '../windows/apps'
+import { type WindowAppId, getWindowApp, isAddonApp } from '../windows/apps'
 import { type Point, type Rect, type Size, clampPosition, restoreGrab } from '../windows/geometry'
 import { type WindowState, selectActiveId, useWindowStore } from '../windows/store'
 import { type TileZone, layoutOf, tileRect, tileZoneAt } from '../windows/tiling'
@@ -68,7 +68,7 @@ const WindowBody = memo(function WindowBody({
   notice,
   active,
 }: {
-  appId: AppId
+  appId: WindowAppId
   notice: UnavailableReason | null
   active: boolean
 }) {
@@ -130,7 +130,7 @@ export function Window({ id, bounds, closingState, onClosed }: Props) {
   })
 
   if (!win) return null
-  const app = getApp(win.appId)
+  const app = getWindowApp(win.appId)
   const title = t(app.titleKey)
   const maximizeLabel = win.maximized ? t('window.restore') : t('window.maximize')
   const layout = layoutOf(win)

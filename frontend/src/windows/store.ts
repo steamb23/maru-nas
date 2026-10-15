@@ -3,13 +3,13 @@
 // 데스크톱 영역 크기(bounds)는 호출하는 쪽이 넘긴다. DOM에 의존하지 않으므로
 // node 환경 테스트에서 그대로 쓸 수 있다.
 import { create } from 'zustand'
-import { type AppId, getApp } from './apps'
+import { type WindowAppId, getWindowApp } from './apps'
 import { type Rect, type Size, cascadePosition, clampPosition } from './geometry'
 import { DEFAULT_TILE_SPLIT, type TileSide, type TileZone, splitForTiling, tilePartner } from './tiling'
 
 export interface WindowState {
   id: string
-  appId: AppId
+  appId: WindowAppId
   // x, y, width, height는 최대화·타일링·최소화 중에도 보존되어 복원 시 그대로 쓰인다.
   x: number
   y: number
@@ -33,7 +33,7 @@ interface WindowData {
 
 interface WindowActions {
   // open은 앱 창을 연다. 이미 열려 있으면 복원하고 맨 앞으로 가져온다. 창 id를 반환한다.
-  open: (appId: AppId, bounds: Size) => string
+  open: (appId: WindowAppId, bounds: Size) => string
   close: (id: string) => void
   // closeMany는 여러 창을 한 번에 닫는다. 없는 id는 무시한다.
   closeMany: (ids: readonly string[]) => void
@@ -107,7 +107,7 @@ export const useWindowStore = create<WindowStore>()((set, get) => {
         get().restore(existing.id)
         return existing.id
       }
-      const app = getApp(appId)
+      const app = getWindowApp(appId)
       const s = get()
       const id = `win-${s.nextId}`
       const pos = cascadePosition(s.windows.length, app.defaultSize, bounds)

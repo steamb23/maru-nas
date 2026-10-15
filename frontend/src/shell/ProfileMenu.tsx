@@ -2,11 +2,13 @@
 import { type KeyboardEvent, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { SessionInfo } from '../api/types.gen'
+import { useCapabilitiesStore } from '../addons/capabilities'
 import { useAuthStore } from '../auth/store'
 import { setLanguage, useLanguage } from '../i18n'
 import { SUPPORTED_LANGUAGES, languageName } from '../i18n/languages'
 import { IconImage } from '../icons/IconImage'
 import { useDialogs } from './dialogPresets'
+import { openLink } from './launchApp'
 import {
   PROFILE_MENU_ITEMS,
   type ProfileMenuActionId,
@@ -37,6 +39,8 @@ export function ProfileMenu() {
   const { t } = useTranslation()
   const lang = useLanguage()
   const user = useAuthStore((s) => s.user)
+  // OMV 웹 UI 주소가 설정되어 있으면 "OMV 워크벤치 열기"를 보인다.
+  const workbench = useCapabilitiesStore((s) => Boolean(s.caps?.workbenchUrl))
   const [open, setOpen] = useState(false)
   // 언어 하위 메뉴가 열려 있으면 true.
   const [subOpen, setSubOpen] = useState(false)
@@ -55,6 +59,8 @@ export function ProfileMenu() {
 
   // 메뉴 항목 동작. profileMenu.ts의 action 항목 id마다 하나씩 둔다.
   const actions: Record<ProfileMenuActionId, () => void> = {
+    // 팝업 차단을 피하려고 클릭 처리 안에서 바로 연다.
+    workbench: () => openLink('workbench'),
     // 로그아웃하면 열린 창이 모두 닫히므로 데스크톱 범위 모달로 한 번 묻는다.
     logout: async () => {
       const ok = await dialogs.confirm({
@@ -154,7 +160,7 @@ export function ProfileMenu() {
   }, [subOpen])
 
   if (!user) return null
-  const groups = groupItems(visibleItems(PROFILE_MENU_ITEMS, user))
+  const groups = groupItems(visibleItems(PROFILE_MENU_ITEMS, { admin: user.admin, workbench }))
 
   const onMenuKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.key === 'Escape') {

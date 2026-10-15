@@ -2,7 +2,7 @@
 //
 // 좌우에 타일링된 창들은 하나의 비율(split)을 공유하는 타일 그룹이다. 비율을 바꾸면 양쪽 창이 함께
 // 다시 배치된다. 좌표는 geometry.ts와 같이 데스크톱 영역(작업표시줄 제외) 왼쪽 위가 원점이다.
-import { type AppId, getApp } from './apps'
+import { type WindowAppId, getWindowApp } from './apps'
 import { FLOAT_GAP, MIN_WIDTH, type Point, type Rect, type Size } from './geometry'
 
 export type TileSide = 'left' | 'right'
@@ -19,7 +19,7 @@ export const DEFAULT_TILE_SPLIT = 0.5
 // 타일링 계산에 필요한 창 정보. store의 WindowState가 이 모양을 만족한다.
 export interface TileWindow {
   id: string
-  appId: AppId
+  appId: WindowAppId
   z: number
   minimized: boolean
   maximized: boolean
@@ -90,7 +90,7 @@ export function splitFromDrag(startSplit: number, dx: number, bounds: Size): num
 export function tileMinWidth(windows: readonly TileWindow[], side: TileSide): number {
   let min = MIN_WIDTH
   for (const w of windows) {
-    if (w.tile === side) min = Math.max(min, getApp(w.appId).minSize?.width ?? 0)
+    if (w.tile === side) min = Math.max(min, getWindowApp(w.appId).minSize?.width ?? 0)
   }
   return min
 }

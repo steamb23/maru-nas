@@ -4,24 +4,38 @@
 // (ProfileMenuActionId에 추가하면 동작을 빠뜨렸을 때 타입 오류가 난다). submenu 항목은 누르면 하위 메뉴를 연다.
 // 나중에 개인 설정, 정보, 재시작·종료(admin) 같은 항목이 들어갈 자리다. 같은 group끼리 묶고 group 사이에 구분선을 그린다.
 import type { ParseKeys } from 'i18next'
-import type { SessionInfo } from '../api/types.gen'
 import type { IconName } from '../icons/resolver'
 
-export type ProfileMenuActionId = 'logout'
+export type ProfileMenuActionId = 'workbench' | 'logout'
 export type ProfileMenuSubmenuId = 'language'
 
 interface ItemBase {
   labelKey: ParseKeys
   icon: IconName
   group: string
-  // admin이면 관리자에게만 보인다.
-  requires?: 'admin'
+  // admin이면 관리자에게만, workbench면 OMV 웹 UI 주소가 설정되어 있을 때만 보인다(MenuContext).
+  requires?: keyof MenuContext
+}
+
+// MenuContext는 항목 표시 조건이다. 로그인한 사용자의 역할과 capability로 정한다.
+export interface MenuContext {
+  admin: boolean
+  workbench: boolean
 }
 
 export type ProfileMenuItem = ItemBase &
   ({ kind: 'action'; id: ProfileMenuActionId } | { kind: 'submenu'; id: ProfileMenuSubmenuId })
 
 export const PROFILE_MENU_ITEMS: readonly ProfileMenuItem[] = [
+  // OMV 웹 UI를 이름 붙은 브라우저 탭으로 연다(shell/launchApp.ts의 openLink).
+  {
+    kind: 'action',
+    id: 'workbench',
+    labelKey: 'profile.openWorkbench',
+    icon: 'openmediavault',
+    group: 'omv',
+    requires: 'workbench',
+  },
   {
     kind: 'submenu',
     id: 'language',
@@ -32,9 +46,9 @@ export const PROFILE_MENU_ITEMS: readonly ProfileMenuItem[] = [
   { kind: 'action', id: 'logout', labelKey: 'profile.logout', icon: 'system-log-out-symbolic', group: 'session' },
 ]
 
-// visibleItems는 사용자 권한으로 볼 수 있는 항목만 남긴다.
-export function visibleItems(items: readonly ProfileMenuItem[], user: SessionInfo): ProfileMenuItem[] {
-  return items.filter((it) => it.requires !== 'admin' || user.admin)
+// visibleItems는 표시 조건(requires)을 만족하는 항목만 남긴다.
+export function visibleItems(items: readonly ProfileMenuItem[], ctx: MenuContext): ProfileMenuItem[] {
+  return items.filter((it) => it.requires === undefined || ctx[it.requires])
 }
 
 // groupItems는 이어진 같은 group 항목을 묶는다. 순서는 그대로 둔다.

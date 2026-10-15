@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getApp } from './apps'
+import { getWindowApp } from './apps'
 import { FLOAT_GAP, MIN_WIDTH } from './geometry'
 import {
   DEFAULT_TILE_SPLIT,
@@ -123,7 +123,7 @@ describe('tileMinWidth', () => {
   it('공통 하한과 그쪽 타일 창들의 앱 최소 너비 중 큰 값', () => {
     const windows: TileWindow[] = [tw('a', 1, 'left'), { ...tw('b', 2, 'right'), appId: 'system-info' }]
     expect(tileMinWidth(windows, 'left')).toBe(MIN_WIDTH)
-    expect(tileMinWidth(windows, 'right')).toBe(Math.max(MIN_WIDTH, getApp('system-info').minSize?.width ?? 0))
+    expect(tileMinWidth(windows, 'right')).toBe(Math.max(MIN_WIDTH, getWindowApp('system-info').minSize?.width ?? 0))
   })
 })
 

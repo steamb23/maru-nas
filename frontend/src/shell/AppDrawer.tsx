@@ -13,7 +13,6 @@ import { placeShortcut, removeShortcut } from '../shortcuts/list'
 import { useShortcutStore } from '../shortcuts/store'
 import { APP_IDS, type AppId, getApp, isAppId } from '../windows/apps'
 import type { Point, Size } from '../windows/geometry'
-import { useWindowStore } from '../windows/store'
 import {
   DRAWER_CLOSE_MS,
   DRAWER_CONTENT_CLOSE_TO,
@@ -28,6 +27,7 @@ import {
 import { useAppDrawerPrefsStore } from './appDrawerPrefsStore'
 import { APP_DRAWER_ID, useAppDrawerStore } from './appDrawerStore'
 import { searchApps } from './appSearch'
+import { launchApp } from './launchApp'
 import { APP_SORT_LABELS, APP_SORTS, sortApps } from './appSort'
 import type { ContextMenuAction, ContextMenuItem } from './contextMenu'
 import { useContextMenuStore } from './contextMenuStore'
@@ -140,7 +140,7 @@ export function AppDrawer({ bounds, shortcuts }: Props) {
 
   const openApp = (id: AppId) => {
     close()
-    useWindowStore.getState().open(id, bounds)
+    launchApp(id, bounds)
   }
 
   // 열기·닫기 애니메이션. 닫는 중에 다시 열면 지금 보이는 투명도·크기에서 이어 간다.

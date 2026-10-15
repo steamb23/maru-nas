@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { MANIFESTS } from '../addons/manifests.gen'
-import { APP_IDS, getApp, isAddonApp, isAppId } from './apps'
+import { APP_IDS, type WindowAppId, getApp, getWindowApp, isAddonApp, isAppId, isLinkApp } from './apps'
 import { MIN_HEIGHT, MIN_WIDTH } from './geometry'
 
+const windowAppIds = APP_IDS.filter((id): id is WindowAppId => !isLinkApp(id))
+
 describe('APPS', () => {
-  it.each(APP_IDS)('%s의 기본 크기는 최소 크기 이상이다', (id) => {
-    const app = getApp(id)
+  it.each(windowAppIds)('%s의 기본 크기는 최소 크기 이상이다', (id) => {
+    const app = getWindowApp(id)
     expect(app.defaultSize.width).toBeGreaterThanOrEqual(Math.max(app.minSize?.width ?? 0, MIN_WIDTH))
     expect(app.defaultSize.height).toBeGreaterThanOrEqual(Math.max(app.minSize?.height ?? 0, MIN_HEIGHT))
   })
@@ -29,16 +31,26 @@ describe('애드온 앱', () => {
     expect(getApp('storage').kind).toBe('addon')
   })
 
-  it('준비 중 앱과 애드온의 id가 겹치지 않는다', () => {
-    const placeholders = APP_IDS.filter((id) => !isAddonApp(id))
-    for (const id of placeholders) expect(Object.hasOwn(MANIFESTS, id)).toBe(false)
+  it('준비 중 앱·링크 앱과 애드온의 id가 겹치지 않는다', () => {
+    const others = APP_IDS.filter((id) => !isAddonApp(id))
+    for (const id of others) expect(Object.hasOwn(MANIFESTS, id)).toBe(false)
   })
 
-  it('애드온 앱이 앞에, 준비 중 앱이 뒤에 놓인다', () => {
+  it('애드온 앱, 준비 중 앱, 링크 앱 순서로 놓인다', () => {
     const windowAddons = Object.values(MANIFESTS)
       .filter((m) => 'window' in m.views)
       .map((m) => m.id)
-    expect(APP_IDS).toEqual([...windowAddons, 'files'])
+    expect(APP_IDS).toEqual([...windowAddons, 'files', 'workbench'])
+  })
+})
+
+describe('링크 앱', () => {
+  it('OMV 워크벤치는 창 없이 여는 링크 앱이다', () => {
+    expect(isLinkApp('workbench')).toBe(true)
+    expect(isAddonApp('workbench')).toBe(false)
+    expect(getApp('workbench')).toEqual({ titleKey: 'apps.workbench', icon: 'openmediavault', kind: 'link' })
+    expect(isLinkApp('files')).toBe(false)
+    expect(isLinkApp('system-info')).toBe(false)
   })
 })
 

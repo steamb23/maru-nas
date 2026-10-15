@@ -3,7 +3,8 @@
 // 아직 받지 못했거나 요청이 실패하면 모두 쓸 수 있는 것으로 보고 그린다. 실제 차단은 백엔드가 한다.
 import { create } from 'zustand'
 import type { AddonCapability, CapabilitiesResponse } from '../api/types.gen'
-import { type AppId, isAddonApp } from '../windows/apps'
+import { type AppId, isAddonApp, isLinkApp } from '../windows/apps'
+import { linkConfigured } from '../windows/links'
 import type { WidgetAddonId } from '../widgets/catalog'
 import { type AddonId, MANIFESTS } from './manifests.gen'
 import type { AddonManifest } from './types'
@@ -19,10 +20,15 @@ export interface AppAccess {
 
 const OPEN: AppAccess = { visible: true, notice: null }
 
+const HIDDEN: AppAccess = { visible: false, notice: null }
+
 // appAccess는 capability로 앱 아이콘(바로가기, "모든 앱")과 창 내용을 어떻게 그릴지 정한다.
 // 관리자 전용(admin_required)은 아이콘을 숨기고, 플러그인 없음(plugin_missing)은 아이콘을 두고
 // 창 안에 안내한다. 이미 열린 창이면 두 경우 모두 창 안에 안내한다.
+// 링크 앱은 주소가 설정되어 있을 때만 보인다. capability를 받기 전에는 열 주소를 모르므로
+// "받기 전에는 모두 보인다"의 예외로 숨긴다.
 export function appAccess(caps: CapabilitiesResponse | null, id: AppId): AppAccess {
+  if (isLinkApp(id)) return linkConfigured(id, caps) ? OPEN : HIDDEN
   return isAddonApp(id) ? addonAccess(caps, id) : OPEN
 }
 

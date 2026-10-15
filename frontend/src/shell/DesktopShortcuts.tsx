@@ -10,8 +10,8 @@ import { placeShortcut, removeShortcut, visibleShortcuts } from '../shortcuts/li
 import { useShortcutStore } from '../shortcuts/store'
 import { APP_IDS, type AppId, getApp, isAppId } from '../windows/apps'
 import type { Point, Rect, Size } from '../windows/geometry'
-import { useWindowStore } from '../windows/store'
 import { GHOST_GRAB } from './appDrawerAnim'
+import { launchApp } from './launchApp'
 import type { ContextMenuAction, ContextMenuItem } from './contextMenu'
 import { DesktopIcon } from './DesktopIcon'
 import { usePointerDrag } from './usePointerDrag'
@@ -126,7 +126,7 @@ export function DesktopShortcuts({ bounds, listRef, ref }: Props) {
     return n > 0 ? n : rowsPerColumn(bounds.height)
   }
 
-  const open = (id: AppId) => useWindowStore.getState().open(id, bounds)
+  const open = (id: AppId) => launchApp(id, bounds)
 
   const press = useRef<Press | null>(null)
   const drawerDrag = useRef<DrawerDrag | null>(null)

@@ -11,21 +11,30 @@ const items: ProfileMenuItem[] = [
   { kind: 'action', id: 'logout', labelKey: 'apps.files', icon: 'folder', group: 'g1' },
   { kind: 'action', id: 'logout', labelKey: 'apps.storage', icon: 'folder', group: 'g1', requires: 'admin' },
   { kind: 'submenu', id: 'language', labelKey: 'apps.systemInfo', icon: 'folder', group: 'g2' },
+  { kind: 'action', id: 'workbench', labelKey: 'apps.workbench', icon: 'folder', group: 'g2', requires: 'workbench' },
 ]
 const keys = (list: ProfileMenuItem[]) => list.map((i) => i.labelKey)
 
 describe('profileMenu', () => {
   it('관리자 전용 항목은 관리자에게만 보인다', () => {
-    expect(keys(visibleItems(items, { username: 'u', admin: false }))).toEqual(['apps.files', 'apps.systemInfo'])
-    expect(keys(visibleItems(items, { username: 'a', admin: true }))).toEqual([
+    expect(keys(visibleItems(items, { admin: false, workbench: false }))).toEqual(['apps.files', 'apps.systemInfo'])
+    expect(keys(visibleItems(items, { admin: true, workbench: false }))).toEqual([
       'apps.files',
       'apps.storage',
       'apps.systemInfo',
     ])
   })
 
+  it('OMV 워크벤치 항목은 주소가 설정되어 있을 때만 보인다', () => {
+    expect(keys(visibleItems(items, { admin: false, workbench: true }))).toEqual([
+      'apps.files',
+      'apps.systemInfo',
+      'apps.workbench',
+    ])
+  })
+
   it('이어진 같은 group끼리 묶는다', () => {
-    expect(groupItems(items).map(keys)).toEqual([['apps.files', 'apps.storage'], ['apps.systemInfo']])
+    expect(groupItems(items).map(keys)).toEqual([['apps.files', 'apps.storage'], ['apps.systemInfo', 'apps.workbench']])
     expect(groupItems([])).toEqual([])
   })
 
@@ -44,5 +53,9 @@ describe('profileMenu', () => {
   it('기본 메뉴에는 언어와 로그아웃이 있다', () => {
     expect(PROFILE_MENU_ITEMS.some((i) => i.id === 'logout' && i.kind === 'action' && !i.requires)).toBe(true)
     expect(PROFILE_MENU_ITEMS.some((i) => i.id === 'language' && i.kind === 'submenu' && !i.requires)).toBe(true)
+  })
+
+  it('OMV 워크벤치 열기는 맨 위 그룹이며 주소가 있을 때만 보인다', () => {
+    expect(PROFILE_MENU_ITEMS[0]).toMatchObject({ kind: 'action', id: 'workbench', requires: 'workbench' })
   })
 })

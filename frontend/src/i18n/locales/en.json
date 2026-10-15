@@ -55,7 +55,8 @@
     "roleAdmin": "Administrator",
     "roleUser": "User",
     "logout": "Sign out",
-    "logoutConfirm": "Sign out? All open windows will be closed."
+    "logoutConfirm": "Sign out? All open windows will be closed.",
+    "openWorkbench": "Open OMV Workbench"
   },
   "apps": {
     "systemInfo": "System Information",
@@ -65,7 +66,8 @@
     "temperature": "Temperature",
     "containers": "Containers",
     "smart": "Disk Health",
-    "services": "Services"
+    "services": "Services",
+    "workbench": "OMV Workbench"
   },
   "sysinfo": {
     "disconnected": "Disconnected — reconnecting…",
