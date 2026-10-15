@@ -1,0 +1,16 @@
+openmediavault logo (favicon.svg)
+
+Copyright (c) Volker Theile <volker.theile@openmediavault.org>
+License: GPL-3.0 (the openmediavault package's debian/copyright lists the
+workbench sources, including this file, under "Files: *" / GPL-3). The full
+license text is in the LICENSE file at the root of this repository.
+
+Source: https://github.com/openmediavault/openmediavault
+  path:   deb/openmediavault/workbench/src/favicon.svg
+  commit: bc3a0ce88b6b450ad7390561565125b87b11246f (last change to this file)
+  sha256: 8b34b5e4eb5330a02971b48e92b06885222da9e9a650cddb6381f41f99287069
+  Identical to /var/www/openmediavault/favicon.svg in openmediavault 8.5.11-1.
+
+The file is kept unmodified. It is used only to refer to openmediavault itself
+(the "OMV Workbench" app that opens the OMV web UI). openmediavault does not
+publish a trademark or logo usage policy; this use does not imply endorsement.

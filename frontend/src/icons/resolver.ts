@@ -1,75 +1,22 @@
 // 아이콘 리졸버. 컴포넌트는 아이콘 경로 대신 freedesktop 아이콘 이름으로 getIcon()을 부른다.
-// 테마를 바꿀 때는 이 파일의 매핑 테이블만 수정한다.
 //
-// 테이블에 import한 파일만 번들에 포함된다. 디렉터리 단위 glob을 쓰면 테마 전체가
-// 실행 파일에 들어가므로, 아이콘을 쓸 때마다 여기에 한 줄씩 추가한다.
+// 아이콘은 출처별 테이블(sources/<출처>.ts)에 두고 여기서 합친다. 기본 출처는 Colloid 테마이고,
+// 테마에 없는 제3자 에셋(브랜드 로고 등)은 vendor/icons/<출처>/에 원본과 출처·라이선스를 두고
+// 출처 테이블을 하나 더 만든다(.claude/rules/icons.md). 테마를 바꿀 때는 출처 테이블만 바꾼다.
+import { COLLOID_ICONS } from './sources/colloid'
+import { OPENMEDIAVAULT_ICONS } from './sources/openmediavault'
+import type { Icon } from './types'
 
-import documentOpen from '@colloid/actions/symbolic/document-open-symbolic.svg?url'
-import editFind from '@colloid/actions/symbolic/edit-find-symbolic.svg?url'
-import listAdd from '@colloid/actions/symbolic/list-add-symbolic.svg?url'
-import listRemove from '@colloid/actions/symbolic/list-remove-symbolic.svg?url'
-import mediaPlaybackStart from '@colloid/actions/symbolic/media-playback-start-symbolic.svg?url'
-import mediaPlaybackStop from '@colloid/actions/symbolic/media-playback-stop-symbolic.svg?url'
-import objectSelect from '@colloid/actions/symbolic/object-select-symbolic.svg?url'
-import panEnd from '@colloid/actions/symbolic/pan-end-symbolic.svg?url'
-import panStart from '@colloid/actions/symbolic/pan-start-symbolic.svg?url'
-import systemLogOut from '@colloid/actions/symbolic/system-log-out-symbolic.svg?url'
-import viewAppGrid from '@colloid/actions/symbolic/view-app-grid-symbolic.svg?url'
-import viewRefresh from '@colloid/actions/symbolic/view-refresh-symbolic.svg?url'
-import viewSortAscending from '@colloid/actions/symbolic/view-sort-ascending-symbolic.svg?url'
-import windowClose from '@colloid/actions/symbolic/window-close-symbolic.svg?url'
-import windowMaximize from '@colloid/actions/symbolic/window-maximize-symbolic.svg?url'
-import windowMinimize from '@colloid/actions/symbolic/window-minimize-symbolic.svg?url'
-import windowRestore from '@colloid/actions/symbolic/window-restore-symbolic.svg?url'
-import gnomeDiskUtility from '@colloid/apps/scalable/org.gnome.DiskUtility.svg?url'
-import preferencesSystemNetworkServer from '@colloid/apps/scalable/preferences-system-network-server.svg?url'
-import preferencesSystemNetworkEthernet from '@colloid/apps/scalable/preferences-system-network-ethernet.svg?url'
-import preferencesVirtualizationContainer from '@colloid/apps/scalable/preferences-virtualization-container.svg?url'
-import thermalMonitor from '@colloid/apps/scalable/thermal-monitor.svg?url'
-import utilitiesSystemMonitor from '@colloid/apps/scalable/utilities-system-monitor.svg?url'
-import preferencesDesktopLocale from '@colloid/categories/symbolic/preferences-desktop-locale-symbolic.svg?url'
-import driveHarddisk from '@colloid/devices/scalable/drive-harddisk.svg?url'
-import folder from '@colloid/places/scalable/folder.svg?url'
-import avatarDefault from '@colloid/status/symbolic/avatar-default-symbolic.svg?url'
+export type { Icon, IconKind } from './types'
 
-// color: 컬러 아이콘. <img>로 그대로 쓴다.
-// symbolic: 단색 -symbolic 아이콘. IconImage가 mask-image로 currentColor를 입힌다.
-export type IconKind = 'color' | 'symbolic'
+// ICON_SOURCES는 출처 id(vendor/icons/<id>/ 폴더 이름) → 아이콘 테이블이다.
+// 출처를 더하면 vendor/icons/README.md에도 절을 추가한다(resolver.test.ts가 검사한다).
+export const ICON_SOURCES = {
+  colloid: COLLOID_ICONS,
+  openmediavault: OPENMEDIAVAULT_ICONS,
+} as const
 
-export interface Icon {
-  url: string
-  kind: IconKind
-}
-
-const ICONS = {
-  'window-close-symbolic': { url: windowClose, kind: 'symbolic' },
-  'window-maximize-symbolic': { url: windowMaximize, kind: 'symbolic' },
-  'window-minimize-symbolic': { url: windowMinimize, kind: 'symbolic' },
-  'window-restore-symbolic': { url: windowRestore, kind: 'symbolic' },
-  'system-log-out-symbolic': { url: systemLogOut, kind: 'symbolic' },
-  'object-select-symbolic': { url: objectSelect, kind: 'symbolic' },
-  'pan-start-symbolic': { url: panStart, kind: 'symbolic' },
-  'pan-end-symbolic': { url: panEnd, kind: 'symbolic' },
-  'list-add-symbolic': { url: listAdd, kind: 'symbolic' },
-  'list-remove-symbolic': { url: listRemove, kind: 'symbolic' },
-  'document-open-symbolic': { url: documentOpen, kind: 'symbolic' },
-  'media-playback-start-symbolic': { url: mediaPlaybackStart, kind: 'symbolic' },
-  'media-playback-stop-symbolic': { url: mediaPlaybackStop, kind: 'symbolic' },
-  'view-refresh-symbolic': { url: viewRefresh, kind: 'symbolic' },
-  'view-app-grid-symbolic': { url: viewAppGrid, kind: 'symbolic' },
-  'edit-find-symbolic': { url: editFind, kind: 'symbolic' },
-  'view-sort-ascending-symbolic': { url: viewSortAscending, kind: 'symbolic' },
-  'preferences-desktop-locale-symbolic': { url: preferencesDesktopLocale, kind: 'symbolic' },
-  'avatar-default-symbolic': { url: avatarDefault, kind: 'symbolic' },
-  'utilities-system-monitor': { url: utilitiesSystemMonitor, kind: 'color' },
-  'preferences-system-network-ethernet': { url: preferencesSystemNetworkEthernet, kind: 'color' },
-  'thermal-monitor': { url: thermalMonitor, kind: 'color' },
-  'preferences-virtualization-container': { url: preferencesVirtualizationContainer, kind: 'color' },
-  'preferences-system-network-server': { url: preferencesSystemNetworkServer, kind: 'color' },
-  'org.gnome.DiskUtility': { url: gnomeDiskUtility, kind: 'color' },
-  'drive-harddisk': { url: driveHarddisk, kind: 'color' },
-  folder: { url: folder, kind: 'color' },
-} as const satisfies Record<string, Icon>
+const ICONS = { ...COLLOID_ICONS, ...OPENMEDIAVAULT_ICONS } as const satisfies Record<string, Icon>
 
 export type IconName = keyof typeof ICONS
 

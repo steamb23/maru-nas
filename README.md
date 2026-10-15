@@ -199,4 +199,4 @@ nas.example.com {
 
 ## 라이선스
 
-`LICENSE` 파일을 참고해 주세요.
+`LICENSE` 파일을 참고해 주세요. 함께 포함된 아이콘 등 제3자 에셋의 출처와 라이선스는 `vendor/icons/README.md`에 정리되어 있습니다.

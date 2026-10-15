@@ -21,7 +21,10 @@ export default defineConfig(({ mode }) => {
     plugins: [react()],
     resolve: {
       alias: {
+        // 기본 아이콘 테마(Colloid)의 원본 SVG.
         '@colloid': fromHere('../vendor/icons/colloid/src'),
+        // 테마 밖 제3자 아이콘 출처(vendor/icons/<출처>/). src/icons/sources/에서만 쓴다.
+        '@vendor-icons': fromHere('../vendor/icons'),
       },
     },
     server: {
