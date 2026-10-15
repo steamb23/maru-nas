@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="209.77" height="80" viewBox="0 0 209.77 80">
+  <!-- 온마루 묶음 로고: 로고(onmaru.svg) + 이름 "온마루" + 로마자 표기 "Onmaru". README 머리 등 글자와 함께 보여 줄 때 쓴다.
+       글꼴은 Pretendard(SIL OFL 1.1)이고 글자는 윤곽선 path로 바꿨다. "온"은 Light에 파랑, "마루"는 Bold로 "마루"를 강조한다.
+       로고 80 기준으로 이름(40, 자간 0.12em) 잉크의 세로 중심을 로고 타일 중심에 맞추고, "Onmaru"(13, 자간 0.08em)는
+       이름 잉크 1.5 아래에 두어 아래 끝이 로고 타일 아래 끝(75) 위에 오게 했다. 글자색은 prefers-color-scheme을 따른다 -->
+  <style>.o{fill:#3c84f7}.n{fill:#1f2328}.r{fill:#5b636e}@media (prefers-color-scheme: dark){.o{fill:#5c9cff}.n{fill:#e6e8eb}.r{fill:#9aa3ad}}</style>
+  <svg x="0" y="0" width="80" height="80" viewBox="0 0 64 64">
+    <defs>
+      <clipPath id="onmaru-tile"><rect x="4" y="4" width="56" height="56" rx="14"/></clipPath>
+      <linearGradient id="onmaru-wall" x1="4" y1="0" x2="60" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#3174e8"/><stop offset="0.143" stop-color="#468cf9"/><stop offset="0.857" stop-color="#468cf9"/><stop offset="1" stop-color="#3174e8"/></linearGradient>
+      <linearGradient id="onmaru-ceil" x1="0" y1="4" x2="0" y2="16" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#1e4eb5"/><stop offset="1" stop-color="#2b63d3"/></linearGradient>
+      <linearGradient id="onmaru-floor" x1="0" y1="40" x2="0" y2="60" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#bfd6ff"/><stop offset="1" stop-color="#9fc0fd"/></linearGradient>
+      <linearGradient id="onmaru-sky" x1="0" y1="16" x2="0" y2="40" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#f1f7ff"/><stop offset="1" stop-color="#ffffff"/></linearGradient>
+      <linearGradient id="onmaru-nas" x1="0" y1="24" x2="0" y2="52" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#4a8ef8"/><stop offset="0.035" stop-color="#2a62d0"/><stop offset="0.07" stop-color="#2257c2"/><stop offset="1" stop-color="#1a479f"/></linearGradient>
+      <linearGradient id="onmaru-shadow" x1="0" y1="52" x2="0" y2="54" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#8cb2fa"/><stop offset="1" stop-color="#9fc0fd"/></linearGradient>
+      <linearGradient id="onmaru-bay" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f7faff"/><stop offset="1" stop-color="#d2e2ff"/></linearGradient>
+      <radialGradient id="onmaru-spill" cx="32" cy="40" r="28" gradientUnits="userSpaceOnUse" gradientTransform="translate(0 22) scale(1 0.45)"><stop offset="0" stop-color="#ffffff" stop-opacity="0.75"/><stop offset="1" stop-color="#ffffff" stop-opacity="0"/></radialGradient>
+      <radialGradient id="onmaru-vignette" cx="32" cy="30" r="40" gradientUnits="userSpaceOnUse"><stop offset="0.5" stop-color="#0b2a66" stop-opacity="0"/><stop offset="1" stop-color="#0b2a66" stop-opacity="0.13"/></radialGradient>
+    </defs>
+    <g clip-path="url(#onmaru-tile)">
+      <rect x="4" y="4" width="56" height="56" fill="url(#onmaru-wall)"/>
+      <polygon points="12,16 52,16 152,-54 -88,-54" fill="url(#onmaru-ceil)"/>
+      <polygon points="12,40 52,40 152,90 -88,90" fill="url(#onmaru-floor)"/>
+      <polygon points="12,40 52,40 152,90 -88,90" fill="url(#onmaru-spill)"/>
+      <rect x="4" y="4" width="56" height="56" fill="url(#onmaru-vignette)"/>
+      <rect x="12" y="16" width="40" height="24" fill="url(#onmaru-sky)"/>
+      <polygon points="16,52 48,52 49.45,54 14.55,54" fill="url(#onmaru-shadow)"/>
+      <rect x="16" y="24" width="32" height="28" rx="1" fill="url(#onmaru-nas)"/>
+      <g fill="url(#onmaru-bay)"><rect x="20" y="28" width="24" height="4" rx="0.6"/><rect x="20" y="36" width="24" height="4" rx="0.6"/><rect x="20" y="44" width="24" height="4" rx="0.6"/></g>
+      <path d="M21.5 29.5h6v1h-6ZM21.5 37.5h6v1h-6ZM21.5 45.5h6v1h-6Z" fill="#3c84f7"/>
+      <path d="M42 29.2a0.8 0.8 0 1 1 0 1.6a0.8 0.8 0 1 1 0-1.6ZM42 37.2a0.8 0.8 0 1 1 0 1.6a0.8 0.8 0 1 1 0-1.6ZM42 45.2a0.8 0.8 0 1 1 0 1.6a0.8 0.8 0 1 1 0-1.6Z" fill="#3c84f7"/>
+      <circle cx="44.5" cy="26" r="1.2" fill="#f5a524"/>
+      <rect x="4.5" y="4.5" width="55" height="55" rx="13.5" fill="none" stroke="#0b2a66" stroke-opacity="0.08"/>
+    </g>
+  </svg>
+  <path class="o" d="M125.41 41.25H110.95V37.34C117.59 37.07 121.73 34.63 121.73 30.59C121.73 26.37 117.05 23.79 109.66 23.79C102.24 23.79 97.59 26.37 97.59 30.59C97.59 34.65 101.75 37.11 108.49 37.34V41.25H94V43.36H125.41ZM121.93 54.3H100.64V46.37H98.14V56.37H121.93ZM109.66 25.86C115.45 25.86 119.23 27.73 119.23 30.59C119.23 33.55 115.45 35.35 109.66 35.35C103.88 35.35 100.09 33.55 100.13 30.59C100.09 27.73 103.88 25.86 109.66 25.86Z"/>
+  <path class="n" d="M151.1 25.55H134.03V49.06H151.1ZM138.96 29.45H146.14V45.12H138.96ZM160.95 22.19H155.95V57.73H160.95V39.73H166.18V35.59H160.95ZM201.02 23.28H175.98V27.3H195.9V30.12H176.1V40.82H201.84V36.84H181.14V33.87H201.02ZM204.77 43.48H172.23V47.46H185.94V57.81H190.94V47.46H204.77Z"/>
+  <path class="r" d="M131.51 64.04C131.51 61.04 129.65 59.31 127.22 59.31C124.77 59.31 122.92 61.04 122.92 64.04C122.92 67.02 124.77 68.76 127.22 68.76C129.65 68.76 131.51 67.03 131.51 64.04ZM129.57 64.04C129.57 66 128.64 67.07 127.22 67.07C125.8 67.07 124.86 66 124.86 64.04C124.86 62.07 125.8 61 127.22 61C128.64 61 129.57 62.07 129.57 64.04ZM135.77 64.64C135.77 63.73 136.3 63.21 137.09 63.21C137.86 63.21 138.33 63.72 138.33 64.57V68.63H140.2V64.24C140.21 62.63 139.26 61.65 137.82 61.65C136.81 61.65 136.07 62.14 135.75 62.94H135.68V61.74H133.89V68.63H135.77ZM142.7 68.63H144.57V64.49C144.57 63.71 145.07 63.2 145.7 63.2C146.34 63.2 146.77 63.63 146.77 64.31V68.63H148.6V64.42C148.6 63.69 149.01 63.2 149.72 63.2C150.34 63.2 150.8 63.58 150.8 64.37V68.63H152.67V64C152.67 62.5 151.79 61.65 150.5 61.65C149.49 61.65 148.71 62.16 148.42 62.94H148.36C148.13 62.14 147.43 61.65 146.48 61.65C145.55 61.65 144.85 62.14 144.56 62.94H144.49V61.74H142.7ZM154.83 66.7C154.83 68.07 155.81 68.76 157.13 68.76C158.16 68.76 158.81 68.31 159.15 67.68H159.2V68.63H160.98V63.98C160.98 62.32 159.55 61.65 158.06 61.65C156.23 61.65 155.19 62.59 155.07 63.78H156.86C156.96 63.31 157.37 63.02 158.01 63.02C158.7 63.02 159.1 63.36 159.11 63.93V64.49C158.82 64.5 157.89 64.55 157.4 64.58C156.08 64.66 154.83 65.17 154.83 66.7ZM156.63 66.65C156.63 66.12 157.05 65.81 157.7 65.75C158.02 65.72 158.82 65.67 159.11 65.66V66.17C159.12 66.89 158.51 67.46 157.66 67.46C157.07 67.46 156.63 67.18 156.63 66.65ZM163.45 68.63H165.33V64.71C165.33 63.87 165.95 63.27 166.8 63.27C167.07 63.27 167.42 63.32 167.6 63.38V61.7C167.44 61.66 167.2 61.64 167.01 61.64C166.23 61.64 165.6 62.08 165.34 62.93H165.27V61.74H163.45ZM173.97 65.7C173.97 66.64 173.33 67.13 172.64 67.13C171.9 67.13 171.44 66.61 171.44 65.8V61.74H169.56V66.13C169.56 67.74 170.5 68.72 171.88 68.72C172.92 68.72 173.66 68.19 173.97 67.39H174.05V68.63H175.85V61.74H173.97Z"/>
+</svg>

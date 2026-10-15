@@ -1,6 +1,4 @@
-<img src="frontend/src/assets/logo/onmaru.svg" alt="" width="96" height="96">
-
-# 온마루 (Onmaru)
+# <img src="frontend/src/assets/logo/onmaru-lockup.svg" alt="온마루 (Onmaru)" height="80">
 
 > A suspiciously normal desktop-like dashboard for openmediavault.
 
