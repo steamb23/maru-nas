@@ -139,4 +139,51 @@ describe('createPoller', () => {
     expect(t.fn).toHaveBeenCalledTimes(3)
     t.poller.stop()
   })
+  it('intervalMs가 함수면 예약할 때마다 다시 읽는다', async () => {
+    const f = fakeFetch()
+    let interval = 5000
+    const poller = createPoller({ fetch: f.fn, intervalMs: () => interval, timeoutMs: TIMEOUT, onData: vi.fn(), onError: vi.fn() })
+    poller.start()
+    f.last().resolve(1)
+    await vi.advanceTimersByTimeAsync(0)
+    interval = 2000
+    // 이미 잡힌 예약은 그대로다.
+    await vi.advanceTimersByTimeAsync(4999)
+    expect(f.fn).toHaveBeenCalledTimes(1)
+    await vi.advanceTimersByTimeAsync(1)
+    expect(f.fn).toHaveBeenCalledTimes(2)
+    f.last().resolve(2)
+    await vi.advanceTimersByTimeAsync(2000)
+    expect(f.fn).toHaveBeenCalledTimes(3)
+    poller.stop()
+  })
+
+  it('reschedule은 마지막 응답 시각 기준으로 지금 주기에 맞춰 다시 예약한다', async () => {
+    const f = fakeFetch()
+    let interval = 5000
+    const poller = createPoller({ fetch: f.fn, intervalMs: () => interval, timeoutMs: TIMEOUT, onData: vi.fn(), onError: vi.fn() })
+    poller.start()
+    f.last().resolve(1)
+    await vi.advanceTimersByTimeAsync(1000)
+    interval = 2000
+    poller.reschedule()
+    await vi.advanceTimersByTimeAsync(999)
+    expect(f.fn).toHaveBeenCalledTimes(1)
+    await vi.advanceTimersByTimeAsync(1)
+    expect(f.fn).toHaveBeenCalledTimes(2)
+
+    // 이미 주기가 지났으면 바로 요청한다.
+    f.last().resolve(2)
+    interval = 5000
+    await vi.advanceTimersByTimeAsync(3000)
+    interval = 2000
+    poller.reschedule()
+    await vi.advanceTimersByTimeAsync(0)
+    expect(f.fn).toHaveBeenCalledTimes(3)
+
+    // 요청 중이면 아무것도 하지 않는다.
+    poller.reschedule()
+    expect(f.fn).toHaveBeenCalledTimes(3)
+    poller.stop()
+  })
 })

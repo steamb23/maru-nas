@@ -1,5 +1,6 @@
 import { fetchAddon } from '../../api/client'
 import type { StorageResponse } from '../../api/types.gen'
+import { DEFAULT_TIMEOUT_MS, createSharedPoll } from '../common/sharedPoll'
 import { type PolledData, usePolledData } from '../common/usePolledData'
 import { isStorageResponse } from './storage'
 
@@ -7,8 +8,11 @@ import { isStorageResponse } from './storage'
 export const STORAGE_POLL_INTERVAL_MS = 15_000
 export const STORAGE_WIDGET_POLL_INTERVAL_MS = 60_000
 
-const fetchStorage = (signal: AbortSignal) => fetchAddon('storage', isStorageResponse, { signal })
+const storagePoll = createSharedPoll({
+  fetch: (signal) => fetchAddon('storage', isStorageResponse, { signal }),
+  timeoutMs: DEFAULT_TIMEOUT_MS,
+})
 
 export function useStorage(active: boolean, intervalMs = STORAGE_POLL_INTERVAL_MS): PolledData<StorageResponse> {
-  return usePolledData(fetchStorage, active, intervalMs)
+  return usePolledData(storagePoll, active, intervalMs)
 }

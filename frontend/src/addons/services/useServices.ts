@@ -1,5 +1,6 @@
 import { fetchAddon } from '../../api/client'
 import type { ServicesResponse } from '../../api/types.gen'
+import { DEFAULT_TIMEOUT_MS, createSharedPoll } from '../common/sharedPoll'
 import { type PolledData, usePolledData } from '../common/usePolledData'
 import { isServicesResponse } from './services'
 
@@ -7,8 +8,11 @@ import { isServicesResponse } from './services'
 export const SERVICES_POLL_INTERVAL_MS = 10_000
 export const SERVICES_WIDGET_POLL_INTERVAL_MS = 30_000
 
-const fetchServices = (signal: AbortSignal) => fetchAddon('services', isServicesResponse, { signal })
+const servicesPoll = createSharedPoll({
+  fetch: (signal, refresh) => fetchAddon('services', isServicesResponse, { signal, refresh }),
+  timeoutMs: DEFAULT_TIMEOUT_MS,
+})
 
 export function useServices(active: boolean, intervalMs = SERVICES_POLL_INTERVAL_MS): PolledData<ServicesResponse> {
-  return usePolledData(fetchServices, active, intervalMs)
+  return usePolledData(servicesPoll, active, intervalMs)
 }

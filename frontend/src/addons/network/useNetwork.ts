@@ -1,10 +1,10 @@
-import { useRef } from 'react'
 import { fetchAddon } from '../../api/client'
 import type { NetworkResponse } from '../../api/types.gen'
+import { DEFAULT_TIMEOUT_MS, createSharedPoll } from '../common/sharedPoll'
 import { type PolledState, usePolledData } from '../common/usePolledData'
 import { type Rate, computeRates, isNetworkResponse } from './network'
 
-// 속도는 보기마다 직전 응답과의 차이로 계산하므로 창·위젯이 서로 영향을 주지 않는다.
+// 창과 위젯이 요청을 함께 쓰고, 속도는 보기마다 자기가 받은 직전 응답과의 차이로 계산한다.
 export const NETWORK_POLL_INTERVAL_MS = 2000
 export const NETWORK_WIDGET_POLL_INTERVAL_MS = 5000
 
@@ -14,14 +14,17 @@ export interface NetworkSample {
   rates: Map<string, Rate>
 }
 
+const networkPoll = createSharedPoll({
+  fetch: (signal) => fetchAddon('network', isNetworkResponse, { signal }),
+  timeoutMs: DEFAULT_TIMEOUT_MS,
+})
+
+const toSample = (prev: NetworkSample | null, response: NetworkResponse): NetworkSample => ({
+  response,
+  rates: computeRates(prev?.response ?? null, response),
+})
+
 export function useNetwork(active: boolean, intervalMs = NETWORK_POLL_INTERVAL_MS): PolledState<NetworkSample> {
-  const prev = useRef<NetworkResponse | null>(null)
-  const fetchSample = async (signal: AbortSignal): Promise<NetworkSample> => {
-    const response = await fetchAddon('network', isNetworkResponse, { signal })
-    const rates = computeRates(prev.current, response)
-    prev.current = response
-    return { response, rates }
-  }
-  const { data, status } = usePolledData(fetchSample, active, intervalMs)
+  const { data, status } = usePolledData(networkPoll, active, intervalMs, toSample)
   return { data, status }
 }

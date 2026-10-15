@@ -1,5 +1,6 @@
 import { fetchAddon } from '../../api/client'
 import type { ContainersResponse } from '../../api/types.gen'
+import { createSharedPoll } from '../common/sharedPoll'
 import { type PolledData, usePolledData } from '../common/usePolledData'
 import { isContainersResponse } from './containers'
 
@@ -8,11 +9,14 @@ export const CONTAINERS_POLL_INTERVAL_MS = 15_000
 export const CONTAINERS_WIDGET_POLL_INTERVAL_MS = 30_000
 const CONTAINERS_TIMEOUT_MS = 20_000
 
-const fetchContainers = (signal: AbortSignal) => fetchAddon('containers', isContainersResponse, { signal })
+const containersPoll = createSharedPoll({
+  fetch: (signal, refresh) => fetchAddon('containers', isContainersResponse, { signal, refresh }),
+  timeoutMs: CONTAINERS_TIMEOUT_MS,
+})
 
 export function useContainers(
   active: boolean,
   intervalMs = CONTAINERS_POLL_INTERVAL_MS,
 ): PolledData<ContainersResponse> {
-  return usePolledData(fetchContainers, active, intervalMs, CONTAINERS_TIMEOUT_MS)
+  return usePolledData(containersPoll, active, intervalMs)
 }

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { fetchAddon } from '../../api/client'
 import type { SmartResponse } from '../../api/types.gen'
+import { createSharedPoll } from '../common/sharedPoll'
 import { type PolledData, usePolledData } from '../common/usePolledData'
 import { isSmartResponse } from './smart'
 
@@ -22,8 +23,10 @@ const fetchSmart = async (signal: AbortSignal, refresh: boolean): Promise<SmartS
   return { response, refreshAfterMs: Date.now() + response.refreshInSeconds * 1000 }
 }
 
+const smartPoll = createSharedPoll({ fetch: fetchSmart, timeoutMs: SMART_TIMEOUT_MS })
+
 export function useSmart(active: boolean): PolledData<SmartSample> {
-  return usePolledData(fetchSmart, active, SMART_POLL_INTERVAL_MS, SMART_TIMEOUT_MS)
+  return usePolledData(smartPoll, active, SMART_POLL_INTERVAL_MS)
 }
 
 // useRefreshReady는 새로고침할 수 있는 시각이 지났는지다. 남은 시간이 지나면 다시 그린다.
