@@ -6,6 +6,7 @@ import documentOpen from '@colloid/actions/symbolic/document-open-symbolic.svg?u
 import editCopy from '@colloid/actions/symbolic/edit-copy-symbolic.svg?url'
 import editDelete from '@colloid/actions/symbolic/edit-delete-symbolic.svg?url'
 import editFind from '@colloid/actions/symbolic/edit-find-symbolic.svg?url'
+import externalLink from '@colloid/actions/symbolic/external-link-symbolic.svg?url'
 import hamburgerMenu from '@colloid/actions/symbolic/hamburger-menu-symbolic.svg?url'
 import helpAbout from '@colloid/actions/symbolic/help-about-symbolic.svg?url'
 import listAdd from '@colloid/actions/symbolic/list-add-symbolic.svg?url'
@@ -64,6 +65,7 @@ export const COLLOID_ICONS = {
   'hamburger-menu-symbolic': { url: hamburgerMenu, kind: 'symbolic' },
   'edit-delete-symbolic': { url: editDelete, kind: 'symbolic' },
   'edit-copy-symbolic': { url: editCopy, kind: 'symbolic' },
+  'external-link-symbolic': { url: externalLink, kind: 'symbolic' },
   'help-about-symbolic': { url: helpAbout, kind: 'symbolic' },
   'system-lock-screen-symbolic': { url: systemLockScreen, kind: 'symbolic' },
   'preferences-desktop-appearance-symbolic': { url: preferencesDesktopAppearance, kind: 'symbolic' },

@@ -1,0 +1,60 @@
+/* 설정의 프로필 페이지(ProfilePage.tsx). */
+.profile-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px 20px;
+  margin-bottom: 20px;
+}
+
+/* 큰 아바타. 누르면 사진을 고른다. */
+.profile-photo {
+  flex: none;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+}
+
+.profile-photo:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.profile-photo:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 60%, transparent);
+  outline-offset: 3px;
+}
+
+.profile-head-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.profile-head-name {
+  overflow: hidden;
+  font-size: 18px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.profile-head-role {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.profile-head .settings-actions {
+  margin-top: 8px;
+}
+
+.profile-omv-icon {
+  margin-right: 6px;
+  vertical-align: -2px;
+}
+
+/* 저장 버튼 옆 안내. 버튼과 같은 줄에 두므로 위 여백을 없앤다. */
+.profile-save-hint {
+  margin: 0;
+}

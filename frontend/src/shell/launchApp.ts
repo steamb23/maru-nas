@@ -4,7 +4,7 @@
 import { useCapabilitiesStore } from '../addons/capabilities'
 import { type AppId, type LinkAppId, isLinkApp } from '../windows/apps'
 import type { Size } from '../windows/geometry'
-import { LINK_TAB_NAMES, linkHref } from '../windows/links'
+import { LINK_TAB_NAMES, linkHref, workbenchHref } from '../windows/links'
 import { useWindowStore } from '../windows/store'
 import { confirmLinkOpen } from './linkNoticeDialog'
 
@@ -15,6 +15,13 @@ import { confirmLinkOpen } from './linkNoticeDialog'
 export function openLink(id: LinkAppId): void {
   const href = linkHref(id, useCapabilitiesStore.getState().caps, document.baseURI)
   if (href) confirmLinkOpen(id, () => window.open(href, LINK_TAB_NAMES[id]))
+}
+
+// openWorkbenchRoute는 OMV 워크벤치의 특정 화면(route)을 워크벤치 앱과 같은 이름 붙은 탭으로 연다.
+// 열기 전 안내와 팝업 차단 회피는 openLink와 같다.
+export function openWorkbenchRoute(route: string): void {
+  const href = workbenchHref(useCapabilitiesStore.getState().caps?.workbenchUrl, document.baseURI, route)
+  if (href) confirmLinkOpen('workbench', () => window.open(href, LINK_TAB_NAMES.workbench))
 }
 
 export function launchApp(id: AppId, bounds: Size): void {

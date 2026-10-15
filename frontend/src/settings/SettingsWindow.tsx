@@ -1,7 +1,7 @@
 // 설정 앱 창. 왼쪽 사이드바(사용자 카드, 그룹별 페이지 목록)와 오른쪽 페이지 내용으로 나뉜다.
 // 창이 좁으면(pages.ts의 SETTINGS_NARROW_WIDTH 미만) 사이드바를 숨기고, 내용 머리의 메뉴 단추로
 // 사이드바를 내용 위에 덮어 연다. 이때 내용은 입력을 받지 않고, 바깥 누르기·Esc·페이지 고르기로 닫힌다.
-import { type KeyboardEvent, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { type KeyboardEvent, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { WindowViewProps } from '../addons/types'
 import { useAuthStore } from '../auth/store'
@@ -15,7 +15,7 @@ import { useSettingsNavStore } from './navStore'
 import { SETTINGS_PAGE_VIEWS } from './pageViews'
 import { SETTINGS_NARROW_WIDTH, type SettingsPageId, groupPages, resolvePage, visiblePages } from './pages'
 
-const { show, reset } = useSettingsNavStore.getState()
+const { show } = useSettingsNavStore.getState()
 
 // play는 el을 지금 보이는 모습에서 to로 움직인다. 열기·닫기가 겹치면 이어서 움직인다.
 function play(el: Element | null, from: Keyframe, to: Keyframe, opening: boolean, onFinish?: () => void) {
@@ -53,9 +53,6 @@ export function SettingsWindow(_props: WindowViewProps) {
   const prevOpen = useRef(false)
   // 닫은 뒤 메뉴 단추로 포커스를 돌려줄지. 닫는 순간에는 내용이 아직 inert라 포커스할 수 없어 그린 뒤에 옮긴다.
   const focusButton = useRef(false)
-
-  // 창이 닫히면 다음에 기본 페이지로 열리게 한다.
-  useEffect(() => reset, [])
 
   // 창 너비로 좁은 배치를 정한다. 넓어지면 덮어 연 사이드바는 닫힌 것으로 본다(다시 좁아져도 열려 있지 않게).
   useLayoutEffect(() => {
@@ -119,7 +116,7 @@ export function SettingsWindow(_props: WindowViewProps) {
       closeNav(true)
       return
     }
-    moveFocus(navRef.current, '.settings-nav-item', e)
+    moveFocus(navRef.current, '.settings-user, .settings-nav-item', e)
   }
 
   const overlay = narrow && (navOpen || navClosing)
@@ -136,14 +133,21 @@ export function SettingsWindow(_props: WindowViewProps) {
         inert={navClosing}
         onKeyDown={onNavKeyDown}
       >
+        {/* 사용자 카드. 누르면 프로필 페이지(pages.ts의 nav: 'card')로 간다. */}
         {user && (
-          <div className="settings-user">
+          <button
+            type="button"
+            className="settings-user"
+            title={t('profile.openProfile')}
+            aria-current={current.id === 'profile' ? 'page' : undefined}
+            onClick={() => select('profile')}
+          >
             <ProfileAvatar user={user} size={40} />
-            <div className="settings-user-text">
+            <span className="settings-user-text">
               <span className="settings-user-name">{user.username}</span>
               <span className="settings-user-role">{admin ? t('profile.roleAdmin') : t('profile.roleUser')}</span>
-            </div>
-          </div>
+            </span>
+          </button>
         )}
         {groups.map((g) => (
           <div

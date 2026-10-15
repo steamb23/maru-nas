@@ -4,11 +4,13 @@ import { AboutPage } from './AboutPage'
 import { DefaultScreenPage } from './DefaultScreenPage'
 import { GeneralPage } from './GeneralPage'
 import { LoginScreenPage } from './LoginScreenPage'
+import { ProfilePage } from './ProfilePage'
 import { ScreenPage } from './ScreenPage'
 import { ServerPage } from './ServerPage'
 import type { SettingsPageId } from './pages'
 
 export const SETTINGS_PAGE_VIEWS: Record<SettingsPageId, ComponentType> = {
+  profile: ProfilePage,
   screen: ScreenPage,
   general: GeneralPage,
   'login-screen': LoginScreenPage,

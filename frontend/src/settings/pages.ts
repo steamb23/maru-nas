@@ -5,9 +5,9 @@
 import type { ParseKeys } from 'i18next'
 import type { IconName } from '../icons/resolver'
 
-export type SettingsPageId = 'screen' | 'general' | 'login-screen' | 'default-screen' | 'server' | 'about'
+export type SettingsPageId = 'profile' | 'screen' | 'general' | 'login-screen' | 'default-screen' | 'server' | 'about'
 
-export type SettingsGroupId = 'user' | 'admin' | 'info'
+export type SettingsGroupId = 'account' | 'user' | 'admin' | 'info'
 
 export interface SettingsPageDef {
   id: SettingsPageId
@@ -16,16 +16,26 @@ export interface SettingsPageDef {
   group: SettingsGroupId
   // admin이면 관리자에게만 보인다. 전역에 적용되는 설정이다(백엔드도 관리자가 아니면 403으로 막는다).
   requires?: 'admin'
+  // card면 사이드바 목록에 넣지 않고 사이드바 위 사용자 카드로 연다(프로필).
+  nav?: 'card'
 }
 
 // 그룹 머리글의 번역 키. null이면 머리글 없이 구분선만 둔다.
 export const SETTINGS_GROUP_LABELS: Record<SettingsGroupId, ParseKeys | null> = {
+  account: null,
   user: 'settings.groups.user',
   admin: 'settings.groups.admin',
   info: null,
 }
 
 export const SETTINGS_PAGES: readonly SettingsPageDef[] = [
+  {
+    id: 'profile',
+    labelKey: 'settings.pages.profile',
+    icon: 'avatar-default-symbolic',
+    group: 'account',
+    nav: 'card',
+  },
   {
     id: 'screen',
     labelKey: 'settings.pages.screen',
@@ -78,10 +88,12 @@ export interface PageGroup {
   pages: SettingsPageDef[]
 }
 
-// groupPages는 이어진 같은 그룹의 페이지를 묶는다. 페이지가 없는 그룹은 생기지 않는다.
+// groupPages는 사이드바 목록에 넣을 페이지를 이어진 같은 그룹끼리 묶는다. 페이지가 없는 그룹은 생기지 않고,
+// 사용자 카드로 여는 페이지(nav: 'card')는 넣지 않는다.
 export function groupPages(pages: readonly SettingsPageDef[]): PageGroup[] {
   const groups: PageGroup[] = []
   for (const p of pages) {
+    if (p.nav === 'card') continue
     const last = groups.at(-1)
     if (last && last.id === p.group) last.pages.push(p)
     else groups.push({ id: p.group, labelKey: SETTINGS_GROUP_LABELS[p.group], pages: [p] })
@@ -89,7 +101,7 @@ export function groupPages(pages: readonly SettingsPageDef[]): PageGroup[] {
   return groups
 }
 
-// resolvePage는 요청한 페이지가 보이면 그 페이지, 아니면(관리자가 아닌 사용자 등) 보이는 첫 페이지다.
+// resolvePage는 요청한 페이지가 보이면 그 페이지, 아니면(관리자가 아닌 사용자 등) 기본 페이지다.
 export function resolvePage(requested: SettingsPageId, pages: readonly SettingsPageDef[]): SettingsPageDef {
-  return pages.find((p) => p.id === requested) ?? pages[0]
+  return pages.find((p) => p.id === requested) ?? pages.find((p) => p.id === DEFAULT_SETTINGS_PAGE) ?? pages[0]
 }

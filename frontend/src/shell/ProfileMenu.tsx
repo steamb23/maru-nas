@@ -238,15 +238,15 @@ export function ProfileMenu({ onOpenSettings }: { onOpenSettings: (page: Setting
           inert={closing}
           onKeyDown={onMenuKeyDown}
         >
-          {/* 머리글을 누르면 설정의 화면 페이지를 연다. 화살표로 옮겨 갈 수 있게 메뉴 항목으로 둔다. */}
+          {/* 머리글을 누르면 설정의 프로필 페이지를 연다. 화살표로 옮겨 갈 수 있게 메뉴 항목으로 둔다. */}
           <button
             type="button"
             role="menuitem"
             className="profile-menu-header"
-            title={t('profile.openSettings')}
+            title={t('profile.openProfile')}
             onClick={() => {
               close(false)
-              onOpenSettings('screen')
+              onOpenSettings('profile')
             }}
           >
             <ProfileAvatar user={user} size={36} />

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { CapabilitiesResponse } from '../api/types.gen'
-import { linkConfigured, linkHref, workbenchHref } from './links'
+import { linkConfigured, linkHref, userEditRoute, workbenchHref } from './links'
 
 const caps = (workbenchUrl?: string): CapabilitiesResponse => ({ addons: [], plugins: [], workbenchUrl })
 
@@ -40,5 +40,15 @@ describe('linkHref·linkConfigured', () => {
     expect(linkConfigured('workbench', caps('https://vault.example.lan/'))).toBe(true)
     expect(linkHref('workbench', null, 'https://nas.example.lan/')).toBeNull()
     expect(linkHref('workbench', caps('/'), 'https://nas.example.lan/desk/')).toBe('https://nas.example.lan/#/')
+  })
+})
+
+describe('userEditRoute', () => {
+  it('OMV 사용자 편집 라우트를 사용자 이름을 인코딩해 만든다', () => {
+    const base = 'https://nas.example.lan/desk/'
+    expect(workbenchHref('https://nas.example.lan/', base, userEditRoute('totp'))).toBe(
+      'https://nas.example.lan/#/usermgmt/users/edit/totp',
+    )
+    expect(userEditRoute('a b/c')).toBe('usermgmt/users/edit/a%20b%2Fc')
   })
 })

@@ -58,7 +58,7 @@
     "logout": "Sign out",
     "logoutConfirm": "Sign out? All open windows will be closed.",
     "openWorkbench": "Open OMV Workbench",
-    "openSettings": "Open settings"
+    "openProfile": "Open profile"
   },
   "apps": {
     "systemInfo": "System Information",
@@ -259,7 +259,8 @@
       "loginScreen": "Login screen",
       "defaultScreen": "Default screen",
       "server": "Server",
-      "about": "About"
+      "about": "About",
+      "profile": "Profile"
     },
     "about": {
       "build": "Version information",
@@ -373,7 +374,44 @@
         "zoom": "Zoom",
         "hint": "Drag to position the photo. The circle becomes your profile photo.",
         "save": "Save"
-      }
+      },
+      "changePhoto": "Change photo…",
+      "removePhoto": "Remove photo",
+      "removePhotoConfirm": "Remove your profile photo? The default avatar will be shown instead.",
+      "account": "Account",
+      "loadFailed": "Couldn't load your account information from OMV.",
+      "username": "Username",
+      "role": "Role",
+      "email": "Email",
+      "groups": "Groups",
+      "none": "(none)",
+      "readOnly": {
+        "system": "This is a built-in OMV system account, so its email and tags can't be changed.",
+        "locked": "Changes to this account are disabled in OMV."
+      },
+      "saving": "Saving…",
+      "savedApplied": "Saved and applied in OMV.",
+      "savedPending": "Saved. OMV now has a pending change; an administrator needs to apply it in the OMV web UI.",
+      "saveConfigDirty": "Not saved: OMV has changes that haven't been applied yet. Apply them in the OMV web UI first.",
+      "saveApplyFailed": "Your account information was changed, but applying it in OMV failed. Apply it in the OMV web UI.",
+      "saveBusy": "Your previous change is still being saved.",
+      "saveFailed": "Couldn't save your account information.",
+      "omv": "OMV account",
+      "editInOmv": "Edit in OMV",
+      "omvHintAdmin": "Change the password, groups and more on the OMV user edit page. It opens in a new tab.",
+      "omvHintSystem": "The built-in OMV administrator account isn't listed in OMV user management.",
+      "omvHintNoWorkbench": "Set the OMV Workbench address in Server settings to open the OMV user edit page from here.",
+      "omvHintUser": "An administrator can change your password and other account details in the OMV web UI.",
+      "tags": "Tags",
+      "tagsDesc": "Same as Tags in OMV user management. Separate tags with a comma or Enter.",
+      "addTag": "Add a tag",
+      "removeTag": "Remove tag {{tag}}",
+      "emailPlaceholder": "name@example.com",
+      "emailInvalid": "That doesn't look like an email address.",
+      "tagsInvalid": "Tags can't contain commas (,) or colons (:), and together must be 255 bytes and 32 tags or fewer.",
+      "invalid": "Check the email address and tags.",
+      "saveDescAdmin": "Saving applies the change in OMV right away.",
+      "saveDescUser": "After saving, an administrator applies the pending change in the OMV web UI."
     }
   },
   "appearance": {

@@ -1,0 +1,94 @@
+/* 태그 입력(TagInput.tsx). 칩과 입력 상자를 한 상자에 둔다. */
+.tag-input {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  width: 300px;
+  max-width: 100%;
+  min-height: 32px;
+  padding: 3px 4px;
+  border: 1px solid var(--window-border);
+  border-radius: 6px;
+  background: var(--window-bg);
+}
+
+.tag-input:focus-within {
+  outline: 2px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  outline-offset: 1px;
+}
+
+.tag-input[aria-disabled] {
+  opacity: 0.6;
+}
+
+.tag-list {
+  display: contents;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  max-width: 100%;
+  padding: 1px 2px 1px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  font-size: 12px;
+}
+
+.tag-chip > span {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.tag-remove {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+}
+
+.tag-remove:hover:not(:disabled),
+.tag-remove:focus-visible {
+  background: var(--hover-bg);
+  outline: none;
+}
+
+.tag-input-text {
+  flex: 1 1 80px;
+  min-width: 80px;
+  padding: 3px 4px;
+  border: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+}
+
+.tag-input-text:focus {
+  outline: none;
+}
+
+/* 바꿀 수 없을 때 태그만 보여 준다. */
+.tag-view {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tag-view .tag-chip {
+  padding-right: 8px;
+}

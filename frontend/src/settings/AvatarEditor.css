@@ -23,9 +23,10 @@
   cursor: grabbing;
 }
 
+/* 대화상자 본문이 스크롤 영역이라 바깥 테두리는 잘리므로 안쪽에 그린다. */
 .avatar-editor-view:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--accent) 60%, transparent);
-  outline-offset: 2px;
+  outline: 3px solid var(--accent);
+  outline-offset: -3px;
 }
 
 .avatar-editor-canvas {

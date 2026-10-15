@@ -7,11 +7,16 @@ describe('visiblePages', () => {
   })
 
   it('일반 사용자에게는 관리자 전용 페이지를 숨긴다', () => {
-    expect(visiblePages({ admin: false }).map((p) => p.id)).toEqual(['screen', 'general', 'about'])
+    expect(visiblePages({ admin: false }).map((p) => p.id)).toEqual(['profile', 'screen', 'general', 'about'])
   })
 })
 
 describe('groupPages', () => {
+  it('사용자 카드로 여는 프로필은 목록에 넣지 않는다', () => {
+    const ids = groupPages(visiblePages({ admin: true })).flatMap((g) => g.pages.map((p) => p.id))
+    expect(ids).not.toContain('profile')
+  })
+
   it('이어진 같은 그룹끼리 묶고 머리글 키를 붙인다', () => {
     const groups = groupPages(visiblePages({ admin: true }))
     expect(groups.map((g) => [g.id, g.labelKey, g.pages.length])).toEqual([

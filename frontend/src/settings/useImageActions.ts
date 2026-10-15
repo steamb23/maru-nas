@@ -30,11 +30,18 @@ export function useImageActions() {
     }
   }
 
-  // remove는 한 번 물은 뒤 send로 지우고 done을 부른다.
-  const remove = async (send: () => Promise<void>, done: () => void) => {
+  // remove는 한 번 물은 뒤 send로 지우고 done을 부른다. 묻는 문구는 text로 바꿀 수 있다(기본은 배경 이미지).
+  const remove = async (
+    send: () => Promise<void>,
+    done: () => void,
+    text: { title: ParseKeys; message: ParseKeys } = {
+      title: 'settings.image.delete',
+      message: 'settings.image.deleteConfirm',
+    },
+  ) => {
     const ok = await dialogs.confirm({
-      title: t('settings.image.delete'),
-      message: t('settings.image.deleteConfirm'),
+      title: t(text.title),
+      message: t(text.message),
       confirmLabel: t('settings.image.deleteButton'),
       danger: true,
     })
