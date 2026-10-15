@@ -37,10 +37,13 @@ export function Desktop() {
     ],
     accept: (e) => e.target === e.currentTarget || e.target === iconsRef.current,
   })
-  // 데스크톱 범위 모달. 열려 있으면 창·위젯·아이콘·작업표시줄을 모두 막고, 열린 컨텍스트 메뉴는 닫는다.
+  // 데스크톱 범위 모달. 열려 있으면 창·위젯·아이콘·작업표시줄을 모두 막고, 열린 컨텍스트 메뉴와 진행 중인
+  // 바로가기 끌기는 끝낸다.
   const { setHost: setModalHost, layer: modalLayer, blocked } = useModalHost()
   useEffect(() => {
-    if (blocked) useContextMenuStore.getState().close()
+    if (!blocked) return
+    useContextMenuStore.getState().close()
+    shortcutsRef.current?.cancelDrag()
   }, [blocked])
   // 데스크톱 영역(작업표시줄 제외) 크기. 창 위치 제한의 기준이다.
   const [bounds, setBounds] = useState<Size>(() => ({ width: window.innerWidth, height: window.innerHeight }))

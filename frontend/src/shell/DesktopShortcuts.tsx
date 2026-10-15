@@ -1,21 +1,30 @@
-// 바탕화면 바로가기: 사용자가 고른 앱 아이콘을 왼쪽 위부터 열 단위로 놓는다. 위젯 레이어와 창 아래에 그린다.
-// 목록은 shortcuts/store.ts(사용자별 저장), 순서 계산은 shortcuts/list.ts가 한다.
-import { type PointerEvent, type Ref, type RefObject, useEffect, useImperativeHandle, useRef } from 'react'
+// 바탕화면 바로가기: 사용자가 고른 앱 아이콘을 왼쪽 위부터 열 단위로 놓는다. 위젯 레이어와 창 아래에 그리고,
+// 끄는 동안만 창 위로 올라온다. 끌어서 순서를 바꾼다.
+// 목록은 shortcuts/store.ts(사용자별 저장), 순서 계산은 shortcuts/list.ts, 칸 계산은 shortcuts/layout.ts가 한다.
+import { type Ref, type RefObject, useEffect, useImperativeHandle, useRef, useState } from 'react'
+import { flushSync } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { appAccess, useCapabilitiesStore } from '../addons/capabilities'
+import { iconCenter, inBounds, previewOffsets, rowsPerColumn, slotAt } from '../shortcuts/layout'
 import { placeShortcut, removeShortcut, visibleShortcuts } from '../shortcuts/list'
 import { useShortcutStore } from '../shortcuts/store'
 import { APP_IDS, type AppId, getApp, isAppId } from '../windows/apps'
-import type { Size } from '../windows/geometry'
+import type { Point, Rect, Size } from '../windows/geometry'
 import { useWindowStore } from '../windows/store'
 import type { ContextMenuAction, ContextMenuItem } from './contextMenu'
 import { DesktopIcon } from './DesktopIcon'
-import { useContextMenuTrigger } from './useContextMenuTrigger'
+import { usePointerDrag } from './usePointerDrag'
+import { mergeHandlers, useContextMenuTrigger } from './useContextMenuTrigger'
+import { animationsEnabled } from './useWindowAnimation'
+import { DROP_MS, slideKeyframes } from './widgetPreviewAnim'
+import { EASING } from './windowAnim'
 
 // DesktopShortcutsHandle은 바탕화면 메뉴(Desktop)가 바로가기에 묻는 것이다.
 export interface DesktopShortcutsHandle {
   // 바탕화면 우클릭 메뉴에 넣을 항목("바로가기 추가 ▸"). 목록을 아직 불러오지 못했으면 빈 목록.
   desktopMenuItems: () => ContextMenuItem[]
+  // 진행 중인 끌기를 취소한다(데스크톱 범위 모달이 열릴 때).
+  cancelDrag: () => void
 }
 
 interface Props {
@@ -28,6 +37,30 @@ interface Props {
 
 // 목록을 불러오지 못했을 때 다시 시도하는 간격
 const RETRY_MS = 10_000
+// 이 거리 이상 끌어야 끌기로 본다. 그 전에 놓으면 클릭(창 열기)이다. 창·위젯과 같다.
+const DRAG_THRESHOLD = 4
+
+// DragView는 끄는 동안 화면에 반영할 미리보기다. from은 끄는 아이콘의 보이는 순서, to는 놓을 칸이다.
+interface DragView {
+  from: number
+  to: number
+}
+
+// Press는 아이콘을 누른 순간부터 놓을 때까지의 정보다. 포인터 이벤트가 렌더링보다 먼저 이어서 들어올 수
+// 있어, 판단은 상태가 아닌 이 값으로 한다.
+interface Press {
+  app: AppId
+  from: number
+  button: HTMLElement
+  // 누른 시점의 보이는 순서. 끄는 사이 목록이 바뀌면 끌기를 취소하는 기준이다.
+  ids: AppId[]
+  rows: number
+  // 누른 시점의 데스크톱 영역 왼쪽 위(화면 좌표)
+  origin: Point
+  to: number
+  // 임계 거리를 넘어 끌기가 시작됐는지
+  moved: boolean
+}
 
 const { load, clear } = useShortcutStore.getState()
 
@@ -59,7 +92,65 @@ export function DesktopShortcuts({ bounds, listRef, ref }: Props) {
   const include = (id: AppId) => appAccess(caps, id).visible
   const visible = status === 'ready' ? visibleShortcuts(apps, include) : []
 
+  const rows = rowsPerColumn(bounds.height)
+  const visibleKey = visible.join(' ')
+
   const open = (id: AppId) => useWindowStore.getState().open(id, bounds)
+
+  const press = useRef<Press | null>(null)
+  const [view, setView] = useState<DragView | null>(null)
+  // 끌거나 놓은 아이콘이 제자리로 가는 동안 목록을 창 위로 올린다.
+  const [raised, setRaised] = useState(false)
+  // 진행 중인 착지 애니메이션 묶음 수. 모두 끝나면 목록을 내린다.
+  const landing = useRef(0)
+  // 끌기·길게 누르기 뒤에 오는 click은 무시한다(창을 열지 않는다). 다음 누름에서 풀린다.
+  const suppressClick = useRef(false)
+
+  // settle은 끌기를 끝낸다. next가 있으면 그 목록으로 바꾸고, 아이콘마다 지금 보이는 자리에서 새 자리로
+  // 미끄러지게 한다(FLIP). 순서(li의 DOM 순서)는 여기서만 바뀐다. 끄는 동안 옮기면 pointer capture가 풀린다.
+  const settle = (next: AppId[] | null, dragged: HTMLElement | null) => {
+    const list = listRef.current
+    const buttons = () => (list ? Array.from(list.querySelectorAll<HTMLElement>('.desktop-icon')) : [])
+    const before = new Map<string, Rect>()
+    for (const b of buttons()) {
+      before.set(b.dataset.app ?? '', b.getBoundingClientRect())
+      for (const a of b.getAnimations()) a.cancel()
+    }
+    // 목록과 미리보기 해제를 한 번에 그린다. li의 transform과 전환 효과(.shifting)가 함께 빠지므로 튀지 않는다.
+    flushSync(() => {
+      if (next) update(() => next)
+      setView(null)
+    })
+    if (dragged) dragged.style.transform = ''
+    const anims: Animation[] = []
+    if (animationsEnabled()) {
+      for (const b of buttons()) {
+        const from = before.get(b.dataset.app ?? '')
+        const frames = from && slideKeyframes(b.getBoundingClientRect(), from)
+        if (frames) anims.push(b.animate(frames, { duration: DROP_MS, easing: EASING }))
+      }
+    }
+    if (anims.length === 0) {
+      if (landing.current === 0) setRaised(false)
+      return
+    }
+    landing.current++
+    void Promise.allSettled(anims.map((a) => a.finished)).then(() => {
+      if (--landing.current === 0) setRaised(false)
+    })
+  }
+
+  // cancel은 진행 중인 끌기를 순서를 바꾸지 않고 끝낸다(Esc, 포커스 잃음, 목록·화면 높이 변화, 모달).
+  // 포인터는 아직 눌려 있을 수 있으므로 이어지는 click을 무시한다. effect 안에서도 불리므로 flushSync를 쓰는
+  // settle은 microtask로 미룬다(React가 커밋하는 중에는 flushSync를 할 수 없다).
+  const cancel = () => {
+    const p = press.current
+    if (!p) return
+    press.current = null
+    if (!p.moved) return
+    suppressClick.current = true
+    queueMicrotask(() => settle(null, p.button))
+  }
 
   // 아이콘 우클릭·메뉴 키·길게 누르기 메뉴. 대상 앱은 입력을 받은 버튼의 data-app이다.
   const menu = useContextMenuTrigger({
@@ -80,16 +171,81 @@ export function DesktopShortcuts({ bounds, listRef, ref }: Props) {
     },
   })
 
-  // 길게 눌러 메뉴를 연 누름 뒤에 오는 click은 무시한다(창을 열지 않는다). 다음 누름에서 풀린다.
-  const suppressClick = useRef(false)
-  const onPointerDown = (e: PointerEvent<HTMLElement>) => {
-    menu.handlers.onPointerDown(e)
-    suppressClick.current = false
-  }
-  const onPointerUp = (e: PointerEvent<HTMLElement>) => {
-    menu.handlers.onPointerUp(e)
-    if (menu.openedByPress()) suppressClick.current = true
-  }
+  // 아이콘 끌기. 포인터 capture는 누른 버튼이 갖는다. 끄는 동안 버튼은 transform으로만 움직이고(렌더 없음),
+  // 다른 아이콘은 놓을 칸이 바뀔 때만 미리보기 자리로 옮겨 그린다.
+  const drag = usePointerDrag({
+    threshold: DRAG_THRESHOLD,
+    onStart: (e) => {
+      suppressClick.current = false
+      const button = e.currentTarget
+      const app = button.dataset.app
+      const area = listRef.current?.parentElement
+      const from = app && isAppId(app) ? visible.indexOf(app) : -1
+      if (!app || !isAppId(app) || !area || from < 0) return false
+      const r = area.getBoundingClientRect()
+      press.current = { app, from, button, ids: visible, rows, origin: { x: r.x, y: r.y }, to: from, moved: false }
+    },
+    onMove: (d, e) => {
+      const p = press.current
+      // 길게 눌러 메뉴를 연 누름은 끌기로 이어 가지 않는다.
+      if (!p || menu.openedByPress()) return
+      if (!p.moved) {
+        p.moved = true
+        for (const a of p.button.getAnimations()) a.cancel()
+        setRaised(true)
+        setView({ from: p.from, to: p.from })
+      }
+      p.button.style.transform = `translate(${d.dx}px, ${d.dy}px)`
+      // 영역 밖(작업표시줄 등)이면 놓아도 제자리로 돌아가므로 미리보기도 제자리다.
+      const pointer = { x: e.clientX - p.origin.x, y: e.clientY - p.origin.y }
+      const start = iconCenter(p.from, p.rows)
+      const to = inBounds(pointer, bounds)
+        ? slotAt({ x: start.x + d.dx, y: start.y + d.dy }, p.rows, p.ids.length - 1)
+        : p.from
+      if (to === p.to) return
+      p.to = to
+      setView({ from: p.from, to })
+    },
+    onEnd: (moved, _d, e) => {
+      const p = press.current
+      press.current = null
+      if (menu.openedByPress()) suppressClick.current = true
+      if (!p || !p.moved) return
+      suppressClick.current = true
+      const pointer = { x: e.clientX - p.origin.x, y: e.clientY - p.origin.y }
+      const keep = moved && !menu.openedByPress() && inBounds(pointer, bounds) && p.to !== p.from
+      settle(keep ? placeShortcut(useShortcutStore.getState().apps, p.app, p.to, include) : null, p.button)
+    },
+    onCancel: () => {
+      const p = press.current
+      press.current = null
+      if (p?.moved) settle(null, p.button)
+    },
+  })
+
+  // 끄는 동안 Esc를 누르거나 브라우저 창이 포커스를 잃으면 취소한다.
+  const dragging = view !== null
+  useEffect(() => {
+    if (!dragging) return
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      e.preventDefault()
+      cancel()
+    }
+    window.addEventListener('keydown', onKeyDown, true)
+    window.addEventListener('blur', cancel)
+    return () => {
+      window.removeEventListener('keydown', onKeyDown, true)
+      window.removeEventListener('blur', cancel)
+    }
+  })
+
+  // 끄는 사이 보이는 목록(capability, 다른 탭의 저장)이나 화면 높이(열 나눔)가 바뀌면 잰 자리가 맞지 않으므로 취소한다.
+  useEffect(() => {
+    const p = press.current
+    if (p && (p.ids.join(' ') !== visibleKey || p.rows !== rows)) cancel()
+  })
+
   const onClick = (id: AppId) => {
     if (suppressClick.current) suppressClick.current = false
     else open(id)
@@ -97,6 +253,7 @@ export function DesktopShortcuts({ bounds, listRef, ref }: Props) {
 
   // "바로가기 추가 ▸" 하위 메뉴. 볼 수 있는 앱마다 하나씩, 이미 있는 앱은 체크 표시와 함께 비활성이다.
   useImperativeHandle(ref, () => ({
+    cancelDrag: cancel,
     desktopMenuItems: () => {
       if (status !== 'ready') return []
       const items = APP_IDS.filter(include).map((id): ContextMenuAction => {
@@ -117,19 +274,26 @@ export function DesktopShortcuts({ bounds, listRef, ref }: Props) {
     },
   }))
 
+  const offsets = view ? previewOffsets(visible.length, view.from, view.to, rows) : null
+
   return (
-    <ul className="desktop-icons" aria-label={t('desktop.label')} ref={listRef}>
-      {visible.map((id) => (
-        <li key={id}>
-          <DesktopIcon
-            appId={id}
-            {...menu.handlers}
-            onPointerDown={onPointerDown}
-            onPointerUp={onPointerUp}
-            onClick={() => onClick(id)}
-          />
-        </li>
-      ))}
+    <ul className={raised ? 'desktop-icons raised' : 'desktop-icons'} aria-label={t('desktop.label')} ref={listRef}>
+      {visible.map((id, i) => {
+        // 끄는 아이콘은 버튼이 포인터를 따라가므로 li는 그대로 둔다.
+        const dragged = view?.from === i
+        const o = offsets && !dragged ? offsets[i] : null
+        let className: string | undefined
+        if (view) className = dragged ? 'dragging' : 'shifting'
+        return (
+          <li
+            key={id}
+            className={className}
+            style={o && (o.x || o.y) ? { transform: `translate(${o.x}px, ${o.y}px)` } : undefined}
+          >
+            <DesktopIcon appId={id} {...mergeHandlers(menu.handlers, drag)} onClick={() => onClick(id)} />
+          </li>
+        )
+      })}
     </ul>
   )
 }

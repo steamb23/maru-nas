@@ -13,3 +13,29 @@
   padding: 0;
   list-style: none;
 }
+
+/* 끄는 동안과 놓은 아이콘이 제자리로 가는 동안 창 위로 올라온다(위젯 레이어의 .raised와 같은 값). */
+.desktop-icons.raised {
+  z-index: 1000000;
+}
+
+/* 끄는 동안 다른 아이콘은 놓을 칸을 비우며 미끄러진다. 전환 효과는 li 클래스에 둔다: 놓을 때 순서 반영과
+   transform·클래스 해제가 한 번에 그려져야 튀지 않는다. */
+.desktop-icons > li.shifting {
+  transition: transform 200ms ease;
+}
+
+.desktop-icons > li.dragging {
+  position: relative;
+  z-index: 1;
+}
+
+.desktop-icons > li.dragging > .desktop-icon {
+  cursor: grabbing;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .desktop-icons > li.shifting {
+    transition: none;
+  }
+}

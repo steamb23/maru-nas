@@ -11,6 +11,8 @@
   background: none;
   color: #fff;
   cursor: pointer;
+  /* 터치로 끌 때 브라우저가 포인터를 스크롤용으로 가져가지 않게 한다. */
+  touch-action: none;
 }
 
 .desktop-icon:hover {

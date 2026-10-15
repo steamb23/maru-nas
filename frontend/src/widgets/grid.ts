@@ -7,7 +7,7 @@
 import type { GridSize } from '../api/types.gen'
 
 // 칸 한 변의 크기, 칸 사이 간격, 데스크톱 영역 가장자리와의 간격(CSS 픽셀).
-// 가장자리 간격은 바탕화면 아이콘 목록의 여백(shell/Desktop.css의 .desktop-icons top·left)과 같다.
+// 가장자리 간격은 바탕화면 아이콘 목록의 여백(shell/DesktopShortcuts.css의 .desktop-icons top·left)과 같다.
 export const CELL = 80
 export const GAP = 8
 export const PADDING = 12
