@@ -145,6 +145,9 @@ func (failingStore) SetShortcuts(string, []api.Shortcut) error {
 func (failingStore) SetDrawer(string, api.DrawerPrefs) error {
 	return errors.New("disk on fire")
 }
+func (failingStore) UpdateAppearance(string, func(*api.AppearancePrefs)) error {
+	return errors.New("disk on fire")
+}
 
 func TestPreferencesStoreError(t *testing.T) {
 	e := prefsEnv(t, failingStore{})

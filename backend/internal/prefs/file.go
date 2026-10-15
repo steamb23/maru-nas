@@ -23,21 +23,30 @@ type fileDoc struct {
 	api.Preferences
 }
 
-// FileStore는 <dir>/users/<인코딩한 사용자 이름>.json에 사용자별로 저장하는 Store다.
+// FileStore는 상태 디렉터리에 저장하는 Store, SiteStore, ImageStore다.
+//
+//	<dir>/users/<인코딩한 사용자 이름>.json  사용자 설정
+//	<dir>/site.json                          전역 설정(site.go)
+//	<dir>/images/...                         배경 이미지(images.go)
+//
 // 쓰기는 임시 파일에 쓴 뒤 rename으로 바꿔 넣으므로 중간에 멈춰도 이전 파일이나 새 파일 중 하나가 남는다.
 // 같은 디렉터리를 쓰는 프로세스는 하나라고 보고, 프로세스 안에서만 잠근다.
 type FileStore struct {
-	dir string
-	mu  sync.Mutex
+	root string
+	dir  string
+	// mu는 사용자·전역 설정 파일을, imgMu는 이미지 파일을 지킨다. 큰 이미지를 쓰는 동안 설정 저장이 기다리지 않게 나눈다.
+	mu    sync.Mutex
+	imgMu sync.Mutex
 }
 
-// NewFileStore는 dir 아래에 사용자 설정을 저장하는 FileStore를 만든다. users 디렉터리가 없으면 만든다.
+// NewFileStore는 dir 아래에 설정을 저장하는 FileStore를 만든다. users 디렉터리가 없으면 만든다.
+// 전역 설정과 이미지 디렉터리는 처음 쓸 때 만든다.
 func NewFileStore(dir string) (*FileStore, error) {
 	users := filepath.Join(dir, "users")
 	if err := os.MkdirAll(users, 0o700); err != nil {
 		return nil, err
 	}
-	return &FileStore{dir: users}, nil
+	return &FileStore{root: dir, dir: users}, nil
 }
 
 func (s *FileStore) Get(username string) (api.Preferences, error) {
@@ -63,6 +72,10 @@ func (s *FileStore) SetDrawer(username string, drawer api.DrawerPrefs) error {
 	return s.update(username, func(p *api.Preferences) { p.Drawer = &drawer })
 }
 
+func (s *FileStore) UpdateAppearance(username string, apply func(*api.AppearancePrefs)) error {
+	return s.update(username, func(p *api.Preferences) { p.Appearance = applyAppearance(p.Appearance, apply) })
+}
+
 // update는 username의 설정 파일을 읽어 설정 하나를 바꾼 뒤 다시 쓴다. 다른 설정은 그대로 둔다.
 // 읽기부터 쓰기까지 잠그므로 서로 다른 설정을 동시에 저장해도 한쪽이 지워지지 않는다.
 func (s *FileStore) update(username string, apply func(*api.Preferences)) error {
@@ -78,28 +91,35 @@ func (s *FileStore) update(username string, apply func(*api.Preferences)) error 
 	}
 	doc.Version = fileVersion
 	apply(&doc.Preferences)
+	// 응답할 때 붙이는 값은 저장하지 않는다.
+	doc.WallpaperImage = nil
 	return writeAtomic(path, doc)
 }
 
-// read는 설정 파일을 읽는다. 없으면 빈 설정이다. 읽을 수 없는 형식이면 파일을 .corrupt로 옮겨
-// 두고(손으로 되살릴 수 있게) 빈 설정으로 시작한다. 그대로 두면 사용자가 배치를 다시 저장할 수 없다.
+// read는 사용자 설정 파일을 읽는다(readJSON).
 func (s *FileStore) read(path string) (fileDoc, error) {
+	doc, err := readJSON[fileDoc](path)
+	doc.WallpaperImage = nil
+	return doc, err
+}
+
+// readJSON은 JSON 파일을 읽는다. 없으면 빈 값이다. 읽을 수 없는 형식이면 파일을 .corrupt로 옮겨
+// 두고(손으로 되살릴 수 있게) 빈 값으로 시작한다. 그대로 두면 사용자가 설정을 다시 저장할 수 없다.
+func readJSON[T any](path string) (T, error) {
+	var zero T
 	b, err := os.ReadFile(path)
 	if errors.Is(err, fs.ErrNotExist) {
-		return fileDoc{}, nil
+		return zero, nil
 	}
 	if err != nil {
-		return fileDoc{}, err
+		return zero, err
 	}
-	var doc fileDoc
-	if err := json.Unmarshal(b, &doc); err != nil {
+	var v T
+	if err := json.Unmarshal(b, &v); err != nil {
 		log.Printf("preferences: %s is not valid JSON, moving it to .corrupt: %v", filepath.Base(path), err)
-		if err := os.Rename(path, path+".corrupt"); err != nil {
-			return fileDoc{}, err
-		}
-		return fileDoc{}, nil
+		return zero, os.Rename(path, path+".corrupt")
 	}
-	return doc, nil
+	return v, nil
 }
 
 // path는 사용자 설정 파일 경로다. 사용자 이름은 fileName으로 인코딩해 디렉터리를 벗어나지 못하게 한다.
@@ -125,12 +145,17 @@ func fileName(username string) string {
 	return b.String()
 }
 
-// writeAtomic은 v를 JSON으로 같은 디렉터리의 임시 파일에 쓰고 fsync한 뒤 path로 바꿔 넣는다.
-func writeAtomic(path string, v any) (err error) {
+// writeAtomic은 v를 JSON으로 path에 바꿔 넣는다(writeFileAtomic).
+func writeAtomic(path string, v any) error {
 	b, err := json.MarshalIndent(v, "", "  ")
 	if err != nil {
 		return err
 	}
+	return writeFileAtomic(path, append(b, '\n'))
+}
+
+// writeFileAtomic은 data를 같은 디렉터리의 임시 파일에 쓰고 fsync한 뒤 path로 바꿔 넣는다.
+func writeFileAtomic(path string, data []byte) (err error) {
 	dir := filepath.Dir(path)
 	f, err := os.CreateTemp(dir, ".tmp-*")
 	if err != nil {
@@ -143,7 +168,7 @@ func writeAtomic(path string, v any) (err error) {
 		}
 	}()
 	// CreateTemp는 0600으로 만든다. 설정에는 비밀 값이 없지만 서비스 계정만 읽으면 된다.
-	if _, err = f.Write(append(b, '\n')); err != nil {
+	if _, err = f.Write(data); err != nil {
 		return err
 	}
 	if err = f.Sync(); err != nil {

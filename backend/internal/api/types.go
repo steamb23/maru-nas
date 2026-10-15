@@ -344,6 +344,85 @@ type Preferences struct {
 	Shortcuts *[]Shortcut `json:"shortcuts,omitempty"`
 	// Drawer는 "모든 앱" 화면 설정이다. 한 번도 저장하지 않았으면 없다(프론트가 기본값을 쓴다).
 	Drawer *DrawerPrefs `json:"drawer,omitempty"`
+	// Appearance는 화면 설정(테마, 바탕화면 등)이다. 없거나 비어 있는 값은 관리자가 정한 기본 화면을 따른다.
+	Appearance *AppearancePrefs `json:"appearance,omitempty"`
+	// WallpaperImage는 이 사용자가 올린 바탕화면 이미지의 정보다. 올리지 않았으면 없다.
+	// 설정 파일에 저장하지 않고 응답할 때 이미지 저장소에서 붙인다.
+	WallpaperImage *ImageInfo `json:"wallpaperImage,omitempty"`
+}
+
+// 테마. AppearancePrefs.Theme, SiteDefaults.Theme에 들어간다.
+const (
+	// ThemeAuto는 브라우저(OS)의 밝은·어두운 모드 설정을 따른다.
+	ThemeAuto  = "auto"
+	ThemeLight = "light"
+	ThemeDark  = "dark"
+)
+
+// 배경 종류. Wallpaper.Kind에 들어간다.
+const (
+	// WallpaperPreset은 프론트에 들어 있는 배경(그라데이션·단색)이다.
+	WallpaperPreset = "preset"
+	// WallpaperImage는 올린 이미지다. 어느 이미지인지는 배경을 쓰는 자리가 정한다
+	// (사용자 바탕화면, 로그인 배경, 기본 바탕화면).
+	WallpaperImage = "image"
+)
+
+// Wallpaper는 바탕화면·로그인 화면 배경 하나다. 다른 출처(파일 탐색기에서 고른 파일 등)는 Kind를 더해 담는다.
+type Wallpaper struct {
+	Kind string `json:"kind" tstype:"'preset' | 'image'"`
+	// Preset은 Kind가 preset일 때 프론트 프리셋 id다. 백엔드는 형식만 검사하고, 모르는 id는 프론트가 기본 배경으로 그린다.
+	Preset string `json:"preset,omitempty"`
+}
+
+// AppearancePrefs는 사용자 화면 설정이다. 설정 전체를 한 번에 바꾼다. 비어 있는 값은 관리자가 정한 기본 화면
+// (SiteDefaults)을, 그것도 없으면 대시보드 기본값을 따른다.
+type AppearancePrefs struct {
+	// Theme은 Theme* 중 하나다. 비어 있으면 기본 화면을 따른다.
+	Theme string `json:"theme,omitempty" tstype:"'auto' | 'light' | 'dark'"`
+	// Wallpaper는 바탕화면이다. 없으면 기본 화면을 따른다. image는 이 사용자가 올린 이미지다.
+	Wallpaper *Wallpaper `json:"wallpaper,omitempty"`
+	// Animations는 창·메뉴 애니메이션을 켤지다. 없으면 켠다.
+	Animations *bool `json:"animations,omitempty"`
+}
+
+// ImageInfo는 저장된 배경 이미지의 정보다.
+type ImageInfo struct {
+	// Rev는 이미지가 바뀔 때마다 달라지는 값이다. 이미지 주소에 붙여(?v=) 브라우저가 이전 이미지를 쓰지 않게 한다.
+	Rev string `json:"rev"`
+}
+
+// SiteSettings는 모든 사용자에게 적용하는 전역 설정이며 관리자만 바꾼다. 상태 디렉터리의 site.json에 저장한다.
+// 부분마다 전체를 한 번에 바꾸고, 없는 부분은 기본값이다.
+type SiteSettings struct {
+	Login    *SiteLogin       `json:"login,omitempty"`
+	Defaults *SiteDefaults    `json:"defaults,omitempty"`
+	Server   *ServerOverrides `json:"server,omitempty"`
+}
+
+// SiteLogin은 로그인 화면 설정이다. 저장한 적 없으면 대시보드 기본 배경에 대기 연출을 켠다.
+type SiteLogin struct {
+	// Background는 로그인 화면 배경이다. 없으면 대시보드 기본 배경이다. image는 관리자가 올린 로그인 배경 이미지다.
+	Background *Wallpaper `json:"background,omitempty"`
+	// EasterEgg는 로그인 화면에서 오래 기다리면 나오는 연출을 켤지다.
+	EasterEgg bool `json:"easterEgg"`
+}
+
+// SiteDefaults는 화면 설정을 정하지 않은 사용자에게 적용하는 기본 화면이다.
+type SiteDefaults struct {
+	// Theme은 Theme* 중 하나다. 비어 있으면 auto다.
+	Theme string `json:"theme,omitempty" tstype:"'auto' | 'light' | 'dark'"`
+	// Wallpaper는 기본 바탕화면이다. 없으면 대시보드 기본 배경이다. image는 관리자가 올린 기본 바탕화면 이미지다.
+	Wallpaper *Wallpaper `json:"wallpaper,omitempty"`
+}
+
+// ServerOverrides는 재시작 없이 바꿀 수 있는 가동 설정을 웹에서 덮어쓴 값이다. 없는 값은 플래그·환경 변수
+// (/etc/default/onmaru) 값을 따른다.
+type ServerOverrides struct {
+	// WorkbenchURL은 -workbench-url을 덮어쓴다. 빈 문자열이면 OMV 워크벤치 앱을 끈다.
+	WorkbenchURL *string `json:"workbenchUrl,omitempty"`
+	// SmartRefreshAt은 -smart-refresh-at(HH:MM)을 덮어쓴다.
+	SmartRefreshAt *string `json:"smartRefreshAt,omitempty"`
 }
 
 // "모든 앱" 화면의 앱 정렬 방식. DrawerPrefs.Sort에 들어간다.

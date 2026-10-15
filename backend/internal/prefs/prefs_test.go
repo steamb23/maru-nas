@@ -260,3 +260,45 @@ func TestFileStoreCorruptFile(t *testing.T) {
 		t.Errorf("after rewrite: %+v", p)
 	}
 }
+
+func TestAppearanceRoundTrip(t *testing.T) {
+	for name, s := range stores(t) {
+		t.Run(name, func(t *testing.T) {
+			if err := s.SetDrawer("alice", api.DrawerPrefs{Sort: api.DrawerSortName}); err != nil {
+				t.Fatal(err)
+			}
+			off := false
+			if err := s.UpdateAppearance("alice", func(a *api.AppearancePrefs) {
+				*a = api.AppearancePrefs{
+					Theme:      api.ThemeDark,
+					Wallpaper:  &api.Wallpaper{Kind: api.WallpaperImage},
+					Animations: &off,
+				}
+			}); err != nil {
+				t.Fatal(err)
+			}
+			// 조건부로 고칠 때는 지금 값을 받는다.
+			if err := s.UpdateAppearance("alice", func(a *api.AppearancePrefs) {
+				if a.Wallpaper != nil && a.Wallpaper.Kind == api.WallpaperImage {
+					a.Wallpaper = nil
+				}
+			}); err != nil {
+				t.Fatal(err)
+			}
+			p, err := s.Get("alice")
+			if err != nil || p.Appearance == nil || p.Appearance.Theme != api.ThemeDark || p.Appearance.Wallpaper != nil ||
+				p.Appearance.Animations == nil || *p.Appearance.Animations {
+				t.Fatalf("appearance %+v, %v", p.Appearance, err)
+			}
+			// 다른 설정은 그대로다.
+			if p.Drawer == nil || p.Drawer.Sort != api.DrawerSortName {
+				t.Errorf("drawer %+v", p.Drawer)
+			}
+			// 받은 값을 바꿔도 저장값은 그대로다.
+			*p.Appearance.Animations = true
+			if again, _ := s.Get("alice"); *again.Appearance.Animations {
+				t.Error("stored value changed")
+			}
+		})
+	}
+}
