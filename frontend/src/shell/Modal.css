@@ -70,6 +70,8 @@
 
 .modal-message {
   margin: 0;
+  /* 한글도 띄어쓰기에서만 줄을 바꾸고, 한 줄보다 긴 단어만 글자 사이에서 자른다. */
+  word-break: keep-all;
   overflow-wrap: anywhere;
 }
 
