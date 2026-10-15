@@ -59,6 +59,10 @@ func (s *FileStore) SetShortcuts(username string, shortcuts []api.Shortcut) erro
 	return s.update(username, func(p *api.Preferences) { p.Shortcuts = cloneList(shortcuts) })
 }
 
+func (s *FileStore) SetDrawer(username string, drawer api.DrawerPrefs) error {
+	return s.update(username, func(p *api.Preferences) { p.Drawer = &drawer })
+}
+
 // update는 username의 설정 파일을 읽어 설정 하나를 바꾼 뒤 다시 쓴다. 다른 설정은 그대로 둔다.
 // 읽기부터 쓰기까지 잠그므로 서로 다른 설정을 동시에 저장해도 한쪽이 지워지지 않는다.
 func (s *FileStore) update(username string, apply func(*api.Preferences)) error {

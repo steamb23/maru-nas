@@ -109,6 +109,37 @@ func TestStoreFieldsIndependent(t *testing.T) {
 	}
 }
 
+func TestStoreDrawer(t *testing.T) {
+	for name, s := range stores(t) {
+		t.Run(name, func(t *testing.T) {
+			if p, _ := s.Get("alice"); p.Drawer != nil {
+				t.Fatalf("new user drawer: %+v", *p.Drawer)
+			}
+			if err := s.SetShortcuts("alice", sampleShortcuts); err != nil {
+				t.Fatal(err)
+			}
+			if err := s.SetDrawer("alice", api.DrawerPrefs{Sort: api.DrawerSortName}); err != nil {
+				t.Fatal(err)
+			}
+			p, err := s.Get("alice")
+			if err != nil || p.Drawer == nil || p.Drawer.Sort != api.DrawerSortName {
+				t.Fatalf("after set: %+v, %v", p.Drawer, err)
+			}
+			if p.Shortcuts == nil || !slices.Equal(*p.Shortcuts, sampleShortcuts) {
+				t.Errorf("drawer save dropped shortcuts: %+v", p.Shortcuts)
+			}
+			// 돌려준 값을 바꿔도 저장값은 그대로다.
+			p.Drawer.Sort = "changed"
+			if p, _ := s.Get("alice"); p.Drawer.Sort != api.DrawerSortName {
+				t.Errorf("stored drawer changed: %+v", *p.Drawer)
+			}
+			if p, _ := s.Get("bob"); p.Drawer != nil {
+				t.Errorf("bob sees %+v", *p.Drawer)
+			}
+		})
+	}
+}
+
 func TestStoreReturnsCopies(t *testing.T) {
 	for name, s := range stores(t) {
 		t.Run(name, func(t *testing.T) {

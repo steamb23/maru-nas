@@ -66,3 +66,30 @@ func (h *handler) setShortcuts(w http.ResponseWriter, r *http.Request, s auth.Se
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
+
+// validDrawerSort는 저장할 수 있는 "모든 앱" 정렬 방식인지다.
+func validDrawerSort(sort string) bool {
+	return sort == api.DrawerSortRecommended || sort == api.DrawerSortName
+}
+
+// setDrawer는 "모든 앱" 화면 설정 전체를 바꾼다. 다른 설정은 그대로 둔다.
+func (h *handler) setDrawer(w http.ResponseWriter, r *http.Request, s auth.Session) {
+	var req api.DrawerRequest
+	if !decodeJSONLimit(w, r, &req, maxPreferencesBodyBytes) {
+		return
+	}
+	if req.Drawer == nil {
+		writeError(w, http.StatusBadRequest, api.ErrBadRequest, "drawer is required")
+		return
+	}
+	if !validDrawerSort(req.Drawer.Sort) {
+		writeError(w, http.StatusBadRequest, api.ErrBadRequest, "unknown drawer sort")
+		return
+	}
+	if err := h.Prefs.SetDrawer(s.Username, *req.Drawer); err != nil {
+		log.Printf("preferences: write: %v", err)
+		writeError(w, http.StatusInternalServerError, "", "failed to save preferences")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}

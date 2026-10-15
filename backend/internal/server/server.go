@@ -132,6 +132,7 @@ func New(cfg Config) http.Handler {
 	mux.HandleFunc("GET /api/preferences", h.requireSession(h.preferences))
 	mux.HandleFunc("PUT /api/preferences/widgets", h.requireSession(h.setWidgets))
 	mux.HandleFunc("PUT /api/preferences/shortcuts", h.requireSession(h.setShortcuts))
+	mux.HandleFunc("PUT /api/preferences/drawer", h.requireSession(h.setDrawer))
 	mux.HandleFunc("/api/", func(w http.ResponseWriter, _ *http.Request) {
 		writeJSON(w, http.StatusNotFound, api.ErrorResponse{Error: "not found"})
 	})

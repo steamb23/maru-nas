@@ -20,6 +20,8 @@ type Store interface {
 	SetWidgets(username string, widgets []api.WidgetPlacement) error
 	// SetShortcuts는 바로가기 목록만 바꾼다. 다른 설정은 그대로 둔다. 검사는 호출하는 쪽이 한다.
 	SetShortcuts(username string, shortcuts []api.Shortcut) error
+	// SetDrawer는 "모든 앱" 화면 설정만 바꾼다. 다른 설정은 그대로 둔다. 검사는 호출하는 쪽이 한다.
+	SetDrawer(username string, drawer api.DrawerPrefs) error
 }
 
 // MemoryStore는 프로세스 메모리에 두는 Store다. 백엔드를 재시작하면 사라진다.
@@ -49,6 +51,11 @@ func (m *MemoryStore) SetShortcuts(username string, shortcuts []api.Shortcut) er
 	return nil
 }
 
+func (m *MemoryStore) SetDrawer(username string, drawer api.DrawerPrefs) error {
+	m.update(username, func(p *api.Preferences) { p.Drawer = &drawer })
+	return nil
+}
+
 // update는 username의 설정 하나를 바꾼다. 다른 설정은 그대로 둔다.
 func (m *MemoryStore) update(username string, apply func(*api.Preferences)) {
 	m.mu.Lock()
@@ -65,6 +72,10 @@ func clonePrefs(p api.Preferences) api.Preferences {
 	}
 	if p.Shortcuts != nil {
 		p.Shortcuts = cloneList(*p.Shortcuts)
+	}
+	if p.Drawer != nil {
+		d := *p.Drawer
+		p.Drawer = &d
 	}
 	return p
 }

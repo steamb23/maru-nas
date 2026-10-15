@@ -142,6 +142,9 @@ func (failingStore) SetWidgets(string, []api.WidgetPlacement) error {
 func (failingStore) SetShortcuts(string, []api.Shortcut) error {
 	return errors.New("disk on fire")
 }
+func (failingStore) SetDrawer(string, api.DrawerPrefs) error {
+	return errors.New("disk on fire")
+}
 
 func TestPreferencesStoreError(t *testing.T) {
 	e := prefsEnv(t, failingStore{})
@@ -151,6 +154,7 @@ func TestPreferencesStoreError(t *testing.T) {
 	for path, body := range map[string]any{
 		"/api/preferences/widgets":   api.WidgetsRequest{Widgets: []api.WidgetPlacement{}},
 		"/api/preferences/shortcuts": api.ShortcutsRequest{Shortcuts: []api.Shortcut{}},
+		"/api/preferences/drawer":    api.DrawerRequest{Drawer: &api.DrawerPrefs{Sort: api.DrawerSortName}},
 	} {
 		rec := b.do(http.MethodPut, path, body)
 		wantStatus(t, rec, http.StatusInternalServerError)
@@ -248,5 +252,64 @@ func TestSetShortcutsRejectsInvalid(t *testing.T) {
 	// JSON이 아닌 본문은 받지 않는다(CSRF 보조 장치).
 	b.header.Set("Content-Type", "text/plain")
 	wantCode(t, b.do(http.MethodPut, "/api/preferences/shortcuts", api.ShortcutsRequest{Shortcuts: []api.Shortcut{}}),
+		http.StatusUnsupportedMediaType, api.ErrBadRequest)
+}
+
+func TestDrawerRoundTrip(t *testing.T) {
+	e := prefsEnv(t, nil)
+	b := e.browser()
+	wantStatus(t, b.login("admin", "admin"), http.StatusOK)
+
+	if got := decode[api.Preferences](t, b.do(http.MethodGet, "/api/preferences", nil)); got.Drawer != nil {
+		t.Fatalf("new user drawer = %+v, want none", *got.Drawer)
+	}
+	list := []api.Shortcut{{App: "files"}}
+	wantStatus(t, b.do(http.MethodPut, "/api/preferences/shortcuts", api.ShortcutsRequest{Shortcuts: list}), http.StatusNoContent)
+	for _, sort := range []string{api.DrawerSortName, api.DrawerSortRecommended} {
+		req := api.DrawerRequest{Drawer: &api.DrawerPrefs{Sort: sort}}
+		wantStatus(t, b.do(http.MethodPut, "/api/preferences/drawer", req), http.StatusNoContent)
+		got := decode[api.Preferences](t, b.do(http.MethodGet, "/api/preferences", nil))
+		if got.Drawer == nil || got.Drawer.Sort != sort {
+			t.Fatalf("drawer = %+v, want sort %q", got.Drawer, sort)
+		}
+		// 다른 설정은 그대로다.
+		if got.Shortcuts == nil || !slices.Equal(*got.Shortcuts, list) {
+			t.Errorf("drawer save changed shortcuts: %+v", got.Shortcuts)
+		}
+	}
+	user := e.browser()
+	wantStatus(t, user.login("user", "user"), http.StatusOK)
+	if got := decode[api.Preferences](t, user.do(http.MethodGet, "/api/preferences", nil)); got.Drawer != nil {
+		t.Errorf("user sees admin's drawer settings: %+v", *got.Drawer)
+	}
+}
+
+func TestSetDrawerRejectsInvalid(t *testing.T) {
+	store := prefs.NewMemoryStore()
+	e := prefsEnv(t, store)
+	b := e.browser()
+	wantCode(t, b.do(http.MethodPut, "/api/preferences/drawer", api.DrawerRequest{Drawer: &api.DrawerPrefs{Sort: api.DrawerSortName}}),
+		http.StatusUnauthorized, api.ErrUnauthorized)
+	wantStatus(t, b.login("admin", "admin"), http.StatusOK)
+
+	cases := map[string]any{
+		"missing drawer": map[string]any{},
+		"null drawer":    map[string]any{"drawer": nil},
+		"not an object":  map[string]any{"drawer": "name"},
+		"missing sort":   map[string]any{"drawer": map[string]any{}},
+		"unknown sort":   api.DrawerRequest{Drawer: &api.DrawerPrefs{Sort: "random"}},
+	}
+	for name, body := range cases {
+		rec := b.do(http.MethodPut, "/api/preferences/drawer", body)
+		if rec.Code != http.StatusBadRequest {
+			t.Errorf("%s: status %d (body %s)", name, rec.Code, rec.Body.String())
+		}
+	}
+	if p, _ := store.Get("admin"); p.Drawer != nil {
+		t.Errorf("invalid drawer settings were saved: %+v", *p.Drawer)
+	}
+
+	b.header.Set("Content-Type", "text/plain")
+	wantCode(t, b.do(http.MethodPut, "/api/preferences/drawer", api.DrawerRequest{Drawer: &api.DrawerPrefs{Sort: api.DrawerSortName}}),
 		http.StatusUnsupportedMediaType, api.ErrBadRequest)
 }

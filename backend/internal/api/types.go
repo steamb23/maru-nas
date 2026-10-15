@@ -339,6 +339,27 @@ type Preferences struct {
 	// Shortcuts는 바탕화면 바로가기 목록이며 순서대로 놓인다. 한 번도 저장하지 않았으면 없고
 	// (프론트가 기본 목록을 쓴다), 모두 지웠으면 빈 목록이다.
 	Shortcuts *[]Shortcut `json:"shortcuts,omitempty"`
+	// Drawer는 "모든 앱" 화면 설정이다. 한 번도 저장하지 않았으면 없다(프론트가 기본값을 쓴다).
+	Drawer *DrawerPrefs `json:"drawer,omitempty"`
+}
+
+// "모든 앱" 화면의 앱 정렬 방식. DrawerPrefs.Sort에 들어간다.
+const (
+	// DrawerSortRecommended는 대시보드가 정한 순서다(비슷한 기능의 앱끼리 모인다).
+	DrawerSortRecommended = "recommended"
+	// DrawerSortName은 화면 언어의 이름순이다.
+	DrawerSortName = "name"
+)
+
+// DrawerPrefs는 "모든 앱" 화면 설정이다. 설정 전체를 한 번에 바꾼다.
+type DrawerPrefs struct {
+	// Sort는 앱 정렬 방식이다(DrawerSort*). 프론트는 모르는 값이면 추천순을 쓴다.
+	Sort string `json:"sort"`
+}
+
+// DrawerRequest는 PUT /api/preferences/drawer의 요청 본문이다.
+type DrawerRequest struct {
+	Drawer *DrawerPrefs `json:"drawer"`
 }
 
 // Shortcut은 바탕화면 바로가기 하나다. 지금은 앱만 가리킨다. 폴더나 OMV 페이지를 가리키는
