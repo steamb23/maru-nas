@@ -2,15 +2,54 @@
 # 개발 서버 실행: 백엔드(go run, 루프백)를 백그라운드로, Vite(LAN 공개)를 포그라운드로 띄운다.
 # Ctrl+C로 Vite를 끄면 백엔드도 함께 종료된다.
 #
-#   scripts/dev.sh          실제 OMV(ONMARU_OMV_URL)에 연결
-#   scripts/dev.sh --fake   가짜 OMV(cmd/fakeomv, 가짜 계정)를 함께 띄워 연결
+#   scripts/dev.sh                    실제 OMV(ONMARU_OMV_URL)에 연결
+#   scripts/dev.sh --fake             가짜 OMV(cmd/fakeomv, 가짜 계정)를 함께 띄워 연결
+#   scripts/dev.sh --branch <브랜치>  그 브랜치가 체크아웃된 git 워크트리의 코드로 실행(--fake와 함께 쓸 수 있다)
 #
 # frontend/.env.local의 ONMARU_*·DEV_* 값을 환경 변수로 내보내 백엔드와 Vite에 적용한다. 셸 환경 변수가 우선한다.
-# git 워크트리에서 실행하면 주 체크아웃의 frontend/.env.local과 .dev-state를 함께 쓴다.
+# git 워크트리에서 실행하거나 --branch로 워크트리를 고르면 주 체크아웃의 frontend/.env.local과 .dev-state를 함께 쓴다.
 # 워크트리 자신의 frontend/.env.local이 있으면 그 값이 우선하고, ONMARU_STATE_DIR로 상태 디렉터리를 따로 둘 수 있다.
+# --branch는 이 스크립트가 그 워크트리의 backend·frontend를 실행하므로, 대상 브랜치의 dev.sh 변경은 쓰이지 않는다.
 set -euo pipefail
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
+
+usage() { echo "usage: $0 [--fake] [--branch <branch>]" >&2; exit 2; }
+
+fake=0
+branch=""
+while (($#)); do
+  case "$1" in
+    --fake) fake=1 ;;
+    --branch) (($# >= 2)) && [[ -n $2 ]] || usage; branch="$2"; shift ;;
+    *) usage ;;
+  esac
+  shift
+done
+
+# --branch: git worktree list에서 refs/heads/<브랜치>가 체크아웃된 워크트리를 찾아 root로 쓴다.
+# 한 브랜치는 워크트리 하나에만 체크아웃되므로 결과는 하나뿐이다.
+if [[ -n $branch ]]; then
+  target=""
+  available=()
+  path=""
+  while IFS= read -r line; do
+    case "$line" in
+      "worktree "*) path="${line#worktree }" ;;
+      "branch refs/heads/"*)
+        name="${line#branch refs/heads/}"
+        available+=("  $name  $path")
+        [[ $name == "${branch#refs/heads/}" ]] && target="$path"
+        ;;
+    esac
+  done < <(git -C "$root" worktree list --porcelain)
+  if [[ -z $target ]]; then
+    echo "[dev] no git worktree has branch '$branch' checked out. Worktrees:" >&2
+    printf '%s\n' "${available[@]}" >&2
+    exit 2
+  fi
+  root="$target"
+fi
 
 # 주 체크아웃: 워크트리가 공유하는 .git의 상위 디렉터리. bare 저장소·서브모듈이거나 git이 없으면 이 저장소를 쓴다.
 main_root="$root"
@@ -18,13 +57,6 @@ if common="$(git -C "$root" rev-parse --path-format=absolute --git-common-dir 2>
   [[ "$(basename "$common")" == .git ]]; then
   main_root="$(dirname "$common")"
 fi
-
-fake=0
-case "${1:-}" in
-  "") ;;
-  --fake) fake=1 ;;
-  *) echo "usage: $0 [--fake]" >&2; exit 2 ;;
-esac
 
 # 먼저 읽은 파일의 값이 우선한다(이미 설정된 키는 건너뛴다). Vite는 frontend/.env.local만 직접 읽으므로
 # 주 체크아웃의 DEV_* 값도 여기서 내보내야 한다. 포트 검사(DEV_PORT)도 Vite와 같은 값을 보게 된다.
@@ -86,6 +118,7 @@ if [[ $fake == 1 ]]; then
 fi
 
 echo "[dev] backend: http://$ONMARU_LISTEN (omv: ${ONMARU_OMV_URL:-http://127.0.0.1}, workbench: ${ONMARU_WORKBENCH_URL:-off})"
+[[ $root != "$main_root" ]] && echo "[dev] worktree: $root"
 echo "[dev] state: $ONMARU_STATE_DIR"
 (cd "$root/backend" && exec setsid go run ./cmd/onmaru) &
 pids+=($!)
