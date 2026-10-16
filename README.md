@@ -8,9 +8,42 @@ OpenMediaVault 8 위에 올리는 데스크톱형 웹 대시보드입니다. 창
 - 로그인은 OMV 계정으로 합니다. 백엔드가 OMV `rpc.php`에 로그인을 위임하며, 설정 변경도 로그인한 사용자의 OMV 세션으로만 합니다.
 - Go 실행 파일 하나(프론트엔드 포함)를 systemd 서비스로 실행하고, 앞단의 리버스 프록시가 HTTPS를 맡습니다.
 
-## 설치
+## 빌드 및 설치
 
-빌드에는 Go, Node.js(npm), make, git이 필요합니다.
+### 준비
+
+OpenMediaVault 8.5 이상이 필요합니다. OMV 8.5.0에서 로그인 RPC(`Session.login`)의 응답 형식이 바뀌었고, 온마루는 바뀐 형식만 지원합니다. OMV 설치 이미지(ISO)로 막 설치했다면 이미지의 버전이 그대로 설치되므로(예: 8.3.1 이미지는 OMV 8.3.1) 먼저 OMV 웹 UI의 시스템 → 업데이트 관리에서 업데이트하거나 `sudo omv-upgrade`를 실행해 주세요. 지금 버전은 `dpkg-query -W openmediavault`로 확인합니다.
+
+빌드에는 아래 도구가 필요합니다. OMV 설치 이미지로 설치한 직후에는 어느 것도 들어 있지 않지만, 모두 OMV 8(Debian 13)이 기본으로 쓰는 apt 저장소에서 설치할 수 있습니다.
+
+| 도구 | 필요한 버전 | apt 패키지(버전) | 비고 |
+|---|---|---|---|
+| Go | 1.27.1 이상 | `golang-go`(trixie-backports 1.27, 기본 저장소 1.24) | `backend/go.mod` 기준입니다. |
+| Node.js | 20.19 이상 또는 22.12 이상 | `nodejs`(20.19) | Vite 8 기준입니다. |
+| npm | 7 이상 | `npm`(9.2) | Debian에서는 `nodejs`와 따로 설치합니다. |
+| make | GNU make | `make`(4.4) | |
+| git | | `git`(2.47) | 소스와 아이콘 서브모듈을 받고, 빌드할 때 커밋 정보를 실행 파일에 넣습니다. |
+
+```sh
+sudo apt install git make nodejs npm curl
+sudo apt install -t trixie-backports golang-go
+```
+
+- OMV는 커널 업데이트용으로 Debian의 trixie-backports 저장소를 기본으로 켜 둡니다. 두 번째 줄은 그 저장소에서 Go 1.27을 설치합니다.
+- `-t trixie-backports` 없이 설치하면 Go 1.24가 설치됩니다. 이때는 첫 빌드에서 Go가 1.27.1 툴체인을 proxy.golang.org에서 자동으로 내려받습니다(약 75MB). 내려받은 파일과 푼 툴체인을 합쳐 `~/go/pkg/mod`에 약 330MB가 생깁니다. `GOTOOLCHAIN=local`로 설정했거나 proxy.golang.org에 접속할 수 없다면 backports나 [go.dev/dl](https://go.dev/dl/)의 배포본을 설치해 주세요.
+- `curl`은 선택입니다. 없으면 설치 끝의 상태 확인을 건너뜁니다. C 컴파일러는 필요하지 않습니다.
+- Node.js 20에서는 `npm ci`가 Vitest의 `EBADENGINE` 경고를 표시합니다. 개발용 테스트 도구에 대한 경고이므로 빌드에는 영향이 없습니다.
+- root 계정이라면 `sudo` 없이 실행합니다.
+- 빌드하는 동안 github.com(아이콘 서브모듈)과 registry.npmjs.org(npm 의존성)에 접속하며, 도구 설치와 빌드에 약 1.1GB의 여유 공간이 필요합니다(backports의 Go 기준. 기본 저장소의 Go 1.24를 쓰면 툴체인 때문에 약 0.3GB가 더 필요합니다).
+
+소스는 git으로 받습니다. 아이콘 서브모듈은 설치 스크립트가 받으므로 `--recurse-submodules`는 필요 없습니다.
+
+```sh
+git clone https://github.com/steamb23/Onmaru.git
+cd Onmaru
+```
+
+### 설치 스크립트
 
 ```sh
 ./install.sh
@@ -21,6 +54,8 @@ OpenMediaVault 8 위에 올리는 데스크톱형 웹 대시보드입니다. 창
 1. **설정 입력**: 서비스 사용자, 수신 방식, OMV 주소, SMART 갱신 시각, OMV 워크벤치 주소를 묻고 요약을 보여 준 뒤 확인을 받습니다. 입력은 이 단계에서 모두 끝납니다.
 2. **빌드**: 실행한 계정으로 빌드합니다. 처음 클론한 상태라면 아이콘 서브모듈과 npm 의존성부터 준비합니다(`make build` → `bin/onmaru`).
 3. **설치**: root 권한이 필요한 단계입니다. 일반 사용자라면 스크립트가 1단계의 설정을 옵션으로 넘겨 스스로 `sudo ./install.sh --service-install ...`을 실행하므로 비밀번호만 한 번 입력하면 됩니다. root 계정만 있는 환경이라면 sudo 없이 그대로 이어서 진행합니다.
+
+OMV 설치 이미지가 만든 일반 사용자는 sudo 그룹에 들어 있으므로 이 방식으로 설치할 수 있습니다. 다만 OMV는 root와 `_ssh` 그룹 사용자에게만 SSH 접속을 허용하므로, 그 계정으로 SSH에 접속하려면 OMV 웹 UI의 사용자 편집 화면에서 `_ssh` 그룹을 더해 주세요.
 
 설치 단계에서는 다음 작업을 합니다.
 
@@ -230,6 +265,8 @@ nas.example.com {
 ## 개발
 
 개발 명령과 설계 문서는 `CLAUDE.md`와 `.claude/` 디렉터리에 있습니다. `make dev-fake`를 실행하면 가짜 OMV에 연결된 개발 서버가 뜹니다.
+
+개발 도구는 "빌드 및 설치"의 빌드 도구와 같습니다. 다만 테스트(`make test`, `make check`)에 쓰는 Vitest 5는 Node.js 22.12 이상을 공식 지원합니다. Debian 13의 Node.js 20.19에서도 테스트가 통과하지만 지원 범위 밖입니다.
 
 ## 라이선스
 

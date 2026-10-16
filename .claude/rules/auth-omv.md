@@ -15,6 +15,7 @@ paths:
 OMV 공식 저장소 소스(2026-10 기준)에서 확인한 내용이다. OMV 업데이트 후 동작이 다르면 이 섹션을 갱신한다. 로그인 관련 소스는 `/var/www/openmediavault/rpc/session.inc`.
 
 - **로그인 흐름은 두 단계**: `Session.login`(`username`, `password`) 응답의 `status`가 `authenticated`면 완료, `challengeRequired`면 TOTP 등 2차 인증이 필요하다. 이때 같은 세션으로 `Session.verify`(`challengeresponse`)를 호출한다. 2FA를 쓰지 않더라도 이 분기를 항상 구현한다
+- **8.5.0 이전 형식**: `status` 필드와 2차 인증 분기는 OMV 8.5.0(Issue #2235)에서 생겼다. 8.4 이하는 `{"authenticated": true, "username", "permissions", "sessionid"}` 형식이라 백엔드가 `omv login: unexpected response`로 거절한다. 그래서 OMV 8.5 이상만 지원한다(2026-10, OMV 8.3.1 ISO로 설치한 VM에서 확인. 최신 ISO도 8.3.1이라 설치 직후에는 업데이트가 필요하다)
 - **2차 인증 시 세션 ID**: `challengeRequired`일 때 OMV는 세션 ID를 바꾸고(`session_regenerate_id`) 새 ID를 응답 본문 없이 `Set-Cookie`로만 준다. `Session.verify`는 그 ID로 호출해야 한다. `challengeresponse`의 형식은 2FA 플러그인이 정한다(이 NAS에는 2FA 플러그인이 없어 미검증)
 - **대기 중 세션 주의**: 인증되지 않은 세션으로 엔진 RPC(Session 밖의 서비스)를 부르면 OMV가 세션을 파기하므로, 2차 인증 대기 중인 세션으로는 다른 RPC를 부르지 않는다
 - **세션 쿠키**: 이름 `OPENMEDIAVAULT-SESSIONID`, HttpOnly, SameSite=Strict, HTTPS일 때 Secure. 쿠키 대신 `X-OpenMediaVault-SessionID` 헤더도 받는다

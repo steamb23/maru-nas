@@ -15,6 +15,7 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 ## 실행 환경
 
 - Debian + OMV 8 NAS. 개발과 실행 모두 NAS 안에서 한다
+  - OMV 8.5 이상만 지원한다. 8.5.0에서 `Session.login` 응답 형식이 바뀌었다(`.claude/rules/auth-omv.md`)
 - 프로젝트는 일반 사용자 계정 홈 아래에 있고, Claude Code도 일반 사용자 권한으로 실행된다
 
 ## 절대 규칙
@@ -72,7 +73,7 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 
 ## 명령어
 
-저장소 루트에서 실행한다. 처음 클론했다면 `git submodule update --init --depth 1`과 `npm --prefix frontend ci`를 먼저 실행한다.
+저장소 루트에서 실행한다. 처음 클론했다면 `git submodule update --init --depth 1`과 `npm --prefix frontend ci`를 먼저 실행한다. 도구 버전은 Go 1.27.1 이상(`backend/go.mod`), Node.js 20.19 이상 또는 22.12 이상(Vite 8)이고, Vitest 5는 Node.js 22.12 이상을 공식 지원한다. 설치 경로는 `README.md`의 "빌드 및 설치"에 있다.
 
 | 명령 | 내용 |
 |---|---|
