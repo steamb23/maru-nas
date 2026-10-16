@@ -115,13 +115,13 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 ## 작업 방식
 
 - 세션에서 첫 작업을 시작하기 전에 `git status`로 커밋하지 않은 변경이 남아 있는지 확인한다. 남아 있으면 내용을 요약해 보여 주고 커밋할지 사용자에게 묻는다
-- 별도 지시가 없으면 작업을 시작하기 전에 `master`에서 작업 브랜치와 git 워크트리를 만들고 그 워크트리에 들어가서 진행한다. 주 체크아웃은 다른 세션이나 사용자가 쓰고 있을 수 있다. 주 체크아웃에서 하라는 지시가 있으면 브랜치만 만든다
-  - 주 체크아웃에서 `git worktree add -b <브랜치> .claude/worktrees/<이름> master`로 만들고 `EnterWorktree`의 `path`로 들어간다. `EnterWorktree`의 `name`은 로컬 `master`보다 뒤처질 수 있는 `origin/master`에서 갈라지므로 쓰지 않는다
+- 별도 지시가 없으면 작업을 시작하기 전에 `main`에서 작업 브랜치와 git 워크트리를 만들고 그 워크트리에 들어가서 진행한다. 주 체크아웃은 다른 세션이나 사용자가 쓰고 있을 수 있다. 주 체크아웃에서 하라는 지시가 있으면 브랜치만 만든다
+  - 주 체크아웃에서 `git worktree add -b <브랜치> .claude/worktrees/<이름> main`으로 만들고 `EnterWorktree`의 `path`로 들어간다. `EnterWorktree`의 `name`은 로컬 `main`보다 뒤처질 수 있는 `origin/main`에서 갈라지므로 쓰지 않는다
   - 워크트리 안에서 `git submodule update --init --depth 1`과 `npm --prefix frontend ci`를 먼저 실행한다
   - 사용자는 주 체크아웃에서 `make dev BRANCH=<브랜치>`로 그 워크트리의 개발 서버를 띄울 수 있다
-  - `master` 병합(rebase 후 fast-forward)은 `ExitWorktree`(keep)로 주 체크아웃에 돌아간 뒤 `git merge --ff-only <브랜치>`로 한다. 워크트리 안에서는 주 체크아웃을 대상으로 한 git 명령이 거부된다. 병합한 뒤에는 워크트리 디렉터리를 `trash-put`으로 지우고 `git worktree prune`을 실행한다
+  - `main` 병합(rebase 후 fast-forward)은 `ExitWorktree`(keep)로 주 체크아웃에 돌아간 뒤 `git merge --ff-only <브랜치>`로 한다. 워크트리 안에서는 주 체크아웃을 대상으로 한 git 명령이 거부된다. 병합한 뒤에는 워크트리 디렉터리를 `trash-put`으로 지우고 `git worktree prune`을 실행한다
 - 작은 단위로 작업하고, 작업 단위 하나가 끝날 때마다 승인을 기다리지 않고 브랜치에 커밋한다
-- 브랜치의 작업이 모두 끝나면 변경 요약을 제시하고, `master` 병합은 사용자가 승인한 뒤에만 한다
+- 브랜치의 작업이 모두 끝나면 변경 요약을 제시하고, `main` 병합은 사용자가 승인한 뒤에만 한다
 - 커밋 전에 `make check`를 실행한다. 프론트엔드나 embed 관련 변경이면 `make build`도 확인한다
 - 새 의존성을 추가하기 전에 이유와 대안을 먼저 설명한다
 - OMV RPC의 서비스·메서드 이름과 역할이 확실하지 않으면 추측하지 말고 OMV 소스(`/usr/share/openmediavault/engined/rpc/`, 로그인 관련은 `/var/www/openmediavault/rpc/session.inc`)를 읽는다
