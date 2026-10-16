@@ -105,6 +105,19 @@ func TestListenOnUnix(t *testing.T) {
 	}
 }
 
+func TestCheckHelperSocket(t *testing.T) {
+	for _, ok := range []string{"", "/run/onmaru-helper/helper.sock"} {
+		if err := checkHelperSocket(ok); err != nil {
+			t.Errorf("%q rejected: %v", ok, err)
+		}
+	}
+	for _, bad := range []string{"helper.sock", "unix:/run/x.sock", "/run/../x.sock", "/run/x/"} {
+		if checkHelperSocket(bad) == nil {
+			t.Errorf("%q accepted", bad)
+		}
+	}
+}
+
 func TestRuntimeSettings(t *testing.T) {
 	env := map[string]string{
 		"ONMARU_LISTEN":        "unix:/run/onmaru/onmaru.sock",

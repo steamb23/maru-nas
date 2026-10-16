@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { CapabilitiesResponse } from '../api/types.gen'
 import { linkConfigured, linkHref, userEditRoute, workbenchHref } from './links'
 
-const caps = (workbenchUrl?: string): CapabilitiesResponse => ({ addons: [], plugins: [], workbenchUrl })
+const caps = (workbenchUrl?: string): CapabilitiesResponse => ({ addons: [], plugins: [], workbenchUrl, helper: false })
 
 describe('workbenchHref', () => {
   const base = 'https://nas.example.lan/desk/'

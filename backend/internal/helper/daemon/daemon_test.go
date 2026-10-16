@@ -165,6 +165,18 @@ func (l *logBuf) logf(format string, args ...any) {
 	l.lines = append(l.lines, fmt.Sprintf(format, args...))
 }
 
+// wait는 로그에 substr이 나올 때까지 기다린다. 도우미는 worker가 응답한 뒤에 감사 로그를 남긴다.
+func (l *logBuf) wait(t *testing.T, substr string) {
+	t.Helper()
+	deadline := time.Now().Add(5 * time.Second)
+	for !strings.Contains(l.text(), substr) {
+		if time.Now().After(deadline) {
+			t.Fatalf("log line %q missing:\n%s", substr, l.text())
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+}
+
 func (l *logBuf) text() string {
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -225,9 +237,8 @@ func (e *env) call(req proto.Request, body []byte) (proto.Response, []byte) {
 	defer c.Close()
 	req.V = proto.Version
 	req.Size = int64(len(body))
-	if err := proto.WriteRequest(c, req); err != nil {
-		e.t.Fatal(err)
-	}
+	// 도우미가 요청을 읽기 전에 거절하고 닫으면 쓰기가 실패할 수 있다. 그래도 응답은 읽힌다.
+	proto.WriteRequest(c, req)
 	if len(body) > 0 {
 		c.Write(body)
 	}
@@ -277,9 +288,7 @@ func runID(tok, scope string) proto.Request {
 func TestRejectsOtherPeer(t *testing.T) {
 	e := newEnv(t, func(c *Config) { c.ClientUID = os.Getuid() + 1 })
 	e.expect(proto.CodeForbiddenPeer, proto.Request{Op: proto.OpReset})
-	if !strings.Contains(e.logs.text(), "rejected connection") {
-		t.Fatal("rejected connection not logged")
-	}
+	e.logs.wait(t, "rejected connection")
 }
 
 func TestOpenAndRunAsUser(t *testing.T) {
@@ -304,12 +313,9 @@ func TestOpenAndRunAsUser(t *testing.T) {
 	if st.User != "alice" || st.Pending || st.CanElevate || st.ElevatedSeconds != 0 {
 		t.Fatalf("status = %+v", st)
 	}
-	logs := e.logs.text()
-	if strings.Contains(logs, res.Ticket) || strings.Contains(logs, "alice-pw") {
+	e.logs.wait(t, `run: user="alice" scope=user action=id result=ok`)
+	if logs := e.logs.text(); strings.Contains(logs, res.Ticket) || strings.Contains(logs, "alice-pw") {
 		t.Fatal("ticket or password logged")
-	}
-	if !strings.Contains(logs, `run: user="alice" scope=user action=id result=ok`) {
-		t.Fatalf("audit log missing:\n%s", logs)
 	}
 }
 
@@ -528,11 +534,9 @@ func TestRunFileOps(t *testing.T) {
 	}
 	e.expect(proto.CodeOutsideRoots, proto.Request{Op: proto.OpRun, Ticket: res.Ticket, Scope: proto.ScopeUser, Action: proto.ActionList,
 		Params: params(proto.PathParams{Path: "/etc"})})
-	logs := e.logs.text()
-	if !strings.Contains(logs, `action=fs.write path="`+home+`/a.txt" result=ok`) {
-		t.Fatalf("write not audited with its path:\n%s", logs)
-	}
-	if strings.Contains(logs, `action=fs.read path=`) {
+	e.logs.wait(t, `action=fs.write path="`+home+`/a.txt" result=ok`)
+	e.logs.wait(t, `action=fs.read result=ok`)
+	if logs := e.logs.text(); strings.Contains(logs, `action=fs.read path=`) {
 		t.Fatalf("read path logged:\n%s", logs)
 	}
 }

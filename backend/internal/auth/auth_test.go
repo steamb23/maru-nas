@@ -86,7 +86,7 @@ func TestStoreCap(t *testing.T) {
 func TestStorePending(t *testing.T) {
 	clk := newClock()
 	s := newTestStore(clk)
-	p := s.CreatePending("totp", "omv-p")
+	p := s.CreatePending("totp", "omv-p", "")
 	got, ok := s.GetPending(p.ID)
 	if !ok || got.Username != "totp" || got.OMVSessionID != "omv-p" {
 		t.Fatalf("pending %+v %v", got, ok)
@@ -95,10 +95,67 @@ func TestStorePending(t *testing.T) {
 	if _, ok := s.GetPending(p.ID); ok {
 		t.Error("expired pending found")
 	}
-	q := s.CreatePending("totp", "omv-q")
+	q := s.CreatePending("totp", "omv-q", "")
 	s.DeletePending(q.ID)
 	if _, ok := s.GetPending(q.ID); ok {
 		t.Error("deleted pending found")
+	}
+}
+
+// 지워지는 세션·대기는 훅으로 알린다(도우미 티켓 폐기). 인증을 마쳐 꺼낸 대기는 알리지 않는다.
+func TestStoreRemoveHooks(t *testing.T) {
+	clk := newClock()
+	s := newTestStore(clk)
+	var sessions, pendings []string
+	s.OnRemove = func(ss Session) {
+		// 훅은 잠금 밖에서 불리므로 저장소를 다시 써도 된다.
+		s.Len()
+		sessions = append(sessions, ss.HelperTicket)
+	}
+	s.OnRemovePending = func(p Pending) { pendings = append(pendings, p.HelperTicket) }
+
+	a := s.Create("a", false, "x")
+	s.Update(a.ID, func(ss *Session) { ss.HelperTicket = "t-a" })
+	s.Delete(a.ID)
+	s.Delete(a.ID)
+
+	b := s.Create("b", false, "x")
+	s.Update(b.ID, func(ss *Session) { ss.HelperTicket = "t-b" })
+	clk.Add(IdleTTL + time.Second)
+	s.Get(b.ID)
+
+	p := s.CreatePending("p", "x", "t-p")
+	s.DeletePending(p.ID)
+	q := s.CreatePending("q", "x", "t-q")
+	clk.Add(PendingTTL + time.Second)
+	s.GetPending(q.ID)
+	r := s.CreatePending("r", "x", "t-r")
+	if got, ok := s.ClaimPending(r.ID); !ok || got.HelperTicket != "t-r" {
+		t.Fatalf("claim = %+v %v", got, ok)
+	}
+	if _, ok := s.ClaimPending(r.ID); ok {
+		t.Fatal("claimed twice")
+	}
+
+	if want := []string{"t-a", "t-b"}; len(sessions) != 2 || sessions[0] != want[0] || sessions[1] != want[1] {
+		t.Errorf("removed sessions = %q, want %q", sessions, want)
+	}
+	if want := []string{"t-p", "t-q"}; len(pendings) != 2 || pendings[0] != want[0] || pendings[1] != want[1] {
+		t.Errorf("removed pendings = %q, want %q", pendings, want)
+	}
+}
+
+func TestStoreCapNotifies(t *testing.T) {
+	clk := newClock()
+	s := newTestStore(clk)
+	n := 0
+	s.OnRemove = func(Session) { n++ }
+	for range MaxSessions + 1 {
+		clk.Add(time.Millisecond)
+		s.Create("u", false, "x")
+	}
+	if n != 1 {
+		t.Fatalf("evictions notified = %d", n)
 	}
 }
 

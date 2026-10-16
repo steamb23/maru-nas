@@ -139,7 +139,7 @@ func TestCapabilitiesDefaults(t *testing.T) {
 	wantStatus(t, b.login("admin", "admin"), http.StatusOK)
 	rec := b.do(http.MethodGet, "/api/capabilities", nil)
 	wantStatus(t, rec, http.StatusOK)
-	if body := rec.Body.String(); body != "{\"addons\":[],\"plugins\":[]}\n" {
+	if body := rec.Body.String(); body != "{\"addons\":[],\"plugins\":[],\"helper\":false}\n" {
 		t.Errorf("body = %q", body)
 	}
 }

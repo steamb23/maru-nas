@@ -56,8 +56,11 @@ func (h *handler) login(w http.ResponseWriter, r *http.Request) {
 	}
 	done(auth.Success)
 
-	if res.Status == omv.StatusChallengeRequired {
-		p := h.Sessions.CreatePending(res.Username, res.SessionID)
+	// 도우미 티켓은 도우미가 이 비밀번호를 직접 확인해 발급한다. 2차 인증이 남았으면 대기 티켓이다.
+	challenge := res.Status == omv.StatusChallengeRequired
+	ticket := h.openHelper(r.Context(), res.Username, req.Password, challenge)
+	if challenge {
+		p := h.Sessions.CreatePending(res.Username, res.SessionID, ticket)
 		h.setCookie(w, r, PendingCookie, p.ID, int(auth.PendingTTL/time.Second))
 		log.Printf("login challenge required: user=%q ip=%s kind=%q", res.Username, ip, res.Challenge.Kind)
 		writeJSON(w, http.StatusOK, api.LoginResponse{
@@ -66,7 +69,7 @@ func (h *handler) login(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	h.startSession(w, r, res, ip)
+	h.startSession(w, r, res, ip, ticket)
 }
 
 func (h *handler) verify(w http.ResponseWriter, r *http.Request) {
@@ -101,13 +104,18 @@ func (h *handler) verify(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	done(auth.Success)
-	h.Sessions.DeletePending(p.ID)
 	if res.Status != omv.StatusAuthenticated {
+		h.Sessions.DeletePending(p.ID)
 		log.Printf("verify: unexpected status %q for user=%q", res.Status, p.Username)
 		writeError(w, http.StatusBadGateway, api.ErrOMVUnavailable, "unexpected response from OpenMediaVault")
 		return
 	}
-	h.startSession(w, r, res, ip)
+	// 대기의 도우미 티켓은 새 세션으로 옮긴다(꺼내는 사이에 지워졌으면 훅이 이미 폐기했다).
+	ticket := ""
+	if claimed, ok := h.Sessions.ClaimPending(p.ID); ok {
+		ticket = h.activateHelper(r.Context(), claimed)
+	}
+	h.startSession(w, r, res, ip, ticket)
 }
 
 // authFailed는 로그인·2차 인증 실패를 응답한다. 틀린 값이면 FailDelay만큼 기다린다.
@@ -134,8 +142,16 @@ func (h *handler) authFailed(w http.ResponseWriter, r *http.Request, done func(a
 	}
 }
 
-func (h *handler) startSession(w http.ResponseWriter, r *http.Request, res omv.LoginResult, ip string) {
+// startSession은 대시보드 세션을 만든다. helperTicket은 이 세션의 도우미 티켓이다(없으면 빈 값).
+func (h *handler) startSession(w http.ResponseWriter, r *http.Request, res omv.LoginResult, ip, helperTicket string) {
 	s := h.Sessions.Create(res.Username, res.Admin, res.SessionID)
+	if helperTicket != "" {
+		if upd, ok := h.Sessions.Update(s.ID, func(ss *auth.Session) { ss.HelperTicket = helperTicket }); ok {
+			s = upd
+		} else {
+			h.closeHelper(helperTicket)
+		}
+	}
 	// 로그인이 OMV 세션의 마지막 접근 시각을 갱신했으므로 만료 시각 계산에 쓸 timeout만 읽는다.
 	if st, err := h.OMV.Probe(r.Context(), s.OMVSessionID, false); err != nil {
 		log.Printf("login: read auto logout timeout: %v", err)
@@ -152,7 +168,7 @@ func (h *handler) startSession(w http.ResponseWriter, r *http.Request, res omv.L
 	h.setCookie(w, r, DeviceCookie, h.Limiter.Trust(res.Username, deviceToken(r)), int(auth.DeviceTTL/time.Second))
 	// 실행 중에 플러그인을 설치하거나 지웠을 수 있으므로 로그인할 때 다시 확인한다.
 	h.Plugins.Refresh()
-	log.Printf("login ok: user=%q ip=%s admin=%t", s.Username, ip, s.Admin)
+	log.Printf("login ok: user=%q ip=%s admin=%t helper=%t", s.Username, ip, s.Admin, s.HelperTicket != "")
 	info := h.sessionInfo(s)
 	writeJSON(w, http.StatusOK, api.LoginResponse{Status: api.LoginAuthenticated, Session: &info})
 }

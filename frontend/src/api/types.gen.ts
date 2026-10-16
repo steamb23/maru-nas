@@ -176,6 +176,10 @@ export interface CapabilitiesResponse {
    * 설정하지 않은 것이다. http(s) URL이거나 대시보드 문서 기준의 경로 참조(/, ../)이며 해석은 프론트엔드가 한다.
    */
   workbenchUrl?: string;
+  /**
+   * Helper는 권한 도우미를 설정했는지다(-helper-socket). 이 세션이 쓸 수 있는지는 GET /api/helper로 안다.
+   */
+  helper: boolean;
 }
 /**
  * AddonCapability는 애드온 하나를 이 사용자가 쓸 수 있는지다.
@@ -1045,6 +1049,26 @@ export const ErrUnsupportedImage = "unsupported_image";
  */
 export const ErrProfileReadOnly = "profile_readonly";
 /**
+ * ErrHelperUnavailable은 권한 도우미를 설정하지 않았거나 지금 연결할 수 없다는 뜻이다.
+ */
+export const ErrHelperUnavailable = "helper_unavailable";
+/**
+ * ErrHelperReauth는 이 세션에 도우미 티켓이 없거나 사라졌다는 뜻이다(도우미 재시작 등). 다시 로그인하면 된다.
+ */
+export const ErrHelperReauth = "helper_reauth";
+/**
+ * ErrElevationFailed는 권한 상승 비밀번호가 틀렸다는 뜻이다.
+ */
+export const ErrElevationFailed = "elevation_failed";
+/**
+ * ErrElevationNotAllowed는 이 계정이 root 권한으로 상승할 수 없다는 뜻이다(그룹 조건).
+ */
+export const ErrElevationNotAllowed = "elevation_not_allowed";
+/**
+ * ErrElevationRequired는 root 권한이 필요한 조작이라 먼저 상승해야 한다는 뜻이다.
+ */
+export const ErrElevationRequired = "elevation_required";
+/**
  * ErrorResponse는 2xx가 아닌 상태 코드와 함께 반환된다.
  */
 export interface ErrorResponse {
@@ -1052,9 +1076,78 @@ export interface ErrorResponse {
   /**
    * Code는 화면에서 분기할 때 쓰는 오류 종류다. 없을 수 있다.
    */
-  code?: 'invalid_credentials' | 'rate_limited' | 'challenge_failed' | 'challenge_expired' | 'omv_unavailable' | 'unauthorized' | 'bad_request' | 'rpc_forbidden' | 'admin_required' | 'plugin_missing' | 'omv_error' | 'action_busy' | 'action_failed' | 'action_timeout' | 'config_dirty' | 'image_too_large' | 'unsupported_image' | 'profile_readonly';
+  code?: 'invalid_credentials' | 'rate_limited' | 'challenge_failed' | 'challenge_expired' | 'omv_unavailable' | 'unauthorized' | 'bad_request' | 'rpc_forbidden' | 'admin_required' | 'plugin_missing' | 'omv_error' | 'action_busy' | 'action_failed' | 'action_timeout' | 'config_dirty' | 'image_too_large' | 'unsupported_image' | 'profile_readonly' | 'helper_unavailable' | 'helper_reauth' | 'elevation_failed' | 'elevation_not_allowed' | 'elevation_required';
   /**
    * RetryAfterSeconds는 rate_limited일 때 다시 시도할 수 있기까지 남은 초다.
    */
   retryAfterSeconds?: number /* int */;
+}
+/**
+ * HelperDisabled는 도우미를 설정하지 않았다는 뜻이다(-helper-socket이 비어 있음).
+ */
+export const HelperDisabled = "disabled";
+/**
+ * HelperUnavailable은 설정했지만 지금 도우미에 연결할 수 없다는 뜻이다.
+ */
+export const HelperUnavailable = "unavailable";
+/**
+ * HelperNone은 이 세션에 도우미 티켓이 없다는 뜻이다(로그인할 때 발급받지 못함, 시스템 계정 등).
+ */
+export const HelperNone = "none";
+/**
+ * HelperReauth는 티켓이 도우미에서 사라졌다는 뜻이다(도우미 재시작 등). 다시 로그인하면 된다.
+ */
+export const HelperReauth = "reauth";
+/**
+ * HelperActive는 이 세션이 도우미를 쓸 수 있다는 뜻이다.
+ */
+export const HelperActive = "active";
+/**
+ * HelperStatus는 GET /api/helper, POST·DELETE /api/helper/elevation의 응답이다.
+ */
+export interface HelperStatus {
+  state: 'disabled' | 'unavailable' | 'none' | 'reauth' | 'active';
+  /**
+   * CanElevate는 이 사용자가 root 권한으로 상승할 수 있는지다(도우미가 그룹으로 판단).
+   */
+  canElevate: boolean;
+  /**
+   * ElevatedSeconds는 상승이 끝날 때까지 남은 초다. 상승하지 않았으면 0이다.
+   */
+  elevatedSeconds: number /* int */;
+}
+/**
+ * HelperGroup은 그룹 하나다.
+ */
+export interface HelperGroup {
+  id: number /* int */;
+  name: string;
+}
+/**
+ * HelperIdentity는 도우미 worker가 실제로 가진 권한이다.
+ */
+export interface HelperIdentity {
+  uid: number /* int */;
+  gid: number /* int */;
+  user: string;
+  groups: HelperGroup[];
+}
+/**
+ * HelperIdentityResponse는 GET /api/helper/identity의 응답이다.
+ */
+export interface HelperIdentityResponse {
+  /**
+   * User는 이 세션의 사용자 권한으로 실행한 worker의 권한이다.
+   */
+  user: HelperIdentity;
+  /**
+   * Root는 상승 중일 때 root 범위 worker의 권한이다.
+   */
+  root?: HelperIdentity;
+}
+/**
+ * ElevationRequest는 POST /api/helper/elevation의 본문이다. 비밀번호는 도우미가 직접 확인한다.
+ */
+export interface ElevationRequest {
+  password: string;
 }

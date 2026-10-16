@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -16,6 +17,8 @@ import (
 	"onmaru/backend/internal/addons"
 	"onmaru/backend/internal/api"
 	"onmaru/backend/internal/auth"
+	helperclient "onmaru/backend/internal/helper/client"
+	"onmaru/backend/internal/helper/helperfake"
 	"onmaru/backend/internal/omv"
 	"onmaru/backend/internal/omv/omvfake"
 	"onmaru/backend/internal/prefs"
@@ -58,6 +61,8 @@ type env struct {
 	clk   *clock
 	store *auth.Store
 	logs  *bytes.Buffer
+	// helper는 envOptions.helper일 때 띄운 가짜 권한 도우미다.
+	helper *helperfake.Server
 }
 
 type envOptions struct {
@@ -82,6 +87,9 @@ type envOptions struct {
 	smartAt  string
 	setSmart func(hour, minute int)
 	runtime  []api.RuntimeSetting
+	// helper면 가짜 권한 도우미를 띄워 연결한다. helperSocket만 주면 그 경로(도우미 없음)에 연결한다.
+	helper       bool
+	helperSocket string
 }
 
 func newEnv(t *testing.T, o envOptions) *env {
@@ -121,6 +129,22 @@ func newEnv(t *testing.T, o envOptions) *env {
 	log.SetOutput(logs)
 	t.Cleanup(func() { log.SetOutput(prev) })
 
+	var helper Helper
+	var fakeHelper *helperfake.Server
+	if o.helper {
+		dir := t.TempDir()
+		var err error
+		fakeHelper, err = helperfake.Start(filepath.Join(dir, "helper.sock"), filepath.Join(dir, "root"),
+			helperfake.DefaultUsers(), helperfake.Options{Now: clk.Now, FailDelay: -1, Logf: func(string, ...any) {}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() { fakeHelper.Close() })
+		helper = helperclient.New(fakeHelper.Socket)
+	} else if o.helperSocket != "" {
+		helper = helperclient.New(o.helperSocket)
+	}
+
 	h := New(Config{
 		System:            o.system,
 		Static:            static,
@@ -136,11 +160,12 @@ func newEnv(t *testing.T, o envOptions) *env {
 		SmartRefreshAt:    o.smartAt,
 		SetSmartRefreshAt: o.setSmart,
 		Runtime:           o.runtime,
+		Helper:            helper,
 		CheckInterval:     o.interval,
 		FailDelay:         o.failDelay,
 		Now:               clk.Now,
 	})
-	return &env{t: t, h: h, fake: fake, omvTS: ts, clk: clk, store: store, logs: logs}
+	return &env{t: t, h: h, fake: fake, omvTS: ts, clk: clk, store: store, logs: logs, helper: fakeHelper}
 }
 
 // browser는 쿠키를 보관하는 간이 브라우저다.

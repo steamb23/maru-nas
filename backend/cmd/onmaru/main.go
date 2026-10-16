@@ -27,6 +27,7 @@ import (
 	"onmaru/backend/internal/addons/smart"
 	"onmaru/backend/internal/api"
 	"onmaru/backend/internal/buildinfo"
+	"onmaru/backend/internal/helper/client"
 	"onmaru/backend/internal/omv"
 	"onmaru/backend/internal/prefs"
 	"onmaru/backend/internal/server"
@@ -52,6 +53,8 @@ func main() {
 		"브라우저에서 OMV 웹 UI(workbench)를 열 주소. http(s) URL 또는 대시보드 기준 경로(/, ../). 비우면 OMV 워크벤치 앱을 숨긴다 (환경 변수 ONMARU_WORKBENCH_URL)")
 	smartAt := flag.String("smart-refresh-at", cmp.Or(os.Getenv("ONMARU_SMART_REFRESH_AT"), "00:00"),
 		"SMART 정보를 하루 한 번 다시 가져오는 기준 시각 HH:MM, 서버 로컬 시간 (환경 변수 ONMARU_SMART_REFRESH_AT)")
+	helperSocket := flag.String("helper-socket", os.Getenv("ONMARU_HELPER_SOCKET"),
+		"권한 도우미(onmaru-helper) 소켓의 절대 경로. 비우면 도우미 기능을 끈다 (환경 변수 ONMARU_HELPER_SOCKET)")
 	flag.Parse()
 
 	network, address, err := parseListen(*listen, *allowNonLoopback)
@@ -67,6 +70,9 @@ func main() {
 		log.Fatal(err)
 	}
 	if err := server.CheckWorkbenchURL(*workbenchURL); err != nil {
+		log.Fatal(err)
+	}
+	if err := checkHelperSocket(*helperSocket); err != nil {
 		log.Fatal(err)
 	}
 
@@ -112,7 +118,22 @@ func main() {
 		// 빈 값은 "끔"이라는 뜻으로 일부러 넣는 값이다(install.sh).
 		{flag: "workbench-url", env: "ONMARU_WORKBENCH_URL", value: *workbenchURL, emptyIsSet: true},
 		{flag: "smart-refresh-at", env: "ONMARU_SMART_REFRESH_AT", value: *smartAt},
+		{flag: "helper-socket", env: "ONMARU_HELPER_SOCKET", value: *helperSocket},
 	})
+
+	var helper server.Helper
+	if *helperSocket != "" {
+		hc := client.New(*helperSocket)
+		// 이전 실행의 세션은 메모리와 함께 사라졌으므로 그 티켓도 폐기한다.
+		resetCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		if err := hc.Reset(resetCtx); err != nil {
+			log.Printf("helper: %s: not reachable yet (%v); logins will retry", *helperSocket, err)
+		} else {
+			log.Printf("helper: %s", *helperSocket)
+		}
+		cancel()
+		helper = hc
+	}
 
 	srv := &http.Server{
 		Handler: server.New(server.Config{
@@ -130,6 +151,7 @@ func main() {
 			SmartRefreshAt:    *smartAt,
 			SetSmartRefreshAt: deps.Smart.SetRefreshAt,
 			Runtime:           runtime,
+			Helper:            helper,
 		}),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
@@ -237,6 +259,14 @@ func checkOMVURL(raw string) error {
 	}
 	if ip := net.ParseIP(u.Hostname()); u.Hostname() != "localhost" && (ip == nil || !ip.IsLoopback()) {
 		return errors.New("omv url must point to a loopback address (e.g. http://127.0.0.1), got " + raw)
+	}
+	return nil
+}
+
+// checkHelperSocket은 도우미 소켓 경로가 비었거나 절대 경로인지 확인한다.
+func checkHelperSocket(path string) error {
+	if path != "" && (!filepath.IsAbs(path) || filepath.Clean(path) != path) {
+		return errors.New("helper socket must be an absolute path (e.g. /run/onmaru-helper/helper.sock), got " + path)
 	}
 	return nil
 }

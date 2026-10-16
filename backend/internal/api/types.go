@@ -122,6 +122,8 @@ type CapabilitiesResponse struct {
 	// WorkbenchURL은 브라우저에서 OMV 웹 UI(workbench)를 열 주소다(-workbench-url). 비어 있으면
 	// 설정하지 않은 것이다. http(s) URL이거나 대시보드 문서 기준의 경로 참조(/, ../)이며 해석은 프론트엔드가 한다.
 	WorkbenchURL string `json:"workbenchUrl,omitempty"`
+	// Helper는 권한 도우미를 설정했는지다(-helper-socket). 이 세션이 쓸 수 있는지는 GET /api/helper로 안다.
+	Helper bool `json:"helper"`
 }
 
 // AddonCapability는 애드온 하나를 이 사용자가 쓸 수 있는지다.
@@ -697,13 +699,73 @@ const (
 	ErrUnsupportedImage = "unsupported_image"
 	// ErrProfileReadOnly는 이 계정의 정보를 바꿀 수 없다는 뜻이다(시스템 계정, OMV에서 수정을 막은 계정).
 	ErrProfileReadOnly = "profile_readonly"
+	// ErrHelperUnavailable은 권한 도우미를 설정하지 않았거나 지금 연결할 수 없다는 뜻이다.
+	ErrHelperUnavailable = "helper_unavailable"
+	// ErrHelperReauth는 이 세션에 도우미 티켓이 없거나 사라졌다는 뜻이다(도우미 재시작 등). 다시 로그인하면 된다.
+	ErrHelperReauth = "helper_reauth"
+	// ErrElevationFailed는 권한 상승 비밀번호가 틀렸다는 뜻이다.
+	ErrElevationFailed = "elevation_failed"
+	// ErrElevationNotAllowed는 이 계정이 root 권한으로 상승할 수 없다는 뜻이다(그룹 조건).
+	ErrElevationNotAllowed = "elevation_not_allowed"
+	// ErrElevationRequired는 root 권한이 필요한 조작이라 먼저 상승해야 한다는 뜻이다.
+	ErrElevationRequired = "elevation_required"
 )
 
 // ErrorResponse는 2xx가 아닌 상태 코드와 함께 반환된다.
 type ErrorResponse struct {
 	Error string `json:"error"`
 	// Code는 화면에서 분기할 때 쓰는 오류 종류다. 없을 수 있다.
-	Code string `json:"code,omitempty" tstype:"'invalid_credentials' | 'rate_limited' | 'challenge_failed' | 'challenge_expired' | 'omv_unavailable' | 'unauthorized' | 'bad_request' | 'rpc_forbidden' | 'admin_required' | 'plugin_missing' | 'omv_error' | 'action_busy' | 'action_failed' | 'action_timeout' | 'config_dirty' | 'image_too_large' | 'unsupported_image' | 'profile_readonly'"`
+	Code string `json:"code,omitempty" tstype:"'invalid_credentials' | 'rate_limited' | 'challenge_failed' | 'challenge_expired' | 'omv_unavailable' | 'unauthorized' | 'bad_request' | 'rpc_forbidden' | 'admin_required' | 'plugin_missing' | 'omv_error' | 'action_busy' | 'action_failed' | 'action_timeout' | 'config_dirty' | 'image_too_large' | 'unsupported_image' | 'profile_readonly' | 'helper_unavailable' | 'helper_reauth' | 'elevation_failed' | 'elevation_not_allowed' | 'elevation_required'"`
 	// RetryAfterSeconds는 rate_limited일 때 다시 시도할 수 있기까지 남은 초다.
 	RetryAfterSeconds int `json:"retryAfterSeconds,omitempty"`
+}
+
+// 권한 도우미 상태. HelperStatus.State에 들어간다.
+const (
+	// HelperDisabled는 도우미를 설정하지 않았다는 뜻이다(-helper-socket이 비어 있음).
+	HelperDisabled = "disabled"
+	// HelperUnavailable은 설정했지만 지금 도우미에 연결할 수 없다는 뜻이다.
+	HelperUnavailable = "unavailable"
+	// HelperNone은 이 세션에 도우미 티켓이 없다는 뜻이다(로그인할 때 발급받지 못함, 시스템 계정 등).
+	HelperNone = "none"
+	// HelperReauth는 티켓이 도우미에서 사라졌다는 뜻이다(도우미 재시작 등). 다시 로그인하면 된다.
+	HelperReauth = "reauth"
+	// HelperActive는 이 세션이 도우미를 쓸 수 있다는 뜻이다.
+	HelperActive = "active"
+)
+
+// HelperStatus는 GET /api/helper, POST·DELETE /api/helper/elevation의 응답이다.
+type HelperStatus struct {
+	State string `json:"state" tstype:"'disabled' | 'unavailable' | 'none' | 'reauth' | 'active'"`
+	// CanElevate는 이 사용자가 root 권한으로 상승할 수 있는지다(도우미가 그룹으로 판단).
+	CanElevate bool `json:"canElevate"`
+	// ElevatedSeconds는 상승이 끝날 때까지 남은 초다. 상승하지 않았으면 0이다.
+	ElevatedSeconds int `json:"elevatedSeconds"`
+}
+
+// HelperGroup은 그룹 하나다.
+type HelperGroup struct {
+	ID   int    `json:"id"`
+	Name string `json:"name"`
+}
+
+// HelperIdentity는 도우미 worker가 실제로 가진 권한이다.
+type HelperIdentity struct {
+	UID    int           `json:"uid"`
+	GID    int           `json:"gid"`
+	User   string        `json:"user"`
+	Groups []HelperGroup `json:"groups"`
+}
+
+// HelperIdentityResponse는 GET /api/helper/identity의 응답이다.
+type HelperIdentityResponse struct {
+	// User는 이 세션의 사용자 권한으로 실행한 worker의 권한이다.
+	User HelperIdentity `json:"user"`
+	// Root는 상승 중일 때 root 범위 worker의 권한이다.
+	Root *HelperIdentity `json:"root,omitempty"`
+}
+
+// ElevationRequest는 POST /api/helper/elevation의 본문이다. 비밀번호는 도우미가 직접 확인한다.
+type ElevationRequest struct {
+	Password string `json:"password"`
 }

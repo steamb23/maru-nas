@@ -84,6 +84,9 @@ type Config struct {
 	SetSmartRefreshAt func(hour, minute int)
 	// Runtime은 시작할 때 정해진 가동 설정 전체다. 설정의 서버 페이지(관리자)에 보여 준다.
 	Runtime []api.RuntimeSetting
+	// Helper는 권한 도우미 클라이언트다(-helper-socket). nil이면 도우미 기능을 끈다.
+	// 설정하면 Sessions의 삭제 훅(OnRemove, OnRemovePending)을 이 핸들러가 쓴다.
+	Helper Helper
 	// CheckInterval마다 요청 처리 중에 OMV 세션이 살아 있는지 확인한다. 기본 60초.
 	// 예상 만료 시각이 지났으면 주기와 상관없이 확인한다.
 	CheckInterval time.Duration
@@ -141,6 +144,11 @@ func New(cfg Config) http.Handler {
 	}
 	h := &handler{Config: cfg, actions: newInflight(), about: buildinfo.Read()}
 	h.loadOverrides()
+	if cfg.Helper != nil {
+		// 세션이 어떻게 끝나든(로그아웃, 만료, 밀려남, 2차 인증 포기) 도우미 티켓을 폐기한다.
+		cfg.Sessions.OnRemove = func(s auth.Session) { h.closeHelper(s.HelperTicket) }
+		cfg.Sessions.OnRemovePending = func(p auth.Pending) { h.closeHelper(p.HelperTicket) }
+	}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/health", func(w http.ResponseWriter, _ *http.Request) {
@@ -159,6 +167,10 @@ func New(cfg Config) http.Handler {
 	mux.HandleFunc("GET /api/about", h.requireSession(h.aboutInfo))
 	mux.HandleFunc("GET /api/profile", h.requireSession(h.profile))
 	mux.HandleFunc("PUT /api/profile", h.requireSession(h.setProfile))
+	mux.HandleFunc("GET /api/helper", h.requireSession(h.helperStatus))
+	mux.HandleFunc("GET /api/helper/identity", h.requireSession(h.helperIdentity))
+	mux.HandleFunc("POST /api/helper/elevation", h.requireAdmin(h.elevate))
+	mux.HandleFunc("DELETE /api/helper/elevation", h.requireSession(h.dropElevation))
 	mux.HandleFunc("GET /api/addons/{id}", h.requireSession(h.addonData))
 	mux.HandleFunc("POST /api/addons/{id}/actions/{action}", h.requireSession(h.addonAction))
 	mux.HandleFunc("POST /api/rpc", h.requireSession(h.rpc))
@@ -198,10 +210,11 @@ func (h *handler) system(w http.ResponseWriter, _ *http.Request, _ auth.Session)
 }
 
 // capabilities는 플러그인 설치 상태와 세션 역할로 애드온마다 쓸 수 있는지 알려 준다.
-// OMV 웹 UI 주소(설정했으면)도 함께 알려 준다.
+// OMV 웹 UI 주소(설정했으면)와 권한 도우미 설정 여부도 함께 알려 준다.
 func (h *handler) capabilities(w http.ResponseWriter, _ *http.Request, s auth.Session) {
 	resp := h.Addons.Capabilities(h.Plugins.Plugins(), s.Admin)
 	resp.WorkbenchURL = h.workbenchURL()
+	resp.Helper = h.Helper != nil
 	writeJSON(w, http.StatusOK, resp)
 }
 
