@@ -145,6 +145,9 @@ func (failingStore) SetShortcuts(string, []api.Shortcut) error {
 func (failingStore) SetDrawer(string, api.DrawerPrefs) error {
 	return errors.New("disk on fire")
 }
+func (failingStore) SetSystemInfo(string, api.SystemInfoPrefs) error {
+	return errors.New("disk on fire")
+}
 func (failingStore) UpdateAppearance(string, func(*api.AppearancePrefs)) error {
 	return errors.New("disk on fire")
 }
@@ -158,6 +161,9 @@ func TestPreferencesStoreError(t *testing.T) {
 		"/api/preferences/widgets":   api.WidgetsRequest{Widgets: []api.WidgetPlacement{}},
 		"/api/preferences/shortcuts": api.ShortcutsRequest{Shortcuts: []api.Shortcut{}},
 		"/api/preferences/drawer":    api.DrawerRequest{Drawer: &api.DrawerPrefs{Sort: api.DrawerSortName}},
+		"/api/preferences/system-info": api.SystemInfoRequest{
+			SystemInfo: &api.SystemInfoPrefs{CPUScale: api.CPUScaleMachine, CPUGraph: api.CPUGraphOverall},
+		},
 	} {
 		rec := b.do(http.MethodPut, path, body)
 		wantStatus(t, rec, http.StatusInternalServerError)
@@ -315,4 +321,69 @@ func TestSetDrawerRejectsInvalid(t *testing.T) {
 	b.header.Set("Content-Type", "text/plain")
 	wantCode(t, b.do(http.MethodPut, "/api/preferences/drawer", api.DrawerRequest{Drawer: &api.DrawerPrefs{Sort: api.DrawerSortName}}),
 		http.StatusUnsupportedMediaType, api.ErrBadRequest)
+}
+
+func TestSystemInfoPrefsRoundTrip(t *testing.T) {
+	e := prefsEnv(t, nil)
+	b := e.browser()
+	wantStatus(t, b.login("admin", "admin"), http.StatusOK)
+
+	if got := decode[api.Preferences](t, b.do(http.MethodGet, "/api/preferences", nil)); got.SystemInfo != nil {
+		t.Fatalf("new user system info = %+v, want none", *got.SystemInfo)
+	}
+	drawer := api.DrawerRequest{Drawer: &api.DrawerPrefs{Sort: api.DrawerSortName}}
+	wantStatus(t, b.do(http.MethodPut, "/api/preferences/drawer", drawer), http.StatusNoContent)
+	for _, want := range []api.SystemInfoPrefs{
+		{CPUScale: api.CPUScaleCore, CPUGraph: api.CPUGraphCores},
+		{CPUScale: api.CPUScaleMachine, CPUGraph: api.CPUGraphOverall},
+	} {
+		wantStatus(t, b.do(http.MethodPut, "/api/preferences/system-info", api.SystemInfoRequest{SystemInfo: &want}), http.StatusNoContent)
+		got := decode[api.Preferences](t, b.do(http.MethodGet, "/api/preferences", nil))
+		if got.SystemInfo == nil || *got.SystemInfo != want {
+			t.Fatalf("system info = %+v, want %+v", got.SystemInfo, want)
+		}
+		// 다른 설정은 그대로다.
+		if got.Drawer == nil || got.Drawer.Sort != api.DrawerSortName {
+			t.Errorf("system info save changed drawer: %+v", got.Drawer)
+		}
+	}
+	// 일반 사용자도 자기 설정을 저장한다(개요의 CPU 그래프 모양).
+	user := e.browser()
+	wantStatus(t, user.login("user", "user"), http.StatusOK)
+	if got := decode[api.Preferences](t, user.do(http.MethodGet, "/api/preferences", nil)); got.SystemInfo != nil {
+		t.Errorf("user sees admin's system info settings: %+v", *got.SystemInfo)
+	}
+	own := api.SystemInfoPrefs{CPUScale: api.CPUScaleMachine, CPUGraph: api.CPUGraphCores}
+	wantStatus(t, user.do(http.MethodPut, "/api/preferences/system-info", api.SystemInfoRequest{SystemInfo: &own}), http.StatusNoContent)
+}
+
+func TestSetSystemInfoRejectsInvalid(t *testing.T) {
+	store := prefs.NewMemoryStore()
+	e := prefsEnv(t, store)
+	b := e.browser()
+	valid := api.SystemInfoRequest{SystemInfo: &api.SystemInfoPrefs{CPUScale: api.CPUScaleMachine, CPUGraph: api.CPUGraphOverall}}
+	wantCode(t, b.do(http.MethodPut, "/api/preferences/system-info", valid), http.StatusUnauthorized, api.ErrUnauthorized)
+	wantStatus(t, b.login("admin", "admin"), http.StatusOK)
+
+	cases := map[string]any{
+		"missing":       map[string]any{},
+		"null":          map[string]any{"systemInfo": nil},
+		"not an object": map[string]any{"systemInfo": "core"},
+		"missing scale": map[string]any{"systemInfo": map[string]any{"cpuGraph": "cores"}},
+		"missing graph": map[string]any{"systemInfo": map[string]any{"cpuScale": "core"}},
+		"unknown scale": api.SystemInfoRequest{SystemInfo: &api.SystemInfoPrefs{CPUScale: "irix", CPUGraph: api.CPUGraphOverall}},
+		"unknown graph": api.SystemInfoRequest{SystemInfo: &api.SystemInfoPrefs{CPUScale: api.CPUScaleCore, CPUGraph: "heatmap"}},
+	}
+	for name, body := range cases {
+		rec := b.do(http.MethodPut, "/api/preferences/system-info", body)
+		if rec.Code != http.StatusBadRequest {
+			t.Errorf("%s: status %d (body %s)", name, rec.Code, rec.Body.String())
+		}
+	}
+	if p, _ := store.Get("admin"); p.SystemInfo != nil {
+		t.Errorf("invalid system info settings were saved: %+v", *p.SystemInfo)
+	}
+
+	b.header.Set("Content-Type", "text/plain")
+	wantCode(t, b.do(http.MethodPut, "/api/preferences/system-info", valid), http.StatusUnsupportedMediaType, api.ErrBadRequest)
 }

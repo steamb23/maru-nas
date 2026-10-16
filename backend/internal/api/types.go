@@ -417,6 +417,8 @@ type Preferences struct {
 	Shortcuts *[]Shortcut `json:"shortcuts,omitempty"`
 	// Drawer는 "모든 앱" 화면 설정이다. 한 번도 저장하지 않았으면 없다(프론트가 기본값을 쓴다).
 	Drawer *DrawerPrefs `json:"drawer,omitempty"`
+	// SystemInfo는 시스템 정보 창의 보기 설정이다. 한 번도 저장하지 않았으면 없다(프론트가 기본값을 쓴다).
+	SystemInfo *SystemInfoPrefs `json:"systemInfo,omitempty"`
 	// Appearance는 화면 설정(테마, 바탕화면 등)이다. 없거나 비어 있는 값은 관리자가 정한 기본 화면을 따른다.
 	Appearance *AppearancePrefs `json:"appearance,omitempty"`
 	// WallpaperImage는 이 사용자가 올린 바탕화면 이미지의 정보다. 올리지 않았으면 없다.
@@ -536,6 +538,34 @@ type DrawerPrefs struct {
 // DrawerRequest는 PUT /api/preferences/drawer의 요청 본문이다.
 type DrawerRequest struct {
 	Drawer *DrawerPrefs `json:"drawer"`
+}
+
+// 프로세스 CPU 사용률의 기준. SystemInfoPrefs.CPUScale에 들어간다.
+const (
+	// CPUScaleMachine은 전체 CPU 대비 0~100%다(작업 관리자 방식).
+	CPUScaleMachine = "machine"
+	// CPUScaleCore는 코어 하나를 100%로 본다(top 방식, 코어 수 × 100%까지).
+	CPUScaleCore = "core"
+)
+
+// 개요의 CPU 그래프 모양. SystemInfoPrefs.CPUGraph에 들어간다.
+const (
+	// CPUGraphOverall은 전체 사용률 그래프 하나다.
+	CPUGraphOverall = "overall"
+	// CPUGraphCores는 코어마다 작은 그래프다.
+	CPUGraphCores = "cores"
+)
+
+// SystemInfoPrefs는 시스템 정보 창의 보기 설정이다. 설정 전체를 한 번에 바꾼다.
+// 프론트는 모르는 값이면 기본값(machine, overall)을 쓴다.
+type SystemInfoPrefs struct {
+	CPUScale string `json:"cpuScale" tstype:"'machine' | 'core'"`
+	CPUGraph string `json:"cpuGraph" tstype:"'overall' | 'cores'"`
+}
+
+// SystemInfoRequest는 PUT /api/preferences/system-info의 요청 본문이다.
+type SystemInfoRequest struct {
+	SystemInfo *SystemInfoPrefs `json:"systemInfo"`
 }
 
 // Shortcut은 바탕화면 바로가기 하나다. 지금은 앱만 가리킨다. 폴더나 OMV 페이지를 가리키는

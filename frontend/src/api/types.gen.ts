@@ -627,6 +627,10 @@ export interface Preferences {
    */
   drawer?: DrawerPrefs;
   /**
+   * SystemInfo는 시스템 정보 창의 보기 설정이다. 한 번도 저장하지 않았으면 없다(프론트가 기본값을 쓴다).
+   */
+  systemInfo?: SystemInfoPrefs;
+  /**
    * Appearance는 화면 설정(테마, 바탕화면 등)이다. 없거나 비어 있는 값은 관리자가 정한 기본 화면을 따른다.
    */
   appearance?: AppearancePrefs;
@@ -793,6 +797,36 @@ export interface DrawerPrefs {
  */
 export interface DrawerRequest {
   drawer?: DrawerPrefs;
+}
+/**
+ * CPUScaleMachine은 전체 CPU 대비 0~100%다(작업 관리자 방식).
+ */
+export const CPUScaleMachine = "machine";
+/**
+ * CPUScaleCore는 코어 하나를 100%로 본다(top 방식, 코어 수 × 100%까지).
+ */
+export const CPUScaleCore = "core";
+/**
+ * CPUGraphOverall은 전체 사용률 그래프 하나다.
+ */
+export const CPUGraphOverall = "overall";
+/**
+ * CPUGraphCores는 코어마다 작은 그래프다.
+ */
+export const CPUGraphCores = "cores";
+/**
+ * SystemInfoPrefs는 시스템 정보 창의 보기 설정이다. 설정 전체를 한 번에 바꾼다.
+ * 프론트는 모르는 값이면 기본값(machine, overall)을 쓴다.
+ */
+export interface SystemInfoPrefs {
+  cpuScale: 'machine' | 'core';
+  cpuGraph: 'overall' | 'cores';
+}
+/**
+ * SystemInfoRequest는 PUT /api/preferences/system-info의 요청 본문이다.
+ */
+export interface SystemInfoRequest {
+  systemInfo?: SystemInfoPrefs;
 }
 /**
  * Shortcut은 바탕화면 바로가기 하나다. 지금은 앱만 가리킨다. 폴더나 OMV 페이지를 가리키는

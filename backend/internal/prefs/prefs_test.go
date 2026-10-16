@@ -141,6 +141,38 @@ func TestStoreDrawer(t *testing.T) {
 	}
 }
 
+func TestStoreSystemInfo(t *testing.T) {
+	for name, s := range stores(t) {
+		t.Run(name, func(t *testing.T) {
+			if p, _ := s.Get("alice"); p.SystemInfo != nil {
+				t.Fatalf("new user system info: %+v", *p.SystemInfo)
+			}
+			if err := s.SetDrawer("alice", api.DrawerPrefs{Sort: api.DrawerSortName}); err != nil {
+				t.Fatal(err)
+			}
+			want := api.SystemInfoPrefs{CPUScale: api.CPUScaleCore, CPUGraph: api.CPUGraphCores}
+			if err := s.SetSystemInfo("alice", want); err != nil {
+				t.Fatal(err)
+			}
+			p, err := s.Get("alice")
+			if err != nil || p.SystemInfo == nil || *p.SystemInfo != want {
+				t.Fatalf("after set: %+v, %v", p.SystemInfo, err)
+			}
+			if p.Drawer == nil || p.Drawer.Sort != api.DrawerSortName {
+				t.Errorf("system info save dropped drawer: %+v", p.Drawer)
+			}
+			// 돌려준 값을 바꿔도 저장값은 그대로다.
+			p.SystemInfo.CPUScale = "changed"
+			if p, _ := s.Get("alice"); *p.SystemInfo != want {
+				t.Errorf("stored system info changed: %+v", *p.SystemInfo)
+			}
+			if p, _ := s.Get("bob"); p.SystemInfo != nil {
+				t.Errorf("bob sees %+v", *p.SystemInfo)
+			}
+		})
+	}
+}
+
 func TestStoreReturnsCopies(t *testing.T) {
 	for name, s := range stores(t) {
 		t.Run(name, func(t *testing.T) {

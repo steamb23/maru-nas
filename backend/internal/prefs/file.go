@@ -72,6 +72,10 @@ func (s *FileStore) SetDrawer(username string, drawer api.DrawerPrefs) error {
 	return s.update(username, func(p *api.Preferences) { p.Drawer = &drawer })
 }
 
+func (s *FileStore) SetSystemInfo(username string, sysinfo api.SystemInfoPrefs) error {
+	return s.update(username, func(p *api.Preferences) { p.SystemInfo = &sysinfo })
+}
+
 func (s *FileStore) UpdateAppearance(username string, apply func(*api.AppearancePrefs)) error {
 	return s.update(username, func(p *api.Preferences) { p.Appearance = applyAppearance(p.Appearance, apply) })
 }

@@ -216,6 +216,33 @@ func (h *handler) setDrawer(w http.ResponseWriter, r *http.Request, s auth.Sessi
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// setSystemInfo는 시스템 정보 창 설정 전체를 바꾼다. 다른 설정은 그대로 둔다.
+func (h *handler) setSystemInfo(w http.ResponseWriter, r *http.Request, s auth.Session) {
+	var req api.SystemInfoRequest
+	if !decodeJSONLimit(w, r, &req, maxPreferencesBodyBytes) {
+		return
+	}
+	if req.SystemInfo == nil {
+		writeError(w, http.StatusBadRequest, api.ErrBadRequest, "systemInfo is required")
+		return
+	}
+	p := *req.SystemInfo
+	if p.CPUScale != api.CPUScaleMachine && p.CPUScale != api.CPUScaleCore {
+		writeError(w, http.StatusBadRequest, api.ErrBadRequest, "unknown cpu scale")
+		return
+	}
+	if p.CPUGraph != api.CPUGraphOverall && p.CPUGraph != api.CPUGraphCores {
+		writeError(w, http.StatusBadRequest, api.ErrBadRequest, "unknown cpu graph")
+		return
+	}
+	if err := h.Prefs.SetSystemInfo(s.Username, p); err != nil {
+		log.Printf("preferences: write: %v", err)
+		writeError(w, http.StatusInternalServerError, "", "failed to save preferences")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // avatarImage는 로그인한 사용자의 프로필 사진을 보낸다. 자기 사진만 받는다.
 func (h *handler) avatarImage(w http.ResponseWriter, r *http.Request, s auth.Session) {
 	key, err := prefs.UserAvatar(s.Username)
