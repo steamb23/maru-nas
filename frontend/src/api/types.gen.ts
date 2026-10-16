@@ -816,11 +816,16 @@ export const CPUGraphOverall = "overall";
 export const CPUGraphCores = "cores";
 /**
  * SystemInfoPrefs는 시스템 정보 창의 보기 설정이다. 설정 전체를 한 번에 바꾼다.
- * 프론트는 모르는 값이면 기본값(machine, overall)을 쓴다.
  */
 export interface SystemInfoPrefs {
-  cpuScale: 'machine' | 'core';
-  cpuGraph: 'overall' | 'cores';
+  /**
+   * CPUScale은 CPUScale* 중 하나다. 프론트는 모르는 값이면 machine을 쓴다.
+   */
+  cpuScale: string;
+  /**
+   * CPUGraph는 CPUGraph* 중 하나다. 프론트는 모르는 값이면 overall을 쓴다.
+   */
+  cpuGraph: string;
 }
 /**
  * SystemInfoRequest는 PUT /api/preferences/system-info의 요청 본문이다.

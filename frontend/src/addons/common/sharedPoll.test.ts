@@ -88,6 +88,43 @@ describe('createSharedPoll', () => {
     offWidget()
   })
 
+  it('warmupMs가 있으면 시작한 뒤 두 번째 요청만 빨리 보낸다', async () => {
+    const f = fakeFetch()
+    const poll = createSharedPoll({ fetch: f.fn, timeoutMs: TIMEOUT, warmupMs: 500 })
+    const off = poll.subscribe(2000, vi.fn())
+    f.last().resolve(1)
+    await vi.advanceTimersByTimeAsync(499)
+    expect(f.fn).toHaveBeenCalledTimes(1)
+    await vi.advanceTimersByTimeAsync(1)
+    expect(f.fn).toHaveBeenCalledTimes(2)
+    // 그다음부터는 원래 주기다.
+    f.last().resolve(2)
+    await vi.advanceTimersByTimeAsync(1999)
+    expect(f.fn).toHaveBeenCalledTimes(2)
+    await vi.advanceTimersByTimeAsync(1)
+    expect(f.fn).toHaveBeenCalledTimes(3)
+    off()
+
+    // 모두 떨어졌다가 다시 붙으면 다시 빨리 보낸다.
+    const again = poll.subscribe(2000, vi.fn())
+    f.last().resolve(3)
+    await vi.advanceTimersByTimeAsync(500)
+    expect(f.fn).toHaveBeenCalledTimes(5)
+    again()
+  })
+
+  it('warmupMs는 첫 요청이 실패하면 쓰지 않는다', async () => {
+    const f = fakeFetch()
+    const poll = createSharedPoll({ fetch: f.fn, timeoutMs: TIMEOUT, warmupMs: 500 })
+    const off = poll.subscribe(2000, vi.fn())
+    f.last().reject(new Error('HTTP 502'))
+    await vi.advanceTimersByTimeAsync(500)
+    expect(f.fn).toHaveBeenCalledTimes(1)
+    await vi.advanceTimersByTimeAsync(1500)
+    expect(f.fn).toHaveBeenCalledTimes(2)
+    off()
+  })
+
   it('긴 주기의 보기가 붙으면 예약을 바꾸지 않는다', async () => {
     const t = setup()
     const offWindow = t.poll.subscribe(2000, vi.fn())

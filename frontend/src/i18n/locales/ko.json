@@ -82,7 +82,56 @@
     "disconnected": "연결 끊김 — 다시 연결하는 중…",
     "cpu": "CPU",
     "memory": "메모리",
-    "uptime": "가동 시간"
+    "uptime": "가동 시간",
+    "network": "네트워크",
+    "disk": "디스크",
+    "receive": "수신",
+    "send": "송신",
+    "read": "읽기",
+    "write": "쓰기",
+    "core": "코어 {{id}}",
+    "tabs": {
+      "label": "시스템 정보 보기",
+      "overview": "개요",
+      "processes": "프로세스"
+    },
+    "chart": {
+      "ago": "{{time}} 전",
+      "now": "지금",
+      "collecting": "수집하는 중…"
+    },
+    "menu": {
+      "overall": "전체 사용률",
+      "perCore": "코어별",
+      "cpuScale": "CPU 사용률 기준",
+      "scaleMachine": "전체 대비 (최대 100%)",
+      "scaleCore": "코어당 100% (top 방식)"
+    },
+    "processes": {
+      "search": "프로세스 검색",
+      "showKernel": "커널 스레드 표시",
+      "count_one": "프로세스 {{count}}개",
+      "count_other": "프로세스 {{count}}개",
+      "loading": "프로세스를 불러오는 중…",
+      "failed": "프로세스 목록을 읽지 못했습니다.",
+      "empty": "일치하는 프로세스 없음",
+      "columns": {
+        "name": "이름",
+        "pid": "PID",
+        "user": "사용자",
+        "state": "상태",
+        "cpu": "CPU",
+        "memory": "메모리"
+      }
+    },
+    "states": {
+      "running": "실행 중",
+      "sleeping": "대기",
+      "diskSleep": "I/O 대기",
+      "zombie": "좀비",
+      "stopped": "정지",
+      "idle": "유휴"
+    }
   },
   "language": {
     "label": "언어"

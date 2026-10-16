@@ -32,6 +32,8 @@ import type {
   SiteInfo,
   SiteLogin,
   SiteLoginRequest,
+  SystemInfoPrefs,
+  SystemInfoRequest,
   SystemResponse,
   Wallpaper,
   WidgetPlacement,
@@ -331,6 +333,11 @@ export function isDrawerPrefs(v: unknown): v is DrawerPrefs {
   return isObj(v) && isStr(v.sort)
 }
 
+// isSystemInfoPrefs는 값이 문자열인지만 본다. 모르는 값은 시스템 정보 창이 기본값으로 다룬다(sysinfoPrefsStore.ts).
+export function isSystemInfoPrefs(v: unknown): v is SystemInfoPrefs {
+  return isObj(v) && isStr(v.cpuScale) && isStr(v.cpuGraph)
+}
+
 const THEMES = ['auto', 'light', 'dark'] as const
 
 // isWallpaper는 배경 서술자의 모양을 본다. 모르는 프리셋 id는 화면이 기본 배경으로 다룬다(appearance/wallpapers.ts).
@@ -357,6 +364,7 @@ export function isPreferences(v: unknown): v is Preferences {
     isOptional(v.widgets, (x) => isArrayOf(x, isWidgetPlacement)) &&
     isOptional(v.shortcuts, (x) => isArrayOf(x, isShortcut)) &&
     isOptional(v.drawer, isDrawerPrefs) &&
+    isOptional(v.systemInfo, isSystemInfoPrefs) &&
     isOptional(v.appearance, isAppearancePrefs) &&
     isOptional(v.wallpaperImage, isImageInfo) &&
     isOptional(v.avatarImage, isImageInfo)
@@ -417,6 +425,12 @@ export async function saveShortcuts(shortcuts: readonly Shortcut[]): Promise<voi
 export async function saveDrawer(drawer: DrawerPrefs): Promise<void> {
   const body: DrawerRequest = { drawer: { ...drawer } }
   await request('PUT', '/preferences/drawer', { body })
+}
+
+// saveSystemInfoPrefs는 시스템 정보 창 설정 전체를 저장한다. 다른 설정은 바꾸지 않는다.
+export async function saveSystemInfoPrefs(prefs: SystemInfoPrefs): Promise<void> {
+  const body: SystemInfoRequest = { systemInfo: { ...prefs } }
+  await request('PUT', '/preferences/system-info', { body })
 }
 
 // saveAppearance는 화면 설정 전체를 저장한다. 다른 설정은 바꾸지 않는다.

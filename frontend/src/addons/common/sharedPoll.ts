@@ -29,6 +29,9 @@ export interface SharedPollOptions<T> {
   fetch: PolledFetch<T>
   // 주기 요청 하나의 제한 시간. refresh는 백엔드가 OMV를 다시 부르므로 이보다 길게(REFRESH_TIMEOUT_FACTOR배) 기다린다.
   timeoutMs: number
+  // warmupMs가 있으면 폴러를 (다시) 시작한 뒤 첫 응답을 받고 나서 두 번째 요청만 이만큼 뒤에 보낸다.
+  // 누적 카운터의 차이로 값을 구하는 보기(시스템 정보 창)가 첫 값을 주기만큼 기다리지 않게 한다.
+  warmupMs?: number
 }
 
 export interface SharedPoll<T> {
@@ -51,8 +54,14 @@ export function createSharedPoll<T>(opts: SharedPollOptions<T>): SharedPoll<T> {
   const subs = new Set<Sub>()
   let snap: PollSnapshot<T> = EMPTY
   let refreshCtrl: AbortController | null = null
+  // 시작한 뒤 받은 주기 응답 수. warmupMs를 첫 응답 뒤에만 쓰는 데 쓴다.
+  let received = 0
 
   const minInterval = () => Math.min(...Array.from(subs, (s) => s.intervalMs))
+  const nextDelay = () => {
+    const interval = minInterval()
+    return opts.warmupMs !== undefined && received === 1 ? Math.min(opts.warmupMs, interval) : interval
+  }
   const emit = (next: PollSnapshot<T>) => {
     snap = next
     for (const s of subs) s.listener(snap)
@@ -60,9 +69,12 @@ export function createSharedPoll<T>(opts: SharedPollOptions<T>): SharedPoll<T> {
 
   const poller = createPoller<T>({
     fetch: (signal) => opts.fetch(signal, false),
-    intervalMs: minInterval,
+    intervalMs: nextDelay,
     timeoutMs: opts.timeoutMs,
-    onData: (data) => emit({ ...snap, data, status: 'ok' }),
+    onData: (data) => {
+      received++
+      emit({ ...snap, data, status: 'ok' })
+    },
     onError: () => {
       if (snap.status !== 'disconnected') emit({ ...snap, status: 'disconnected' })
     },
@@ -73,6 +85,7 @@ export function createSharedPoll<T>(opts: SharedPollOptions<T>): SharedPoll<T> {
     refreshCtrl?.abort()
     refreshCtrl = null
     snap = EMPTY
+    received = 0
   }
 
   return {

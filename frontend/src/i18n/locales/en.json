@@ -82,7 +82,56 @@
     "disconnected": "Disconnected — reconnecting…",
     "cpu": "CPU",
     "memory": "Memory",
-    "uptime": "Uptime"
+    "uptime": "Uptime",
+    "network": "Network",
+    "disk": "Disk",
+    "receive": "Receive",
+    "send": "Send",
+    "read": "Read",
+    "write": "Write",
+    "core": "Core {{id}}",
+    "tabs": {
+      "label": "System information views",
+      "overview": "Overview",
+      "processes": "Processes"
+    },
+    "chart": {
+      "ago": "{{time}} ago",
+      "now": "Now",
+      "collecting": "Collecting…"
+    },
+    "menu": {
+      "overall": "Overall utilization",
+      "perCore": "Per core",
+      "cpuScale": "CPU usage basis",
+      "scaleMachine": "Share of all CPUs (max 100%)",
+      "scaleCore": "100% per core (top style)"
+    },
+    "processes": {
+      "search": "Search processes",
+      "showKernel": "Show kernel threads",
+      "count_one": "{{count}} process",
+      "count_other": "{{count}} processes",
+      "loading": "Loading processes…",
+      "failed": "Couldn't read the process list.",
+      "empty": "No matching processes",
+      "columns": {
+        "name": "Name",
+        "pid": "PID",
+        "user": "User",
+        "state": "Status",
+        "cpu": "CPU",
+        "memory": "Memory"
+      }
+    },
+    "states": {
+      "running": "Running",
+      "sleeping": "Sleeping",
+      "diskSleep": "Waiting for I/O",
+      "zombie": "Zombie",
+      "stopped": "Stopped",
+      "idle": "Idle"
+    }
   },
   "language": {
     "label": "Language"

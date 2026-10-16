@@ -202,6 +202,8 @@ describe('preferences', () => {
     ['위젯과 바로가기', { widgets: [placement], shortcuts: [{ app: 'files' }] }],
     ['모든 앱 설정', { drawer: { sort: 'name' } }],
     ['모르는 정렬 방식(다른 버전)', { drawer: { sort: 'later' } }],
+    ['시스템 정보 설정', { systemInfo: { cpuScale: 'core', cpuGraph: 'cores' } }],
+    ['모르는 시스템 정보 값(다른 버전)', { systemInfo: { cpuScale: 'irix', cpuGraph: 'heatmap' } }],
   ])('%s를 받는다', (_name, v) => {
     expect(isPreferences(v)).toBe(true)
   })
@@ -218,6 +220,8 @@ describe('preferences', () => {
     ['app이 숫자', { shortcuts: [{ app: 1 }] }],
     ['drawer가 문자열', { drawer: 'name' }],
     ['sort 없음', { drawer: {} }],
+    ['systemInfo가 문자열', { systemInfo: 'core' }],
+    ['cpuGraph 없음', { systemInfo: { cpuScale: 'core' } }],
   ])('%s는 거부한다', (_name, v) => {
     expect(isPreferences(v)).toBe(false)
   })
