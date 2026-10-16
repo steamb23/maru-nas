@@ -78,6 +78,96 @@ func TestLoginAuthenticated(t *testing.T) {
 	}
 }
 
+// OMV 8.4 이하는 Session.login이 status 없이 authenticated를 준다. 8.0·8.1에는
+// WebGui.getAutoLogoutSettings도 없어 세션이 살아 있는지만 알고 timeout은 모른다.
+func TestLoginLegacyVersions(t *testing.T) {
+	for _, v := range []omvfake.Version{omvfake.Version82, omvfake.Version80} {
+		t.Run(v.String(), func(t *testing.T) {
+			c, fake, _ := setup(t, 5*time.Minute)
+			fake.SetVersion(v)
+			res, err := c.Login(ctx, "admin", "admin", "")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if res.Status != omv.StatusAuthenticated || !res.Admin || res.Username != "admin" || res.SessionID == "" {
+				t.Fatalf("unexpected result %+v", res)
+			}
+			if user, err := c.Login(ctx, "user", "user", ""); err != nil || user.Admin {
+				t.Fatalf("non-admin login: %+v, %v", user, err)
+			}
+			// 2차 인증이 없는 버전이라 2차 인증 계정도 바로 로그인된다.
+			if totp, err := c.Login(ctx, "totp", "totp", ""); err != nil || totp.Status != omv.StatusAuthenticated {
+				t.Fatalf("totp login: %+v, %v", totp, err)
+			}
+			if _, err := c.Login(ctx, "admin", "wrong", ""); omv.HTTPStatus(err) != http.StatusBadRequest {
+				t.Fatalf("wrong password err %v", err)
+			}
+			st, err := c.Probe(ctx, res.SessionID, false)
+			if err != nil {
+				t.Fatal(err)
+			}
+			want := omv.SessionState{Timeout: 5 * time.Minute, TimeoutKnown: true}
+			if v == omvfake.Version80 {
+				want = omv.SessionState{}
+			}
+			if st != want {
+				t.Errorf("probe %+v, want %+v", st, want)
+			}
+			fake.Expire("admin")
+			if err := probe(c, ctx, res.SessionID, false); !omv.IsUnauthorized(err) {
+				t.Errorf("expired err %v", err)
+			}
+		})
+	}
+}
+
+func TestFakeParseVersion(t *testing.T) {
+	for in, want := range map[string]omvfake.Version{
+		"8.0": omvfake.Version80, "8.1.1": omvfake.Version80, "8.2": omvfake.Version82,
+		"8.4.0": omvfake.Version82, "8.5": omvfake.Version85, "8.5.11": omvfake.Version85, "8.10": omvfake.Version85,
+	} {
+		if got, err := omvfake.ParseVersion(in); err != nil || got != want {
+			t.Errorf("ParseVersion(%q) = %v, %v; want %v", in, got, err, want)
+		}
+	}
+	for _, in := range []string{"", "8", "7.4", "9.0", "8.x"} {
+		if _, err := omvfake.ParseVersion(in); err == nil {
+			t.Errorf("ParseVersion(%q) accepted", in)
+		}
+	}
+}
+
+// 옛 형식 응답을 그대로 해석한다. 본문은 OMV 8.3.1 응답의 형식이고 세션 ID는 합성 값이다.
+func TestLoginLegacyResponse(t *testing.T) {
+	var body string
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(body))
+	}))
+	defer ts.Close()
+	c := omv.NewClient(ts.URL, testUA)
+
+	body = `{"response":{"authenticated":true,"username":"admin","permissions":{"role":"admin"},"sessionid":"0123456789abcdef"},"error":null}`
+	res, err := c.Login(ctx, "admin", "x", "")
+	if err != nil || res.Status != omv.StatusAuthenticated || !res.Admin || res.SessionID != "0123456789abcdef" {
+		t.Fatalf("admin: %+v, %v", res, err)
+	}
+	body = `{"response":{"authenticated":true,"username":"user","permissions":{"role":"user"},"sessionid":"0123456789abcdef"},"error":null}`
+	if res, err := c.Login(ctx, "user", "x", ""); err != nil || res.Admin {
+		t.Fatalf("user: %+v, %v", res, err)
+	}
+	// 옛 OMV는 실패를 HTTP 400으로 알리므로 false나 빈 세션 ID는 예상 밖의 응답이다.
+	for _, bad := range []string{
+		`{"response":{"authenticated":false,"username":"admin","permissions":{"role":"admin"},"sessionid":"0123456789abcdef"},"error":null}`,
+		`{"response":{"authenticated":true,"username":"admin","permissions":{"role":"admin"},"sessionid":""},"error":null}`,
+	} {
+		body = bad
+		if _, err := c.Login(ctx, "admin", "x", ""); err == nil {
+			t.Errorf("accepted %s", bad)
+		}
+	}
+}
+
 func TestLoginWrongPassword(t *testing.T) {
 	c, _, _ := setup(t, 5*time.Minute)
 	_, err := c.Login(ctx, "admin", "wrong", "")

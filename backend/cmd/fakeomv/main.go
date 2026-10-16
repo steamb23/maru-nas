@@ -26,10 +26,16 @@ func main() {
 		"수신 주소 (루프백만 허용, 환경 변수 FAKEOMV_LISTEN)")
 	timeout := flag.Duration("timeout", envDuration("FAKEOMV_TIMEOUT", 5*time.Minute),
 		"세션 timeout, 분 단위, 0이면 만료 없음 (환경 변수 FAKEOMV_TIMEOUT, 예: 2m)")
+	omvVersion := flag.String("omv-version", cmp.Or(os.Getenv("FAKEOMV_VERSION"), "8.5"),
+		"흉내 낼 OMV 버전, 8.0 ~ 8.4는 옛 로그인 응답 (환경 변수 FAKEOMV_VERSION, 예: 8.3)")
 	flag.Parse()
 
 	if *timeout < 0 || *timeout%time.Minute != 0 {
 		log.Fatalf("timeout must be whole minutes like OMV's setting, got %v", *timeout)
+	}
+	version, err := omvfake.ParseVersion(*omvVersion)
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	host, _, err := net.SplitHostPort(*listen)
@@ -38,7 +44,8 @@ func main() {
 	}
 
 	srv := omvfake.New(omvfake.DefaultUsers(), *timeout)
-	log.Printf("fake omv listening on http://%s (session timeout %v)", *listen, *timeout)
+	srv.SetVersion(version)
+	log.Printf("fake omv listening on http://%s (OMV %s, session timeout %v)", *listen, version, *timeout)
 	for _, u := range omvfake.DefaultUsers() {
 		role := "user"
 		if u.Admin {

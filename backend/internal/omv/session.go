@@ -33,11 +33,18 @@ type LoginResult struct {
 	Challenge *Challenge
 }
 
+// loginResponse는 Session.login·Session.verify 응답이다. OMV 버전에 따라 형식이 둘이다.
+//   - 8.5.0-2 이상: status가 authenticated 또는 challengeRequired다.
+//   - 8.4 이하: status 없이 authenticated(bool)만 준다. 2차 인증이 없고, 틀린 비밀번호는
+//     false가 아니라 HTTP 400으로 온다.
+//
+// 8.5의 응답에도 authenticated가 들어 있을 수 있으므로 옛 형식은 status가 없는 것으로 판단한다.
 type loginResponse struct {
-	Status      string `json:"status"`
-	Username    string `json:"username"`
-	SessionID   string `json:"sessionid"`
-	Permissions struct {
+	Status        string `json:"status"`
+	Authenticated *bool  `json:"authenticated"`
+	Username      string `json:"username"`
+	SessionID     string `json:"sessionid"`
+	Permissions   struct {
 		Role string `json:"role"`
 	} `json:"permissions"`
 	Challenge *Challenge `json:"challenge"`
@@ -49,6 +56,10 @@ func (c *Client) loginResult(res Response) (LoginResult, error) {
 	var lr loginResponse
 	if err := json.Unmarshal(res.Result, &lr); err != nil {
 		return LoginResult{}, errBadLogin
+	}
+	// 옛 형식(OMV 8.4 이하)은 새 형식의 authenticated 상태로 바꿔 같은 흐름을 탄다.
+	if lr.Status == "" && lr.Authenticated != nil && *lr.Authenticated {
+		lr.Status = StatusAuthenticated
 	}
 	out := LoginResult{
 		Status:    lr.Status,

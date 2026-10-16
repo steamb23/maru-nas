@@ -16,6 +16,8 @@
 //   - Exec.isRunning은 백그라운드 작업이 끝났는지 알려 준다(exec.go).
 //   - 로그인 성공 시 OPENMEDIAVAULT-LOGIN-* 쿠키가 없으면 "새 브라우저 로그인"
 //     메일을 보낸 것으로 센다(LoginMails).
+//   - 없는 메서드는 실제 OMV(rpc/rpc.inc)처럼 HTTP 404다.
+//   - SetVersion으로 옛 OMV 8 버전대의 응답을 흉내 낸다(Version).
 //
 // 실제 OMV보다 엄격한 점: User-Agent 검사를 Session.logout뿐 아니라 인증된 모든
 // 호출에서 한다. 백엔드가 고정 User-Agent를 지키는지 확인하기 위해서다.
@@ -27,7 +29,9 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -70,6 +74,49 @@ func DefaultUsers() []User {
 	}
 }
 
+// Version은 흉내 낼 OMV 8 버전대다. 온마루가 쓰는 RPC의 동작이 달라지는 경계만 나눈다.
+// 경계는 OMV 패키지 소스(var/www/openmediavault/rpc/session.inc, engined/rpc/webgui.inc)로 확인했다.
+type Version int
+
+const (
+	// Version85는 OMV 8.5.0-2 이상이다(기본값). Session.login이 status를 주고 2차 인증(Session.verify)이 있다.
+	Version85 Version = iota
+	// Version82는 OMV 8.2.0 ~ 8.4.x다. Session.login이 status 없이 authenticated(bool)를 준다.
+	// 2차 인증이 없으므로 Session.verify가 없고 2차 인증 계정도 바로 로그인된다.
+	Version82
+	// Version80은 OMV 8.0 ~ 8.1.x다. Version82에 더해 WebGui.getAutoLogoutSettings가 없다.
+	Version80
+)
+
+// ParseVersion은 "8.3"·"8.5.11" 같은 OMV 버전을 그 버전이 속한 버전대로 바꾼다.
+func ParseVersion(s string) (Version, error) {
+	parts := strings.Split(s, ".")
+	if len(parts) < 2 || parts[0] != "8" {
+		return 0, fmt.Errorf("unsupported OMV version %q (want 8.x)", s)
+	}
+	minor, err := strconv.Atoi(parts[1])
+	if err != nil || minor < 0 {
+		return 0, fmt.Errorf("invalid OMV version %q", s)
+	}
+	switch {
+	case minor >= 5:
+		return Version85, nil
+	case minor >= 2:
+		return Version82, nil
+	}
+	return Version80, nil
+}
+
+func (v Version) String() string {
+	switch v {
+	case Version82:
+		return "8.2-8.4"
+	case Version80:
+		return "8.0-8.1"
+	}
+	return "8.5+"
+}
+
 // Call은 받은 호출 하나의 기록이다.
 type Call struct {
 	Service   string
@@ -91,6 +138,7 @@ type Server struct {
 	Now func() time.Time
 
 	mu       sync.Mutex
+	version  Version
 	users    map[string]User
 	timeout  time.Duration
 	sessions map[string]*session
@@ -156,6 +204,13 @@ func (s *Server) Expire(username string) {
 	}
 }
 
+// SetVersion은 흉내 낼 OMV 버전대를 바꾼다. 이미 있는 세션은 그대로 둔다.
+func (s *Server) SetVersion(v Version) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.version = v
+}
+
 // SetTimeout은 세션 timeout을 바꾼다. 웹 관리 설정을 바꾼 상황을 흉내 낸다.
 func (s *Server) SetTimeout(d time.Duration) {
 	s.mu.Lock()
@@ -196,6 +251,11 @@ type rpcError struct {
 }
 
 func errStatus(status int, message string) *rpcError { return &rpcError{status, message} }
+
+// noMethod는 없는 메서드를 부른 오류다. OMV rpc/rpc.inc는 HttpErrorException(404)을 던진다.
+func noMethod(service, method string) *rpcError {
+	return errStatus(http.StatusNotFound, "The method '"+method+"' does not exist for the RPC service '"+service+"'.")
+}
 
 // request는 호출 하나를 처리하는 동안의 상태다.
 type request struct {
@@ -277,15 +337,15 @@ func (s *Server) handle(req *request, body rpcBody, touch bool) (any, *rpcError)
 	}
 
 	if body.Service == "Session" {
-		switch body.Method {
-		case "login":
+		switch {
+		case body.Method == "login":
 			return s.login(req, body.Params)
-		case "verify":
+		case body.Method == "verify" && s.version == Version85:
 			return s.verify(req, body.Params)
-		case "logout":
+		case body.Method == "logout":
 			return s.logout(req)
 		}
-		return nil, errStatus(http.StatusInternalServerError, "The method '"+body.Method+"' does not exist for the RPC service 'Session'.")
+		return nil, noMethod("Session", body.Method)
 	}
 
 	// Session 밖의 서비스는 엔진으로 넘어가므로 인증이 필요하다.
@@ -294,6 +354,9 @@ func (s *Server) handle(req *request, body rpcBody, touch bool) (any, *rpcError)
 		return nil, errStatus(http.StatusUnauthorized, "Session not authenticated.")
 	}
 	if body.Service == "WebGui" && body.Method == "getAutoLogoutSettings" {
+		if s.version == Version80 {
+			return nil, noMethod(body.Service, body.Method)
+		}
 		return map[string]any{"timeout": int(s.timeout / time.Minute)}, nil
 	}
 	if body.Service == "UserMgmt" {
@@ -368,7 +431,7 @@ func (s *Server) login(req *request, raw json.RawMessage) (any, *rpcError) {
 		return nil, errStatus(http.StatusBadRequest, "Incorrect username or password.")
 	}
 
-	if u.TOTP != "" {
+	if u.TOTP != "" && s.version == Version85 {
 		if req.sess.authenticated && req.sess.username != name {
 			return nil, errStatus(http.StatusBadRequest, "Another user is already authenticated.")
 		}
@@ -384,6 +447,15 @@ func (s *Server) login(req *request, raw json.RawMessage) (any, *rpcError) {
 	id, rerr := s.initialize(req, name, u.Admin)
 	if rerr != nil {
 		return nil, rerr
+	}
+	if s.version != Version85 {
+		// OMV 8.4 이하의 형식이다. 실패는 위의 HTTP 400뿐이라 authenticated는 늘 true다.
+		return map[string]any{
+			"authenticated": true,
+			"username":      name,
+			"permissions":   permissions(u.Admin),
+			"sessionid":     id,
+		}, nil
 	}
 	return map[string]any{
 		"username":    name,

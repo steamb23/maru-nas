@@ -15,20 +15,27 @@ paths:
 OMV 공식 저장소 소스(2026-10 기준)에서 확인한 내용이다. OMV 업데이트 후 동작이 다르면 이 섹션을 갱신한다. 로그인 관련 소스는 `/var/www/openmediavault/rpc/session.inc`.
 
 - **로그인 흐름은 두 단계**: `Session.login`(`username`, `password`) 응답의 `status`가 `authenticated`면 완료, `challengeRequired`면 TOTP 등 2차 인증이 필요하다. 이때 같은 세션으로 `Session.verify`(`challengeresponse`)를 호출한다. 2FA를 쓰지 않더라도 이 분기를 항상 구현한다
-- **8.5.0 이전 형식**: `status` 필드와 2차 인증 분기는 OMV 8.5.0(Issue #2235)에서 생겼다. 8.4 이하는 `{"authenticated": true, "username", "permissions", "sessionid"}` 형식이라 백엔드가 `omv login: unexpected response`로 거절한다. 그래서 OMV 8.5 이상만 지원한다(2026-10, OMV 8.3.1 ISO로 설치한 VM에서 확인. 최신 ISO도 8.3.1이라 설치 직후에는 업데이트가 필요하다)
 - **2차 인증 시 세션 ID**: `challengeRequired`일 때 OMV는 세션 ID를 바꾸고(`session_regenerate_id`) 새 ID를 응답 본문 없이 `Set-Cookie`로만 준다. `Session.verify`는 그 ID로 호출해야 한다. `challengeresponse`의 형식은 2FA 플러그인이 정한다(이 NAS에는 2FA 플러그인이 없어 미검증)
 - **대기 중 세션 주의**: 인증되지 않은 세션으로 엔진 RPC(Session 밖의 서비스)를 부르면 OMV가 세션을 파기하므로, 2차 인증 대기 중인 세션으로는 다른 RPC를 부르지 않는다
 - **세션 쿠키**: 이름 `OPENMEDIAVAULT-SESSIONID`, HttpOnly, SameSite=Strict, HTTPS일 때 Secure. 쿠키 대신 `X-OpenMediaVault-SessionID` 헤더도 받는다
 - **세션 바인딩**: 세션은 User-Agent에 묶이며 다르면 서버가 세션을 파기한다(`Session.logout` 같은 로컬 서비스 호출 시 검사). IP 검사(`validateIpAddress`)는 OMV 소스에서 꺼져 있다. 한 주체가 받은 세션을 다른 주체에게 넘겨 쓰는 설계는 하지 않는다
 - **클라이언트 IP**: 인증 로그의 IP는 `X-Forwarded-For` 등 프록시 헤더를 그대로 믿어 정한다(세션 검증에는 쓰지 않음). 백엔드는 브라우저 IP를 `X-Forwarded-For`로 넘긴다
 - **세션 만료**: OMV 웹 관리 설정의 timeout 값(기본 5분)을 따른다. 인증된 호출마다 마지막 접근 시각이 갱신되며, `options.updatelastaccess=false`면 갱신하지 않는다
-- **세션 확인용 RPC**: `WebGui.getAutoLogoutSettings`. 엔진 RPC라 인증된 세션이 필요하고 역할 제한이 없으며, 자동 로그아웃 시간(`timeout`, 분, 0이면 꺼짐)을 돌려준다. OMV workbench도 이 값으로 브라우저에서 자동 로그아웃 타이머를 돈다. `System.noop`은 admin 전용이다
+- **세션 확인용 RPC**: `WebGui.getAutoLogoutSettings`(8.2.0부터 있다. 아래 "OMV 8 버전별 차이"). 엔진 RPC라 인증된 세션이 필요하고 역할 제한이 없으며, 자동 로그아웃 시간(`timeout`, 분, 0이면 꺼짐)을 돌려준다. OMV workbench도 이 값으로 브라우저에서 자동 로그아웃 타이머를 돈다. `System.noop`은 admin 전용이다
 - **로그인 실패 제한**: 비밀번호 실패에는 OMV 쪽 지연이 없다(2차 인증 실패만 제한, 429). 그래서 백엔드가 자체 제한을 둔다
 - **새 브라우저 로그인 메일**: 로그인 성공 시 `OPENMEDIAVAULT-LOGIN-*` 쿠키가 없으면 "새 브라우저 로그인" 알림 메일을 보낸다. 백엔드가 이 쿠키(비밀 아님)를 사용자별로 메모리에 보관해 다음 로그인에 실어 보내므로, 백엔드 재시작 후 첫 로그인에만 메일이 간다
 - **권한**: 로그인 응답의 `permissions.role`에 admin 포함 여부가 들어 있다. 관리자가 아니면 설정 관련 창과 버튼을 숨긴다
 - **workbench의 탭별 로그인**: OMV workbench는 사용자 이름과 권한을 sessionStorage에 저장하고 그것으로 로그인 여부를 판단해서, 새 탭마다 다시 로그인해야 한다
 - **대시보드 로그인을 OMV 탭에 넘길 수 없다**: Session 서비스에는 `login`·`verify`·`logout`만 있고 토큰·SSO 같은 비밀번호 없는 로그인이 없다. 백엔드의 OMV 세션은 고정 User-Agent에 묶여 브라우저에 넘기면 파기되고(대시보드도 로그아웃된다), 쿠키가 있어도 새 탭은 sessionStorage가 비어 로그인 화면이 뜬다. 그래서 OMV 워크벤치 링크 앱은 이름 붙은 탭 하나를 다시 써서 그 탭의 로그인을 유지한다(OMV 8.5 소스 기준)
 - **보안 헤더**: 기본값이 `X-Frame-Options: SAMEORIGIN`, CSP `default-src 'self'`. OMV 화면을 iframe에 넣는 건 같은 출처에서만 가능하다. 보안 헤더를 끄는 방식은 쓰지 않는다
+
+## OMV 8 버전별 차이
+
+OMV 8의 모든 버전을 지원한다. OMV 패키지(`packages.openmediavault.org/public/pool/main/o/openmediavault/`)를 버전별로 풀어 온마루가 쓰는 RPC를 비교했고(2026-10), 아래만 다르다. 나머지 메서드는 8.0부터 의미가 같고 set 스키마(`rpc.*`)도 같다. 새 RPC를 쓰면 옛 버전 소스에도 있는지 같은 방법으로 확인한다. `omvfake.Version`(`SetVersion`, 개발 서버는 `FAKEOMV_VERSION`)이 이 경계를 흉내 낸다
+
+- **`Session.login` 응답**: `status`와 2차 인증(`Session.verify`)은 8.5.0(Issue #2235)에서 생겼다. 8.4 이하는 `{"authenticated": true, "username", "permissions", "sessionid"}`이고 실패는 똑같이 HTTP 400이다. 백엔드는 `status`가 없고 `authenticated`가 true이면 `authenticated` 상태로 바꿔 같은 흐름을 탄다(`omv.loginResult`). 8.5의 verify 응답에도 `authenticated`가 들어 있을 수 있으므로 옛 형식은 `status`가 없는 것으로 판단한다
+- **8.5.0-1의 `Session.authenticate`**: 이 한 릴리스만 `login`을 `authenticate`로 바꿨고 8.5.0-2에서 되돌렸다. 지원하지 않는다
+- **`WebGui.getAutoLogoutSettings`**: 8.2.0에서 생겼다. 8.0·8.1에서는 HTTP 404(없는 메서드, `rpc/rpc.inc`)라 `Probe`가 세션은 살아 있고 timeout은 모른다고 본다. 이때 브라우저에 남은 시간을 주지 않고 만료는 확인 주기의 Probe(401)로 안다
 
 ## 인증 설계
 

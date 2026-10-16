@@ -613,6 +613,43 @@ func TestTimeoutChangeIsPickedUp(t *testing.T) {
 	}
 }
 
+// OMV 8.2 ~ 8.4는 Session.login이 옛 형식(authenticated)이고 2차 인증이 없다.
+func TestLegacyOMVLogin(t *testing.T) {
+	e := newEnv(t, envOptions{omvTimeout: 5 * time.Minute})
+	e.fake.SetVersion(omvfake.Version82)
+	rec := e.browser().login("admin", "admin")
+	wantStatus(t, rec, http.StatusOK)
+	res := decode[api.LoginResponse](t, rec)
+	if res.Status != api.LoginAuthenticated || res.Session == nil || !res.Session.Admin ||
+		res.Session.ExpiresInSeconds == nil || *res.Session.ExpiresInSeconds != 300 {
+		t.Fatalf("legacy login %s", rec.Body.String())
+	}
+	// 2차 인증 계정도 바로 로그인된다.
+	rec = e.browser().login("totp", "totp")
+	wantStatus(t, rec, http.StatusOK)
+	if res := decode[api.LoginResponse](t, rec); res.Status != api.LoginAuthenticated {
+		t.Fatalf("totp login %s", rec.Body.String())
+	}
+	wantCode(t, e.browser().login("user", "wrong"), http.StatusBadRequest, api.ErrInvalidCredentials)
+}
+
+// OMV 8.0 ~ 8.1에는 WebGui.getAutoLogoutSettings가 없다. 남은 시간 없이 로그인하고,
+// OMV 세션 만료는 확인 주기마다 OMV에 물어 안다.
+func TestOMVWithoutAutoLogoutSettings(t *testing.T) {
+	e := newEnv(t, envOptions{omvTimeout: 5 * time.Minute, interval: time.Minute})
+	e.fake.SetVersion(omvfake.Version80)
+	b := e.browser()
+	rec := b.login("user", "user")
+	wantStatus(t, rec, http.StatusOK)
+	if s := decode[api.LoginResponse](t, rec).Session; s == nil || s.ExpiresInSeconds != nil {
+		t.Fatalf("login session %s", rec.Body.String())
+	}
+	wantStatus(t, b.do(http.MethodGet, "/api/session", nil), http.StatusOK)
+	e.fake.Expire("user")
+	e.clk.Add(2 * time.Minute)
+	wantCode(t, b.do(http.MethodGet, "/api/session", nil), http.StatusUnauthorized, api.ErrUnauthorized)
+}
+
 func TestAutoLogoutOff(t *testing.T) {
 	e := newEnv(t, envOptions{omvTimeoutOff: true})
 	b := e.browser()

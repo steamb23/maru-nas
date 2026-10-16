@@ -38,5 +38,6 @@ paths:
 
 - 서버 테스트는 `internal/server/server_test.go`의 `newEnv`·`browser`를 쓴다. `omvfake`를 `httptest`로 띄우고 실제 `omv.Client`와 서버 핸들러를 연결한다
 - 시계는 주입한다. OMV 세션 만료는 `omvfake.Expire(user)`로 흉내 낸다
+- 옛 OMV 8 버전의 응답은 `omvfake.SetVersion`(`Version82`, `Version80`)으로 흉내 낸다. 버전마다 RPC가 다른 기능은 해당 버전대도 테스트한다(`auth-omv.md`의 "OMV 8 버전별 차이")
 - 새 RPC를 쓰는 기능은 `omvfake`에 그 RPC의 합성 응답을 추가해 같은 방식으로 테스트한다. 응답 형식은 OMV 소스(`/usr/share/openmediavault/engined/rpc/`)를 읽고 만들며 NAS 실제 출력을 넣지 않는다
 - `omvfake`는 인증된 모든 호출에서 User-Agent를 검사한다(실제 OMV보다 엄격). 백엔드가 고정 User-Agent를 지키는지 확인하기 위해서다
