@@ -55,6 +55,10 @@ describe('formatPercent / percentOf', () => {
     expect(formatPercent(3.14159, 'en')).toBe('3.1%')
   })
 
+  it('소수 자릿수를 바꿀 수 있다', () => {
+    expect(formatPercent(100, 'en', 0)).toBe('100%')
+  })
+
   it('비율을 0~100으로 계산하고 total이 0이면 0', () => {
     expect(percentOf(25, 100)).toBe(25)
     expect(percentOf(5, 0)).toBe(0)
@@ -65,6 +69,8 @@ describe('formatPercent / percentOf', () => {
 describe('formatRate, formatLinkSpeed', () => {
   it('초당 바이트에 /s를 붙인다', () => {
     expect(formatRate(1536, 'en')).toBe('1.5 KiB/s')
+    expect(formatRate(2 * 1024 * 1024, 'en', 0)).toBe('2 MiB/s')
+    expect(formatRate(512, 'en', 0)).toBe('512 B/s')
   })
   it('링크 속도는 1000 이상이면 Gbps', () => {
     expect(formatLinkSpeed(2500, 'en')).toBe('2.5 Gbps')

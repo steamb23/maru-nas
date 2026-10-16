@@ -13,7 +13,7 @@ export const MANIFESTS = {
       "window": {
         "defaultSize": {
           "width": 720,
-          "height": 560
+          "height": 520
         },
         "minSize": {
           "width": 440,

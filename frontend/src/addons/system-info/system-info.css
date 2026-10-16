@@ -179,6 +179,11 @@
   transition: opacity 0.2s;
 }
 
+/* 같은 줄 카드의 그래프 아래쪽을 맞춘다(카드마다 머리 줄 수가 다르다). */
+.sysinfo-card > .sysinfo-chart {
+  margin-top: auto;
+}
+
 /* 연결이 끊기면 마지막 그래프를 흐리게 보여 준다. */
 .sysinfo-chart.stale {
   opacity: 0.45;
@@ -189,6 +194,12 @@
   height: 96px;
   border-radius: 4px;
   touch-action: pan-y;
+}
+
+.sysinfo-chart-plot:focus-visible,
+.sysinfo-cores:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .sysinfo-chart.compact .sysinfo-chart-plot {
@@ -301,7 +312,7 @@
 
 .sysinfo-cores {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
   gap: 8px;
 }
 

@@ -17,9 +17,11 @@ var Manifest = api.Manifest{
 	Title: "apps.systemInfo",
 	Icon:  "utilities-system-monitor",
 	Views: api.AddonViews{
-		// 개요(그래프 카드)와 프로세스 표. 크기는 브라우저 실측으로 정한다. 창 내용을 바꾸면 다시 잰다.
+		// 개요(그래프 카드)와 프로세스 표. 기본 크기는 관리자의 개요(탭 막대, 전체 사용률 그래프, 카드 2×2)가
+		// 스크롤 없이 들어가는 높이다(Chrome 실측 511px, ko·en 같음, 10px 단위로 올림). 최소 크기에서는 카드가
+		// 한 열이 되어 스크롤하고, 프로세스 표는 상태·사용자 열을 숨긴다. 창 내용을 바꾸면 다시 잰다.
 		Window: &api.WindowView{
-			DefaultSize: api.Size{Width: 720, Height: 560},
+			DefaultSize: api.Size{Width: 720, Height: 520},
 			MinSize:     &api.Size{Width: 440, Height: 360},
 		},
 		// CPU·RAM·가동 시간 요약. 위젯 내용을 바꾸면 브라우저에서 다시 잰다.

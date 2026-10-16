@@ -25,14 +25,15 @@ const dateTimeFormat = (locale: string, opts: Intl.DateTimeFormatOptions) =>
   cached('datetime', locale, opts, () => new Intl.DateTimeFormat(locale, opts))
 
 // formatBytes는 1024 단위로 바꿔 소수점 한 자리까지 표시한다. 예: 5.3 GiB
-export function formatBytes(bytes: number, locale: string): string {
+// fractionDigits를 주면 B보다 큰 단위의 소수 자릿수를 바꾼다(그래프 축처럼 깔끔한 수만 쓰는 곳은 0).
+export function formatBytes(bytes: number, locale: string, fractionDigits = 1): string {
   let v = Math.max(0, bytes)
   let i = 0
   while (v >= 1024 && i < BYTE_UNITS.length - 1) {
     v /= 1024
     i++
   }
-  const digits = i === 0 ? 0 : 1
+  const digits = i === 0 ? 0 : fractionDigits
   const n = numberFormat(locale, { minimumFractionDigits: digits, maximumFractionDigits: digits })
   return `${n.format(v)} ${BYTE_UNITS[i]}`
 }
@@ -64,11 +65,13 @@ export function formatUptime(seconds: number, locale: string, unitDisplay: UnitD
   return listFormat(locale, { type: 'unit', style: 'narrow' }).format(parts)
 }
 
-// formatPercent는 0~100 값을 소수점 한 자리 백분율로 표시한다.
-export function formatPercent(percent: number, locale: string): string {
-  return numberFormat(locale, { style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(
-    percent / 100,
-  )
+// formatPercent는 0~100 값을 소수점 한 자리(fractionDigits) 백분율로 표시한다.
+export function formatPercent(percent: number, locale: string, fractionDigits = 1): string {
+  return numberFormat(locale, {
+    style: 'percent',
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits,
+  }).format(percent / 100)
 }
 
 // percentOf는 part/total을 0~100으로 반환한다. total이 0이면 0.
@@ -77,8 +80,8 @@ export function percentOf(part: number, total: number): number {
 }
 
 // formatRate는 초당 바이트를 1024 단위로 표시한다. 예: 1.2 MiB/s
-export function formatRate(bytesPerSecond: number, locale: string): string {
-  return `${formatBytes(bytesPerSecond, locale)}/s`
+export function formatRate(bytesPerSecond: number, locale: string, fractionDigits = 1): string {
+  return `${formatBytes(bytesPerSecond, locale, fractionDigits)}/s`
 }
 
 // formatLinkSpeed는 링크 속도(Mbps)를 표시한다. 1000 이상은 Gbps로 바꾼다. 예: 2.5 Gbps, 100 Mbps

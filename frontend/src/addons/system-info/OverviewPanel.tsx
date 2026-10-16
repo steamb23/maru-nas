@@ -79,7 +79,7 @@ export function OverviewPanel({ sample, stale }: Props) {
       now={now}
       max={100}
       format={(v) => formatPercent(v, lang)}
-      maxLabel={formatPercent(100, lang)}
+      maxLabel={formatPercent(100, lang, 0)}
       compact={compact}
       label={`${label} ${pct(values[values.length - 1])}`}
       stale={stale}
@@ -96,7 +96,7 @@ export function OverviewPanel({ sample, stale }: Props) {
         now={now}
         max={max}
         format={(v) => formatRate(v, lang)}
-        maxLabel={formatRate(max, lang)}
+        maxLabel={formatRate(max, lang, 0)}
         label={`${title}: ${summary}`}
         stale={stale}
       />
@@ -121,7 +121,15 @@ export function OverviewPanel({ sample, stale }: Props) {
           {...cpuMenu.handlers}
         >
           {perCore ? (
-            <div className="sysinfo-cores">
+            // 작은 그래프는 포커스를 받지 않으므로, 키보드로 메뉴(Shift+F10)를 열 자리와 값 요약을 격자에 둔다.
+            <div
+              className="sysinfo-cores"
+              role="group"
+              tabIndex={0}
+              aria-label={cores
+                .map((c) => `${t('sysinfo.core', { id: c.id })} ${pct(point?.cores.get(c.id))}`)
+                .join(', ')}
+            >
               {cores.map((c) => {
                 const values = pick(points, (p) => p.cores.get(c.id) ?? null)
                 const name = t('sysinfo.core', { id: c.id })
