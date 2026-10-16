@@ -83,6 +83,11 @@
   color: var(--text-muted);
 }
 
+/* 하위 메뉴에 설명이 붙으면 설명이 오른쪽으로 밀고, 화살표는 그 뒤에 붙는다. */
+.context-menu-detail + .context-menu-chevron {
+  margin-left: 4px;
+}
+
 .context-menu-separator {
   height: 1px;
   margin: 6px 4px;

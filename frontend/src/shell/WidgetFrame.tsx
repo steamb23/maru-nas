@@ -43,7 +43,7 @@ interface Props {
   others: readonly CellRect[]
   notice: UnavailableReason | null
   plugins: readonly string[]
-  // 위젯 잠금(화면 설정). 옮기거나 크기를 바꾸지 못한다. 누르면 창을 여는 것과 메뉴는 그대로다.
+  // 위젯 잠금(화면 설정). 옮기거나 크기를 바꾸거나 메뉴로 제거하지 못한다. 누르면 창을 여는 것은 그대로다.
   locked: boolean
   // 옮기거나 크기를 바꾼 자리를 저장한다.
   onCommit: (edited: WidgetPlacement) => void
@@ -165,6 +165,8 @@ export function WidgetFrame({
         id: 'remove',
         labelKey: 'widgets.remove',
         icon: 'list-remove-symbolic',
+        disabled: locked,
+        detailKey: locked ? 'widgets.locked' : undefined,
         onSelect: () => onRemove(id),
       })
       return items

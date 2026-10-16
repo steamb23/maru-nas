@@ -41,7 +41,7 @@ export function WidgetLayer({ bounds, iconsRef, iconsReady, ref }: Props) {
   const status = useWidgetStore((s) => s.status)
   const placements = useWidgetStore((s) => s.placements)
   const caps = useCapabilitiesStore((s) => s.caps)
-  // 화면 설정에서 잠그면 옮기기·크기 조절만 막는다. 메뉴로 추가·제거하는 것과 눌러서 창을 여는 것은 그대로다.
+  // 화면 설정에서 잠그면 옮기기·크기 조절과 메뉴의 추가·제거를 막는다. 눌러서 창을 여는 것은 그대로다.
   const locked = useAppearanceStore((s) => widgetsLocked(s.prefs))
   const [icons, setIcons] = useState<PxRect | null>(null)
   // 위젯을 끌거나 크기를 바꾸는 중이면 레이어를 창 위로 올린다.
@@ -90,6 +90,7 @@ export function WidgetLayer({ bounds, iconsRef, iconsReady, ref }: Props) {
 
   // "위젯 추가 ▸" 하위 메뉴. 관리자 전용 위젯은 일반 사용자에게 보이지 않는다.
   // 이미 있는 위젯은 체크 표시와 함께 비활성, 화면에 자리가 없으면 비활성과 이유를 보여 준다.
+  // 위젯이 잠겨 있으면 하위 메뉴 자체를 비활성으로 두고 이유를 보여 준다.
   useImperativeHandle(ref, () => ({
     desktopMenuItems: () => {
       if (status !== 'ready' || !iconsReady) return []
@@ -109,7 +110,17 @@ export function WidgetLayer({ bounds, iconsRef, iconsReady, ref }: Props) {
         }
       })
       if (items.length === 0) return []
-      return [{ kind: 'submenu', id: 'add-widget', labelKey: 'widgets.add', icon: 'list-add-symbolic', items }]
+      return [
+        {
+          kind: 'submenu',
+          id: 'add-widget',
+          labelKey: 'widgets.add',
+          icon: 'list-add-symbolic',
+          disabled: locked,
+          detailKey: locked ? 'widgets.locked' : undefined,
+          items,
+        },
+      ]
     },
   }))
 

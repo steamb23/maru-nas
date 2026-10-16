@@ -31,7 +31,7 @@ paths:
 - `src/widgets/`와 `src/windows/`는 서로 import하지 않는다. 위젯이 창을 여는 일은 `shell/WidgetFrame.tsx`가 창 저장소의 `open`을 불러 처리한다
 - 저장 배치는 `widgets/store.ts`, 화면 배치는 `fitLayout`으로 렌더링 때 계산한다. 저장 배치는 사용자가 바꾼 위젯만 `commitPlacement`로 바꾼다(화면 크기 변화로 바꾸지 않는다)
 - 끄는 동안 위치·크기는 렌더링 없이 요소 style을 직접 바꾼다. 끝나면 지우지 말고 지금 자리의 값으로 되돌린다(React는 값이 바뀌지 않은 style을 다시 넣지 않는다)
-- 위젯 잠금은 `WidgetLayer`가 화면 설정 저장소(`appearance/store.ts`의 `widgetsLocked`)에서 읽어 `WidgetFrame`의 `locked`로 넘긴다. 잠기면 끌기를 시작하지 않고 크기 조절 핸들을 그리지 않는다. 끌기를 시작했는지는 `mode`가 아니라 ref(`moving`)로 판단한다(놓는 순간 `mode`가 아직 렌더되지 않았을 수 있다). 끄는 도중 잠겨도 시작한 끌기는 끝낸다
+- 위젯 잠금은 `WidgetLayer`가 화면 설정 저장소(`appearance/store.ts`의 `widgetsLocked`)에서 읽어 `WidgetFrame`의 `locked`로 넘긴다. 잠기면 끌기를 시작하지 않고 크기 조절 핸들을 그리지 않으며, "위젯 추가 ▸"(`desktopMenuItems`)와 "위젯 제거"를 비활성("잠김")으로 둔다. 끌기를 시작했는지는 `mode`가 아니라 ref(`moving`)로 판단한다(놓는 순간 `mode`가 아직 렌더되지 않았을 수 있다). 끄는 도중 잠겨도 시작한 끌기는 끝낸다
 - 포인터 끌기 공통 처리는 `usePointerDrag`(임계 거리, pointer capture, 취소)를 쓴다. 창(`Window.tsx`)의 끌기 코드는 아직 이 훅으로 옮기지 않았다
 - 가이드(`WidgetPreview`)는 타일링 가이드와 같은 모양(`.tile-preview`)을 쓰고, 칸이 바뀌면 임계 감쇠 스프링으로 따라간다(`widgetPreviewAnim.ts`). 끄는 동안 렌더 없이 핸들(`moveTo`)로 움직이고, 놓을 수 없는 자리에서는 숨기기만 한다
 
@@ -75,7 +75,7 @@ paths:
 - 창 메뉴 항목은 `windowMenu.ts`가 만든다. 작업표시줄 버튼 메뉴(`taskMenuItems`)와 제목 표시줄 메뉴(`titlebarMenuItems`)가 상태 항목(최소화·복원, 최대화·이전 크기로)을 함께 쓴다. 여러 창은 저장소의 `closeMany`로 한 번에 닫는다
   - 작업표시줄: 상태 항목 / 다른 항목·오른쪽 항목·모두 닫기 / 닫기. 메뉴가 버튼 위로 열리므로 닫기는 누른 자리 가까이 오도록 맨 아래에 둔다. 최소화된 창에는 최소화 대신 복원(`raiseGroup`, 버튼 클릭과 같음)을 두고, 최소화된 창을 최대화하면 복원도 함께 한다. "오른쪽"은 `windows[]`(작업표시줄) 순서 기준이다. 메뉴는 `Taskbar`의 트리거 하나로 열고, 대상 창은 `items(el)`이 받는 버튼의 `data-window-id`로 찾는다. 끄는 중에는 열지 않는다
   - 제목 표시줄: 상태 항목 / 닫기. 제목 표시줄 버튼 위에서는 열지 않고(길게 누르면 버튼이 눌리지 않게), 창을 끄는 중에는 열지 않으며, 메뉴를 연 누름은 창 끌기로 이어 가지 않는다
-- 비활성 항목은 `aria-disabled`로 두어 포커스는 받게 한다. 이유가 있으면 `detailKey`로 짧게 보여 준다
+- 비활성 항목은 `aria-disabled`로 두어 포커스는 받게 한다(비활성 하위 메뉴는 열리지 않는다). 이유가 있으면 `detailKey`로 짧게 보여 준다(하위 메뉴는 화살표 앞)
 - 키보드 이동(`menuNav.ts`), 포커스 이동(`menuFocus.ts`), 열기·닫기 애니메이션 값(`menuAnim.ts`)은 프로필 메뉴와 함께 쓴다
 
 ## 모달

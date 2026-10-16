@@ -396,8 +396,9 @@ type AppearancePrefs struct {
 	Animations *bool `json:"animations,omitempty"`
 	// TaskbarAlign은 TaskbarAlign* 중 하나다. 비어 있으면 가운데다(관리자 기본값은 없다).
 	TaskbarAlign string `json:"taskbarAlign,omitempty" tstype:"'center' | 'left'"`
-	// WidgetsLocked는 바탕화면 위젯을 옮기거나 크기를 바꾸지 못하게 할지다. 메뉴로 추가·제거하는 것과
-	// 눌러서 창을 여는 것은 막지 않는다. 관리자 기본값은 없다.
+	// WidgetsLocked는 바탕화면 위젯을 옮기거나 크기를 바꾸거나 메뉴로 추가·제거하지 못하게 할지다.
+	// 눌러서 창을 여는 것은 막지 않는다. 프론트만 지키는 편의 설정이라 위젯 배치 저장은 막지 않는다.
+	// 관리자 기본값은 없다.
 	WidgetsLocked bool `json:"widgetsLocked,omitempty"`
 }
 

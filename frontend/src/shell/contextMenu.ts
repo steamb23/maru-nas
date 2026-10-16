@@ -10,16 +10,16 @@ interface ItemBase {
   id: string
   labelKey: ParseKeys
   icon?: IconName
-  // 비활성 항목은 보이고 포커스도 받지만 누를 수 없다(aria-disabled).
+  // 비활성 항목은 보이고 포커스도 받지만 누를 수 없다(aria-disabled). 하위 메뉴는 열리지 않는다.
   disabled?: boolean
+  // 항목 오른쪽에 흐리게 붙이는 짧은 설명(비활성 이유 등)
+  detailKey?: ParseKeys
 }
 
 export interface ContextMenuAction extends ItemBase {
   kind: 'action'
   // 켜져 있음 표시(체크). 있으면 항목은 menuitemcheckbox가 된다.
   checked?: boolean
-  // 항목 오른쪽에 흐리게 붙이는 짧은 설명(비활성 이유 등)
-  detailKey?: ParseKeys
   onSelect: () => void
 }
 

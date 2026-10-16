@@ -101,6 +101,7 @@
     "remove": "Remove widget",
     "add": "Add widget",
     "noSpace": "No space",
+    "locked": "Locked",
     "more": "+{{count}} more",
     "empty": "Nothing to show"
   },
@@ -314,7 +315,7 @@
       },
       "widgets": "Widgets",
       "widgetLock": "Lock widgets",
-      "widgetLockDesc": "Desktop widgets can't be moved or resized. You can still add or remove them from the menu."
+      "widgetLockDesc": "Desktop widgets can't be moved, resized, added or removed."
     },
     "image": {
       "upload": "Upload image…",

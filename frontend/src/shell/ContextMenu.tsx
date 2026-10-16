@@ -290,6 +290,7 @@ function MenuItems({ items, openSub, onSelect, onSubmenu, onHover }: ItemsProps)
         >
           <span className="context-menu-icon">{item.icon && <IconImage name={item.icon} size={16} />}</span>
           <span className="context-menu-label">{t(item.labelKey)}</span>
+          {item.detailKey && <span className="context-menu-detail">{t(item.detailKey)}</span>}
           <IconImage name="pan-end-symbolic" size={16} className="context-menu-chevron" />
         </button>
       )
