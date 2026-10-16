@@ -1,17 +1,30 @@
-import { type PointerEvent, type TransitionEvent, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import {
+  type CSSProperties,
+  type PointerEvent,
+  type TransitionEvent,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react'
 import { flushSync } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { useAppearanceStore } from '../appearance/store'
 import { taskbarAlignOf } from '../appearance/taskbar'
+import { useLanguage } from '../i18n'
 import { IconImage } from '../icons/IconImage'
 import type { SettingsPageId } from '../settings/pages'
 import { getApp } from '../windows/apps'
-import { type WindowState, selectActiveId, useWindowStore } from '../windows/store'
+import { type WindowState, type WindowStore, selectActiveId, useWindowStore } from '../windows/store'
 import { APP_DRAWER_ID, useAppDrawerStore } from './appDrawerStore'
 import { Clock } from './Clock'
+import type { ContextMenuAction } from './contextMenu'
+import { useContextMenuStore } from './contextMenuStore'
 import { ProfileMenu } from './ProfileMenu'
 import { TASK_ENTER_MS, TASK_LEAVE_MS, withLeaving } from './taskbarAnim'
 import { type DragLayout, type Slot, dragLayout } from './taskbarDrag'
+import { TASK_ICON_WIDTH, TASK_MAX_WIDTH, TASK_TITLE_GAP, type TaskbarFit, fitTasks, sameFit } from './taskbarFit'
 import { useContextMenuTrigger } from './useContextMenuTrigger'
 import { useClosingWindows } from './useClosingWindows'
 import { animationsEnabled, captureWindowLayout } from './useWindowAnimation'
@@ -29,6 +42,8 @@ const ICON_SIZE = 24
 // "모든 앱" 버튼 아이콘 크기. 창 버튼과 구분되게 앱 아이콘보다 크게 그린다.
 // 16px 격자의 symbolic 아이콘이라 2배인 32px에서 점이 정수 픽셀에 맞는다.
 const LAUNCHER_ICON_SIZE = 32
+// "더 보기" 메뉴와 버튼 사이 간격. 프로필 메뉴(ProfileMenu.css의 .profile-menu bottom)와 맞춘다.
+const MENU_GAP = 12
 
 // 작업표시줄 버튼: 활성 창은 최소화, 그 밖의 창은 복원해 맨 앞으로. 타일 그룹의 창이면 짝 창도 함께 앞으로 온다.
 // "모든 앱" 화면이 열려 있으면 닫고 그 창을 보인다(화면에 가려져 있던 활성 창을 최소화하지 않는다).
@@ -79,15 +94,23 @@ interface DragView {
 }
 
 // 닫힌 창의 버튼은 마지막 상태로 퇴장 애니메이션을 재생한다.
-const leavingSnapshot = (w: WindowState) => w
+// overflowed: 닫힐 때 "더 보기" 메뉴로 접혀 있었는지. 그랬으면 보이지 않게 애니메이션 없이 뺀다.
+interface LeavingTask {
+  win: WindowState
+  overflowed: boolean
+}
+
+// "더 보기" 메뉴로 접힌 버튼인지. 접힌 버튼은 자리만 빼고 보이지 않게 둔다(Taskbar.css의 li.overflowed).
+const isOverflowed = (li: Element) => li.classList.contains('overflowed')
 
 // 버튼 사이 간격(px). 등장·퇴장 중인 버튼이 차지하는 간격도 함께 늘리고 줄여, 끝날 때 버튼이 튀지 않게 한다.
 const gapOf = (el: Element | null) => (el ? parseFloat(getComputedStyle(el).columnGap) || 0 : 0)
 
 // enterTask는 새로 그려진 버튼을 너비 0에서 제 너비로 펼친다. 같은 함수를 ref로 넘기므로
 // 버튼이 처음 그려질 때만 불린다(순서가 바뀌어 DOM이 옮겨질 때는 불리지 않는다).
+// "더 보기" 메뉴로 접혀 숨은 채 그려진 버튼은 펼치지 않는다.
 function enterTask(li: HTMLLIElement | null) {
-  if (!li || !animationsEnabled()) return
+  if (!li || isOverflowed(li) || !animationsEnabled()) return
   // 개발 모드(StrictMode)에서는 ref가 두 번 불리므로, 앞서 건 애니메이션을 지운 뒤 제 너비를 잰다.
   li.getAnimations().forEach((a) => a.cancel())
   const width = li.getBoundingClientRect().width
@@ -105,6 +128,39 @@ function enterTask(li: HTMLLIElement | null) {
 const sameIds = (a: readonly string[], b: readonly WindowState[]) =>
   a.length === b.length && a.every((id, i) => id === b[i].id)
 
+const widthOf = (el: Element) => el.getBoundingClientRect().width
+
+// 재기 전(처음 그릴 때)의 배치. 줄이지 않는다.
+const UNFITTED: TaskbarFit = { mode: 'labels', cap: TASK_MAX_WIDTH, truncated: [] }
+
+// measureFit은 작업표시줄의 지금 너비로 창 버튼을 어떻게 그릴지 정한다(taskbarFit.ts).
+// 잰 값은 결과(제목 너비 제한, 아이콘만, 숨김)에 따라 바뀌지 않는 것만 쓴다. 그래야 결과로 다시 그린 뒤
+// 다시 재도 같은 결과가 나온다.
+function measureFit(nav: HTMLElement, launcher: HTMLElement, list: HTMLElement, tray: HTMLElement): TaskbarFit {
+  const navStyle = getComputedStyle(nav)
+  const navGap = parseFloat(navStyle.columnGap) || 0
+  const inner = nav.clientWidth - (parseFloat(navStyle.paddingLeft) || 0) - (parseFloat(navStyle.paddingRight) || 0)
+  // 트레이는 가운데 정렬이면 남는 너비만큼 늘어나 있으므로 자식 너비의 합으로 잰다.
+  const trayItems = Array.from(tray.children)
+  const trayWidth = trayItems.reduce((sum, el) => sum + widthOf(el), 0) + gapOf(tray) * Math.max(0, trayItems.length - 1)
+  // nav 자식 사이 간격: "모든 앱" | 목록 | 트레이, 가운데 정렬이면 앞쪽 빈 칸(::before, 0까지 줄어든다) 뒤에 하나 더
+  const gaps = navGap * (nav.classList.contains('centered') ? 3 : 2)
+  // 버튼 너비는 제목 글자 너비로 잰다. 제목이 잘리거나 아이콘만 그려도 span은 남아 있어 scrollWidth는 글자 전체 너비다.
+  // 접힌 버튼도 display: none이 아니라 보이지만 않게 두는 것은 이 때문이다(display: none이면 0이 되어, 넓어진 화면에서
+  // 다 들어간다고 잘못 판단하고 다시 잴 계기도 없다).
+  // scrollWidth는 정수로 반올림되므로 1px 여유를 둔다(조금이라도 모자라면 말줄임이 붙는다).
+  const natural = Array.from(list.children)
+    .filter((li) => !li.classList.contains('leaving'))
+    .map((li) => TASK_ICON_WIDTH + TASK_TITLE_GAP + (li.querySelector('.task-title')?.scrollWidth ?? 0) + 1)
+  return fitTasks({
+    available: inner - widthOf(launcher) - trayWidth - gaps,
+    gap: gapOf(list),
+    // "더 보기" 버튼은 "모든 앱" 버튼과 같은 크기다.
+    moreSpace: widthOf(launcher) + navGap,
+    natural,
+  })
+}
+
 // inert이면 작업표시줄 전체가 입력을 받지 않는다(데스크톱 범위 모달이 열려 있을 때).
 // onOpenSettings는 프로필 메뉴 머리글이 설정 창을 열 때 부른다.
 export function Taskbar({
@@ -115,6 +171,7 @@ export function Taskbar({
   onOpenSettings: (page: SettingsPageId) => void
 }) {
   const { t } = useTranslation()
+  const lang = useLanguage()
   const windows = useWindowStore((s) => s.windows)
   const activeId = useWindowStore(selectActiveId)
   const drawerOpen = useAppDrawerStore((s) => s.open)
@@ -122,7 +179,25 @@ export function Taskbar({
   const centered = useAppearanceStore((s) => taskbarAlignOf(s.prefs.taskbarAlign) === 'center')
   // "모든 앱" 버튼을 마지막으로 누른 포인터 종류. 터치로 열면 검색 상자에 포커스하지 않는다.
   const launcherPointer = useRef('')
+  const navRef = useRef<HTMLElement>(null)
+  const launcherRef = useRef<HTMLButtonElement>(null)
   const listRef = useRef<HTMLUListElement>(null)
+  const moreRef = useRef<HTMLButtonElement>(null)
+  const trayRef = useRef<HTMLDivElement>(null)
+  // 창 버튼 배치(제목 줄이기, 아이콘만, 접기). 다시 잰 결과가 같으면 그대로 둔다.
+  const [fit, setFit] = useState<TaskbarFit>(UNFITTED)
+  // 지금 그려진 배치에서 보이는 창 버튼 수. 창이 닫히는 순간(저장소 구독) 그 버튼이 접혀 있었는지 판단한다.
+  const visibleNow = useRef(Infinity)
+  useLayoutEffect(() => {
+    visibleNow.current = fit.mode === 'icons' ? fit.visible : Infinity
+  }, [fit])
+  const leavingSnapshot = useCallback(
+    (win: WindowState, prev: WindowStore): LeavingTask => ({
+      win,
+      overflowed: prev.windows.findIndex((w) => w.id === win.id) >= visibleNow.current,
+    }),
+    [],
+  )
   // 닫힌 창의 버튼은 저장소에서 바로 지워지지만, 퇴장 애니메이션이 끝나 onLeft가 불릴 때까지
   // 원래 자리에 마지막 상태로 남긴다.
   const [leaving, onLeft] = useClosingWindows(leavingSnapshot)
@@ -195,12 +270,43 @@ export function Taskbar({
 
   useEffect(() => () => window.clearTimeout(settleTimer.current), [])
 
+  // 창 버튼 배치를 잰다. 창 목록·제목(언어)·정렬이 바뀌면 그리기 직후에, 작업표시줄·트레이 크기가 바뀌면
+  // (화면 크기, 시계 글자) ResizeObserver로, 글꼴을 받으면 다시 잰다.
+  // ref와 setFit만 쓰므로 처음 그릴 때 만든 함수를 계속 써도 된다.
+  const measure = () => {
+    const nav = navRef.current
+    const launcher = launcherRef.current
+    const list = listRef.current
+    const tray = trayRef.current
+    if (!nav || !launcher || !list || !tray) return
+    const next = measureFit(nav, launcher, list, tray)
+    setFit((prev) => (sameFit(prev, next) ? prev : next))
+  }
+  const renderKey = renderIds.join(' ')
+  useLayoutEffect(measure, [renderKey, lang, centered])
+  useLayoutEffect(() => {
+    const ro = new ResizeObserver(measure)
+    for (const el of [navRef.current, launcherRef.current, ...Array.from(trayRef.current?.children ?? [])]) {
+      if (el) ro.observe(el)
+    }
+    void document.fonts.ready.then(measure)
+    return () => ro.disconnect()
+  }, [])
+
+  // 끄는 동안 배치가 바뀌면(창 크기 변화) 잰 버튼 위치가 맞지 않으므로 드래그를 취소한다.
+  useEffect(() => {
+    if (!press.current || press.current.phase === 'press') return
+    reset()
+    setView(null)
+  }, [fit])
+
   // 닫힌 창의 버튼을 지금 너비·투명도에서 접으며 사라지게 한다. 등장 도중이어도 이어 간다.
   useLayoutEffect(() => {
     for (const id of leaving.keys()) {
       if (leaveStarted.current.has(id)) continue
       const li = listRef.current?.querySelector<HTMLLIElement>(`li[data-task-id="${CSS.escape(id)}"]`)
-      if (!li) {
+      // "더 보기" 메뉴로 접혀 있던 버튼은 보이지 않으므로 애니메이션 없이 뺀다.
+      if (!li || isOverflowed(li)) {
         onLeft(id)
         continue
       }
@@ -257,8 +363,9 @@ export function Taskbar({
       if (Math.abs(dx) < DRAG_THRESHOLD || !list) return
       // 드래그를 시작할 때 한 번만 잰다. 이후로는 transform만 바뀌어 배치가 그대로다.
       // 퇴장 중인 버튼은 빼고 잰다. 남은 버튼의 순서가 windows[] 순서와 같다.
+      // "더 보기" 메뉴로 접힌 버튼(뒤쪽)도 뺀다. 숨은 버튼은 끌 수 없으므로 from은 그대로 맞는다.
       p.slots = Array.from(list.children)
-        .filter((li) => !li.classList.contains('leaving'))
+        .filter((li) => !li.classList.contains('leaving') && !isOverflowed(li))
         .map((li) => {
           const r = li.getBoundingClientRect()
           return { left: r.left, width: r.width }
@@ -300,11 +407,37 @@ export function Taskbar({
     if (p?.phase === 'settle' && p.id === id) finish()
   }
 
+  // 아이콘만으로도 넘쳐 "더 보기" 메뉴로 접힌 창. 순서는 그대로이므로 windows[]의 뒤쪽이다.
+  const visibleCount = fit.mode === 'icons' ? fit.visible : windows.length
+  const overflowedWindows = windows.slice(visibleCount)
+
+  // "더 보기" 메뉴는 버튼 위로 연다. 항목을 고르면 그 창의 작업표시줄 버튼을 누른 것과 같다.
+  // 버튼은 넘칠 때만 있어 트레이 바로 옆(화면 오른쪽)이므로, 오른쪽 끝을 기준점으로 주면 메뉴가 왼쪽으로
+  // 뒤집혀 버튼 오른쪽 끝에 맞춰 열린다.
+  const openMoreMenu = (viaKeyboard: boolean) => {
+    const r = moreRef.current?.getBoundingClientRect()
+    if (!r) return
+    const items = overflowedWindows.map((w): ContextMenuAction => {
+      const app = getApp(w.appId)
+      const active = w.id === activeId
+      return {
+        kind: 'action',
+        id: w.id,
+        labelKey: app.titleKey,
+        icon: app.icon,
+        checked: active,
+        onSelect: () => onTaskClick(w, active),
+      }
+    })
+    useContextMenuStore.getState().openAt({ x: r.right, y: r.top - MENU_GAP }, items, viaKeyboard)
+  }
+
   return (
     <div className="taskbar-dock" inert={inert}>
-      <nav className={centered ? 'taskbar centered' : 'taskbar'} aria-label={t('taskbar.label')}>
+      <nav ref={navRef} className={centered ? 'taskbar centered' : 'taskbar'} aria-label={t('taskbar.label')}>
         {/* "모든 앱" 버튼. 창 버튼 목록(드래그 정렬이 자식 순서를 잰다) 밖에 둔다. */}
         <button
+          ref={launcherRef}
           type="button"
           className="taskbar-launcher"
           aria-label={t('drawer.title')}
@@ -323,7 +456,11 @@ export function Taskbar({
         >
           <IconImage name="view-app-grid-symbolic" size={LAUNCHER_ICON_SIZE} />
         </button>
-        <ul ref={listRef} className="taskbar-items">
+        <ul
+          ref={listRef}
+          className={fit.mode === 'icons' ? 'taskbar-items icons' : 'taskbar-items'}
+          style={fit.mode === 'labels' ? ({ '--task-cap': `${fit.cap}px` } as CSSProperties) : undefined}
+        >
           {renderIds.map((id) => {
             const ghost = leaving.get(id)
             const i = windows.findIndex((w) => w.id === id)
@@ -331,10 +468,10 @@ export function Taskbar({
               if (!ghost) return null
               // 퇴장 중인 버튼: 클릭·포커스를 받지 않고, 창 최소화 애니메이션의 목표(data-window-id)도 아니다.
               return (
-                <li key={id} className="leaving" data-task-id={id} inert>
+                <li key={id} className={ghost.overflowed ? 'leaving overflowed' : 'leaving'} data-task-id={id} inert>
                   <button type="button" className="task">
-                    <IconImage name={getApp(ghost.appId).icon} size={ICON_SIZE} app />
-                    <span className="task-title">{t(getApp(ghost.appId).titleKey)}</span>
+                    <IconImage name={getApp(ghost.win.appId).icon} size={ICON_SIZE} app />
+                    <span className="task-title">{t(getApp(ghost.win.appId).titleKey)}</span>
                   </button>
                 </li>
               )
@@ -345,8 +482,12 @@ export function Taskbar({
             const dragging = view?.id === w.id
             const offset = view ? (dragging ? view.layout.dx : view.layout.shifts[i]) : 0
             let liClasses: string | undefined
-            if (dragging) liClasses = view.settling ? 'dragging settling' : 'dragging'
+            if (i >= visibleCount) liClasses = 'overflowed'
+            else if (dragging) liClasses = view.settling ? 'dragging settling' : 'dragging'
             else if (view) liClasses = 'shifting'
+            const title = t(getApp(w.appId).titleKey)
+            // 제목이 잘리거나 아이콘만 그리면 마우스를 올렸을 때 제목을 보인다.
+            const tip = fit.mode === 'icons' || fit.truncated[i] ? title : undefined
 
             return (
               <li
@@ -362,6 +503,7 @@ export function Taskbar({
                   type="button"
                   className={classes}
                   aria-pressed={active}
+                  title={tip}
                   data-window-id={w.id}
                   onContextMenu={menu.handlers.onContextMenu}
                   onKeyDown={menu.handlers.onKeyDown}
@@ -376,14 +518,29 @@ export function Taskbar({
                   }}
                 >
                   <IconImage name={getApp(w.appId).icon} size={ICON_SIZE} app />
-                  <span className="task-title">{t(getApp(w.appId).titleKey)}</span>
+                  <span className="task-title">{title}</span>
                 </button>
               </li>
             )
           })}
         </ul>
+        {/* "더 보기" 버튼: 접힌 창이 있을 때만. 드래그 정렬이 목록의 자식을 재므로 목록 밖에 둔다.
+            접힌 창 중에 활성 창이 있으면 창 버튼처럼 밑줄로 표시한다. */}
+        {overflowedWindows.length > 0 && (
+          <button
+            ref={moreRef}
+            type="button"
+            className={overflowedWindows.some((w) => w.id === activeId) ? 'taskbar-more active' : 'taskbar-more'}
+            aria-haspopup="menu"
+            aria-label={t('taskbar.more')}
+            title={t('taskbar.more')}
+            onClick={(e) => openMoreMenu(e.detail === 0)}
+          >
+            <IconImage name="view-more-symbolic" size={ICON_SIZE} />
+          </button>
+        )}
         {/* 트레이: 시계, 그리고 오른쪽 끝에 고정된 프로필 메뉴 */}
-        <div className="taskbar-tray">
+        <div ref={trayRef} className="taskbar-tray">
           <Clock />
           <ProfileMenu onOpenSettings={onOpenSettings} />
         </div>

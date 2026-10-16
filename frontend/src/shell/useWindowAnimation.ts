@@ -44,10 +44,13 @@ function rectOf(el: Element): Rect {
   return { x: r.left, y: r.top, width: r.width, height: r.height }
 }
 
-// minimizeTarget은 최소화한 창이 줄어들어 갈 위치다. 작업표시줄 버튼이 없으면 제자리에서 조금 줄인다.
+// minimizeTarget은 최소화한 창이 줄어들어 갈 위치다. 작업표시줄 버튼이 "더 보기" 메뉴로 접혀 있으면(li.overflowed)
+// "더 보기" 버튼으로, 그 버튼도 없으면 제자리에서 조금 줄인다.
 function minimizeTarget(id: string, layout: Rect): Rect {
-  const button = document.querySelector(`.taskbar [data-window-id="${CSS.escape(id)}"]`)
-  return button ? fitInside(layout, rectOf(button)) : scaleAbout(layout, FALLBACK_SCALE)
+  const target =
+    document.querySelector(`.taskbar li:not(.overflowed) > [data-window-id="${CSS.escape(id)}"]`) ??
+    document.querySelector('.taskbar-more')
+  return target ? fitInside(layout, rectOf(target)) : scaleAbout(layout, FALLBACK_SCALE)
 }
 
 export interface WindowAnimation {

@@ -54,7 +54,8 @@
     "restore": "Herstellen",
     "closeOthers": "Andere sluiten",
     "closeRight": "Rechts hiervan sluiten",
-    "closeAll": "Alles sluiten"
+    "closeAll": "Alles sluiten",
+    "more": "Meer vensters"
   },
   "profile": {
     "menu": "Gebruikersmenu ({{username}})",

@@ -54,7 +54,8 @@
     "restore": "元に戻す",
     "closeOthers": "ほかを閉じる",
     "closeRight": "右側を閉じる",
-    "closeAll": "すべて閉じる"
+    "closeAll": "すべて閉じる",
+    "more": "その他のウィンドウ"
   },
   "profile": {
     "menu": "ユーザーメニュー（{{username}}）",

@@ -19,6 +19,7 @@ import panStart from '@colloid/actions/symbolic/pan-start-symbolic.svg?url'
 import systemLockScreen from '@colloid/actions/symbolic/system-lock-screen-symbolic.svg?url'
 import systemLogOut from '@colloid/actions/symbolic/system-log-out-symbolic.svg?url'
 import viewAppGrid from '@colloid/actions/symbolic/view-app-grid-symbolic.svg?url'
+import viewMore from '@colloid/actions/symbolic/view-more-symbolic.svg?url'
 import viewRefresh from '@colloid/actions/symbolic/view-refresh-symbolic.svg?url'
 import viewSortAscending from '@colloid/actions/symbolic/view-sort-ascending-symbolic.svg?url'
 import windowClose from '@colloid/actions/symbolic/window-close-symbolic.svg?url'
@@ -58,6 +59,8 @@ export const COLLOID_ICONS = {
   'media-playback-stop-symbolic': { url: mediaPlaybackStop, kind: 'symbolic' },
   'view-refresh-symbolic': { url: viewRefresh, kind: 'symbolic' },
   'view-app-grid-symbolic': { url: viewAppGrid, kind: 'symbolic' },
+  // Colloid에서는 이 이름이 가로 점 세 개(⋯)다. view-more-horizontal-symbolic은 세로 점이다.
+  'view-more-symbolic': { url: viewMore, kind: 'symbolic' },
   'edit-find-symbolic': { url: editFind, kind: 'symbolic' },
   'view-sort-ascending-symbolic': { url: viewSortAscending, kind: 'symbolic' },
   'preferences-desktop-locale-symbolic': { url: preferencesDesktopLocale, kind: 'symbolic' },

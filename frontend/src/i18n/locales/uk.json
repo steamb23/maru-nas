@@ -54,7 +54,8 @@
     "restore": "Відновити",
     "closeOthers": "Закрити інші",
     "closeRight": "Закрити праворуч",
-    "closeAll": "Закрити всі"
+    "closeAll": "Закрити всі",
+    "more": "Інші вікна"
   },
   "profile": {
     "menu": "Меню користувача ({{username}})",

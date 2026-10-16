@@ -54,7 +54,8 @@
     "restore": "Obnovit",
     "closeOthers": "Zavřít ostatní",
     "closeRight": "Zavřít vpravo",
-    "closeAll": "Zavřít vše"
+    "closeAll": "Zavřít vše",
+    "more": "Další okna"
   },
   "profile": {
     "menu": "Uživatelská nabídka ({{username}})",

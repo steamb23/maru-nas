@@ -54,7 +54,8 @@
     "restore": "Restaurer",
     "closeOthers": "Fermer les autres",
     "closeRight": "Fermer ceux de droite",
-    "closeAll": "Tout fermer"
+    "closeAll": "Tout fermer",
+    "more": "Autres fenêtres"
   },
   "profile": {
     "menu": "Menu utilisateur ({{username}})",

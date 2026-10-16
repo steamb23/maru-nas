@@ -54,7 +54,8 @@
     "restore": "還原",
     "closeOthers": "關閉其他項目",
     "closeRight": "關閉右側項目",
-    "closeAll": "全部關閉"
+    "closeAll": "全部關閉",
+    "more": "更多視窗"
   },
   "profile": {
     "menu": "使用者選單（{{username}}）",

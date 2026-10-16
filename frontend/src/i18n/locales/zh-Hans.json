@@ -54,7 +54,8 @@
     "restore": "还原",
     "closeOthers": "关闭其他",
     "closeRight": "关闭右侧",
-    "closeAll": "全部关闭"
+    "closeAll": "全部关闭",
+    "more": "更多窗口"
   },
   "profile": {
     "menu": "用户菜单（{{username}}）",

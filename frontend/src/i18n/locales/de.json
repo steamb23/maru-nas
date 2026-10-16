@@ -54,7 +54,8 @@
     "restore": "Wiederherstellen",
     "closeOthers": "Andere schließen",
     "closeRight": "Rechts davon schließen",
-    "closeAll": "Alle schließen"
+    "closeAll": "Alle schließen",
+    "more": "Weitere Fenster"
   },
   "profile": {
     "menu": "Benutzermenü ({{username}})",

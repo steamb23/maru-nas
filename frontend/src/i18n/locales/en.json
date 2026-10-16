@@ -54,7 +54,8 @@
     "restore": "Restore",
     "closeOthers": "Close others",
     "closeRight": "Close to the right",
-    "closeAll": "Close all"
+    "closeAll": "Close all",
+    "more": "More windows"
   },
   "profile": {
     "menu": "User menu ({{username}})",

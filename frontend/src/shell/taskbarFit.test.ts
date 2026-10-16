@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { TASK_ICON_WIDTH, TASK_LABEL_MIN, TASK_MAX_WIDTH, fitTasks } from './taskbarFit'
+import { TASK_ICON_WIDTH, TASK_LABEL_MIN, TASK_MAX_WIDTH, type TaskbarFit, fitTasks, sameFit } from './taskbarFit'
 
 const gap = 4
 const moreSpace = 50
@@ -81,5 +81,18 @@ describe('fitTasks', () => {
   it('공간이 없으면 모두 접는다', () => {
     expect(fitTasks({ available: 0, gap, moreSpace, natural: [150, 150] })).toEqual({ mode: 'icons', visible: 0 })
     expect(fitTasks({ available: -30, gap, moreSpace, natural: [150] })).toEqual({ mode: 'icons', visible: 0 })
+  })
+})
+
+describe('sameFit', () => {
+  it('모드와 값이 모두 같아야 같다', () => {
+    const labels: TaskbarFit = { mode: 'labels', cap: 120, truncated: [true, false] }
+    expect(sameFit(labels, { mode: 'labels', cap: 120, truncated: [true, false] })).toBe(true)
+    expect(sameFit(labels, { mode: 'labels', cap: 121, truncated: [true, false] })).toBe(false)
+    expect(sameFit(labels, { mode: 'labels', cap: 120, truncated: [true, true] })).toBe(false)
+    expect(sameFit(labels, { mode: 'labels', cap: 120, truncated: [true] })).toBe(false)
+    expect(sameFit(labels, { mode: 'icons', visible: 2 })).toBe(false)
+    expect(sameFit({ mode: 'icons', visible: 2 }, { mode: 'icons', visible: 2 })).toBe(true)
+    expect(sameFit({ mode: 'icons', visible: 2 }, { mode: 'icons', visible: 3 })).toBe(false)
   })
 })
