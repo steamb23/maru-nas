@@ -1,0 +1,444 @@
+{
+  "app": {
+    "title": "Onmaru"
+  },
+  "login": {
+    "sessionExpired": "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.",
+    "twoFactorRedirect": "Die Zwei-Faktor-Authentifizierung für dieses Konto muss in OpenMediaVault abgeschlossen werden.",
+    "twoFactorPrompt": "Geben Sie Ihren Code für die Zwei-Faktor-Authentifizierung ein.",
+    "code": "Authentifizierungscode",
+    "verify": "Bestätigen",
+    "verifying": "Wird bestätigt…",
+    "startOver": "Neu beginnen",
+    "username": "Benutzername",
+    "password": "Passwort",
+    "signIn": "Anmelden",
+    "signingIn": "Anmeldung läuft…",
+    "footnote": "Melden Sie sich mit Ihrem OpenMediaVault-Konto an.",
+    "withCountdown": "{{message}} ({{remaining}})",
+    "error": {
+      "network": "Der Server ist nicht erreichbar. Prüfen Sie Ihre Netzwerkverbindung.",
+      "invalidCredentials": "Benutzername oder Passwort ist falsch.",
+      "rateLimited": "Zu viele Anmeldeversuche. Bitte versuchen Sie es später erneut.",
+      "challengeFailed": "Der Authentifizierungscode ist falsch.",
+      "challengeExpired": "Die Zeit für die Authentifizierung ist abgelaufen. Bitte melden Sie sich erneut an.",
+      "omvUnavailable": "Keine Verbindung zu OpenMediaVault möglich.",
+      "badRequest": "Geben Sie Benutzername und Passwort ein.",
+      "unauthorized": "Sie sind nicht angemeldet. Bitte melden Sie sich erneut an.",
+      "httpStatus": "Anmeldung fehlgeschlagen (HTTP {{status}})."
+    }
+  },
+  "offline": {
+    "title": "Verbindung getrennt",
+    "message": "Der Dashboard-Server ist nicht erreichbar. Gleich wird erneut verbunden.",
+    "retry": "Jetzt neu verbinden"
+  },
+  "desktop": {
+    "label": "Desktop",
+    "openScreenSettings": "Darstellungseinstellungen öffnen"
+  },
+  "window": {
+    "minimize": "Minimieren",
+    "maximize": "Maximieren",
+    "restore": "Wiederherstellen",
+    "close": "Schließen",
+    "placeholder": "Demnächst verfügbar"
+  },
+  "view": {
+    "loadFailed": "Diese Ansicht konnte nicht geladen werden. Laden Sie die Seite neu und versuchen Sie es erneut.",
+    "loadFailedShort": "Laden fehlgeschlagen",
+    "reload": "Seite neu laden"
+  },
+  "taskbar": {
+    "label": "Taskleiste",
+    "restore": "Wiederherstellen",
+    "closeOthers": "Andere schließen",
+    "closeRight": "Rechts davon schließen",
+    "closeAll": "Alle schließen"
+  },
+  "profile": {
+    "menu": "Benutzermenü ({{username}})",
+    "roleAdmin": "Administrator",
+    "roleUser": "Benutzer",
+    "logout": "Abmelden",
+    "logoutConfirm": "Abmelden? Alle geöffneten Fenster werden geschlossen.",
+    "openWorkbench": "OMV-Workbench öffnen",
+    "openProfile": "Profil öffnen"
+  },
+  "apps": {
+    "systemInfo": "Systeminformationen",
+    "files": "Dateien",
+    "storage": "Speicher",
+    "network": "Netzwerk",
+    "temperature": "Temperatur",
+    "containers": "Container",
+    "smart": "Datenträgerzustand",
+    "services": "Dienste",
+    "workbench": "OMV-Workbench",
+    "settings": "Einstellungen"
+  },
+  "sysinfo": {
+    "disconnected": "Verbindung getrennt – wird neu verbunden…",
+    "cpu": "CPU",
+    "memory": "Arbeitsspeicher",
+    "uptime": "Betriebszeit"
+  },
+  "language": {
+    "label": "Sprache"
+  },
+  "addons": {
+    "pluginMissing": "Diese App benötigt ein OpenMediaVault-Plugin, das nicht installiert ist.",
+    "adminRequired": "Nur Administratoren können diese App verwenden.",
+    "requiredPlugins": "Benötigte Plugins: {{plugins}}"
+  },
+  "widgets": {
+    "label": "Widgets",
+    "disconnected": "Getrennt",
+    "pluginMissing": "Plugin erforderlich",
+    "adminRequired": "Nur für Administratoren",
+    "open": "Öffnen",
+    "remove": "Widget entfernen",
+    "add": "Widget hinzufügen",
+    "noSpace": "Kein Platz",
+    "more": "+{{count}} weitere",
+    "empty": "Nichts anzuzeigen"
+  },
+  "shortcuts": {
+    "open": "Öffnen",
+    "add": "Verknüpfung hinzufügen",
+    "remove": "Verknüpfung entfernen",
+    "addToDesktop": "Verknüpfung auf dem Desktop erstellen"
+  },
+  "drawer": {
+    "title": "Alle Apps",
+    "search": "Apps durchsuchen",
+    "empty": "Keine passenden Apps",
+    "sort": "Sortieren",
+    "sortLabel": "Sortierung: {{method}}",
+    "sortRecommended": "Empfohlen",
+    "sortName": "Name"
+  },
+  "storage": {
+    "root": "System",
+    "empty": "Keine Dateisysteme gefunden.",
+    "readOnly": "Schreibgeschützt",
+    "usage": "{{used}} von {{total}} belegt · {{free}} frei"
+  },
+  "addonWindow": {
+    "disconnected": "Verbindung getrennt – wird neu verbunden…",
+    "partial": "Einige Informationen konnten nicht geladen werden."
+  },
+  "network": {
+    "empty": "Keine Netzwerkschnittstellen gefunden.",
+    "rx": "Download",
+    "tx": "Upload",
+    "up": "Verbunden",
+    "down": "Getrennt",
+    "totals": "Empfangen {{rx}} · Gesendet {{tx}}",
+    "errors": "Fehler {{errors}} · Verworfen {{dropped}}",
+    "virtual_one": "{{count}} virtuelle Schnittstelle",
+    "virtual_other": "{{count}} virtuelle Schnittstellen"
+  },
+  "temperature": {
+    "empty": "Keine Temperatursensoren gefunden.",
+    "cpu": "CPU",
+    "sensor": "Sensor {{n}}",
+    "checkedAt": "Geprüft: {{time}}"
+  },
+  "containers": {
+    "empty": "Keine Container.",
+    "running_one": "{{count}} läuft",
+    "running_other": "{{count}} laufen",
+    "stopped_one": "{{count}} gestoppt",
+    "stopped_other": "{{count}} gestoppt",
+    "unknownRuntime": "Unbekannte Laufzeitumgebung",
+    "podmanUnverified": "Der Podman-Modus wurde mit diesem Dashboard nicht getestet. Einige Angaben können falsch sein.",
+    "state": {
+      "running": "Läuft",
+      "paused": "Angehalten",
+      "restarting": "Startet neu",
+      "exited": "Gestoppt",
+      "created": "Erstellt",
+      "dead": "Mit Fehler beendet",
+      "removing": "Wird entfernt",
+      "unknown": "Unbekannt"
+    },
+    "health": {
+      "healthy": "Gesund",
+      "unhealthy": "Nicht gesund",
+      "starting": "Wird geprüft"
+    },
+    "action": {
+      "start": "Starten",
+      "stop": "Stoppen",
+      "restart": "Neu starten",
+      "starting": "Wird gestartet…",
+      "stopping": "Wird gestoppt…",
+      "restarting": "Wird neu gestartet…",
+      "confirmStart": "{{name}} starten?",
+      "confirmStop": "{{name}} stoppen? Die Dienste in diesem Container sind erst nach einem erneuten Start wieder verfügbar.",
+      "confirmRestart": "{{name}} neu starten? Die Dienste in diesem Container werden kurz unterbrochen."
+    }
+  },
+  "smart": {
+    "checking": "Datenträger werden geprüft…",
+    "noDisks": "Keine SMART-fähigen Datenträger.",
+    "allGood": "Alle Datenträger in Ordnung",
+    "problems_one": "{{count}} Datenträger braucht Aufmerksamkeit",
+    "problems_other": "{{count}} Datenträger brauchen Aufmerksamkeit",
+    "checkedShort": "Geprüft: {{time}}",
+    "checkedAt": "Zuletzt geprüft: {{time}}",
+    "refresh": "Jetzt prüfen",
+    "refreshing": "Wird geprüft…",
+    "wakeHint": "Die Prüfung weckt Datenträger im Ruhezustand auf und läuft deshalb automatisch nur einmal am Tag.",
+    "notMonitored": "Nicht überwacht",
+    "status": {
+      "good": "In Ordnung",
+      "warning": "Warnung",
+      "failing": "Kritisch",
+      "unknown": "Unbekannt"
+    }
+  },
+  "services": {
+    "empty": "Keine Dienste.",
+    "running_one": "{{count}} läuft",
+    "running_other": "{{count}} laufen",
+    "attention_one": "{{count}} Problem",
+    "attention_other": "{{count}} Probleme",
+    "state": {
+      "running": "Läuft",
+      "stopped": "Noch gestoppt",
+      "disabled": "Deaktiviert",
+      "disabledRunning": "Läuft noch"
+    },
+    "action": {
+      "enable": "Aktivieren",
+      "disable": "Deaktivieren",
+      "enabling": "Wird aktiviert…",
+      "disabling": "Wird deaktiviert…",
+      "confirmEnable": "{{name}} aktivieren?",
+      "confirmDisable": "{{name}} deaktivieren? OpenMediaVault übernimmt die Änderung sofort.",
+      "confirmDisableSsh": "{{name}} deaktivieren? Bestehende SSH-Sitzungen können getrennt werden, und eine Anmeldung per SSH ist erst nach dem erneuten Aktivieren wieder möglich.",
+      "confirmDisableSamba": "{{name}} deaktivieren? Clients, die freigegebene Ordner über SMB nutzen, werden getrennt.",
+      "confirmDisableNfs": "{{name}} deaktivieren? Clients, die NFS-Freigaben nutzen, werden getrennt.",
+      "confirmDisableRsyncd": "{{name}} deaktivieren? Sicherungen und Synchronisierungen über diesen rsync-Server schlagen fehl."
+    },
+    "toggleHint": "Hier lassen sich nur SSH, SMB/CIFS, NFS und der RSync-Server ein- und ausschalten. Andere Dienste richten Sie in OpenMediaVault ein."
+  },
+  "dialog": {
+    "ok": "OK",
+    "cancel": "Abbrechen"
+  },
+  "linkNotice": {
+    "title": "In neuem Tab öffnen",
+    "workbench": "Die OMV-Workbench wird in einem neuen Browser-Tab geöffnet. Dort müssen Sie sich erneut bei OMV anmelden.",
+    "dontShowAgain": "Nicht mehr anzeigen",
+    "open": "Öffnen"
+  },
+  "actions": {
+    "working": "Wird ausgeführt…",
+    "dismiss": "Schließen",
+    "rowLabel": "{{action}}: {{name}}",
+    "failedPrefix": "{{action}} fehlgeschlagen:",
+    "error": {
+      "action_busy": "Für dieses Element läuft noch ein anderer Vorgang.",
+      "action_failed": "OMV konnte den Vorgang nicht abschließen. Details finden Sie in OMV.",
+      "action_timeout": "OMV antwortet zu langsam. Prüfen Sie den Status gleich noch einmal.",
+      "config_dirty": "In OMV gibt es noch nicht übernommene Konfigurationsänderungen. Übernehmen oder verwerfen Sie diese zuerst in OMV.",
+      "admin_required": "Nur Administratoren können das tun.",
+      "plugin_missing": "Das benötigte OpenMediaVault-Plugin ist nicht installiert.",
+      "omv_error": "OpenMediaVault ist nicht erreichbar.",
+      "unknown": "Die Anfrage ist fehlgeschlagen."
+    }
+  },
+  "settings": {
+    "nav": "Einstellungsbereiche",
+    "showNav": "Bereiche anzeigen",
+    "groups": {
+      "user": "Benutzer",
+      "admin": "Verwaltung"
+    },
+    "pages": {
+      "screen": "Darstellung",
+      "general": "Allgemein",
+      "loginScreen": "Anmeldebildschirm",
+      "defaultScreen": "Standarddarstellung",
+      "server": "Server",
+      "about": "Info",
+      "profile": "Profil"
+    },
+    "about": {
+      "build": "Versionsinformationen",
+      "version": "Version",
+      "commit": "Commit",
+      "modified": "Geändert",
+      "commitTime": "Commit-Datum",
+      "goVersion": "Go-Version",
+      "omvVersion": "OMV-Version",
+      "unknown": "Unbekannt",
+      "notRecorded": "Nicht erfasst",
+      "loadFailed": "Die Versionsinformationen konnten nicht geladen werden.",
+      "license": "Lizenz",
+      "licenseText": "Onmaru ist freie Software und wird unter der GNU General Public License v3.0 verbreitet.",
+      "notices": "Open-Source-Hinweise",
+      "noticesIntro": "Onmaru enthält die folgende Software und folgende Assets von Drittanbietern.",
+      "notes": {
+        "omvLogo": "Wird nur verwendet, um auf openmediavault selbst zu verweisen. Dies bedeutet keine Billigung oder Partnerschaft.",
+        "pretendard": "Für die Schrift im Onmaru-Logo verwendet und in Konturen umgewandelt.",
+        "go": "Standardbibliothek, die in das Backend kompiliert ist."
+      }
+    },
+    "common": {
+      "loading": "Einstellungen werden geladen…",
+      "loadFailed": "Die Einstellungen konnten nicht geladen werden. Neuer Versuch…",
+      "saveFailed": "Ihre Änderung konnte nicht gespeichert werden. Sie wird mit Ihrer nächsten Änderung gespeichert.",
+      "siteSaveFailed": "Die Einstellung konnte nicht gespeichert werden. Der vorherige Wert wird wieder angezeigt."
+    },
+    "screen": {
+      "theme": "Design",
+      "modes": {
+        "auto": "Automatisch",
+        "light": "Hell",
+        "dark": "Dunkel"
+      },
+      "wallpaper": "Desktophintergrund",
+      "following": "Es wird die Vorgabe eines Administrators verwendet.",
+      "useDefault": "Vorgabe verwenden",
+      "taskbar": "Taskleiste",
+      "taskbarAlign": "Ausrichtung der Symbole",
+      "taskbarAlignDesc": "Wo die Schaltfläche „Alle Apps“ und die Fensterschaltflächen in der Taskleiste stehen.",
+      "taskbarAligns": {
+        "center": "Mitte",
+        "left": "Links"
+      }
+    },
+    "image": {
+      "upload": "Bild hochladen…",
+      "uploading": "Wird hochgeladen…",
+      "uploaded": "Hochgeladenes Bild",
+      "delete": "Hochgeladenes Bild löschen",
+      "deleteButton": "Löschen",
+      "deleteConfirm": "Das hochgeladene Bild löschen? Falls es verwendet wird, wird stattdessen der Standardhintergrund angezeigt.",
+      "hint": "PNG, JPEG oder WebP, bis zu 20 MB.",
+      "tooLarge": "Das Bild ist zu groß. Laden Sie ein Bild mit höchstens 20 MB hoch.",
+      "unsupported": "Es können nur PNG-, JPEG- und WebP-Bilder hochgeladen werden.",
+      "failed": "Das Bild konnte nicht hochgeladen oder gelöscht werden."
+    },
+    "general": {
+      "language": "Sprache",
+      "languageDesc": "Gilt nur für diesen Browser.",
+      "motion": "Bewegung",
+      "animations": "Animationen",
+      "animationsDesc": "Fenster, Menüs und Hintergrundwechsel animieren.",
+      "reducedMotion": "In den Geräteeinstellungen ist „Bewegung reduzieren“ eingeschaltet, daher bleiben Animationen aus."
+    },
+    "loginScreen": {
+      "intro": "Diese Einstellungen gelten für den Anmeldebildschirm aller Benutzer. Das Ergebnis sehen Sie nach dem Abmelden.",
+      "background": "Anmeldehintergrund",
+      "backgroundHint": "Das Bild wird vor der Anmeldung angezeigt und ist daher für alle sichtbar, die das Dashboard erreichen. PNG, JPEG oder WebP, bis zu 20 MB.",
+      "idle": "Im Leerlauf",
+      "easterEgg": "Leerlaufanimation",
+      "easterEggDesc": "Zeigt eine Animation, wenn der Anmeldebildschirm 30 Sekunden lang nicht bedient wird."
+    },
+    "defaultScreen": {
+      "intro": "Gilt für Benutzer, die in den Darstellungseinstellungen kein eigenes Design und keinen eigenen Hintergrund gewählt haben."
+    },
+    "server": {
+      "intro": "Die Einstellungen, mit denen Onmaru läuft. Die beiden folgenden Werte lassen sich hier ändern, alle anderen werden in der Einstellungsdatei des Servers festgelegt.",
+      "loadFailed": "Die Servereinstellungen konnten nicht geladen werden.",
+      "saveFailed": "Die Einstellung konnte nicht gespeichert werden.",
+      "invalid": "Der Wert hat kein gültiges Format.",
+      "editable": "Hier ändern",
+      "editableDesc": "Wirkt sofort und hat Vorrang vor dem Wert aus der Einstellungsdatei.",
+      "workbenchDesc": "Adresse, unter der der Browser die OMV-Weboberfläche öffnet. Leer lassen, um die App OMV-Workbench auszublenden.",
+      "smartDesc": "Die SMART-Informationen werden einmal täglich nach dieser Uhrzeit (Serverzeit) neu gelesen.",
+      "fromServer": "Serverwert wird verwendet: {{base}}",
+      "overridden": "Hier geändert. Serverwert: {{base}}",
+      "save": "Speichern",
+      "reset": "Serverwert verwenden",
+      "empty": "(nicht festgelegt)",
+      "runtime": "Aktuelle Einstellungen",
+      "runtimeDesc": "Werte, mit denen der Server gestartet wurde, und ihre Herkunft.",
+      "overriddenBadge": "Hier geändert",
+      "howTo": "Andere Einstellungen ändern",
+      "howToDesc": "Diese Werte sind Umgebungsvariablen in /etc/default/onmaru. Starten Sie den Dienst nach dem Bearbeiten neu. Wenn Sie die Empfangsadresse ändern, passen Sie auch den Reverse-Proxy an.",
+      "howToInstall": "Sie können auch ./install.sh im Repository erneut ausführen und die Fragen beantworten.",
+      "copy": "Befehle kopieren",
+      "copied": "Kopiert",
+      "sources": {
+        "default": "Standard",
+        "env": "Umgebungsvariable",
+        "flag": "Befehlszeilenoption",
+        "systemd": "systemd"
+      },
+      "flags": {
+        "listen": "Empfangsadresse",
+        "allowNonLoopback": "Empfang außerhalb von Loopback erlauben",
+        "omvUrl": "OMV-Adresse",
+        "cookiePath": "Cookie-Pfad",
+        "stateDir": "Statusverzeichnis",
+        "workbenchUrl": "OMV-Workbench-Adresse",
+        "smartRefreshAt": "Uhrzeit der SMART-Prüfung"
+      }
+    },
+    "profile": {
+      "editor": {
+        "title": "Foto bearbeiten",
+        "view": "Fotoposition. Ziehen oder mit den Pfeiltasten verschieben, mit + oder - zoomen.",
+        "zoom": "Zoom",
+        "hint": "Ziehen Sie das Foto in Position. Der Kreis wird zu Ihrem Profilfoto.",
+        "save": "Speichern"
+      },
+      "changePhoto": "Foto ändern…",
+      "removePhoto": "Foto entfernen",
+      "removePhotoConfirm": "Profilfoto entfernen? Stattdessen wird der Standardavatar angezeigt.",
+      "account": "Konto",
+      "loadFailed": "Ihre Kontoinformationen konnten nicht aus OMV geladen werden.",
+      "username": "Benutzername",
+      "role": "Rolle",
+      "email": "E-Mail",
+      "groups": "Gruppen",
+      "none": "(keine)",
+      "readOnly": {
+        "system": "Dies ist ein integriertes Systemkonto von OMV, daher lassen sich E-Mail und Tags nicht ändern.",
+        "locked": "Änderungen an diesem Konto sind in OMV gesperrt."
+      },
+      "saving": "Wird gespeichert…",
+      "savedApplied": "Gespeichert und in OMV übernommen.",
+      "savedPending": "Gespeichert. In OMV steht jetzt eine Änderung aus, die ein Administrator in der OMV-Weboberfläche übernehmen muss.",
+      "saveConfigDirty": "Nicht gespeichert: In OMV gibt es noch nicht übernommene Änderungen. Übernehmen Sie diese zuerst in der OMV-Weboberfläche.",
+      "saveApplyFailed": "Ihre Kontoinformationen wurden geändert, aber das Übernehmen in OMV ist fehlgeschlagen. Übernehmen Sie die Änderung in der OMV-Weboberfläche.",
+      "saveBusy": "Ihre vorherige Änderung wird noch gespeichert.",
+      "saveFailed": "Ihre Kontoinformationen konnten nicht gespeichert werden.",
+      "omv": "OMV-Konto",
+      "editInOmv": "In OMV bearbeiten",
+      "omvHintAdmin": "Passwort, Gruppen und mehr ändern Sie auf der Seite zur Benutzerbearbeitung in OMV. Sie wird in einem neuen Tab geöffnet.",
+      "omvHintSystem": "Das integrierte Administratorkonto von OMV erscheint nicht in der OMV-Benutzerverwaltung.",
+      "omvHintNoWorkbench": "Legen Sie in den Servereinstellungen die OMV-Workbench-Adresse fest, um die Seite zur Benutzerbearbeitung in OMV von hier aus zu öffnen.",
+      "omvHintUser": "Ein Administrator kann Ihr Passwort und andere Kontodaten in der OMV-Weboberfläche ändern.",
+      "tags": "Tags",
+      "tagsDesc": "Entspricht den Tags in der OMV-Benutzerverwaltung. Trennen Sie Tags mit einem Komma oder mit Enter.",
+      "addTag": "Tag hinzufügen",
+      "removeTag": "Tag {{tag}} entfernen",
+      "emailPlaceholder": "name@example.com",
+      "emailInvalid": "Das sieht nicht nach einer E-Mail-Adresse aus.",
+      "tagsInvalid": "Tags dürfen keine Kommas (,) oder Doppelpunkte (:) enthalten und zusammen höchstens 255 Byte und 32 Tags umfassen.",
+      "invalid": "Prüfen Sie die E-Mail-Adresse und die Tags.",
+      "saveDescAdmin": "Beim Speichern wird die Änderung sofort in OMV übernommen.",
+      "saveDescUser": "Nach dem Speichern übernimmt ein Administrator die ausstehende Änderung in der OMV-Weboberfläche."
+    }
+  },
+  "appearance": {
+    "presets": {
+      "dusk": "Dämmerung",
+      "aurora": "Polarlicht",
+      "ocean": "Ozean",
+      "forest": "Wald",
+      "sunset": "Sonnenuntergang",
+      "night": "Nachthimmel",
+      "graphite": "Graphit",
+      "slate": "Schiefer",
+      "plum": "Pflaume"
+    }
+  }
+}

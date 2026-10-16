@@ -1,0 +1,444 @@
+{
+  "app": {
+    "title": "Onmaru"
+  },
+  "login": {
+    "sessionExpired": "Je sessie is verlopen. Log opnieuw in.",
+    "twoFactorRedirect": "Tweestapsverificatie voor dit account moet in OpenMediaVault worden voltooid.",
+    "twoFactorPrompt": "Voer je code voor tweestapsverificatie in.",
+    "code": "Verificatiecode",
+    "verify": "Verifiëren",
+    "verifying": "Bezig met verifiëren…",
+    "startOver": "Opnieuw beginnen",
+    "username": "Gebruikersnaam",
+    "password": "Wachtwoord",
+    "signIn": "Inloggen",
+    "signingIn": "Bezig met inloggen…",
+    "footnote": "Log in met je OpenMediaVault-account.",
+    "withCountdown": "{{message}} ({{remaining}})",
+    "error": {
+      "network": "Kan de server niet bereiken. Controleer je netwerkverbinding.",
+      "invalidCredentials": "Onjuiste gebruikersnaam of onjuist wachtwoord.",
+      "rateLimited": "Te veel inlogpogingen. Probeer het later opnieuw.",
+      "challengeFailed": "Onjuiste verificatiecode.",
+      "challengeExpired": "De verificatie is verlopen. Log opnieuw in.",
+      "omvUnavailable": "Kan geen verbinding maken met OpenMediaVault.",
+      "badRequest": "Voer je gebruikersnaam en wachtwoord in.",
+      "unauthorized": "Je bent niet ingelogd. Log opnieuw in.",
+      "httpStatus": "Inloggen mislukt (HTTP {{status}})."
+    }
+  },
+  "offline": {
+    "title": "Verbinding verbroken",
+    "message": "Kan de dashboardserver niet bereiken. Er wordt zo opnieuw verbinding gemaakt.",
+    "retry": "Nu opnieuw verbinden"
+  },
+  "desktop": {
+    "label": "Bureaublad",
+    "openScreenSettings": "Scherminstellingen openen"
+  },
+  "window": {
+    "minimize": "Minimaliseren",
+    "maximize": "Maximaliseren",
+    "restore": "Vorig formaat",
+    "close": "Sluiten",
+    "placeholder": "Binnenkort beschikbaar"
+  },
+  "view": {
+    "loadFailed": "Dit scherm kan niet worden geladen. Laad de pagina opnieuw en probeer het nog eens.",
+    "loadFailedShort": "Laden mislukt",
+    "reload": "Pagina opnieuw laden"
+  },
+  "taskbar": {
+    "label": "Taakbalk",
+    "restore": "Herstellen",
+    "closeOthers": "Andere sluiten",
+    "closeRight": "Rechts hiervan sluiten",
+    "closeAll": "Alles sluiten"
+  },
+  "profile": {
+    "menu": "Gebruikersmenu ({{username}})",
+    "roleAdmin": "Beheerder",
+    "roleUser": "Gebruiker",
+    "logout": "Uitloggen",
+    "logoutConfirm": "Uitloggen? Alle geopende vensters worden gesloten.",
+    "openWorkbench": "OMV Workbench openen",
+    "openProfile": "Profiel openen"
+  },
+  "apps": {
+    "systemInfo": "Systeeminformatie",
+    "files": "Bestanden",
+    "storage": "Opslag",
+    "network": "Netwerk",
+    "temperature": "Temperatuur",
+    "containers": "Containers",
+    "smart": "Schijfstatus",
+    "services": "Diensten",
+    "workbench": "OMV Workbench",
+    "settings": "Instellingen"
+  },
+  "sysinfo": {
+    "disconnected": "Verbinding verbroken — opnieuw verbinden…",
+    "cpu": "CPU",
+    "memory": "Geheugen",
+    "uptime": "Uptime"
+  },
+  "language": {
+    "label": "Taal"
+  },
+  "addons": {
+    "pluginMissing": "Deze app heeft een OpenMediaVault-plug-in nodig die niet is geïnstalleerd.",
+    "adminRequired": "Alleen beheerders kunnen deze app gebruiken.",
+    "requiredPlugins": "Vereiste plug-ins: {{plugins}}"
+  },
+  "widgets": {
+    "label": "Widgets",
+    "disconnected": "Geen verbinding",
+    "pluginMissing": "Plug-in vereist",
+    "adminRequired": "Alleen beheerders",
+    "open": "Openen",
+    "remove": "Widget verwijderen",
+    "add": "Widget toevoegen",
+    "noSpace": "Geen ruimte",
+    "more": "+{{count}} meer",
+    "empty": "Niets om te tonen"
+  },
+  "shortcuts": {
+    "open": "Openen",
+    "add": "Snelkoppeling toevoegen",
+    "remove": "Snelkoppeling verwijderen",
+    "addToDesktop": "Snelkoppeling op bureaublad zetten"
+  },
+  "drawer": {
+    "title": "Alle apps",
+    "search": "Apps zoeken",
+    "empty": "Geen overeenkomende apps",
+    "sort": "Sorteren",
+    "sortLabel": "Sortering: {{method}}",
+    "sortRecommended": "Aanbevolen",
+    "sortName": "Naam"
+  },
+  "storage": {
+    "root": "Systeem",
+    "empty": "Geen bestandssystemen gevonden.",
+    "readOnly": "Alleen-lezen",
+    "usage": "{{used}} van {{total}} gebruikt · {{free}} vrij"
+  },
+  "addonWindow": {
+    "disconnected": "Verbinding verbroken — opnieuw verbinden…",
+    "partial": "Een deel van de informatie kon niet worden geladen."
+  },
+  "network": {
+    "empty": "Geen netwerkinterfaces gevonden.",
+    "rx": "Download",
+    "tx": "Upload",
+    "up": "Verbonden",
+    "down": "Niet verbonden",
+    "totals": "Ontvangen {{rx}} · Verzonden {{tx}}",
+    "errors": "Fouten {{errors}} · Verworpen {{dropped}}",
+    "virtual_one": "{{count}} virtuele interface",
+    "virtual_other": "{{count}} virtuele interfaces"
+  },
+  "temperature": {
+    "empty": "Geen temperatuursensoren gevonden.",
+    "cpu": "CPU",
+    "sensor": "Sensor {{n}}",
+    "checkedAt": "Gemeten: {{time}}"
+  },
+  "containers": {
+    "empty": "Geen containers.",
+    "running_one": "{{count}} actief",
+    "running_other": "{{count}} actief",
+    "stopped_one": "{{count}} gestopt",
+    "stopped_other": "{{count}} gestopt",
+    "unknownRuntime": "Onbekende runtime",
+    "podmanUnverified": "De Podman-modus is niet gecontroleerd met dit dashboard. Sommige informatie kan onjuist zijn.",
+    "state": {
+      "running": "Actief",
+      "paused": "Gepauzeerd",
+      "restarting": "Wordt herstart",
+      "exited": "Gestopt",
+      "created": "Aangemaakt",
+      "dead": "Gestopt door fout",
+      "removing": "Wordt verwijderd",
+      "unknown": "Onbekend"
+    },
+    "health": {
+      "healthy": "Gezond",
+      "unhealthy": "Niet gezond",
+      "starting": "Wordt gecontroleerd"
+    },
+    "action": {
+      "start": "Starten",
+      "stop": "Stoppen",
+      "restart": "Herstarten",
+      "starting": "Bezig met starten…",
+      "stopping": "Bezig met stoppen…",
+      "restarting": "Bezig met herstarten…",
+      "confirmStart": "{{name}} starten?",
+      "confirmStop": "{{name}} stoppen? De diensten in deze container zijn pas weer beschikbaar als je hem opnieuw start.",
+      "confirmRestart": "{{name}} herstarten? De diensten in deze container worden even onderbroken."
+    }
+  },
+  "smart": {
+    "checking": "Schijven worden gecontroleerd…",
+    "noDisks": "Geen schijven met SMART-ondersteuning.",
+    "allGood": "Alle schijven in orde",
+    "problems_one": "{{count}} schijf vraagt aandacht",
+    "problems_other": "{{count}} schijven vragen aandacht",
+    "checkedShort": "Gecontroleerd: {{time}}",
+    "checkedAt": "Laatst gecontroleerd: {{time}}",
+    "refresh": "Nu controleren",
+    "refreshing": "Bezig met controleren…",
+    "wakeHint": "Controleren maakt slapende schijven wakker, dus dit gebeurt automatisch maar één keer per dag.",
+    "notMonitored": "Niet bewaakt",
+    "status": {
+      "good": "In orde",
+      "warning": "Waarschuwing",
+      "failing": "Kritiek",
+      "unknown": "Onbekend"
+    }
+  },
+  "services": {
+    "empty": "Geen diensten.",
+    "running_one": "{{count}} actief",
+    "running_other": "{{count}} actief",
+    "attention_one": "{{count}} probleem",
+    "attention_other": "{{count}} problemen",
+    "state": {
+      "running": "Actief",
+      "stopped": "Nog gestopt",
+      "disabled": "Uitgeschakeld",
+      "disabledRunning": "Nog actief"
+    },
+    "action": {
+      "enable": "Inschakelen",
+      "disable": "Uitschakelen",
+      "enabling": "Bezig met inschakelen…",
+      "disabling": "Bezig met uitschakelen…",
+      "confirmEnable": "{{name}} inschakelen?",
+      "confirmDisable": "{{name}} uitschakelen? OpenMediaVault past de wijziging meteen toe.",
+      "confirmDisableSsh": "{{name}} uitschakelen? Huidige SSH-sessies kunnen worden verbroken en je kunt pas weer via SSH inloggen als de dienst opnieuw is ingeschakeld.",
+      "confirmDisableSamba": "{{name}} uitschakelen? Clients die gedeelde mappen via SMB gebruiken, worden losgekoppeld.",
+      "confirmDisableNfs": "{{name}} uitschakelen? Clients die NFS-shares gebruiken, worden losgekoppeld.",
+      "confirmDisableRsyncd": "{{name}} uitschakelen? Back-ups en synchronisaties die verbinding maken met deze rsync-server, mislukken."
+    },
+    "toggleHint": "Hier kun je alleen SSH, SMB/CIFS, NFS en de RSync-server in- of uitschakelen. Stel andere diensten in OpenMediaVault in."
+  },
+  "dialog": {
+    "ok": "OK",
+    "cancel": "Annuleren"
+  },
+  "linkNotice": {
+    "title": "Openen in nieuw tabblad",
+    "workbench": "OMV Workbench wordt geopend in een nieuw browsertabblad. Daar moet je opnieuw inloggen bij OMV.",
+    "dontShowAgain": "Niet meer tonen",
+    "open": "Openen"
+  },
+  "actions": {
+    "working": "Bezig…",
+    "dismiss": "Sluiten",
+    "rowLabel": "{{action}}: {{name}}",
+    "failedPrefix": "{{action}} mislukt:",
+    "error": {
+      "action_busy": "Er loopt nog een andere bewerking voor dit item.",
+      "action_failed": "OMV kon de bewerking niet voltooien. Bekijk de details in OMV.",
+      "action_timeout": "OMV reageert te traag. Controleer de status straks opnieuw.",
+      "config_dirty": "OMV heeft configuratiewijzigingen die nog niet zijn toegepast. Pas ze eerst toe of maak ze ongedaan in OMV.",
+      "admin_required": "Alleen beheerders kunnen dit doen.",
+      "plugin_missing": "De vereiste OpenMediaVault-plug-in is niet geïnstalleerd.",
+      "omv_error": "Kan OpenMediaVault niet bereiken.",
+      "unknown": "Het verzoek is mislukt."
+    }
+  },
+  "settings": {
+    "nav": "Onderdelen van instellingen",
+    "showNav": "Onderdelen tonen",
+    "groups": {
+      "user": "Gebruiker",
+      "admin": "Beheer"
+    },
+    "pages": {
+      "screen": "Scherm",
+      "general": "Algemeen",
+      "loginScreen": "Inlogscherm",
+      "defaultScreen": "Standaardscherm",
+      "server": "Server",
+      "about": "Over",
+      "profile": "Profiel"
+    },
+    "about": {
+      "build": "Versie-informatie",
+      "version": "Versie",
+      "commit": "Commit",
+      "modified": "Gewijzigd",
+      "commitTime": "Commitdatum",
+      "goVersion": "Go-versie",
+      "omvVersion": "OMV-versie",
+      "unknown": "Onbekend",
+      "notRecorded": "Niet vastgelegd",
+      "loadFailed": "De versie-informatie kan niet worden geladen.",
+      "license": "Licentie",
+      "licenseText": "Onmaru is vrije software, verspreid onder de GNU General Public License v3.0.",
+      "notices": "Opensourcevermeldingen",
+      "noticesIntro": "Onmaru bevat de volgende software en middelen van derden.",
+      "notes": {
+        "omvLogo": "Alleen gebruikt om naar openmediavault zelf te verwijzen. Dit betekent geen goedkeuring of verbondenheid.",
+        "pretendard": "Gebruikt voor de letters in het Onmaru-logo, omgezet naar contouren.",
+        "go": "Standaardbibliotheek die in de backend is gecompileerd."
+      }
+    },
+    "common": {
+      "loading": "Instellingen laden…",
+      "loadFailed": "De instellingen kunnen niet worden geladen. Opnieuw proberen…",
+      "saveFailed": "Je wijziging kon niet worden opgeslagen. Ze wordt opgeslagen bij je volgende wijziging.",
+      "siteSaveFailed": "De instelling kon niet worden opgeslagen. De vorige waarde wordt weer getoond."
+    },
+    "screen": {
+      "theme": "Thema",
+      "modes": {
+        "auto": "Automatisch",
+        "light": "Licht",
+        "dark": "Donker"
+      },
+      "wallpaper": "Bureaubladachtergrond",
+      "following": "De standaardwaarde van een beheerder wordt gebruikt.",
+      "useDefault": "Standaard gebruiken",
+      "taskbar": "Taakbalk",
+      "taskbarAlign": "Uitlijning van pictogrammen",
+      "taskbarAlignDesc": "Waar de knop ‘Alle apps’ en de vensterknoppen op de taakbalk staan.",
+      "taskbarAligns": {
+        "center": "Midden",
+        "left": "Links"
+      }
+    },
+    "image": {
+      "upload": "Afbeelding uploaden…",
+      "uploading": "Bezig met uploaden…",
+      "uploaded": "Geüploade afbeelding",
+      "delete": "Geüploade afbeelding verwijderen",
+      "deleteButton": "Verwijderen",
+      "deleteConfirm": "Geüploade afbeelding verwijderen? Als die in gebruik is, wordt in plaats daarvan de standaardachtergrond getoond.",
+      "hint": "PNG, JPEG of WebP, tot 20 MB.",
+      "tooLarge": "De afbeelding is te groot. Upload een afbeelding van maximaal 20 MB.",
+      "unsupported": "Alleen PNG-, JPEG- en WebP-afbeeldingen kunnen worden geüpload.",
+      "failed": "De afbeelding kon niet worden geüpload of verwijderd."
+    },
+    "general": {
+      "language": "Taal",
+      "languageDesc": "Geldt alleen voor deze browser.",
+      "motion": "Beweging",
+      "animations": "Animaties",
+      "animationsDesc": "Vensters, menu's en achtergrondwissels animeren.",
+      "reducedMotion": "‘Beperk beweging’ staat aan in de instellingen van je apparaat, dus animaties blijven uit."
+    },
+    "loginScreen": {
+      "intro": "Deze instellingen gelden voor het inlogscherm van alle gebruikers. Je ziet het resultaat nadat je bent uitgelogd.",
+      "background": "Achtergrond van inlogscherm",
+      "backgroundHint": "De afbeelding wordt vóór het inloggen getoond, dus iedereen die het dashboard kan bereiken, kan haar zien. PNG, JPEG of WebP, tot 20 MB.",
+      "idle": "Tijdens wachten",
+      "easterEgg": "Wachtanimatie",
+      "easterEggDesc": "Toont een animatie als het inlogscherm 30 seconden niet wordt gebruikt."
+    },
+    "defaultScreen": {
+      "intro": "Geldt voor gebruikers die in de scherminstellingen geen eigen thema of achtergrond hebben gekozen."
+    },
+    "server": {
+      "intro": "Instellingen waarmee Onmaru draait. De twee waarden hieronder kun je hier wijzigen; de rest staat in het instellingenbestand van de server.",
+      "loadFailed": "De serverinstellingen kunnen niet worden geladen.",
+      "saveFailed": "De instelling kon niet worden opgeslagen.",
+      "invalid": "De waarde heeft geen geldige indeling.",
+      "editable": "Hier wijzigen",
+      "editableDesc": "Werkt meteen en gaat voor op de waarde uit het instellingenbestand.",
+      "workbenchDesc": "Adres waarmee de browser de webinterface van OMV opent. Laat leeg om de app OMV Workbench te verbergen.",
+      "smartDesc": "SMART-informatie wordt eenmaal per dag na dit tijdstip (servertijd) opnieuw gelezen.",
+      "fromServer": "Serverwaarde in gebruik: {{base}}",
+      "overridden": "Hier gewijzigd. Serverwaarde: {{base}}",
+      "save": "Opslaan",
+      "reset": "Serverwaarde gebruiken",
+      "empty": "(niet ingesteld)",
+      "runtime": "Huidige instellingen",
+      "runtimeDesc": "Waarden waarmee de server is gestart en waar ze vandaan komen.",
+      "overriddenBadge": "Hier gewijzigd",
+      "howTo": "Andere instellingen wijzigen",
+      "howToDesc": "Deze waarden zijn omgevingsvariabelen in /etc/default/onmaru. Herstart de dienst na het bewerken. Als je het luisteradres wijzigt, pas dan ook de reverse proxy aan.",
+      "howToInstall": "Je kunt ook ./install.sh vanuit de repository opnieuw uitvoeren en de vragen beantwoorden.",
+      "copy": "Opdrachten kopiëren",
+      "copied": "Gekopieerd",
+      "sources": {
+        "default": "Standaard",
+        "env": "Omgevingsvariabele",
+        "flag": "Opdrachtregeloptie",
+        "systemd": "systemd"
+      },
+      "flags": {
+        "listen": "Luisteradres",
+        "allowNonLoopback": "Luisteren buiten loopback toestaan",
+        "omvUrl": "OMV-adres",
+        "cookiePath": "Cookiepad",
+        "stateDir": "Statusmap",
+        "workbenchUrl": "Adres van OMV Workbench",
+        "smartRefreshAt": "Tijdstip van SMART-controle"
+      }
+    },
+    "profile": {
+      "editor": {
+        "title": "Foto bewerken",
+        "view": "Positie van de foto. Sleep of gebruik de pijltjestoetsen om te verplaatsen, en + of - om te zoomen.",
+        "zoom": "Zoomen",
+        "hint": "Sleep de foto op zijn plaats. De cirkel wordt je profielfoto.",
+        "save": "Opslaan"
+      },
+      "changePhoto": "Foto wijzigen…",
+      "removePhoto": "Foto verwijderen",
+      "removePhotoConfirm": "Je profielfoto verwijderen? In plaats daarvan wordt de standaardavatar getoond.",
+      "account": "Account",
+      "loadFailed": "Je accountgegevens konden niet uit OMV worden geladen.",
+      "username": "Gebruikersnaam",
+      "role": "Rol",
+      "email": "E-mail",
+      "groups": "Groepen",
+      "none": "(geen)",
+      "readOnly": {
+        "system": "Dit is een ingebouwd systeemaccount van OMV, dus het e-mailadres en de tags kunnen niet worden gewijzigd.",
+        "locked": "Wijzigingen aan dit account zijn in OMV uitgeschakeld."
+      },
+      "saving": "Bezig met opslaan…",
+      "savedApplied": "Opgeslagen en toegepast in OMV.",
+      "savedPending": "Opgeslagen. OMV heeft nu een wijziging in afwachting; een beheerder moet die toepassen in de webinterface van OMV.",
+      "saveConfigDirty": "Niet opgeslagen: OMV heeft wijzigingen die nog niet zijn toegepast. Pas ze eerst toe in de webinterface van OMV.",
+      "saveApplyFailed": "Je accountgegevens zijn gewijzigd, maar het toepassen in OMV is mislukt. Pas ze toe in de webinterface van OMV.",
+      "saveBusy": "Je vorige wijziging wordt nog opgeslagen.",
+      "saveFailed": "Je accountgegevens konden niet worden opgeslagen.",
+      "omv": "OMV-account",
+      "editInOmv": "Bewerken in OMV",
+      "omvHintAdmin": "Wijzig het wachtwoord, de groepen en meer op de pagina voor gebruikersbewerking in OMV. Die wordt in een nieuw tabblad geopend.",
+      "omvHintSystem": "Het ingebouwde beheerdersaccount van OMV staat niet in het gebruikersbeheer van OMV.",
+      "omvHintNoWorkbench": "Stel in de serverinstellingen het adres van OMV Workbench in om de pagina voor gebruikersbewerking in OMV hiervandaan te openen.",
+      "omvHintUser": "Een beheerder kan je wachtwoord en andere accountgegevens wijzigen in de webinterface van OMV.",
+      "tags": "Tags",
+      "tagsDesc": "Dezelfde als de Tags in het gebruikersbeheer van OMV. Scheid tags met een komma of met Enter.",
+      "addTag": "Tag toevoegen",
+      "removeTag": "Tag {{tag}} verwijderen",
+      "emailPlaceholder": "naam@example.com",
+      "emailInvalid": "Dat lijkt geen e-mailadres.",
+      "tagsInvalid": "Tags mogen geen komma's (,) of dubbele punten (:) bevatten, en mogen samen niet meer dan 255 bytes en 32 tags zijn.",
+      "invalid": "Controleer het e-mailadres en de tags.",
+      "saveDescAdmin": "Bij opslaan wordt de wijziging meteen in OMV toegepast.",
+      "saveDescUser": "Na het opslaan past een beheerder de wijziging in afwachting toe in de webinterface van OMV."
+    }
+  },
+  "appearance": {
+    "presets": {
+      "dusk": "Schemering",
+      "aurora": "Noorderlicht",
+      "ocean": "Oceaan",
+      "forest": "Bos",
+      "sunset": "Zonsondergang",
+      "night": "Nachthemel",
+      "graphite": "Grafiet",
+      "slate": "Leisteen",
+      "plum": "Pruim"
+    }
+  }
+}

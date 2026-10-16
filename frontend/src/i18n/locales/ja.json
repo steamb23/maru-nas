@@ -1,0 +1,438 @@
+{
+  "app": {
+    "title": "Onmaru"
+  },
+  "login": {
+    "sessionExpired": "セッションの有効期限が切れました。もう一度サインインしてください。",
+    "twoFactorRedirect": "このアカウントの2段階認証は OpenMediaVault の画面で行う必要があります。",
+    "twoFactorPrompt": "2段階認証コードを入力してください。",
+    "code": "認証コード",
+    "verify": "確認",
+    "verifying": "確認しています…",
+    "startOver": "最初からやり直す",
+    "username": "ユーザー名",
+    "password": "パスワード",
+    "signIn": "サインイン",
+    "signingIn": "サインインしています…",
+    "footnote": "OpenMediaVault のアカウントでサインインします。",
+    "withCountdown": "{{message}}（{{remaining}}）",
+    "error": {
+      "network": "サーバーに接続できません。ネットワークの状態を確認してください。",
+      "invalidCredentials": "ユーザー名またはパスワードが正しくありません。",
+      "rateLimited": "サインインの試行回数が多すぎます。しばらくしてからもう一度お試しください。",
+      "challengeFailed": "認証コードが正しくありません。",
+      "challengeExpired": "認証の制限時間を過ぎました。もう一度サインインしてください。",
+      "omvUnavailable": "OpenMediaVault に接続できません。",
+      "badRequest": "ユーザー名とパスワードを入力してください。",
+      "unauthorized": "サインインしていません。もう一度サインインしてください。",
+      "httpStatus": "サインインできませんでした（HTTP {{status}}）。"
+    }
+  },
+  "offline": {
+    "title": "接続が切れました",
+    "message": "ダッシュボードのサーバーに接続できません。まもなく再接続します。",
+    "retry": "今すぐ再接続"
+  },
+  "desktop": {
+    "label": "デスクトップ",
+    "openScreenSettings": "画面の設定を開く"
+  },
+  "window": {
+    "minimize": "最小化",
+    "maximize": "最大化",
+    "restore": "元のサイズに戻す",
+    "close": "閉じる",
+    "placeholder": "準備中"
+  },
+  "view": {
+    "loadFailed": "この画面を読み込めませんでした。ページを再読み込みしてからもう一度お試しください。",
+    "loadFailedShort": "読み込めません",
+    "reload": "ページを再読み込み"
+  },
+  "taskbar": {
+    "label": "タスクバー",
+    "restore": "元に戻す",
+    "closeOthers": "ほかを閉じる",
+    "closeRight": "右側を閉じる",
+    "closeAll": "すべて閉じる"
+  },
+  "profile": {
+    "menu": "ユーザーメニュー（{{username}}）",
+    "roleAdmin": "管理者",
+    "roleUser": "ユーザー",
+    "logout": "サインアウト",
+    "logoutConfirm": "サインアウトしますか？開いているウィンドウはすべて閉じられます。",
+    "openWorkbench": "OMV ワークベンチを開く",
+    "openProfile": "プロフィールを開く"
+  },
+  "apps": {
+    "systemInfo": "システム情報",
+    "files": "ファイル",
+    "storage": "ストレージ",
+    "network": "ネットワーク",
+    "temperature": "温度",
+    "containers": "コンテナ",
+    "smart": "ディスクの状態",
+    "services": "サービス",
+    "workbench": "OMV ワークベンチ",
+    "settings": "設定"
+  },
+  "sysinfo": {
+    "disconnected": "接続が切れました — 再接続しています…",
+    "cpu": "CPU",
+    "memory": "メモリ",
+    "uptime": "稼働時間"
+  },
+  "language": {
+    "label": "言語"
+  },
+  "addons": {
+    "pluginMissing": "このアプリに必要な OpenMediaVault プラグインがインストールされていません。",
+    "adminRequired": "このアプリは管理者のみ使用できます。",
+    "requiredPlugins": "必要なプラグイン: {{plugins}}"
+  },
+  "widgets": {
+    "label": "ウィジェット",
+    "disconnected": "接続なし",
+    "pluginMissing": "プラグインが必要です",
+    "adminRequired": "管理者専用",
+    "open": "開く",
+    "remove": "ウィジェットを削除",
+    "add": "ウィジェットを追加",
+    "noSpace": "空きなし",
+    "more": "ほか {{count}} 件",
+    "empty": "表示する項目はありません"
+  },
+  "shortcuts": {
+    "open": "開く",
+    "add": "ショートカットを追加",
+    "remove": "ショートカットを削除",
+    "addToDesktop": "デスクトップにショートカットを追加"
+  },
+  "drawer": {
+    "title": "すべてのアプリ",
+    "search": "アプリを検索",
+    "empty": "一致するアプリはありません",
+    "sort": "並べ替え",
+    "sortLabel": "並べ替え: {{method}}",
+    "sortRecommended": "おすすめ順",
+    "sortName": "名前順"
+  },
+  "storage": {
+    "root": "システム",
+    "empty": "ファイルシステムが見つかりません。",
+    "readOnly": "読み取り専用",
+    "usage": "{{total}} 中 {{used}} 使用 · 空き {{free}}"
+  },
+  "addonWindow": {
+    "disconnected": "接続が切れました — 再接続しています…",
+    "partial": "一部の情報を取得できませんでした。"
+  },
+  "network": {
+    "empty": "ネットワークインターフェイスが見つかりません。",
+    "rx": "受信",
+    "tx": "送信",
+    "up": "接続済み",
+    "down": "未接続",
+    "totals": "受信 {{rx}} · 送信 {{tx}}",
+    "errors": "エラー {{errors}} · 破棄 {{dropped}}",
+    "virtual_other": "仮想インターフェイス {{count}} 個"
+  },
+  "temperature": {
+    "empty": "温度センサーが見つかりません。",
+    "cpu": "CPU",
+    "sensor": "センサー {{n}}",
+    "checkedAt": "{{time}} に確認"
+  },
+  "containers": {
+    "empty": "コンテナはありません。",
+    "running_other": "実行中 {{count}}",
+    "stopped_other": "停止 {{count}}",
+    "unknownRuntime": "不明なランタイム",
+    "podmanUnverified": "Podman モードはこのダッシュボードで検証していません。一部の情報が正しくない可能性があります。",
+    "state": {
+      "running": "実行中",
+      "paused": "一時停止",
+      "restarting": "再起動中",
+      "exited": "停止",
+      "created": "作成済み",
+      "dead": "エラーで停止",
+      "removing": "削除中",
+      "unknown": "不明"
+    },
+    "health": {
+      "healthy": "正常",
+      "unhealthy": "異常",
+      "starting": "確認中"
+    },
+    "action": {
+      "start": "開始",
+      "stop": "停止",
+      "restart": "再起動",
+      "starting": "開始しています…",
+      "stopping": "停止しています…",
+      "restarting": "再起動しています…",
+      "confirmStart": "{{name}} を開始しますか？",
+      "confirmStop": "{{name}} を停止しますか？再び開始するまで、このコンテナのサービスは使用できません。",
+      "confirmRestart": "{{name}} を再起動しますか？このコンテナのサービスが一時的に中断されます。"
+    }
+  },
+  "smart": {
+    "checking": "ディスクを確認しています…",
+    "noDisks": "SMART に対応したディスクはありません。",
+    "allGood": "すべてのディスクは正常です",
+    "problems_other": "要注意 {{count}} 台",
+    "checkedShort": "{{time}} に確認",
+    "checkedAt": "最終確認 {{time}}",
+    "refresh": "今すぐ確認",
+    "refreshing": "確認しています…",
+    "wakeHint": "確認するとスリープ中のディスクが起動するため、自動確認は1日1回だけ行います。",
+    "notMonitored": "監視オフ",
+    "status": {
+      "good": "正常",
+      "warning": "注意",
+      "failing": "危険",
+      "unknown": "不明"
+    }
+  },
+  "services": {
+    "empty": "サービスはありません。",
+    "running_other": "実行中 {{count}}",
+    "attention_other": "要注意 {{count}}",
+    "state": {
+      "running": "実行中",
+      "stopped": "まだ停止中",
+      "disabled": "オフ",
+      "disabledRunning": "まだ実行中"
+    },
+    "action": {
+      "enable": "オンにする",
+      "disable": "オフにする",
+      "enabling": "オンにしています…",
+      "disabling": "オフにしています…",
+      "confirmEnable": "{{name}} をオンにしますか？",
+      "confirmDisable": "{{name}} をオフにしますか？OpenMediaVault にすぐに適用されます。",
+      "confirmDisableSsh": "{{name}} をオフにしますか？接続中の SSH セッションが切断されることがあり、再びオンにするまで SSH で接続できなくなります。",
+      "confirmDisableSamba": "{{name}} をオフにしますか？SMB で共有フォルダーを使用しているクライアントの接続が切断されます。",
+      "confirmDisableNfs": "{{name}} をオフにしますか？NFS 共有を使用しているクライアントの接続が切断されます。",
+      "confirmDisableRsyncd": "{{name}} をオフにしますか？この rsync サーバーを使うバックアップや同期は失敗します。"
+    },
+    "toggleHint": "ここでオン・オフできるのは SSH、SMB/CIFS、NFS、RSync サーバーだけです。ほかのサービスは OpenMediaVault で設定してください。"
+  },
+  "dialog": {
+    "ok": "OK",
+    "cancel": "キャンセル"
+  },
+  "linkNotice": {
+    "title": "新しいタブで開く",
+    "workbench": "OMV ワークベンチはブラウザーの新しいタブで開きます。新しいタブで OMV にもう一度サインインする必要があります。",
+    "dontShowAgain": "今後表示しない",
+    "open": "開く"
+  },
+  "actions": {
+    "working": "処理しています…",
+    "dismiss": "閉じる",
+    "rowLabel": "{{name}} を{{action}}",
+    "failedPrefix": "{{action}}に失敗しました:",
+    "error": {
+      "action_busy": "この項目では別の操作がまだ実行中です。",
+      "action_failed": "OMV が操作を完了できませんでした。詳細は OMV で確認してください。",
+      "action_timeout": "OMV の応答が遅れています。しばらくしてから状態をもう一度確認してください。",
+      "config_dirty": "OMV に未適用の設定変更があります。先に OMV で適用するか元に戻してください。",
+      "admin_required": "この操作は管理者のみ行えます。",
+      "plugin_missing": "必要な OpenMediaVault プラグインがインストールされていません。",
+      "omv_error": "OpenMediaVault に接続できません。",
+      "unknown": "リクエストに失敗しました。"
+    }
+  },
+  "settings": {
+    "nav": "設定メニュー",
+    "showNav": "メニューを表示",
+    "groups": {
+      "user": "ユーザー",
+      "admin": "管理"
+    },
+    "pages": {
+      "screen": "画面",
+      "general": "一般",
+      "loginScreen": "サインイン画面",
+      "defaultScreen": "既定の画面",
+      "server": "サーバー",
+      "about": "情報",
+      "profile": "プロフィール"
+    },
+    "about": {
+      "build": "バージョン情報",
+      "version": "バージョン",
+      "commit": "コミット",
+      "modified": "変更あり",
+      "commitTime": "コミット日",
+      "goVersion": "Go のバージョン",
+      "omvVersion": "OMV のバージョン",
+      "unknown": "不明",
+      "notRecorded": "記録なし",
+      "loadFailed": "バージョン情報を読み込めませんでした。",
+      "license": "ライセンス",
+      "licenseText": "Onmaru は GNU General Public License v3.0 のもとで配布されるフリーソフトウェアです。",
+      "notices": "オープンソースの告知",
+      "noticesIntro": "Onmaru には次のサードパーティのソフトウェアと素材が含まれています。",
+      "notes": {
+        "omvLogo": "openmediavault そのものを指す場合にのみ使用しています。保証や提携を意味するものではありません。",
+        "pretendard": "Onmaru ロゴの文字に使用し、アウトラインに変換しています。",
+        "go": "バックエンドの実行ファイルに標準ライブラリが含まれています。"
+      }
+    },
+    "common": {
+      "loading": "設定を読み込んでいます…",
+      "loadFailed": "設定を読み込めませんでした。再試行しています…",
+      "saveFailed": "変更を保存できませんでした。次に変更したときにまとめて保存します。",
+      "siteSaveFailed": "設定を保存できませんでした。以前の値に戻しました。"
+    },
+    "screen": {
+      "theme": "テーマ",
+      "modes": {
+        "auto": "自動",
+        "light": "ライト",
+        "dark": "ダーク"
+      },
+      "wallpaper": "デスクトップの壁紙",
+      "following": "管理者が設定した既定値を使用しています。",
+      "useDefault": "既定値を使用",
+      "taskbar": "タスクバー",
+      "taskbarAlign": "アイコンの配置",
+      "taskbarAlignDesc": "タスクバーで「すべてのアプリ」ボタンとウィンドウボタンを置く位置です。",
+      "taskbarAligns": {
+        "center": "中央",
+        "left": "左"
+      }
+    },
+    "image": {
+      "upload": "画像をアップロード…",
+      "uploading": "アップロードしています…",
+      "uploaded": "アップロードした画像",
+      "delete": "アップロードした画像を削除",
+      "deleteButton": "削除",
+      "deleteConfirm": "アップロードした画像を削除しますか？この画像を使用している場合は既定の背景に変わります。",
+      "hint": "PNG、JPEG、WebP 形式で 20 MB までアップロードできます。",
+      "tooLarge": "画像が大きすぎます。20 MB 以下の画像をアップロードしてください。",
+      "unsupported": "アップロードできるのは PNG、JPEG、WebP 形式の画像だけです。",
+      "failed": "画像をアップロードまたは削除できませんでした。"
+    },
+    "general": {
+      "language": "言語",
+      "languageDesc": "このブラウザーにのみ適用されます。",
+      "motion": "動き",
+      "animations": "アニメーション",
+      "animationsDesc": "ウィンドウ、メニュー、背景の切り替えにアニメーションを使用します。",
+      "reducedMotion": "デバイスの「視差効果を減らす」がオンのため、アニメーションはオフになっています。"
+    },
+    "loginScreen": {
+      "intro": "すべてのユーザーのサインイン画面に適用されます。変更後の表示はサインアウトすると確認できます。",
+      "background": "サインイン画面の背景",
+      "backgroundHint": "サインインする前に表示される画像なので、ダッシュボードにアクセスできる人なら誰でも見られます。PNG、JPEG、WebP 形式で 20 MB までアップロードできます。",
+      "idle": "待機中",
+      "easterEgg": "待機アニメーション",
+      "easterEggDesc": "サインイン画面で30秒間操作がないと、アニメーションを表示します。"
+    },
+    "defaultScreen": {
+      "intro": "画面の設定でテーマや壁紙を選んでいないユーザーに適用されます。"
+    },
+    "server": {
+      "intro": "Onmaru が動作している設定です。下の2つの値はここで変更でき、それ以外はサーバーの設定ファイルで変更します。",
+      "loadFailed": "サーバーの設定を読み込めませんでした。",
+      "saveFailed": "設定を保存できませんでした。",
+      "invalid": "値の形式が正しくありません。",
+      "editable": "ここで変更",
+      "editableDesc": "保存するとすぐに適用され、設定ファイルの値より優先されます。",
+      "workbenchDesc": "ブラウザーで OMV の Web UI を開くアドレスです。空にすると OMV ワークベンチ アプリを非表示にします。",
+      "smartDesc": "1日1回、この時刻（サーバー時刻）を過ぎると SMART 情報を読み直します。",
+      "fromServer": "サーバーの値を使用中: {{base}}",
+      "overridden": "ここで変更した値を使用中。サーバーの値: {{base}}",
+      "save": "保存",
+      "reset": "サーバーの値を使用",
+      "empty": "（未設定）",
+      "runtime": "現在の設定",
+      "runtimeDesc": "サーバーの起動時に決まった値とその出どころです。",
+      "overriddenBadge": "ここで変更",
+      "howTo": "ほかの設定を変更する",
+      "howToDesc": "これらの値は /etc/default/onmaru の環境変数で設定します。編集後にサービスを再起動すると反映されます。待ち受けアドレスを変更した場合は、リバースプロキシの設定も変更してください。",
+      "howToInstall": "リポジトリで ./install.sh をもう一度実行し、質問に答えて変更することもできます。",
+      "copy": "コマンドをコピー",
+      "copied": "コピーしました",
+      "sources": {
+        "default": "既定値",
+        "env": "環境変数",
+        "flag": "コマンドラインフラグ",
+        "systemd": "systemd"
+      },
+      "flags": {
+        "listen": "待ち受けアドレス",
+        "allowNonLoopback": "ループバック以外での待ち受けを許可",
+        "omvUrl": "OMV のアドレス",
+        "cookiePath": "Cookie のパス",
+        "stateDir": "状態ディレクトリ",
+        "workbenchUrl": "OMV ワークベンチのアドレス",
+        "smartRefreshAt": "SMART の確認時刻"
+      }
+    },
+    "profile": {
+      "editor": {
+        "title": "写真を編集",
+        "view": "写真の位置。ドラッグするか矢印キーで移動し、+ / - キーで拡大・縮小します。",
+        "zoom": "拡大",
+        "hint": "ドラッグして位置を合わせてください。円の内側がプロフィール写真になります。",
+        "save": "保存"
+      },
+      "changePhoto": "写真を変更…",
+      "removePhoto": "写真を削除",
+      "removePhotoConfirm": "プロフィール写真を削除しますか？既定のアバターに変わります。",
+      "account": "アカウント",
+      "loadFailed": "OMV からアカウント情報を読み込めませんでした。",
+      "username": "ユーザー名",
+      "role": "役割",
+      "email": "メール",
+      "groups": "グループ",
+      "none": "（なし）",
+      "readOnly": {
+        "system": "OMV の組み込みシステムアカウントのため、メールとタグは変更できません。",
+        "locked": "OMV でこのアカウントの情報の変更が禁止されています。"
+      },
+      "saving": "保存しています…",
+      "savedApplied": "保存して OMV に適用しました。",
+      "savedPending": "保存しました。OMV に未適用の変更ができたため、管理者が OMV の Web UI で適用する必要があります。",
+      "saveConfigDirty": "保存していません。OMV に未適用の変更があるため、先に OMV の Web UI で適用してください。",
+      "saveApplyFailed": "アカウント情報は変更されましたが、OMV に適用できませんでした。OMV の Web UI で適用してください。",
+      "saveBusy": "前回の変更をまだ保存しています。",
+      "saveFailed": "アカウント情報を保存できませんでした。",
+      "omv": "OMV アカウント",
+      "editInOmv": "OMV でユーザーを編集",
+      "omvHintAdmin": "パスワードやグループなどは OMV のユーザー編集画面で変更します。新しいタブで開きます。",
+      "omvHintSystem": "OMV の組み込み管理者アカウントは OMV のユーザー管理の一覧にありません。",
+      "omvHintNoWorkbench": "サーバーの設定で OMV ワークベンチのアドレスを設定すると、ここから OMV のユーザー編集画面を開けます。",
+      "omvHintUser": "パスワードなどほかのアカウント情報は、管理者が OMV の Web UI で変更できます。",
+      "tags": "タグ",
+      "tagsDesc": "OMV のユーザー管理の Tags と同じです。カンマか Enter で区切ります。",
+      "addTag": "タグを追加",
+      "removeTag": "タグ {{tag}} を削除",
+      "emailPlaceholder": "name@example.com",
+      "emailInvalid": "メールアドレスの形式ではありません。",
+      "tagsInvalid": "タグにはカンマ（,）とコロン（:）を使えません。また、合計 255 バイト、32 個以下にする必要があります。",
+      "invalid": "メールアドレスとタグを確認してください。",
+      "saveDescAdmin": "保存すると OMV にすぐに適用します。",
+      "saveDescUser": "保存すると OMV に未適用の変更ができ、管理者が OMV の Web UI で適用します。"
+    }
+  },
+  "appearance": {
+    "presets": {
+      "dusk": "黄昏",
+      "aurora": "オーロラ",
+      "ocean": "海",
+      "forest": "森",
+      "sunset": "夕焼け",
+      "night": "夜空",
+      "graphite": "グラファイト",
+      "slate": "スレート",
+      "plum": "プラム"
+    }
+  }
+}

@@ -1,0 +1,438 @@
+{
+  "app": {
+    "title": "Onmaru"
+  },
+  "login": {
+    "sessionExpired": "会话已过期，请重新登录。",
+    "twoFactorRedirect": "此账户的双重身份验证需要在 OpenMediaVault 中完成。",
+    "twoFactorPrompt": "请输入双重身份验证码。",
+    "code": "验证码",
+    "verify": "验证",
+    "verifying": "正在验证…",
+    "startOver": "重新开始",
+    "username": "用户名",
+    "password": "密码",
+    "signIn": "登录",
+    "signingIn": "正在登录…",
+    "footnote": "使用 OpenMediaVault 账户登录。",
+    "withCountdown": "{{message}}（{{remaining}}）",
+    "error": {
+      "network": "无法连接到服务器，请检查网络连接。",
+      "invalidCredentials": "用户名或密码不正确。",
+      "rateLimited": "登录尝试次数过多，请稍后再试。",
+      "challengeFailed": "验证码不正确。",
+      "challengeExpired": "验证已超时，请重新登录。",
+      "omvUnavailable": "无法连接到 OpenMediaVault。",
+      "badRequest": "请输入用户名和密码。",
+      "unauthorized": "尚未登录，请重新登录。",
+      "httpStatus": "登录失败（HTTP {{status}}）。"
+    }
+  },
+  "offline": {
+    "title": "连接已断开",
+    "message": "无法连接到仪表板服务器，稍后将重新连接。",
+    "retry": "立即重新连接"
+  },
+  "desktop": {
+    "label": "桌面",
+    "openScreenSettings": "打开显示设置"
+  },
+  "window": {
+    "minimize": "最小化",
+    "maximize": "最大化",
+    "restore": "还原",
+    "close": "关闭",
+    "placeholder": "即将推出"
+  },
+  "view": {
+    "loadFailed": "无法加载此界面。请刷新页面后重试。",
+    "loadFailedShort": "加载失败",
+    "reload": "刷新页面"
+  },
+  "taskbar": {
+    "label": "任务栏",
+    "restore": "还原",
+    "closeOthers": "关闭其他",
+    "closeRight": "关闭右侧",
+    "closeAll": "全部关闭"
+  },
+  "profile": {
+    "menu": "用户菜单（{{username}}）",
+    "roleAdmin": "管理员",
+    "roleUser": "用户",
+    "logout": "退出登录",
+    "logoutConfirm": "要退出登录吗？所有打开的窗口都将关闭。",
+    "openWorkbench": "打开 OMV 工作台",
+    "openProfile": "打开个人资料"
+  },
+  "apps": {
+    "systemInfo": "系统信息",
+    "files": "文件",
+    "storage": "存储",
+    "network": "网络",
+    "temperature": "温度",
+    "containers": "容器",
+    "smart": "磁盘健康",
+    "services": "服务",
+    "workbench": "OMV 工作台",
+    "settings": "设置"
+  },
+  "sysinfo": {
+    "disconnected": "连接已断开 — 正在重新连接…",
+    "cpu": "CPU",
+    "memory": "内存",
+    "uptime": "运行时间"
+  },
+  "language": {
+    "label": "语言"
+  },
+  "addons": {
+    "pluginMissing": "此应用所需的 OpenMediaVault 插件尚未安装。",
+    "adminRequired": "只有管理员可以使用此应用。",
+    "requiredPlugins": "所需插件：{{plugins}}"
+  },
+  "widgets": {
+    "label": "小组件",
+    "disconnected": "已断开",
+    "pluginMissing": "需要插件",
+    "adminRequired": "仅限管理员",
+    "open": "打开",
+    "remove": "移除小组件",
+    "add": "添加小组件",
+    "noSpace": "没有空位",
+    "more": "另外 {{count}} 项",
+    "empty": "没有可显示的内容"
+  },
+  "shortcuts": {
+    "open": "打开",
+    "add": "添加快捷方式",
+    "remove": "移除快捷方式",
+    "addToDesktop": "添加快捷方式到桌面"
+  },
+  "drawer": {
+    "title": "所有应用",
+    "search": "搜索应用",
+    "empty": "没有匹配的应用",
+    "sort": "排序",
+    "sortLabel": "排序：{{method}}",
+    "sortRecommended": "推荐",
+    "sortName": "名称"
+  },
+  "storage": {
+    "root": "系统",
+    "empty": "未找到文件系统。",
+    "readOnly": "只读",
+    "usage": "已用 {{used}}，共 {{total}} · 剩余 {{free}}"
+  },
+  "addonWindow": {
+    "disconnected": "连接已断开 — 正在重新连接…",
+    "partial": "部分信息无法获取。"
+  },
+  "network": {
+    "empty": "未找到网络接口。",
+    "rx": "下载",
+    "tx": "上传",
+    "up": "已连接",
+    "down": "未连接",
+    "totals": "已接收 {{rx}} · 已发送 {{tx}}",
+    "errors": "错误 {{errors}} · 丢弃 {{dropped}}",
+    "virtual_other": "{{count}} 个虚拟接口"
+  },
+  "temperature": {
+    "empty": "未找到温度传感器。",
+    "cpu": "CPU",
+    "sensor": "传感器 {{n}}",
+    "checkedAt": "检查于 {{time}}"
+  },
+  "containers": {
+    "empty": "没有容器。",
+    "running_other": "运行中 {{count}}",
+    "stopped_other": "已停止 {{count}}",
+    "unknownRuntime": "未知运行时",
+    "podmanUnverified": "Podman 模式尚未在此仪表板上验证，部分信息可能不准确。",
+    "state": {
+      "running": "运行中",
+      "paused": "已暂停",
+      "restarting": "正在重启",
+      "exited": "已停止",
+      "created": "已创建",
+      "dead": "因错误停止",
+      "removing": "正在删除",
+      "unknown": "未知"
+    },
+    "health": {
+      "healthy": "健康",
+      "unhealthy": "不健康",
+      "starting": "检查中"
+    },
+    "action": {
+      "start": "启动",
+      "stop": "停止",
+      "restart": "重启",
+      "starting": "正在启动…",
+      "stopping": "正在停止…",
+      "restarting": "正在重启…",
+      "confirmStart": "要启动 {{name}} 吗？",
+      "confirmStop": "要停止 {{name}} 吗？在重新启动之前，此容器中的服务将无法使用。",
+      "confirmRestart": "要重启 {{name}} 吗？此容器中的服务将短暂中断。"
+    }
+  },
+  "smart": {
+    "checking": "正在检查磁盘…",
+    "noDisks": "没有支持 SMART 的磁盘。",
+    "allGood": "所有磁盘均正常",
+    "problems_other": "{{count}} 块磁盘需要注意",
+    "checkedShort": "检查于 {{time}}",
+    "checkedAt": "上次检查：{{time}}",
+    "refresh": "立即检查",
+    "refreshing": "正在检查…",
+    "wakeHint": "检查会唤醒休眠的磁盘，因此每天只自动检查一次。",
+    "notMonitored": "未监控",
+    "status": {
+      "good": "正常",
+      "warning": "警告",
+      "failing": "危险",
+      "unknown": "未知"
+    }
+  },
+  "services": {
+    "empty": "没有服务。",
+    "running_other": "运行中 {{count}}",
+    "attention_other": "{{count}} 个问题",
+    "state": {
+      "running": "运行中",
+      "stopped": "仍未运行",
+      "disabled": "已关闭",
+      "disabledRunning": "仍在运行"
+    },
+    "action": {
+      "enable": "开启",
+      "disable": "关闭",
+      "enabling": "正在开启…",
+      "disabling": "正在关闭…",
+      "confirmEnable": "要开启 {{name}} 吗？",
+      "confirmDisable": "要关闭 {{name}} 吗？更改将立即应用到 OpenMediaVault。",
+      "confirmDisableSsh": "要关闭 {{name}} 吗？当前的 SSH 会话可能会断开，并且在重新开启之前无法通过 SSH 登录。",
+      "confirmDisableSamba": "要关闭 {{name}} 吗？通过 SMB 使用共享文件夹的客户端将断开连接。",
+      "confirmDisableNfs": "要关闭 {{name}} 吗？使用 NFS 共享的客户端将断开连接。",
+      "confirmDisableRsyncd": "要关闭 {{name}} 吗？连接到此 rsync 服务器的备份和同步将会失败。"
+    },
+    "toggleHint": "这里只能开启或关闭 SSH、SMB/CIFS、NFS 和 RSync 服务器。其他服务请在 OpenMediaVault 中设置。"
+  },
+  "dialog": {
+    "ok": "确定",
+    "cancel": "取消"
+  },
+  "linkNotice": {
+    "title": "在新标签页中打开",
+    "workbench": "OMV 工作台将在浏览器的新标签页中打开。您需要在新标签页中重新登录 OMV。",
+    "dontShowAgain": "不再提示",
+    "open": "打开"
+  },
+  "actions": {
+    "working": "正在处理…",
+    "dismiss": "关闭",
+    "rowLabel": "{{action}} {{name}}",
+    "failedPrefix": "{{action}}失败：",
+    "error": {
+      "action_busy": "此项目的另一项操作仍在进行中。",
+      "action_failed": "OMV 未能完成操作。请在 OMV 中查看详情。",
+      "action_timeout": "OMV 响应过慢。请稍后再次检查状态。",
+      "config_dirty": "OMV 中有尚未应用的配置更改。请先在 OMV 中应用或撤销这些更改。",
+      "admin_required": "只有管理员可以执行此操作。",
+      "plugin_missing": "所需的 OpenMediaVault 插件尚未安装。",
+      "omv_error": "无法连接到 OpenMediaVault。",
+      "unknown": "请求失败。"
+    }
+  },
+  "settings": {
+    "nav": "设置菜单",
+    "showNav": "显示菜单",
+    "groups": {
+      "user": "用户",
+      "admin": "管理"
+    },
+    "pages": {
+      "screen": "显示",
+      "general": "通用",
+      "loginScreen": "登录界面",
+      "defaultScreen": "默认显示",
+      "server": "服务器",
+      "about": "关于",
+      "profile": "个人资料"
+    },
+    "about": {
+      "build": "版本信息",
+      "version": "版本",
+      "commit": "提交",
+      "modified": "已修改",
+      "commitTime": "提交日期",
+      "goVersion": "Go 版本",
+      "omvVersion": "OMV 版本",
+      "unknown": "未知",
+      "notRecorded": "未记录",
+      "loadFailed": "无法加载版本信息。",
+      "license": "许可证",
+      "licenseText": "Onmaru 是依据 GNU General Public License v3.0 发布的自由软件。",
+      "notices": "开源声明",
+      "noticesIntro": "Onmaru 包含以下第三方软件和素材。",
+      "notes": {
+        "omvLogo": "仅用于指代 openmediavault 本身，并不表示认可或合作关系。",
+        "pretendard": "用于 Onmaru 标志中的文字，已转换为轮廓。",
+        "go": "后端可执行文件中包含其标准库。"
+      }
+    },
+    "common": {
+      "loading": "正在加载设置…",
+      "loadFailed": "无法加载设置，正在重试…",
+      "saveFailed": "无法保存更改，将在下次更改时一并保存。",
+      "siteSaveFailed": "无法保存设置，已恢复为之前的值。"
+    },
+    "screen": {
+      "theme": "主题",
+      "modes": {
+        "auto": "自动",
+        "light": "浅色",
+        "dark": "深色"
+      },
+      "wallpaper": "桌面壁纸",
+      "following": "正在使用管理员设置的默认值。",
+      "useDefault": "使用默认值",
+      "taskbar": "任务栏",
+      "taskbarAlign": "图标对齐",
+      "taskbarAlignDesc": "“所有应用”按钮和窗口按钮在任务栏上的位置。",
+      "taskbarAligns": {
+        "center": "居中",
+        "left": "靠左"
+      }
+    },
+    "image": {
+      "upload": "上传图片…",
+      "uploading": "正在上传…",
+      "uploaded": "已上传的图片",
+      "delete": "删除已上传的图片",
+      "deleteButton": "删除",
+      "deleteConfirm": "要删除已上传的图片吗？如果正在使用此图片，将改为显示默认背景。",
+      "hint": "支持 PNG、JPEG、WebP 格式，最大 20 MB。",
+      "tooLarge": "图片过大，请上传 20 MB 以内的图片。",
+      "unsupported": "只能上传 PNG、JPEG、WebP 格式的图片。",
+      "failed": "无法上传或删除图片。"
+    },
+    "general": {
+      "language": "语言",
+      "languageDesc": "仅对此浏览器生效。",
+      "motion": "动态效果",
+      "animations": "动画",
+      "animationsDesc": "为窗口、菜单和背景切换使用动画。",
+      "reducedMotion": "设备已开启“减弱动态效果”，因此动画保持关闭。"
+    },
+    "loginScreen": {
+      "intro": "这些设置应用于所有用户的登录界面。退出登录后即可看到效果。",
+      "background": "登录背景",
+      "backgroundHint": "此图片在登录前显示，任何能访问仪表板的人都能看到。支持 PNG、JPEG、WebP 格式，最大 20 MB。",
+      "idle": "等待时",
+      "easterEgg": "等待动画",
+      "easterEggDesc": "登录界面 30 秒无操作时显示动画。"
+    },
+    "defaultScreen": {
+      "intro": "应用于未在显示设置中选择主题或壁纸的用户。"
+    },
+    "server": {
+      "intro": "Onmaru 当前运行所用的设置。下面两项可以在这里更改，其余设置在服务器的配置文件中更改。",
+      "loadFailed": "无法加载服务器设置。",
+      "saveFailed": "无法保存设置。",
+      "invalid": "值的格式不正确。",
+      "editable": "在此更改",
+      "editableDesc": "保存后立即生效，并优先于配置文件中的值。",
+      "workbenchDesc": "浏览器打开 OMV 网页界面所用的地址。留空则隐藏“OMV 工作台”应用。",
+      "smartDesc": "每天过了这个时间（服务器时间）后重新读取一次 SMART 信息。",
+      "fromServer": "正在使用服务器的值：{{base}}",
+      "overridden": "正在使用在此更改的值。服务器的值：{{base}}",
+      "save": "保存",
+      "reset": "使用服务器的值",
+      "empty": "（未设置）",
+      "runtime": "当前设置",
+      "runtimeDesc": "服务器启动时确定的值及其来源。",
+      "overriddenBadge": "已在此更改",
+      "howTo": "更改其他设置",
+      "howToDesc": "这些值是 /etc/default/onmaru 中的环境变量。编辑后需重启服务才能生效。如果更改了监听地址，也请同时更新反向代理的设置。",
+      "howToInstall": "也可以在仓库中重新运行 ./install.sh 并回答提问。",
+      "copy": "复制命令",
+      "copied": "已复制",
+      "sources": {
+        "default": "默认值",
+        "env": "环境变量",
+        "flag": "命令行参数",
+        "systemd": "systemd"
+      },
+      "flags": {
+        "listen": "监听地址",
+        "allowNonLoopback": "允许在回环地址以外监听",
+        "omvUrl": "OMV 地址",
+        "cookiePath": "Cookie 路径",
+        "stateDir": "状态目录",
+        "workbenchUrl": "OMV 工作台地址",
+        "smartRefreshAt": "SMART 检查时间"
+      }
+    },
+    "profile": {
+      "editor": {
+        "title": "编辑照片",
+        "view": "照片位置。拖动或使用方向键移动，按 + / - 键缩放。",
+        "zoom": "缩放",
+        "hint": "拖动以调整位置。圆圈内的部分将成为个人资料照片。",
+        "save": "保存"
+      },
+      "changePhoto": "更换照片…",
+      "removePhoto": "删除照片",
+      "removePhotoConfirm": "要删除个人资料照片吗？将改为显示默认头像。",
+      "account": "账户",
+      "loadFailed": "无法从 OMV 加载账户信息。",
+      "username": "用户名",
+      "role": "角色",
+      "email": "电子邮件",
+      "groups": "组",
+      "none": "（无）",
+      "readOnly": {
+        "system": "这是 OMV 内置的系统账户，无法更改电子邮件和标签。",
+        "locked": "OMV 已禁止更改此账户的信息。"
+      },
+      "saving": "正在保存…",
+      "savedApplied": "已保存并应用到 OMV。",
+      "savedPending": "已保存。OMV 中现在有待应用的更改，需要管理员在 OMV 网页界面中应用。",
+      "saveConfigDirty": "未保存：OMV 中有尚未应用的更改，请先在 OMV 网页界面中应用。",
+      "saveApplyFailed": "账户信息已更改，但未能应用到 OMV。请在 OMV 网页界面中应用。",
+      "saveBusy": "上一次的更改仍在保存中。",
+      "saveFailed": "无法保存账户信息。",
+      "omv": "OMV 账户",
+      "editInOmv": "在 OMV 中编辑用户",
+      "omvHintAdmin": "密码、组等信息请在 OMV 的用户编辑页面中更改，该页面将在新标签页中打开。",
+      "omvHintSystem": "OMV 内置管理员账户不在 OMV 用户管理列表中。",
+      "omvHintNoWorkbench": "在服务器设置中设定 OMV 工作台地址后，即可从这里打开 OMV 的用户编辑页面。",
+      "omvHintUser": "密码等其他账户信息可由管理员在 OMV 网页界面中更改。",
+      "tags": "标签",
+      "tagsDesc": "与 OMV 用户管理中的 Tags 相同。用逗号或 Enter 分隔。",
+      "addTag": "添加标签",
+      "removeTag": "删除标签 {{tag}}",
+      "emailPlaceholder": "name@example.com",
+      "emailInvalid": "这不像是电子邮件地址。",
+      "tagsInvalid": "标签中不能包含逗号（,）和冒号（:），且合计不得超过 255 字节和 32 个。",
+      "invalid": "请检查电子邮件地址和标签。",
+      "saveDescAdmin": "保存后将立即应用到 OMV。",
+      "saveDescUser": "保存后 OMV 中会产生待应用的更改，由管理员在 OMV 网页界面中应用。"
+    }
+  },
+  "appearance": {
+    "presets": {
+      "dusk": "黄昏",
+      "aurora": "极光",
+      "ocean": "海洋",
+      "forest": "森林",
+      "sunset": "晚霞",
+      "night": "夜空",
+      "graphite": "石墨",
+      "slate": "青灰",
+      "plum": "梅紫"
+    }
+  }
+}

@@ -1,0 +1,438 @@
+{
+  "app": {
+    "title": "Onmaru"
+  },
+  "login": {
+    "sessionExpired": "工作階段已過期，請重新登入。",
+    "twoFactorRedirect": "此帳戶的雙重驗證必須在 OpenMediaVault 中完成。",
+    "twoFactorPrompt": "請輸入雙重驗證碼。",
+    "code": "驗證碼",
+    "verify": "驗證",
+    "verifying": "正在驗證…",
+    "startOver": "重新開始",
+    "username": "使用者名稱",
+    "password": "密碼",
+    "signIn": "登入",
+    "signingIn": "正在登入…",
+    "footnote": "使用 OpenMediaVault 帳戶登入。",
+    "withCountdown": "{{message}}（{{remaining}}）",
+    "error": {
+      "network": "無法連線到伺服器，請檢查網路連線。",
+      "invalidCredentials": "使用者名稱或密碼不正確。",
+      "rateLimited": "登入嘗試次數過多，請稍後再試。",
+      "challengeFailed": "驗證碼不正確。",
+      "challengeExpired": "驗證已逾時，請重新登入。",
+      "omvUnavailable": "無法連線到 OpenMediaVault。",
+      "badRequest": "請輸入使用者名稱和密碼。",
+      "unauthorized": "您尚未登入，請重新登入。",
+      "httpStatus": "無法登入（HTTP {{status}}）。"
+    }
+  },
+  "offline": {
+    "title": "連線中斷",
+    "message": "無法連線到儀表板伺服器，稍後將重新連線。",
+    "retry": "立即重新連線"
+  },
+  "desktop": {
+    "label": "桌面",
+    "openScreenSettings": "開啟畫面設定"
+  },
+  "window": {
+    "minimize": "最小化",
+    "maximize": "最大化",
+    "restore": "還原",
+    "close": "關閉",
+    "placeholder": "即將推出"
+  },
+  "view": {
+    "loadFailed": "無法載入此畫面。請重新整理頁面後再試一次。",
+    "loadFailedShort": "無法載入",
+    "reload": "重新整理頁面"
+  },
+  "taskbar": {
+    "label": "工作列",
+    "restore": "還原",
+    "closeOthers": "關閉其他項目",
+    "closeRight": "關閉右側項目",
+    "closeAll": "全部關閉"
+  },
+  "profile": {
+    "menu": "使用者選單（{{username}}）",
+    "roleAdmin": "管理員",
+    "roleUser": "使用者",
+    "logout": "登出",
+    "logoutConfirm": "要登出嗎？所有開啟的視窗都會關閉。",
+    "openWorkbench": "開啟 OMV 工作台",
+    "openProfile": "開啟個人資料"
+  },
+  "apps": {
+    "systemInfo": "系統資訊",
+    "files": "檔案",
+    "storage": "儲存空間",
+    "network": "網路",
+    "temperature": "溫度",
+    "containers": "容器",
+    "smart": "磁碟健康狀態",
+    "services": "服務",
+    "workbench": "OMV 工作台",
+    "settings": "設定"
+  },
+  "sysinfo": {
+    "disconnected": "連線中斷 — 正在重新連線…",
+    "cpu": "CPU",
+    "memory": "記憶體",
+    "uptime": "運作時間"
+  },
+  "language": {
+    "label": "語言"
+  },
+  "addons": {
+    "pluginMissing": "此應用程式所需的 OpenMediaVault 外掛程式尚未安裝。",
+    "adminRequired": "只有管理員可以使用此應用程式。",
+    "requiredPlugins": "所需的外掛程式：{{plugins}}"
+  },
+  "widgets": {
+    "label": "小工具",
+    "disconnected": "連線中斷",
+    "pluginMissing": "需要外掛程式",
+    "adminRequired": "僅限管理員",
+    "open": "開啟",
+    "remove": "移除小工具",
+    "add": "新增小工具",
+    "noSpace": "沒有空間",
+    "more": "另外 {{count}} 項",
+    "empty": "沒有可顯示的項目"
+  },
+  "shortcuts": {
+    "open": "開啟",
+    "add": "新增捷徑",
+    "remove": "移除捷徑",
+    "addToDesktop": "在桌面新增捷徑"
+  },
+  "drawer": {
+    "title": "所有應用程式",
+    "search": "搜尋應用程式",
+    "empty": "沒有符合的應用程式",
+    "sort": "排序",
+    "sortLabel": "排序：{{method}}",
+    "sortRecommended": "推薦",
+    "sortName": "名稱"
+  },
+  "storage": {
+    "root": "系統",
+    "empty": "找不到檔案系統。",
+    "readOnly": "唯讀",
+    "usage": "已使用 {{used}}，共 {{total}} · 剩餘 {{free}}"
+  },
+  "addonWindow": {
+    "disconnected": "連線中斷 — 正在重新連線…",
+    "partial": "無法取得部分資訊。"
+  },
+  "network": {
+    "empty": "找不到網路介面。",
+    "rx": "下載",
+    "tx": "上傳",
+    "up": "已連線",
+    "down": "未連線",
+    "totals": "已接收 {{rx}} · 已傳送 {{tx}}",
+    "errors": "錯誤 {{errors}} · 捨棄 {{dropped}}",
+    "virtual_other": "{{count}} 個虛擬介面"
+  },
+  "temperature": {
+    "empty": "找不到溫度感測器。",
+    "cpu": "CPU",
+    "sensor": "感測器 {{n}}",
+    "checkedAt": "檢查於 {{time}}"
+  },
+  "containers": {
+    "empty": "沒有容器。",
+    "running_other": "執行中 {{count}}",
+    "stopped_other": "已停止 {{count}}",
+    "unknownRuntime": "不明的執行環境",
+    "podmanUnverified": "Podman 模式尚未在此儀表板上驗證，部分資訊可能不正確。",
+    "state": {
+      "running": "執行中",
+      "paused": "已暫停",
+      "restarting": "正在重新啟動",
+      "exited": "已停止",
+      "created": "已建立",
+      "dead": "因錯誤停止",
+      "removing": "正在刪除",
+      "unknown": "不明"
+    },
+    "health": {
+      "healthy": "良好",
+      "unhealthy": "異常",
+      "starting": "檢查中"
+    },
+    "action": {
+      "start": "啟動",
+      "stop": "停止",
+      "restart": "重新啟動",
+      "starting": "正在啟動…",
+      "stopping": "正在停止…",
+      "restarting": "正在重新啟動…",
+      "confirmStart": "要啟動 {{name}} 嗎？",
+      "confirmStop": "要停止 {{name}} 嗎？在再次啟動之前，此容器中的服務將無法使用。",
+      "confirmRestart": "要重新啟動 {{name}} 嗎？此容器中的服務會短暫中斷。"
+    }
+  },
+  "smart": {
+    "checking": "正在檢查磁碟…",
+    "noDisks": "沒有支援 SMART 的磁碟。",
+    "allGood": "所有磁碟狀態良好",
+    "problems_other": "{{count}} 顆磁碟需要注意",
+    "checkedShort": "檢查於 {{time}}",
+    "checkedAt": "上次檢查：{{time}}",
+    "refresh": "立即檢查",
+    "refreshing": "正在檢查…",
+    "wakeHint": "檢查時會喚醒休眠中的磁碟，因此每天只會自動檢查一次。",
+    "notMonitored": "未監控",
+    "status": {
+      "good": "良好",
+      "warning": "警告",
+      "failing": "危險",
+      "unknown": "不明"
+    }
+  },
+  "services": {
+    "empty": "沒有服務。",
+    "running_other": "執行中 {{count}}",
+    "attention_other": "{{count}} 個問題",
+    "state": {
+      "running": "執行中",
+      "stopped": "仍未執行",
+      "disabled": "已關閉",
+      "disabledRunning": "仍在執行"
+    },
+    "action": {
+      "enable": "開啟",
+      "disable": "關閉",
+      "enabling": "正在開啟…",
+      "disabling": "正在關閉…",
+      "confirmEnable": "要開啟 {{name}} 嗎？",
+      "confirmDisable": "要關閉 {{name}} 嗎？變更會立即套用到 OpenMediaVault。",
+      "confirmDisableSsh": "要關閉 {{name}} 嗎？目前的 SSH 工作階段可能會中斷，而且在再次開啟之前無法透過 SSH 登入。",
+      "confirmDisableSamba": "要關閉 {{name}} 嗎？透過 SMB 使用共用資料夾的用戶端將會中斷連線。",
+      "confirmDisableNfs": "要關閉 {{name}} 嗎？使用 NFS 共用的用戶端將會中斷連線。",
+      "confirmDisableRsyncd": "要關閉 {{name}} 嗎？連線到此 rsync 伺服器的備份和同步將會失敗。"
+    },
+    "toggleHint": "這裡只能開啟或關閉 SSH、SMB/CIFS、NFS 和 RSync 伺服器。其他服務請在 OpenMediaVault 中設定。"
+  },
+  "dialog": {
+    "ok": "確定",
+    "cancel": "取消"
+  },
+  "linkNotice": {
+    "title": "在新分頁中開啟",
+    "workbench": "OMV 工作台會在瀏覽器的新分頁中開啟。您需要在新分頁中重新登入 OMV。",
+    "dontShowAgain": "不再提醒",
+    "open": "開啟"
+  },
+  "actions": {
+    "working": "正在處理…",
+    "dismiss": "關閉",
+    "rowLabel": "{{action}} {{name}}",
+    "failedPrefix": "{{action}}失敗：",
+    "error": {
+      "action_busy": "此項目的另一項作業仍在進行中。",
+      "action_failed": "OMV 無法完成作業。請在 OMV 中查看詳細資訊。",
+      "action_timeout": "OMV 回應過慢。請稍後再次檢查狀態。",
+      "config_dirty": "OMV 中有尚未套用的設定變更。請先在 OMV 中套用或還原這些變更。",
+      "admin_required": "只有管理員可以執行此操作。",
+      "plugin_missing": "所需的 OpenMediaVault 外掛程式尚未安裝。",
+      "omv_error": "無法連線到 OpenMediaVault。",
+      "unknown": "要求失敗。"
+    }
+  },
+  "settings": {
+    "nav": "設定選單",
+    "showNav": "顯示選單",
+    "groups": {
+      "user": "使用者",
+      "admin": "管理"
+    },
+    "pages": {
+      "screen": "畫面",
+      "general": "一般",
+      "loginScreen": "登入畫面",
+      "defaultScreen": "預設畫面",
+      "server": "伺服器",
+      "about": "關於",
+      "profile": "個人資料"
+    },
+    "about": {
+      "build": "版本資訊",
+      "version": "版本",
+      "commit": "提交",
+      "modified": "已修改",
+      "commitTime": "提交日期",
+      "goVersion": "Go 版本",
+      "omvVersion": "OMV 版本",
+      "unknown": "不明",
+      "notRecorded": "未記錄",
+      "loadFailed": "無法載入版本資訊。",
+      "license": "授權",
+      "licenseText": "Onmaru 是依據 GNU General Public License v3.0 散布的自由軟體。",
+      "notices": "開放原始碼聲明",
+      "noticesIntro": "Onmaru 包含下列第三方軟體與素材。",
+      "notes": {
+        "omvLogo": "僅用於指稱 openmediavault 本身，並不代表背書或合作關係。",
+        "pretendard": "用於 Onmaru 標誌中的文字，並已轉換為外框。",
+        "go": "後端執行檔中包含其標準函式庫。"
+      }
+    },
+    "common": {
+      "loading": "正在載入設定…",
+      "loadFailed": "無法載入設定，正在重試…",
+      "saveFailed": "無法儲存變更，會在下次變更時一併儲存。",
+      "siteSaveFailed": "無法儲存設定，已還原為先前的值。"
+    },
+    "screen": {
+      "theme": "主題",
+      "modes": {
+        "auto": "自動",
+        "light": "淺色",
+        "dark": "深色"
+      },
+      "wallpaper": "桌面桌布",
+      "following": "目前使用管理員設定的預設值。",
+      "useDefault": "使用預設值",
+      "taskbar": "工作列",
+      "taskbarAlign": "圖示對齊",
+      "taskbarAlignDesc": "「所有應用程式」按鈕和視窗按鈕在工作列上的位置。",
+      "taskbarAligns": {
+        "center": "置中",
+        "left": "靠左"
+      }
+    },
+    "image": {
+      "upload": "上傳圖片…",
+      "uploading": "正在上傳…",
+      "uploaded": "已上傳的圖片",
+      "delete": "刪除已上傳的圖片",
+      "deleteButton": "刪除",
+      "deleteConfirm": "要刪除已上傳的圖片嗎？如果正在使用這張圖片，將改為顯示預設背景。",
+      "hint": "支援 PNG、JPEG、WebP 格式，最大 20 MB。",
+      "tooLarge": "圖片太大，請上傳 20 MB 以下的圖片。",
+      "unsupported": "只能上傳 PNG、JPEG、WebP 格式的圖片。",
+      "failed": "無法上傳或刪除圖片。"
+    },
+    "general": {
+      "language": "語言",
+      "languageDesc": "僅套用於此瀏覽器。",
+      "motion": "動態",
+      "animations": "動畫",
+      "animationsDesc": "在視窗、選單和背景切換時使用動畫。",
+      "reducedMotion": "裝置已開啟「減少動態效果」，因此動畫會保持關閉。"
+    },
+    "loginScreen": {
+      "intro": "這些設定會套用到所有使用者的登入畫面。登出後即可看到變更後的樣子。",
+      "background": "登入背景",
+      "backgroundHint": "這張圖片會在登入前顯示，因此任何能連到儀表板的人都看得到。支援 PNG、JPEG、WebP 格式，最大 20 MB。",
+      "idle": "等待時",
+      "easterEgg": "等待動畫",
+      "easterEggDesc": "登入畫面 30 秒內沒有操作時顯示動畫。"
+    },
+    "defaultScreen": {
+      "intro": "套用於未在畫面設定中選擇主題或桌布的使用者。"
+    },
+    "server": {
+      "intro": "Onmaru 目前執行時使用的設定。下列兩個值可以在這裡變更，其他設定則在伺服器的設定檔中變更。",
+      "loadFailed": "無法載入伺服器設定。",
+      "saveFailed": "無法儲存設定。",
+      "invalid": "值的格式不正確。",
+      "editable": "在這裡變更",
+      "editableDesc": "儲存後立即生效，並優先於設定檔中的值。",
+      "workbenchDesc": "瀏覽器開啟 OMV 網頁介面所用的位址。留空即可隱藏「OMV 工作台」應用程式。",
+      "smartDesc": "每天過了這個時間（伺服器時間）後重新讀取一次 SMART 資訊。",
+      "fromServer": "目前使用伺服器的值：{{base}}",
+      "overridden": "目前使用在這裡變更的值。伺服器的值：{{base}}",
+      "save": "儲存",
+      "reset": "使用伺服器的值",
+      "empty": "（未設定）",
+      "runtime": "目前的設定",
+      "runtimeDesc": "伺服器啟動時決定的值及其來源。",
+      "overriddenBadge": "已在這裡變更",
+      "howTo": "變更其他設定",
+      "howToDesc": "這些值是 /etc/default/onmaru 中的環境變數。編輯後需重新啟動服務才會生效。如果變更了監聽位址，也請一併更新反向代理的設定。",
+      "howToInstall": "也可以在存放庫中重新執行 ./install.sh 並回答問題。",
+      "copy": "複製指令",
+      "copied": "已複製",
+      "sources": {
+        "default": "預設值",
+        "env": "環境變數",
+        "flag": "命令列旗標",
+        "systemd": "systemd"
+      },
+      "flags": {
+        "listen": "監聽位址",
+        "allowNonLoopback": "允許在回送位址以外監聽",
+        "omvUrl": "OMV 位址",
+        "cookiePath": "Cookie 路徑",
+        "stateDir": "狀態目錄",
+        "workbenchUrl": "OMV 工作台位址",
+        "smartRefreshAt": "SMART 檢查時間"
+      }
+    },
+    "profile": {
+      "editor": {
+        "title": "編輯相片",
+        "view": "相片位置。拖曳或使用方向鍵移動，按 + / - 鍵縮放。",
+        "zoom": "縮放",
+        "hint": "拖曳以調整位置。圓圈內的部分會成為個人資料相片。",
+        "save": "儲存"
+      },
+      "changePhoto": "更換相片…",
+      "removePhoto": "移除相片",
+      "removePhotoConfirm": "要移除個人資料相片嗎？將改為顯示預設大頭貼。",
+      "account": "帳戶",
+      "loadFailed": "無法從 OMV 載入帳戶資訊。",
+      "username": "使用者名稱",
+      "role": "角色",
+      "email": "電子郵件",
+      "groups": "群組",
+      "none": "（無）",
+      "readOnly": {
+        "system": "這是 OMV 內建的系統帳戶，因此無法變更電子郵件和標籤。",
+        "locked": "OMV 已禁止變更此帳戶的資訊。"
+      },
+      "saving": "正在儲存…",
+      "savedApplied": "已儲存並套用到 OMV。",
+      "savedPending": "已儲存。OMV 中現在有待套用的變更，需要管理員在 OMV 網頁介面中套用。",
+      "saveConfigDirty": "未儲存：OMV 中有尚未套用的變更，請先在 OMV 網頁介面中套用。",
+      "saveApplyFailed": "帳戶資訊已變更，但無法套用到 OMV。請在 OMV 網頁介面中套用。",
+      "saveBusy": "上一次的變更仍在儲存中。",
+      "saveFailed": "無法儲存帳戶資訊。",
+      "omv": "OMV 帳戶",
+      "editInOmv": "在 OMV 中編輯使用者",
+      "omvHintAdmin": "密碼、群組等資訊請在 OMV 的使用者編輯頁面中變更，該頁面會在新分頁中開啟。",
+      "omvHintSystem": "OMV 內建的管理員帳戶不在 OMV 使用者管理清單中。",
+      "omvHintNoWorkbench": "在伺服器設定中設定 OMV 工作台位址後，即可從這裡開啟 OMV 的使用者編輯頁面。",
+      "omvHintUser": "密碼等其他帳戶資訊可由管理員在 OMV 網頁介面中變更。",
+      "tags": "標籤",
+      "tagsDesc": "與 OMV 使用者管理中的 Tags 相同。以逗號或 Enter 分隔。",
+      "addTag": "新增標籤",
+      "removeTag": "移除標籤 {{tag}}",
+      "emailPlaceholder": "name@example.com",
+      "emailInvalid": "這看起來不像電子郵件地址。",
+      "tagsInvalid": "標籤不能包含逗號（,）和冒號（:），且合計不得超過 255 位元組和 32 個。",
+      "invalid": "請檢查電子郵件地址和標籤。",
+      "saveDescAdmin": "儲存後會立即套用到 OMV。",
+      "saveDescUser": "儲存後 OMV 中會產生待套用的變更，由管理員在 OMV 網頁介面中套用。"
+    }
+  },
+  "appearance": {
+    "presets": {
+      "dusk": "黃昏",
+      "aurora": "極光",
+      "ocean": "海洋",
+      "forest": "森林",
+      "sunset": "晚霞",
+      "night": "夜空",
+      "graphite": "石墨",
+      "slate": "青灰",
+      "plum": "梅紫"
+    }
+  }
+}
