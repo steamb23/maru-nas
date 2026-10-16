@@ -28,7 +28,7 @@ export function GeneralPage() {
               aria-label={t('settings.general.language')}
               value={lang}
               onChange={(e) => {
-                if (isLanguage(e.target.value)) setLanguage(e.target.value)
+                if (isLanguage(e.target.value)) void setLanguage(e.target.value)
               }}
             >
               {SUPPORTED_LANGUAGES.map((code) => (

@@ -7,6 +7,7 @@ import { type Plugin, defineConfig, loadEnv } from 'vite'
 const fromHere = (p: string) => fileURLToPath(new URL(p, import.meta.url))
 
 const vendorIcons = fromHere('../vendor/icons')
+const locales = fromHere('src/i18n/locales')
 
 // Colloid의 일부 SVG(external-link-symbolic 등)는 루트 <svg>에 xmlns가 없어 브라우저가 이미지로 읽지 못한다.
 // 그러면 mask-image가 비어 아이콘이 보이지 않는다. 원본(서브모듈)은 고치지 않고, ?url로 불러올 때만
@@ -27,6 +28,23 @@ function svgNamespace(): Plugin {
   }
 }
 
+// 번역 카탈로그는 고른 언어만 따로 받지만(i18n/index.ts), "모든 앱" 검색은 모든 언어의 앱 이름이 필요하다.
+// locales/<언어>.json?apps는 카탈로그에서 apps 부분만 남긴 모듈이라 전체 카탈로그와 다른 모듈로 묶인다
+// (i18n/appNames.ts).
+function catalogApps(): Plugin {
+  return {
+    name: 'onmaru:catalog-apps',
+    enforce: 'pre',
+    async load(id) {
+      const [file, query = ''] = id.split('?', 2)
+      if (!file.endsWith('.json') || !file.startsWith(`${locales}/`) || !/(^|&)apps(&|$)/.test(query)) return null
+      this.addWatchFile(file)
+      const { apps } = JSON.parse(await readFile(file, 'utf8'))
+      return { code: `export default ${JSON.stringify({ apps })}`, moduleType: 'js' }
+    },
+  }
+}
+
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
   // 개인 환경 값은 커밋하지 않는 frontend/.env.local에 둔다.
@@ -43,7 +61,7 @@ export default defineConfig(({ mode }) => {
     base: './',
     // DEV_PORT로 개발 서버를 하나 더 띄울 때 의존성 최적화 캐시(node_modules/.vite)를 함께 쓰지 않게 나눈다.
     cacheDir: env.DEV_PORT ? `node_modules/.vite-${env.DEV_PORT}` : undefined,
-    plugins: [svgNamespace(), react()],
+    plugins: [svgNamespace(), catalogApps(), react()],
     resolve: {
       alias: {
         // 기본 아이콘 테마(Colloid)의 원본 SVG.

@@ -3,11 +3,11 @@
 // 데스크톱 영역 위, 작업표시줄 아래에 그린다(작업표시줄은 열려 있는 동안에도 쓸 수 있다).
 // 열림 상태는 appDrawerStore, 정렬 방식은 appDrawerPrefsStore(사용자별 저장), 검색은 appSearch.ts,
 // 정렬은 appSort.ts, 격자 이동은 gridNav.ts가 계산한다.
-import { type KeyboardEvent, type RefObject, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { type KeyboardEvent, type RefObject, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { appAccess, useCapabilitiesStore } from '../addons/capabilities'
 import { useLanguage } from '../i18n'
-import { SUPPORTED_LANGUAGES } from '../i18n/languages'
+import { appTitles } from '../i18n/appNames'
 import { IconImage } from '../icons/IconImage'
 import { placeShortcut, removeShortcut } from '../shortcuts/list'
 import { useShortcutStore } from '../shortcuts/store'
@@ -60,6 +60,10 @@ interface TileDrag {
 
 const GRID_ID = `${APP_DRAWER_ID}-grid`
 
+// 검색어 후보: 지원하는 모든 언어의 앱 이름과 앱 id. 화면 언어와 무관하게 어느 언어로 쳐도 찾게 한다.
+// 다른 언어의 카탈로그는 받지 않았을 수 있으므로 앱 이름만 따로 담은 appNames를 쓴다.
+const SEARCH_TERMS = new Map(APP_IDS.map((id) => [id, [...appTitles(getApp(id).titleKey), id]]))
+
 const { close } = useAppDrawerStore.getState()
 
 // 바깥을 눌러도 닫지 않는 곳: 앱 타일, 검색 상자와 정렬 버튼, 타일·정렬 메뉴, 작업표시줄의 "모든 앱" 버튼
@@ -89,7 +93,7 @@ function columnsOf(grid: HTMLElement | null): number {
 }
 
 export function AppDrawer({ bounds, shortcuts }: Props) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const lang = useLanguage()
   const sort = useAppDrawerPrefsStore((s) => s.sort)
   const prefsStatus = useAppDrawerPrefsStore((s) => s.status)
@@ -127,15 +131,9 @@ export function AppDrawer({ bounds, shortcuts }: Props) {
   // 관리자 전용 앱은 일반 사용자에게 보이지 않는다.
   const include = (id: AppId) => appAccess(caps, id).visible
 
-  // 검색어 후보: 지원하는 모든 언어의 앱 이름과 앱 id. 화면 언어와 무관하게 어느 언어로 쳐도 찾게 한다.
-  // 모든 언어 번들이 로드되어 있어야 한다(i18n/index.ts의 resources).
-  const terms = useMemo(() => {
-    const fixed = SUPPORTED_LANGUAGES.map((lng) => i18n.getFixedT(lng))
-    return new Map(APP_IDS.map((id) => [id, [...fixed.map((tl) => tl(getApp(id).titleKey)), id]]))
-  }, [i18n])
   // 정렬한 뒤 검색한다. 검색 결과는 맞는 정도가 같으면 정렬 순서를 따른다.
   const sorted = sortApps(APP_IDS.filter(include), sort, (id) => t(getApp(id).titleKey), lang)
-  const results = searchApps(sorted, (id) => terms.get(id) ?? [id], query)
+  const results = searchApps(sorted, (id) => SEARCH_TERMS.get(id) ?? [id], query)
   const activeIndex = Math.min(active, Math.max(results.length - 1, 0))
 
   const openApp = (id: AppId) => {

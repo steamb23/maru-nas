@@ -310,7 +310,7 @@ export function ProfileMenu({ onOpenSettings }: { onOpenSettings: (page: Setting
                             className="profile-menu-item"
                             onClick={() => {
                               close(true)
-                              setLanguage(code)
+                              void setLanguage(code)
                             }}
                           >
                             <span className="profile-menu-check">
