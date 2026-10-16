@@ -1,0 +1,9 @@
+22 1 8:1 / / rw,relatime shared:1 - ext4 /dev/sda1 rw,errors=remount-ro
+23 22 0:21 / /proc rw,nosuid,nodev,noexec,relatime shared:12 - proc proc rw
+24 22 0:5 / /dev rw,nosuid,relatime shared:2 - devtmpfs udev rw,size=1000k
+40 22 8:1 /srv /srv ro,relatime shared:1 - ext4 /dev/sda1 rw
+41 40 8:17 / /srv/dev-disk-by-uuid-00000000-1111-2222-3333-444444444444 rw,relatime shared:30 - ext4 /dev/sdb1 rw
+42 40 0:50 / /srv/mergerfs/pool rw,relatime shared:31 - fuse.mergerfs pool rw,user_id=0
+43 40 8:33 / /srv/dev-disk-by-label-my\040disk rw,relatime shared:32 - ext4 /dev/sdc1 rw
+44 22 8:1 /home /home rw,relatime shared:1 - ext4 /dev/sda1 rw
+45 22 0:60 / /srvdata rw,relatime shared:40 - tmpfs tmpfs rw
