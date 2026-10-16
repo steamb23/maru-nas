@@ -14,6 +14,7 @@
 # 일반 사용자가 sudo ./install.sh로 실행하면 root로 빌드하지 않는다(저장소에 root 소유 파일이 생기고,
 # sudo의 PATH에는 사용자의 go·npm이 없을 수 있다). 이때는 기존 실행 파일로 설치만 할지 묻는다.
 #
+# 권한 도우미(onmaru-helper, root로 도는 소켓 활성화 서비스)는 물어서 고른 경우에만 설치한다(--helper).
 # 리버스 프록시 설정은 하지 않는다. README.md의 "리버스 프록시"를 참고한다.
 # 생성하는 설정 파일(유닛, /etc/default/onmaru)의 주석은 언어와 상관없이 영어로 쓴다.
 set -euo pipefail
@@ -26,11 +27,19 @@ readonly STATE_DIR=/var/lib/onmaru
 readonly RUNTIME_DIR=/run/onmaru
 readonly SOCKET_PATH=$RUNTIME_DIR/onmaru.sock
 readonly NGINX_WEBGUI=/etc/nginx/sites-enabled/openmediavault-webgui
+readonly HELPER=onmaru-helper
+readonly HELPER_BIN_DST=/usr/local/bin/onmaru-helper
+readonly HELPER_SOCKET_UNIT=/etc/systemd/system/onmaru-helper.socket
+readonly HELPER_SERVICE_UNIT=/etc/systemd/system/onmaru-helper.service
+readonly HELPER_ENV_FILE=/etc/default/onmaru-helper
+# 도우미 소켓은 Docker 프록시에 바인드 마운트하는 $RUNTIME_DIR과 다른 디렉터리에 둔다.
+readonly HELPER_SOCKET=/run/onmaru-helper/helper.sock
 
 SELF=$(readlink -f "${BASH_SOURCE[0]}")
 repo_dir=$(dirname "$SELF")
 readonly SELF repo_dir
 readonly BIN_SRC=$repo_dir/bin/onmaru
+readonly HELPER_BIN_SRC=$repo_dir/bin/onmaru-helper
 readonly DIST_INDEX=$repo_dir/backend/internal/web/static/dist/index.html
 
 # 안내 문구 언어(en, ko). main에서 정한다.
@@ -94,10 +103,16 @@ write_file() {
   info "$(t "Wrote $path" "$path 작성")"
 }
 
-# env_get KEY: 기존 환경 파일에서 값을 읽는다(source 하지 않는다).
+# env_get KEY [FILE]: 기존 환경 파일(기본 $ENV_FILE)에서 값을 읽는다(source 하지 않는다).
 env_get() {
-  [[ -f $ENV_FILE ]] || return 0
-  sed -n "s/^$1=//p" "$ENV_FILE" | tail -n 1 | sed 's/^"\(.*\)"$/\1/'
+  local file=${2:-$ENV_FILE}
+  [[ -f $file ]] || return 0
+  sed -n "s/^$1=//p" "$file" | tail -n 1 | sed 's/^"\(.*\)"$/\1/'
+}
+
+# valid_group: 도우미의 상승 그룹 이름(onmaru-helper -elevate-group과 같은 규칙)
+valid_group() {
+  [[ $1 =~ ^[A-Za-z0-9_][A-Za-z0-9_.-]{0,63}$ ]]
 }
 
 readonly PORT_RE='[1-9][0-9]{0,4}'
@@ -174,6 +189,8 @@ usage() {
   --omv-url URL              OMV 웹 UI 주소(루프백)
   --workbench-url URL        브라우저에서 OMV 웹 UI를 열 주소(빈 값이면 OMV 워크벤치 앱을 숨깁니다)
   --smart-refresh-at HH:MM   SMART 정보를 매일 다시 가져올 시각
+  --helper | --no-helper     권한 도우미(root로 도는 onmaru-helper)를 설치하거나 설치하지 않습니다(제거)
+  --elevate-group GROUP      root 권한 상승에 openmediavault-admin과 함께 필요한 그룹(기본값 sudo)
 
 일반 사용자는 sudo 없이 실행하세요. 빌드는 그 사용자로 하고, 설치 단계만 sudo로 실행합니다.
 EOF
@@ -196,6 +213,8 @@ Settings (only the missing ones are asked):
   --omv-url URL              OMV web UI address (loopback)
   --workbench-url URL        OMV web UI address for browsers (empty hides the OMV Workbench app)
   --smart-refresh-at HH:MM   daily SMART refresh time
+  --helper | --no-helper     install, or do not install (remove), the privileged helper (onmaru-helper, runs as root)
+  --elevate-group GROUP      group required together with openmediavault-admin to elevate to root (default sudo)
 
 Normal users should run it without sudo: the build runs as that user and only the install step uses sudo.
 EOF
@@ -256,6 +275,15 @@ run_root() {
   esac
 }
 
+# remove_helper: 권한 도우미의 소켓·서비스를 멈추고 유닛, 실행 파일, 설정을 지운다. 없으면 아무것도 하지 않는다.
+remove_helper() {
+  [[ -f $HELPER_SOCKET_UNIT || -f $HELPER_SERVICE_UNIT || -f $HELPER_BIN_DST || -f $HELPER_ENV_FILE ]] || return 0
+  info "$(t "Removing the privileged helper" "권한 도우미 제거")"
+  systemctl disable --now "$HELPER.socket" "$HELPER.service" 2>/dev/null || true
+  rm -f -- "$HELPER_SOCKET_UNIT" "$HELPER_SERVICE_UNIT" "$HELPER_BIN_DST" "$HELPER_ENV_FILE"
+  systemctl daemon-reload
+}
+
 # is_own_system_user NAME: install.sh가 만든 형태의 계정인지 본다. 기존 공용 계정을 지정했을 수 있으므로
 # 시스템 UID 범위이고 홈이 /nonexistent일 때만 제거를 제안한다.
 is_own_system_user() {
@@ -268,11 +296,12 @@ is_own_system_user() {
 
 uninstall() {
   info "$(t "Uninstalling $SERVICE" "$SERVICE 제거")"
-  confirm "$(t "Stop the service and remove $UNIT_FILE, $BIN_DST and $ENV_FILE?" \
-    "서비스를 멈추고 $UNIT_FILE, $BIN_DST, $ENV_FILE 파일을 지울까요?")" n || exit 0
+  confirm "$(t "Stop the service and remove $UNIT_FILE, $BIN_DST and $ENV_FILE (and the privileged helper if installed)?" \
+    "서비스를 멈추고 $UNIT_FILE, $BIN_DST, $ENV_FILE 파일(설치했다면 권한 도우미도)을 지울까요?")" n || exit 0
   if systemctl list-unit-files "$SERVICE.service" >/dev/null 2>&1; then
     systemctl disable --now "$SERVICE.service" 2>/dev/null || true
   fi
+  remove_helper
   local user=""
   [[ -f $UNIT_FILE ]] && user=$(sed -n '/^User=/{s///p;q}' "$UNIT_FILE")
   rm -f -- "$UNIT_FILE" "$BIN_DST" "$ENV_FILE"
@@ -307,9 +336,13 @@ S_SMART=""
 # OMV 워크벤치 주소는 빈 값(끔)도 정한 값이므로 정했는지를 따로 둔다.
 S_WORKBENCH=""
 S_WORKBENCH_SET=false
+# 권한 도우미 설치 여부(yes|no)와 상승 그룹. 설치하지 않으면 그룹은 쓰지 않는다.
+S_HELPER=""
+S_ELEVATE_GROUP=""
 
 settings_complete() {
-  [[ -n $S_USER && -n $S_LISTEN && -n $S_OMV && -n $S_SMART && $S_WORKBENCH_SET == true ]]
+  [[ -n $S_USER && -n $S_LISTEN && -n $S_OMV && -n $S_SMART && $S_WORKBENCH_SET == true ]] &&
+    [[ $S_HELPER == no || ($S_HELPER == yes && -n $S_ELEVATE_GROUP) ]]
 }
 
 # settings_args: 2단계(--service-install)로 넘길 옵션을 한 줄에 하나씩 출력한다.
@@ -318,6 +351,11 @@ settings_args() {
     --workbench-url "$S_WORKBENCH"
   if [[ $S_ALLOW == true ]]; then
     printf '%s\n' --allow-non-loopback
+  fi
+  if [[ $S_HELPER == yes ]]; then
+    printf '%s\n' --helper --elevate-group "$S_ELEVATE_GROUP"
+  elif [[ $S_HELPER == no ]]; then
+    printf '%s\n' --no-helper
   fi
 }
 
@@ -341,6 +379,17 @@ load_installed_settings() {
   if [[ $S_WORKBENCH_SET != true ]] && grep -q '^ONMARU_WORKBENCH_URL=' "$ENV_FILE"; then
     S_WORKBENCH=$(env_get ONMARU_WORKBENCH_URL)
     S_WORKBENCH_SET=true
+  fi
+  # 도우미를 설치하지 않기로 한 설치도 ONMARU_HELPER_SOCKET=(빈 값)을 남기므로 키가 있으면 정한 것이다.
+  if [[ -z $S_HELPER ]] && grep -q '^ONMARU_HELPER_SOCKET=' "$ENV_FILE"; then
+    if [[ -n $(env_get ONMARU_HELPER_SOCKET) && -f $HELPER_SERVICE_UNIT ]]; then
+      S_HELPER=yes
+    else
+      S_HELPER=no
+    fi
+  fi
+  if [[ $S_HELPER == yes && -z $S_ELEVATE_GROUP ]]; then
+    S_ELEVATE_GROUP=$(env_get ONMARU_HELPER_ELEVATE_GROUP "$HELPER_ENV_FILE")
   fi
 }
 
@@ -416,6 +465,34 @@ ask_settings() {
     [[ $REPLY == - ]] && REPLY=""
     S_WORKBENCH=$REPLY
     S_WORKBENCH_SET=true
+  fi
+
+  # 6. 권한 도우미
+  if [[ -z $S_HELPER ]]; then
+    echo
+    t "The privileged helper (onmaru-helper) is a separate service that runs as root.
+  It lets onmaru act with each signed-in user's own Linux account (for example for file access) and,
+  after an administrator enters the password again, run a fixed set of root operations for 5 minutes.
+  Without it, features that need it are unavailable. See README.md, \"Privileged helper\"." \
+      "권한 도우미(onmaru-helper)는 root로 도는 별도 서비스입니다.
+  로그인한 사용자 자신의 Linux 계정 권한으로(예: 파일 접근), 그리고 관리자가 비밀번호를 다시 입력하면
+  5분 동안 정해진 root 연산을 onmaru가 실행할 수 있게 합니다. 설치하지 않으면 그런 기능을 쓸 수 없습니다.
+  README.md의 \"권한 도우미\"를 참고하세요."
+    echo
+    local helper_def=n
+    [[ -f $HELPER_SERVICE_UNIT ]] && helper_def=y
+    if confirm "$(t "Install the privileged helper?" "권한 도우미를 설치할까요?")" "$helper_def"; then
+      S_HELPER=yes
+    else
+      S_HELPER=no
+    fi
+  fi
+  if [[ $S_HELPER == yes && -z $S_ELEVATE_GROUP ]]; then
+    local group_def
+    group_def=$(env_get ONMARU_HELPER_ELEVATE_GROUP "$HELPER_ENV_FILE")
+    ask "$(t "Group that may elevate to root (members must also be in openmediavault-admin)" \
+      "root 권한으로 상승할 수 있는 그룹(openmediavault-admin에도 속해야 합니다)")" "${group_def:-sudo}"
+    S_ELEVATE_GROUP=$REPLY
   fi
 }
 
@@ -516,6 +593,10 @@ validate_settings() {
   valid_omv_url "$S_OMV" ||
     die "$(t "OMV address must be a loopback http(s) URL: $S_OMV" "OMV 주소는 루프백 http(s) URL이어야 합니다: $S_OMV")"
   [[ $S_SMART =~ ^([01][0-9]|2[0-3]):[0-5][0-9]$ ]] || die "$(t "invalid time: $S_SMART" "시각이 올바르지 않습니다: $S_SMART")"
+  [[ $S_HELPER == yes || $S_HELPER == no ]] || die "$(t "choose --helper or --no-helper" "--helper 또는 --no-helper를 고르세요")"
+  if [[ $S_HELPER == yes ]]; then
+    valid_group "$S_ELEVATE_GROUP" || die "$(t "invalid group name: $S_ELEVATE_GROUP" "그룹 이름이 올바르지 않습니다: $S_ELEVATE_GROUP")"
+  fi
   valid_workbench_url "$S_WORKBENCH" ||
     die "$(t "OMV Workbench address must start with http:// or https://, or be a path starting with / or ./ or ../ (no query or fragment): $S_WORKBENCH" \
       "OMV 워크벤치 주소는 http:// 또는 https://로 시작하거나 /·./·../로 시작하는 경로여야 합니다(query·fragment 없이): $S_WORKBENCH")"
@@ -532,8 +613,13 @@ check_settings() {
 }
 
 show_summary() {
-  local allow_note="" workbench=${S_WORKBENCH:-"($(t "off" "끔"))"}
+  local allow_note="" workbench=${S_WORKBENCH:-"($(t "off" "끔"))"} helper
   [[ $S_ALLOW == true ]] && allow_note="  ($(t "non-loopback allowed" "루프백 외 주소 허용"))"
+  if [[ $S_HELPER == yes ]]; then
+    helper="$(t "install" "설치") ($HELPER_BIN_DST, $(t "elevate group" "상승 그룹") $S_ELEVATE_GROUP)"
+  else
+    helper=$(t "do not install" "설치 안 함")
+  fi
   if [[ $LANG_UI == ko ]]; then
     cat <<EOF
 
@@ -544,6 +630,7 @@ show_summary() {
   OMV 주소      $S_OMV
   OMV 워크벤치  $workbench
   SMART 갱신    $S_SMART
+  권한 도우미   $helper
   상태 디렉터리 $STATE_DIR
   설정 파일     $UNIT_FILE, $ENV_FILE
 
@@ -558,6 +645,7 @@ Summary
   OMV address   $S_OMV
   OMV Workbench $workbench
   SMART refresh $S_SMART
+  helper        $helper
   state dir     $STATE_DIR
   files         $UNIT_FILE, $ENV_FILE
 
@@ -568,6 +656,10 @@ EOF
 require_binary() {
   [[ -x $BIN_SRC ]] || die "$(t "$BIN_SRC not found. Run $SELF without --no-build to build it first." \
     "$BIN_SRC 파일이 없습니다. --no-build 없이 $SELF 를 실행해 먼저 빌드하세요.")"
+  if [[ $S_HELPER == yes ]]; then
+    [[ -x $HELPER_BIN_SRC ]] || die "$(t "$HELPER_BIN_SRC not found. Run $SELF without --no-build to build it first." \
+      "$HELPER_BIN_SRC 파일이 없습니다. --no-build 없이 $SELF 를 실행해 먼저 빌드하세요.")"
+  fi
   if [[ ! -f $DIST_INDEX ]]; then
     warn "$(t "frontend build not found ($DIST_INDEX). The binary will serve a 'frontend not built' page." \
       "프론트엔드 빌드가 없습니다($DIST_INDEX). 화면 대신 'frontend not built' 안내만 나옵니다.")"
@@ -591,6 +683,8 @@ install_service() {
   else
     check_settings
   fi
+  # 설정을 물은 뒤에야 도우미를 설치할지 알 수 있으므로 실행 파일을 다시 확인한다.
+  require_binary
   local user=$S_USER listen=$S_LISTEN allow=$S_ALLOW omv_url=$S_OMV smart_at=$S_SMART workbench_url=$S_WORKBENCH group
 
   if ! id -u "$user" >/dev/null 2>&1; then
@@ -613,6 +707,15 @@ install_service() {
   info "$(t "Installing $BIN_DST" "$BIN_DST 설치")"
   install -o root -g root -m 0755 "$BIN_SRC" "$BIN_DST"
 
+  local helper_socket="" helper_deps=""
+  if [[ $S_HELPER == yes ]]; then
+    install_helper "$user"
+    helper_socket=$HELPER_SOCKET
+    helper_deps=$'\nWants=onmaru-helper.socket\nAfter=onmaru-helper.socket'
+  else
+    remove_helper
+  fi
+
   write_file "$ENV_FILE" yes <<EOF
 # onmaru settings. Written by install.sh; re-run it to change them.
 # See README.md for every option.
@@ -621,6 +724,8 @@ ONMARU_ALLOW_NON_LOOPBACK=$allow
 ONMARU_OMV_URL=$omv_url
 ONMARU_SMART_REFRESH_AT=$smart_at
 ONMARU_WORKBENCH_URL=$workbench_url
+# Privileged helper socket; empty means the helper is not installed.
+ONMARU_HELPER_SOCKET=$helper_socket
 EOF
 
   # 특정 IP에 바인딩하면 부팅 중 그 주소가 생긴 뒤에 시작해야 한다.
@@ -634,7 +739,7 @@ EOF
 # Written by onmaru install.sh
 [Unit]
 Description=Onmaru dashboard for openmediavault
-$unit_after
+$unit_after$helper_deps
 
 [Service]
 Type=simple
@@ -672,6 +777,14 @@ WantedBy=multi-user.target
 EOF
 
   systemctl daemon-reload
+  if [[ $S_HELPER == yes ]]; then
+    # onmaru가 시작할 때 도우미에 연결하므로 소켓을 먼저 연다. 이미 돌던 도우미는 새 실행 파일로 다시 시작한다
+    # (티켓이 사라지므로 사용자는 다시 로그인한다. onmaru도 다시 시작하므로 어차피 다시 로그인한다).
+    systemctl enable --now "$HELPER.socket" >/dev/null
+    if systemctl is-active --quiet "$HELPER.service"; then
+      systemctl restart "$HELPER.service"
+    fi
+  fi
   systemctl enable "$SERVICE.service" >/dev/null
   if systemctl is-active --quiet "$SERVICE.service"; then
     info "$(t "Restarting $SERVICE" "$SERVICE 재시작")"
@@ -683,6 +796,85 @@ EOF
 
   health_check "$listen"
   next_steps "$listen" "$group" "$proxy_unchanged"
+}
+
+# install_helper USER: 권한 도우미 실행 파일, 설정, 소켓·서비스 유닛을 쓴다. 도우미는 root로 돌지만
+# USER(onmaru 서비스 사용자)의 연결만 받고, 사용자 권한으로 강등하는 데 필요한 권한만 남긴다.
+install_helper() {
+  local user=$1
+  if ! getent group "$S_ELEVATE_GROUP" >/dev/null; then
+    warn "$(t "group '$S_ELEVATE_GROUP' does not exist. Nobody can elevate to root until it is created." \
+      "그룹 '$S_ELEVATE_GROUP'이(가) 없습니다. 그룹을 만들기 전에는 아무도 root 권한으로 상승할 수 없습니다.")"
+  fi
+  [[ -x /usr/sbin/unix_chkpwd ]] || warn "$(t "/usr/sbin/unix_chkpwd not found (package libpam-modules-bin); the helper will not start." \
+    "/usr/sbin/unix_chkpwd가 없습니다(libpam-modules-bin 패키지). 도우미가 시작하지 않습니다.")"
+  info "$(t "Installing $HELPER_BIN_DST" "$HELPER_BIN_DST 설치")"
+  install -o root -g root -m 0755 "$HELPER_BIN_SRC" "$HELPER_BIN_DST"
+
+  write_file "$HELPER_ENV_FILE" yes <<EOF
+# onmaru-helper settings. Written by install.sh; re-run it to change them.
+# Only this user may connect to the helper socket.
+ONMARU_HELPER_CLIENT_USER=$user
+# Members of openmediavault-admin who are also in this group may elevate to root.
+ONMARU_HELPER_ELEVATE_GROUP=$S_ELEVATE_GROUP
+EOF
+
+  write_file "$HELPER_SOCKET_UNIT" no <<EOF
+# Written by onmaru install.sh
+[Unit]
+Description=Onmaru privileged helper socket
+
+[Socket]
+ListenStream=$HELPER_SOCKET
+# Only the onmaru service user can connect (the helper also checks the peer uid).
+SocketUser=$user
+SocketGroup=root
+SocketMode=0600
+DirectoryMode=0755
+RemoveOnStop=yes
+
+[Install]
+WantedBy=sockets.target
+EOF
+
+  write_file "$HELPER_SERVICE_UNIT" no <<EOF
+# Written by onmaru install.sh
+[Unit]
+Description=Onmaru privileged helper
+Requires=$HELPER.socket
+After=$HELPER.socket
+
+[Service]
+Type=simple
+EnvironmentFile=$HELPER_ENV_FILE
+ExecStart=$HELPER_BIN_DST
+
+# Runs as root, but may only drop privileges to a user (SETUID/SETGID) and stop its own
+# workers (KILL). Add capabilities here only together with a new root operation.
+CapabilityBoundingSet=CAP_SETUID CAP_SETGID CAP_KILL
+NoNewPrivileges=yes
+ProtectSystem=strict
+# User-scope file operations write on data disks and in home directories.
+ReadWritePaths=-/srv -/home
+PrivateTmp=yes
+PrivateDevices=yes
+PrivateNetwork=yes
+RestrictAddressFamilies=AF_UNIX
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+UMask=0077
+EOF
 }
 
 # check_port_free: TCP 수신이면 다른 프로세스(예: make dev의 백엔드)가 포트를 쓰고 있는지 미리 알린다.
@@ -772,7 +964,7 @@ main() {
   while (($#)); do
     # --name=value 형식은 --name value로 나눈다.
     case $1 in
-      --user=* | --listen=* | --omv-url=* | --smart-refresh-at=* | --workbench-url=* | --lang=*)
+      --user=* | --listen=* | --omv-url=* | --smart-refresh-at=* | --workbench-url=* | --elevate-group=* | --lang=*)
         set -- "${1%%=*}" "${1#*=}" "${@:2}"
         ;;
     esac
@@ -804,6 +996,13 @@ main() {
         shift
         ;;
       --allow-non-loopback) S_ALLOW=true ;;
+      --helper) S_HELPER=yes ;;
+      --no-helper) S_HELPER=no ;;
+      --elevate-group)
+        [[ $# -ge 2 && -n $2 ]] || { usage >&2; exit 2; }
+        S_ELEVATE_GROUP=$2
+        shift
+        ;;
       -h | --help) usage; exit 0 ;;
       *) usage >&2; exit 2 ;;
     esac
@@ -852,8 +1051,8 @@ main() {
       fi
       if (( do_build )); then
         build
-        require_binary
       fi
+      require_binary
       as_root service-install
       ;;
   esac

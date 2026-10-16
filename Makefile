@@ -14,14 +14,16 @@ dev-fake:
 types:
 	cd backend && go tool tygo generate && go run ./cmd/genaddons
 
-# 프론트엔드를 빌드해 실행 파일에 포함한 bin/onmaru 생성
+# 프론트엔드를 빌드해 실행 파일에 포함한 bin/onmaru와 권한 도우미 bin/onmaru-helper 생성
 build: build-frontend build-backend
 
 build-frontend:
 	npm --prefix frontend run build
 
+# 도우미는 root로 돌므로 cgo 없이 정적으로 빌드해 os/user가 NSS 대신 로컬 /etc/passwd·/etc/group만 읽게 한다.
 build-backend:
 	cd backend && go build -trimpath -o ../bin/onmaru ./cmd/onmaru
+	cd backend && CGO_ENABLED=0 go build -trimpath -o ../bin/onmaru-helper ./cmd/onmaru-helper
 
 lint:
 	@out=$$(cd backend && gofmt -l .); if [ -n "$$out" ]; then echo "gofmt 필요:"; echo "$$out"; exit 1; fi
