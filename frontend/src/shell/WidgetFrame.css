@@ -16,19 +16,22 @@
   transform-origin: 0 0;
 }
 
+/* 창을 여는 위젯은 hover·누름을 배경 위 덮개(background-image)로 보인다. 면이 넓어 버튼용 토큰(--hover-bg,
+   --press-bg)보다 옅게 둔다. 크기는 바꾸지 않는다(놓기 애니메이션이 transform을 쓴다). */
 .widget.opens-window {
+  --widget-hover-tint: light-dark(rgb(0 0 0 / 0.03), rgb(255 255 255 / 0.04));
+  --widget-press-tint: light-dark(rgb(0 0 0 / 0.06), rgb(255 255 255 / 0.08));
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
 
-/* 창을 여는 위젯은 hover·누름을 배경 위 덮개(background-image)로 보인다. 크기는 바꾸지 않는다(놓기 애니메이션이
-   transform을 쓴다). 끄거나 크기를 바꾸는 동안, 크기 조절 핸들을 누른 동안은 누름으로 보이지 않는다. */
 .widget.opens-window:hover {
-  background-image: linear-gradient(var(--hover-bg), var(--hover-bg));
+  background-image: linear-gradient(var(--widget-hover-tint), var(--widget-hover-tint));
 }
 
+/* 끄거나 크기를 바꾸는 동안, 크기 조절 핸들을 누른 동안은 누름으로 보이지 않는다. */
 .widget.opens-window:active:not(.drag, .resize, :has(.resize-handle:active)) {
-  background-image: linear-gradient(var(--press-bg), var(--press-bg));
+  background-image: linear-gradient(var(--widget-press-tint), var(--widget-press-tint));
 }
 
 .widget:focus-visible {
