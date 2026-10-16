@@ -59,8 +59,8 @@ describe('clawdBitmap', () => {
 
   it('놀라면 팔을 위로 들고 눈이 세로 2칸이 된다', () => {
     const rows = clawdBitmap('startled')
-    expect(rows[0][0]).toBe('#')
-    expect(rows[2][0]).toBe('.')
+    // 팔: 0–2행의 바깥 열과 2행의 어깨. 기본 자세의 3행 팔은 없다.
+    expect(rows.map((row) => row.slice(0, 2))).toEqual(['#.', '#.', '##', '..', '..', '..', '..', '..'])
     expect(cells(rows, 'o')).toEqual([
       [3, 1],
       [8, 1],

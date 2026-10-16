@@ -1,6 +1,8 @@
 // 설정의 정보 페이지: 묶음 로고와 태그라인, 버전·빌드 정보, 라이선스, 제3자 고지.
+// 대기 이스터에그(ClawdParade)도 여기서 그린다.
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import type { WindowViewProps } from '../addons/types'
 import { fetchAbout } from '../api/client'
 import type { AboutResponse } from '../api/types.gen'
 import lockupUrl from '../assets/logo/onmaru-lockup.svg?url'
@@ -8,11 +10,12 @@ import { BRAND_COPYRIGHT, BRAND_NAME, BRAND_ROMANIZED, BRAND_TAGLINE } from '../
 import { useLanguage } from '../i18n'
 import { formatRevisionTime, shortRevision } from './about/about'
 import { NOTICES } from './about/notices'
+import { ClawdParade } from './ClawdParade'
 import { SettingsCard, SettingsRow, SettingsSection } from './controls'
 
 type AboutState = { status: 'loading' } | { status: 'ready'; about: AboutResponse } | { status: 'error' }
 
-export function AboutPage() {
+export function AboutPage({ active }: WindowViewProps) {
   const { t } = useTranslation()
   const lang = useLanguage()
   const [state, setState] = useState<AboutState>({ status: 'loading' })
@@ -90,6 +93,8 @@ export function AboutPage() {
           ))}
         </SettingsCard>
       </SettingsSection>
+
+      <ClawdParade active={active} />
     </>
   )
 }

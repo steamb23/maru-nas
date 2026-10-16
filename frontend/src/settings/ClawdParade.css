@@ -1,0 +1,38 @@
+/* 정보 페이지 대기 이스터에그(ClawdParade.tsx). 레이어는 .settings-body(페이지 영역)를 덮고 포인터를 받지 않는다.
+   z-index로 쌓임 맥락을 만들어, Clawd마다 주는 z-index(줄 위치)가 좁은 창의 덮는 사이드바(.settings-nav.overlay)
+   위로 올라가지 않게 한다. Clawd 크기는 CLAWD_PX(about/clawdParade.ts)에서 나오며 요소 style로 준다. */
+.clawd-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.clawd {
+  position: absolute;
+  top: 0;
+  left: 0;
+  will-change: transform;
+}
+
+/* 첫 프레임에서 자리와 자세를 받기 전에는 왼쪽 위 구석에 보이지 않게 숨긴다. */
+.clawd:not([data-pose]) {
+  visibility: hidden;
+}
+
+.clawd svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  shape-rendering: crispEdges;
+}
+
+/* 참고 그림의 색. 테마와 관계없이 같다. */
+.clawd-body {
+  fill: #d87656;
+}
+
+.clawd-eyes {
+  fill: #000;
+}
