@@ -110,6 +110,7 @@ paths:
 ## 작업표시줄 트레이와 프로필 메뉴
 
 - 트레이는 `[시계][프로필]` 순서이며 프로필 버튼이 오른쪽 끝에 고정된다
+- "모든 앱" 버튼과 창 버튼 목록은 함께 정렬된다. 정렬은 사용자 화면 설정(`appearance.taskbarAlign`, 계산은 `appearance/taskbar.ts`)이고 기본은 가운데(관리자 기본값 없음)다. 가운데는 `.taskbar.centered`에서 앞쪽 빈 칸(`::before`)과 트레이를 같은 비율로 늘려 전체 너비의 가운데에 두며, 창이 없으면 빈 목록 앞의 gap을 지운다. 드래그 정렬이 `ul`의 자식을 재므로 "모든 앱" 버튼은 목록 밖에 둔다
 - 프로필 메뉴 항목은 `profileMenu.ts`의 `PROFILE_MENU_ITEMS`에 데이터로 둔다(`requires`로 거름: `admin`은 관리자만, `workbench`는 OMV 웹 UI 주소가 있을 때만). 항목은 `action`과 `submenu` 두 종류다. `action` 항목을 추가하면 `ProfileMenu.tsx`의 `actions`에 동작도 넣는다
 - 프로필 메뉴 머리글(아바타·이름·역할)은 메뉴 항목 버튼이며 누르면 설정 창의 프로필 페이지를 연다. 메뉴에 따로 "설정" 항목은 두지 않는다. `ProfileMenu`는 데스크톱 크기를 모르므로 `Desktop`이 `onOpenSettings`를 `Taskbar`를 거쳐 넘긴다
 - 아바타 그리기는 `ProfileAvatar` 한 곳에 모은다. 프로필 사진(`profile/store.ts`, 로그인한 동안 불러옴)이 있으면 원형 이미지로, 없거나 받지 못하면 기본 아이콘으로 그린다
@@ -126,7 +127,7 @@ paths:
 
 ## 화면 설정(테마·배경)
 
-- 계산은 `appearance/`의 DOM 없는 모듈(`theme.ts`, `wallpapers.ts`, `wallpaperLayers.ts`, `store.ts`, `siteStore.ts`), 문서·localStorage는 `appearance/dom.ts`, 반영은 `appearance/useAppearance.ts`의 훅을 App이 부른다
+- 계산은 `appearance/`의 DOM 없는 모듈(`theme.ts`, `taskbar.ts`, `wallpapers.ts`, `wallpaperLayers.ts`, `store.ts`, `siteStore.ts`), 문서·localStorage는 `appearance/dom.ts`, 반영은 `appearance/useAppearance.ts`의 훅을 App이 부른다
 - 테마는 `<html data-theme>`로 `color-scheme`을 덮는다(`base.css`). 로그인한 동안은 사용자 값 → 관리자 기본 테마, 로그인 화면은 이 브라우저의 마지막 테마(localStorage 힌트)를 쓴다(로그아웃하며 테마가 바뀌지 않게). `main.tsx`가 그리기 전에 힌트를 먼저 적용한다
 - 배경은 App이 화면과 관계없이 두는 배경 레이어(`shell/Wallpaper.tsx`, `.wallpaper`)가 그리고 `.desktop`은 배경이 없다. 로그인·연결 끊김 화면은 로그인 배경, 데스크톱은 사용자 바탕화면 → 관리자 기본 바탕화면 → 기본 배경(`dusk`)이다. 모르는 프리셋·없는 이미지는 다음 후보로 넘어간다
 - 배경이 바뀌면 새 레이어를 위에 겹쳐 투명도만 올린다(`wallpaperAnim.ts`). 이미지는 `decode()`가 끝난 뒤 시작하고 실패하면 대신 그릴 배경(`useWallpaperView`의 `fallback`, 보통 기본 배경)으로 바꾼다. 페이드 중에 또 바뀌면 그 위에 겹쳐 이어 간다. 사용자 설정을 받기 전에는 배경을 바꾸지 않아(마지막 바탕화면 힌트로 그림) 로그인 뒤 한 번만 바뀐다
