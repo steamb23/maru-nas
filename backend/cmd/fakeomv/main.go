@@ -6,6 +6,10 @@
 //
 // / 에는 가짜 workbench 안내 페이지를 둔다. 대시보드의 "OMV 워크벤치" 링크 앱이 여는 탭을
 // 확인하는 용도이며, OMV 웹 UI를 흉내 내지는 않는다.
+//
+// FAKEHELPER_SOCKET이 있으면 같은 가짜 계정으로 가짜 권한 도우미(internal/helper/helperfake)도
+// 그 소켓에 띄운다. 권한을 바꾸지 않으며, 파일 연산은 FAKEHELPER_ROOT(기본: 소켓 옆 helper-root)
+// 아래의 가짜 홈과 디스크에서만 한다.
 package main
 
 import (
@@ -16,8 +20,10 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"path/filepath"
 	"time"
 
+	"onmaru/backend/internal/helper/helperfake"
 	"onmaru/backend/internal/omv/omvfake"
 )
 
@@ -55,6 +61,18 @@ func main() {
 			log.Printf("  account %s / %s (%s, 2FA code %s)", u.Name, u.Password, role, u.TOTP)
 		} else {
 			log.Printf("  account %s / %s (%s)", u.Name, u.Password, role)
+		}
+	}
+	if sock := os.Getenv("FAKEHELPER_SOCKET"); sock != "" {
+		root := cmp.Or(os.Getenv("FAKEHELPER_ROOT"), filepath.Join(filepath.Dir(sock), "helper-root"))
+		h, err := helperfake.Start(sock, root, helperfake.DefaultUsers(), helperfake.Options{})
+		if err != nil {
+			log.Fatalf("fake helper: %v", err)
+		}
+		defer h.Close()
+		log.Printf("fake helper listening on %s (files under %s)", sock, root)
+		for _, u := range helperfake.DefaultUsers() {
+			log.Printf("  helper account %s uid %d groups %v", u.Name, u.UID, u.Groups)
 		}
 	}
 	mux := http.NewServeMux()

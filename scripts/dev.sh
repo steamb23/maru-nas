@@ -3,7 +3,7 @@
 # Ctrl+C로 Vite를 끄면 백엔드도 함께 종료된다.
 #
 #   scripts/dev.sh                    실제 OMV(ONMARU_OMV_URL)에 연결
-#   scripts/dev.sh --fake             가짜 OMV(cmd/fakeomv, 가짜 계정)를 함께 띄워 연결
+#   scripts/dev.sh --fake             가짜 OMV(cmd/fakeomv, 가짜 계정)와 가짜 권한 도우미를 함께 띄워 연결
 #   scripts/dev.sh --branch <브랜치>  그 브랜치가 체크아웃된 git 워크트리의 코드로 실행(--fake와 함께 쓸 수 있다)
 #
 # frontend/.env.local의 ONMARU_*·DEV_* 값을 환경 변수로 내보내 백엔드와 Vite에 적용한다. 셸 환경 변수가 우선한다.
@@ -81,6 +81,12 @@ if [[ $fake == 1 ]]; then
 fi
 # 사용자 설정(위젯 배치)은 주 체크아웃의 .dev-state에 둔다. 가짜 계정과 실제 계정의 이름이 겹칠 수 있으므로 나눈다.
 export ONMARU_STATE_DIR="${ONMARU_STATE_DIR:-$main_root/.dev-state/$([[ $fake == 1 ]] && echo fake || echo real)}"
+if [[ $fake == 1 ]]; then
+  # 가짜 권한 도우미는 가짜 OMV 프로세스가 상태 디렉터리의 소켓에 띄운다(파일 연산은 helper-root 아래에서만).
+  mkdir -p "$ONMARU_STATE_DIR"
+  export FAKEHELPER_SOCKET="$ONMARU_STATE_DIR/helper.sock"
+  export ONMARU_HELPER_SOCKET="$FAKEHELPER_SOCKET"
+fi
 
 # 이미 떠 있는 서버가 있으면 시작하지 않는다. 일부만 떠서 다른 서버(예: 실제 OMV에 연결된
 # 백엔드)에 붙는 일을 막는다. Vite 포트(DEV_PORT)는 vite.config.ts의 server.port와 같은 기본값을 쓴다.
@@ -117,7 +123,7 @@ if [[ $fake == 1 ]]; then
   pids+=($!)
 fi
 
-echo "[dev] backend: http://$ONMARU_LISTEN (omv: ${ONMARU_OMV_URL:-http://127.0.0.1}, workbench: ${ONMARU_WORKBENCH_URL:-off})"
+echo "[dev] backend: http://$ONMARU_LISTEN (omv: ${ONMARU_OMV_URL:-http://127.0.0.1}, workbench: ${ONMARU_WORKBENCH_URL:-off}, helper: ${ONMARU_HELPER_SOCKET:-off})"
 [[ $root != "$main_root" ]] && echo "[dev] worktree: $root"
 echo "[dev] state: $ONMARU_STATE_DIR"
 (cd "$root/backend" && exec setsid go run ./cmd/onmaru) &
