@@ -22,6 +22,8 @@ const { closeMany, minimize, raiseGroup, reorder, restore, toggleMaximize } = us
 const DRAG_THRESHOLD = 4
 // Taskbar.css의 작업표시줄 li 전환 시간과 맞춘다. transitionend를 놓쳤을 때의 대비용이다.
 const SETTLE_MS = 200
+// 작업표시줄의 앱 아이콘과 "모든 앱" 버튼 아이콘 크기. 작업표시줄 두께(base.css의 --taskbar-height)와 함께 바꾼다.
+const ICON_SIZE = 24
 
 // 작업표시줄 버튼: 활성 창은 최소화, 그 밖의 창은 복원해 맨 앞으로. 타일 그룹의 창이면 짝 창도 함께 앞으로 온다.
 // "모든 앱" 화면이 열려 있으면 닫고 그 창을 보인다(화면에 가려져 있던 활성 창을 최소화하지 않는다).
@@ -311,7 +313,7 @@ export function Taskbar({
             useAppDrawerStore.getState().toggle(viaTouch)
           }}
         >
-          <IconImage name="view-app-grid-symbolic" size={20} />
+          <IconImage name="view-app-grid-symbolic" size={ICON_SIZE} />
         </button>
         <ul ref={listRef} className="taskbar-items">
           {renderIds.map((id) => {
@@ -323,7 +325,7 @@ export function Taskbar({
               return (
                 <li key={id} className="leaving" data-task-id={id} inert>
                   <button type="button" className="task">
-                    <IconImage name={getApp(ghost.appId).icon} size={20} app />
+                    <IconImage name={getApp(ghost.appId).icon} size={ICON_SIZE} app />
                     <span className="task-title">{t(getApp(ghost.appId).titleKey)}</span>
                   </button>
                 </li>
@@ -365,7 +367,7 @@ export function Taskbar({
                     else onTaskClick(w, active)
                   }}
                 >
-                  <IconImage name={getApp(w.appId).icon} size={20} app />
+                  <IconImage name={getApp(w.appId).icon} size={ICON_SIZE} app />
                   <span className="task-title">{t(getApp(w.appId).titleKey)}</span>
                 </button>
               </li>

@@ -9,7 +9,7 @@
      최대화·타일 창 배치는 windows/geometry.ts의 FLOAT_GAP으로 계산하므로 함께 바꾼다. */
   --float-gap: 8px;
   /* 작업표시줄 패널 두께와, 창 영역에서 빼는 높이 */
-  --taskbar-height: 44px;
+  --taskbar-height: 52px;
   --taskbar-reserve: calc(var(--taskbar-height) + var(--float-gap));
 
   --accent: #3c84f7;

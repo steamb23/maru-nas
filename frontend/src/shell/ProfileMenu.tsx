@@ -227,7 +227,7 @@ export function ProfileMenu({ onOpenSettings }: { onOpenSettings: (page: Setting
         title={user.username}
         onClick={() => (open ? hide() : show())}
       >
-        <ProfileAvatar user={user} size={28} />
+        <ProfileAvatar user={user} size={32} />
       </button>
       {(open || closing) && (
         <div
