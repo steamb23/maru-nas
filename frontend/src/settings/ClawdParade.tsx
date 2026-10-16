@@ -3,8 +3,11 @@
 // 모두 놀라 점프한 뒤 가까운 가장자리로 도망친다. 움직임 계산은 about/clawdParade.ts, 그림은 about/clawd.ts.
 //
 // 레이어는 .settings-body(제목 머리 아래 페이지 영역)에 붙어 내용과 함께 스크롤되지 않고, 포인터를 받지 않는다.
-// 창이 비활성이 되거나(최소화·닫는 중·탭 숨김) 애니메이션이 꺼져 있으면 연출 없이 바로 없앤다.
+// 창을 최소화하거나 닫거나 다른 페이지로 가면, 또는 애니메이션이 꺼져 있으면 연출 없이 바로 없앤다.
+// 탭이 숨겨진 동안(다른 탭, 브라우저 최소화, 다른 앱이 덮음)은 없애지 않고 그 자리에 멈춰 두었다가 돌아오면 이어서
+// 움직인다. 대기 시간도 숨겨진 동안 계속 재므로, 자리를 비웠다 돌아오면 이미 나와 있을 수 있다.
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { usePageVisible } from '../addons/common/usePageVisible'
 import { useIdle } from '../shell/useIdle'
 import { animationsEnabled } from '../shell/useWindowAnimation'
 import { CLAWD_COLS, CLAWD_ROWS, clawdPaths } from './about/clawd'
@@ -20,7 +23,10 @@ interface ClawdParadeProps {
 
 // ClawdParade는 대기 시간이 지나면 Clawd를 보여 준다. 입력으로 대기가 풀리면 흩어지게 하고, 모두 나가면 언마운트한다.
 export function ClawdParade({ active }: ClawdParadeProps) {
-  const enabled = active && animationsEnabled()
+  const pageVisible = usePageVisible()
+  // active는 탭이 숨겨져도 false가 되므로, 숨겨진 동안은 창이 그대로 있는 것으로 본다(최소화 여부는 알 수 없다).
+  // 숨겨진 동안 최소화했으면 다시 보일 때 active가 false라 그때 없앤다.
+  const enabled = (active || !pageVisible) && animationsEnabled()
   const since = useIdle(enabled, CLAWD_IDLE_MS)
   // 흩어지는 동안에도 마지막 시작 시각으로 그린다.
   const [shown, setShown] = useState<number | null>(null)
@@ -28,28 +34,32 @@ export function ClawdParade({ active }: ClawdParadeProps) {
   if (since !== null && since !== shown) setShown(since)
   else if (!enabled && shown !== null) setShown(null)
   if (shown === null || !enabled) return null
-  return <Parade key={shown} scatter={since === null} onGone={onGone} />
+  return <Parade key={shown} scatter={since === null} paused={!pageVisible} onGone={onGone} />
 }
 
 interface ParadeProps {
   scatter: boolean
+  // 탭이 숨겨진 동안 true. 움직임을 멈추고, 다시 보이면 멈춘 자리에서 이어 간다.
+  paused: boolean
   onGone: () => void
 }
 
-function Parade({ scatter, onGone }: ParadeProps) {
+function Parade({ scatter, paused, onGone }: ParadeProps) {
   const layerRef = useRef<HTMLDivElement>(null)
   const [parade] = useState(() => createParade(Math.random))
   // 그릴 Clawd의 id. 등장·퇴장할 때만 바뀌고, 위치와 자세는 프레임마다 요소에 직접 쓴다.
   const [ids, setIds] = useState<readonly number[]>([])
+  const shownKey = useRef('')
   const elements = useRef(new Map<number, HTMLDivElement>())
 
   useEffect(() => {
     if (scatter) parade.scatter()
   }, [parade, scatter])
 
+  // 멈춘 동안은 프레임을 돌리지 않는다. 다시 시작할 때 시각을 새로 잡아, 숨겨져 있던 시간만큼 건너뛰지 않는다.
   useEffect(() => {
     const layer = layerRef.current
-    if (!layer) return
+    if (!layer || paused) return
     const resize = () => parade.resize(layer.clientWidth, layer.clientHeight)
     resize()
     const observer = new ResizeObserver(resize)
@@ -57,7 +67,6 @@ function Parade({ scatter, onGone }: ParadeProps) {
 
     let raf = 0
     let last = performance.now()
-    let shownKey = ''
     const frame = (now: number) => {
       parade.step(Math.min(MAX_STEP_MS, Math.max(0, now - last)))
       last = now
@@ -66,8 +75,8 @@ function Parade({ scatter, onGone }: ParadeProps) {
         return
       }
       const key = parade.clawds.map((c) => c.id).join(',')
-      if (key !== shownKey) {
-        shownKey = key
+      if (key !== shownKey.current) {
+        shownKey.current = key
         setIds(parade.clawds.map((c) => c.id))
       }
       for (const c of parade.clawds) {
@@ -93,7 +102,7 @@ function Parade({ scatter, onGone }: ParadeProps) {
       cancelAnimationFrame(raf)
       observer.disconnect()
     }
-  }, [parade, onGone])
+  }, [parade, paused, onGone])
 
   return (
     <div ref={layerRef} className="clawd-layer" aria-hidden="true">
