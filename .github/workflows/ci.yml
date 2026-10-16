@@ -1,0 +1,45 @@
+# main으로의 push와 모든 PR을 make check(lint·test)와 make build로 검사한다.
+# 도구 버전은 CLAUDE.md "명령어"의 요구 사항을 따른다: Go는 backend/go.mod, Node.js는 22(Vitest 5 공식 지원).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+# 같은 브랜치·PR에 새 커밋이 오면 이전 실행을 취소한다
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      # 아이콘 서브모듈(vendor/icons/colloid)도 받는다. .gitmodules의 shallow 설정을 따른다
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm --prefix frontend ci
+
+      - name: Lint and test
+        run: make check
+
+      - name: Build
+        run: make build
