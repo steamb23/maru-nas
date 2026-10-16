@@ -130,7 +130,8 @@
   outline: none;
 }
 
-/* 언어 하위 메뉴. 프로필 메뉴가 화면 오른쪽 끝에 있으므로 메뉴 왼쪽에, 항목의 아래 변에 맞춰 연다. */
+/* 언어 하위 메뉴. 프로필 메뉴가 화면 오른쪽 끝에 있으므로 메뉴 왼쪽에, 항목의 아래 변에 맞춰 연다.
+   화면이 낮아 위로 넘치면 ProfileMenu가 max-height를 정하고 안에서 스크롤한다. */
 .profile-submenu-anchor {
   position: relative;
 }
@@ -138,7 +139,11 @@
 .profile-menu.profile-submenu {
   right: calc(100% + 12px);
   bottom: -6px;
+  /* 기준 상자(항목) 바깥에 놓이므로 너비를 내용에 맞춰야 긴 언어 이름(Português europeu)이 줄을 바꾸지 않는다. */
+  width: max-content;
   min-width: 160px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .profile-menu-item[aria-expanded='true'] {

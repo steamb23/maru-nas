@@ -28,6 +28,9 @@ const { logout } = useAuthStore.getState()
 
 // 메뉴는 프로필 버튼 쪽(오른쪽 아래, ProfileMenu.css의 transform-origin)에서 나타나고 사라진다(menuAnim.ts).
 
+// 언어 하위 메뉴를 화면 높이에 맞춰 줄일 때 화면 위 끝과 띄울 거리(px)
+const SUBMENU_MARGIN = 8
+
 // ProfileAvatar는 사용자 아바타다. 프로필 사진이 있으면 원형으로 그리고, 없거나 받지 못하면 기본 아이콘을 그린다.
 // 아바타 그리기는 여기에만 둔다(작업표시줄, 프로필 메뉴, 설정 사이드바, 프로필 페이지).
 export function ProfileAvatar({ size }: { user: SessionInfo; size: number }) {
@@ -162,12 +165,19 @@ export function ProfileMenu({ onOpenSettings }: { onOpenSettings: (page: Setting
   useLayoutEffect(() => {
     const el = subRef.current
     if (!el) return
-    if (subOpen) el.querySelector<HTMLButtonElement>('[aria-checked="true"]')?.focus()
-    if (!animationsEnabled()) return
     const style = getComputedStyle(el)
     const from: Keyframe = { opacity: style.opacity, transform: style.transform }
     const running = el.getAnimations().length > 0
     el.getAnimations().forEach((a) => a.cancel())
+    if (subOpen) {
+      // 하위 메뉴는 항목의 아래 변에서 위로 자라므로, 화면이 낮아 위로 넘치면 화면 안에 들어오는 높이로 줄이고
+      // 안에서 스크롤한다. 애니메이션을 지운 뒤 재야 변환 없는 자리가 나온다.
+      el.style.maxHeight = ''
+      const room = el.getBoundingClientRect().bottom - SUBMENU_MARGIN
+      if (el.offsetHeight > room) el.style.maxHeight = `${room}px`
+      el.querySelector<HTMLButtonElement>('[aria-checked="true"]')?.focus()
+    }
+    if (!animationsEnabled()) return
     if (subOpen) {
       el.animate([running ? from : MENU_OPEN_FROM, MENU_SHOWN], { duration: MENU_OPEN_MS, easing: EASING })
     } else {
