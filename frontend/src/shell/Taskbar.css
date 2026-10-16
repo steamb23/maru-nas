@@ -24,7 +24,31 @@
   gap: 8px;
 }
 
-/* "모든 앱" 버튼. 작업표시줄 왼쪽 끝에 고정된다. */
+/* 가운데 정렬(Windows 11처럼): "모든 앱" 버튼과 창 버튼 목록을 작업표시줄 전체 너비의 가운데에 둔다.
+   앞쪽 빈 칸(::before)과 트레이를 같은 비율로 늘려 양쪽 너비를 맞춘다(gap도 양쪽에 한 번씩 낀다).
+   트레이는 내용 너비보다 줄지 않으므로, 창 버튼이 늘어나면 앞쪽 빈 칸이 먼저 줄어 묶음이 트레이 옆까지
+   밀리고, 그다음에는 왼쪽 정렬과 같이 창 버튼 목록이 줄어든다. */
+.taskbar.centered::before {
+  content: '';
+  flex: 1 1 0;
+}
+
+.taskbar.centered .taskbar-items {
+  flex: 0 1 auto;
+}
+
+/* 창이 없으면 빈 목록 앞의 gap을 지워 "모든 앱" 버튼만 가운데에 오게 한다. */
+.taskbar.centered .taskbar-items:empty {
+  margin-left: -8px;
+}
+
+.taskbar.centered .taskbar-tray {
+  flex: 1 1 0;
+  justify-content: flex-end;
+  min-width: max-content;
+}
+
+/* "모든 앱" 버튼. 창 버튼 목록 앞에 고정된다(왼쪽 정렬이면 작업표시줄 왼쪽 끝). */
 .taskbar-launcher {
   display: grid;
   flex: none;

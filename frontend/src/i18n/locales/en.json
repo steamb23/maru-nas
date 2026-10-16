@@ -301,7 +301,14 @@
       },
       "wallpaper": "Desktop wallpaper",
       "following": "Using the default set by an administrator.",
-      "useDefault": "Use default"
+      "useDefault": "Use default",
+      "taskbar": "Taskbar",
+      "taskbarAlign": "Icon alignment",
+      "taskbarAlignDesc": "Where the All apps button and window buttons sit on the taskbar.",
+      "taskbarAligns": {
+        "center": "Center",
+        "left": "Left"
+      }
     },
     "image": {
       "upload": "Upload image…",

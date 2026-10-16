@@ -301,7 +301,14 @@
       },
       "wallpaper": "바탕화면",
       "following": "관리자가 정한 기본값을 따르고 있습니다.",
-      "useDefault": "기본값 사용"
+      "useDefault": "기본값 사용",
+      "taskbar": "작업표시줄",
+      "taskbarAlign": "아이콘 정렬",
+      "taskbarAlignDesc": "작업표시줄에서 \"모든 앱\" 버튼과 창 버튼을 놓을 자리입니다.",
+      "taskbarAligns": {
+        "center": "가운데",
+        "left": "왼쪽"
+      }
     },
     "image": {
       "upload": "이미지 올리기…",

@@ -1,6 +1,8 @@
 import { type PointerEvent, type TransitionEvent, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import { useTranslation } from 'react-i18next'
+import { useAppearanceStore } from '../appearance/store'
+import { taskbarAlignOf } from '../appearance/taskbar'
 import { IconImage } from '../icons/IconImage'
 import type { SettingsPageId } from '../settings/pages'
 import { getApp } from '../windows/apps'
@@ -113,6 +115,8 @@ export function Taskbar({
   const windows = useWindowStore((s) => s.windows)
   const activeId = useWindowStore(selectActiveId)
   const drawerOpen = useAppDrawerStore((s) => s.open)
+  // 사용자 화면 설정의 정렬. 불러오기 전에는 기본값(가운데)이다.
+  const centered = useAppearanceStore((s) => taskbarAlignOf(s.prefs.taskbarAlign) === 'center')
   // "모든 앱" 버튼을 마지막으로 누른 포인터 종류. 터치로 열면 검색 상자에 포커스하지 않는다.
   const launcherPointer = useRef('')
   const listRef = useRef<HTMLUListElement>(null)
@@ -294,7 +298,7 @@ export function Taskbar({
 
   return (
     <div className="taskbar-dock" inert={inert}>
-      <nav className="taskbar" aria-label={t('taskbar.label')}>
+      <nav className={centered ? 'taskbar centered' : 'taskbar'} aria-label={t('taskbar.label')}>
         {/* "모든 앱" 버튼. 창 버튼 목록(드래그 정렬이 자식 순서를 잰다) 밖에 둔다. */}
         <button
           type="button"
