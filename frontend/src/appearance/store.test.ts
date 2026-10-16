@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { Preferences } from '../api/types.gen'
-import { type AppearanceApi, allowsAnimations, createAppearanceStore } from './store'
+import { type AppearanceApi, allowsAnimations, createAppearanceStore, widgetsLocked } from './store'
 
 function setup(prefs: Preferences = {}, api: Partial<AppearanceApi> = {}) {
   const full: AppearanceApi = {
@@ -84,5 +84,17 @@ describe('appearance store', () => {
     expect(allowsAnimations(store.getState().prefs)).toBe(false)
     store.getState().clear()
     expect(allowsAnimations(store.getState().prefs)).toBe(true)
+  })
+
+  it('위젯은 잠근 경우만 잠그고, 값을 비우면 저장 본문에서도 빠진다', async () => {
+    expect(widgetsLocked({})).toBe(false)
+    expect(widgetsLocked({ widgetsLocked: false })).toBe(false)
+    const { store, api } = setup({ appearance: { widgetsLocked: true } })
+    expect(widgetsLocked(store.getState().prefs)).toBe(false)
+    await store.getState().load()
+    expect(widgetsLocked(store.getState().prefs)).toBe(true)
+    store.getState().update({ widgetsLocked: undefined })
+    expect(widgetsLocked(store.getState().prefs)).toBe(false)
+    expect(api.saveAppearance).toHaveBeenLastCalledWith({})
   })
 })

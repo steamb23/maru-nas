@@ -106,3 +106,8 @@ export function allowsAnimations(prefs: AppearancePrefs): boolean {
 export function animationsAllowed(): boolean {
   return allowsAnimations(useAppearanceStore.getState().prefs)
 }
+
+// widgetsLocked는 바탕화면 위젯을 옮기거나 크기를 바꾸지 못하게 잠갔는지다. 값이 없으면(불러오기 전 포함) 잠기지 않았다.
+export function widgetsLocked(prefs: AppearancePrefs): boolean {
+  return prefs.widgetsLocked === true
+}

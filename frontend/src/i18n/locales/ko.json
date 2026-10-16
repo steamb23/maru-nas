@@ -311,7 +311,10 @@
       "taskbarAligns": {
         "center": "가운데",
         "left": "왼쪽"
-      }
+      },
+      "widgets": "위젯",
+      "widgetLock": "위젯 잠금",
+      "widgetLockDesc": "바탕화면 위젯을 옮기거나 크기를 바꿀 수 없게 합니다. 메뉴로 추가·제거는 할 수 있습니다."
     },
     "image": {
       "upload": "이미지 올리기…",

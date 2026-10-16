@@ -4,6 +4,7 @@ import { type Ref, type RefObject, useEffect, useImperativeHandle, useLayoutEffe
 import { useTranslation } from 'react-i18next'
 import type { WidgetPlacement } from '../api/types.gen'
 import { requiredPlugins, useCapabilitiesStore, widgetAccess } from '../addons/capabilities'
+import { useAppearanceStore, widgetsLocked } from '../appearance/store'
 import { WIDGET_IDS, type WidgetAddonId, getWidget, isWidgetAddon } from '../widgets/catalog'
 import { type PxRect, type PxSize, gridSize, reservedCells } from '../widgets/grid'
 import { commitPlacement, fitLayout, placeNew, removePlacement } from '../widgets/layout'
@@ -40,6 +41,8 @@ export function WidgetLayer({ bounds, iconsRef, iconsReady, ref }: Props) {
   const status = useWidgetStore((s) => s.status)
   const placements = useWidgetStore((s) => s.placements)
   const caps = useCapabilitiesStore((s) => s.caps)
+  // 화면 설정에서 잠그면 옮기기·크기 조절만 막는다. 메뉴로 추가·제거하는 것과 눌러서 창을 여는 것은 그대로다.
+  const locked = useAppearanceStore((s) => widgetsLocked(s.prefs))
   const [icons, setIcons] = useState<PxRect | null>(null)
   // 위젯을 끌거나 크기를 바꾸는 중이면 레이어를 창 위로 올린다.
   const [raised, setRaised] = useState(false)
@@ -128,6 +131,7 @@ export function WidgetLayer({ bounds, iconsRef, iconsReady, ref }: Props) {
             others={shown.filter((o) => o.addon !== id)}
             notice={widgetAccess(caps, id).notice}
             plugins={requiredPlugins(id)}
+            locked={locked}
             onCommit={commit}
             onInteract={setRaised}
             onRemove={remove}

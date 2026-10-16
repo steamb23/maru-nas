@@ -43,6 +43,8 @@ interface Props {
   others: readonly CellRect[]
   notice: UnavailableReason | null
   plugins: readonly string[]
+  // 위젯 잠금(화면 설정). 옮기거나 크기를 바꾸지 못한다. 누르면 창을 여는 것과 메뉴는 그대로다.
+  locked: boolean
   // 옮기거나 크기를 바꾼 자리를 저장한다.
   onCommit: (edited: WidgetPlacement) => void
   // 끌거나 크기를 바꾸는 동안 true. 레이어를 창 위로 올린다.
@@ -76,6 +78,7 @@ export function WidgetFrame({
   others,
   notice,
   plugins,
+  locked,
   onCommit,
   onInteract,
   onRemove,
@@ -94,6 +97,8 @@ export function WidgetFrame({
   // 끌기를 끝낸 순간 위젯이 보이던 자리. 다음 렌더에서 그 자리부터 제자리로 미끄러지게 한다.
   const dropFrom = useRef<PxRect | null>(null)
   const lastDelta = useRef<DragDelta>({ dx: 0, dy: 0 })
+  // 이번 누름에서 옮기기를 시작했는지. 놓기 전에 mode가 아직 렌더되지 않았을 수 있어 ref로 둔다.
+  const moving = useRef(false)
   // 크기 조절 중인 핸들의 방향
   const resizeEdge = useRef<ResizeEdge>('se')
 
@@ -135,6 +140,7 @@ export function WidgetFrame({
       applyPx(el, rect)
     }
     targetRef.current = null
+    moving.current = false
     setMode('idle')
     onInteract(false)
     if (commit && placed && !sameCell(placed, cells)) onCommit({ addon: id, ...placed })
@@ -170,6 +176,9 @@ export function WidgetFrame({
     onMove: (d) => {
       // 길게 눌러 메뉴를 연 누름은 끌기로 이어 가지 않는다.
       if (menu.openedByPress()) return
+      // 잠겨 있으면 끌기를 시작하지 않는다. 끄는 도중 잠겼으면 시작한 끌기는 그대로 끝낸다.
+      if (locked && !moving.current) return
+      moving.current = true
       lastDelta.current = d
       if (ref.current) ref.current.style.transform = `translate(${d.dx}px, ${d.dy}px)`
       // 놓을 자리를 먼저 정해야 begin이 가이드의 첫 자리로 쓴다.
@@ -178,17 +187,20 @@ export function WidgetFrame({
     },
     onEnd: (moved, d) => {
       if (menu.openedByPress()) {
-        if (mode === 'drag') finish(false)
+        if (moving.current) finish(false)
         return
       }
       if (!moved) {
         openWindow()
         return
       }
+      // 잠겨 있어 끌기를 시작하지 않았으면 클릭도 아니므로 아무것도 하지 않는다.
+      if (!moving.current) return
       dropFrom.current = { ...rect, x: rect.x + d.dx, y: rect.y + d.dy }
       finish(true)
     },
     onCancel: () => {
+      if (!moving.current) return
       const d = lastDelta.current
       dropFrom.current = { ...rect, x: rect.x + d.dx, y: rect.y + d.dy }
       finish(false)
@@ -224,7 +236,7 @@ export function WidgetFrame({
   }
 
   const resizable =
-    def.minSize.cols !== def.maxSize.cols || def.minSize.rows !== def.maxSize.rows
+    !locked && (def.minSize.cols !== def.maxSize.cols || def.minSize.rows !== def.maxSize.rows)
   const classes = ['widget', mode !== 'idle' && mode, opensWindow && 'opens-window'].filter(Boolean).join(' ')
 
   return (

@@ -1,14 +1,14 @@
-// 설정의 화면 페이지(사용자): 테마, 바탕화면, 작업표시줄 정렬. 고르면 바로 적용하고 저장한다.
+// 설정의 화면 페이지(사용자): 테마, 바탕화면, 작업표시줄 정렬, 위젯 잠금. 고르면 바로 적용하고 저장한다.
 // 테마·바탕화면은 정하지 않으면 관리자가 정한 기본 화면을 따르며, 정한 값은 "기본값 사용"으로 비울 수 있다.
-// 작업표시줄 정렬은 관리자 기본값이 없다(정하지 않으면 가운데).
+// 작업표시줄 정렬과 위젯 잠금은 관리자 기본값이 없다(정하지 않으면 가운데, 잠그지 않음).
 import { useTranslation } from 'react-i18next'
 import { useShallow } from 'zustand/react/shallow'
 import { deleteWallpaperImage, uploadWallpaperImage, wallpaperImageUrl } from '../api/client'
 import { useSiteStore } from '../appearance/siteStore'
-import { useAppearanceStore } from '../appearance/store'
+import { useAppearanceStore, widgetsLocked } from '../appearance/store'
 import { TASKBAR_ALIGNS, taskbarAlignOf } from '../appearance/taskbar'
 import { effectiveTheme, toThemeMode } from '../appearance/theme'
-import { SettingsCard, SettingsRow, SettingsSection, StoreNotice } from './controls'
+import { SettingsCard, SettingsRow, SettingsSection, StoreNotice, Switch } from './controls'
 import { ThemePicker, WallpaperPicker } from './pickers'
 import { useImageActions } from './useImageActions'
 
@@ -79,6 +79,19 @@ export function ScreenPage() {
                 </option>
               ))}
             </select>
+          </SettingsRow>
+        </SettingsCard>
+      </SettingsSection>
+
+      <SettingsSection title={t('settings.screen.widgets')}>
+        <SettingsCard>
+          <SettingsRow label={t('settings.screen.widgetLock')} description={t('settings.screen.widgetLockDesc')}>
+            <Switch
+              label={t('settings.screen.widgetLock')}
+              checked={widgetsLocked(prefs)}
+              disabled={!ready}
+              onChange={(on) => update({ widgetsLocked: on || undefined })}
+            />
           </SettingsRow>
         </SettingsCard>
       </SettingsSection>

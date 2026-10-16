@@ -311,7 +311,10 @@
       "taskbarAligns": {
         "center": "Center",
         "left": "Left"
-      }
+      },
+      "widgets": "Widgets",
+      "widgetLock": "Lock widgets",
+      "widgetLockDesc": "Desktop widgets can't be moved or resized. You can still add or remove them from the menu."
     },
     "image": {
       "upload": "Upload image…",
