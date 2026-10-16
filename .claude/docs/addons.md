@@ -90,7 +90,7 @@
 
 내장 애드온의 현황 데이터는 브라우저가 OMV RPC를 직접 조합하지 않고 백엔드 provider가 만든다. 출처 합치기·중복 제거(온도), 세션 사이에 공유하는 캐시(SMART)가 백엔드에 있어야 하기 때문이다.
 
-- `addons.Addon.Fetch(ctx, Request)`가 응답을 만든다. 없으면 `GET /api/addons/{id}`는 404다. 시스템 정보는 애드온 계약 이전부터 있던 `/api/system`을 그대로 쓴다
+- `addons.Addon.Fetch(ctx, Request)`가 응답을 만든다. 없으면 `GET /api/addons/{id}`는 404다. 시스템 정보 위젯은 애드온 계약 이전부터 있던 `/api/system`을 그대로 쓰고, 창은 `GET /api/addons/system-info`를 쓴다
 - `Request`: `Admin`, `Sources`(capability로 계산한 쓸 수 있는 provider, 우선순위 순서. `Has(name)`), `Refresh`(`?refresh=1`, 캐시를 쓰는 애드온만 본다), `RPC`
 - `RPC`(`addons.RPCCaller`)는 서버가 요청마다 사용자 세션으로 만든다
   - **호출한 애드온 자신이** manifest `rpc.read`에 선언한 메서드만 부른다(`Registry.Classify`로 확인, 다른 애드온이 선언한 메서드는 거부). 쓰기는 부를 수 없다(조작에서만)
@@ -200,19 +200,21 @@
   - 객체 목록으로 둔 것은 나중에 폴더·OMV 페이지 바로가기를 필드만 더해 담기 위해서다
 - `PUT /api/preferences/appearance`: 화면 설정(`{theme, wallpaper, animations, taskbarAlign, widgetsLocked}`) 전체를 바꾼다. 빈 값은 관리자 기본 화면을 따른다. 바탕화면 이미지는 `…/wallpaper-image`로 따로 올리며, 응답의 `wallpaperImage`(리비전)는 저장하지 않고 응답할 때 붙인다
 - `PUT /api/preferences/drawer`: "모든 앱" 화면 설정(`{sort}`) 전체를 바꾼다. `sort`는 `recommended`(추천순, 대시보드가 정한 순서)나 `name`(화면 언어의 이름순)만 받는다. 저장한 적 없거나 프론트가 모르는 값이면 추천순이다
+- `PUT /api/preferences/system-info`: 시스템 정보 창 보기 설정(`{cpuScale, cpuGraph}`) 전체를 바꾼다. `cpuScale`은 `machine`(전체 대비)·`core`(코어당 100%), `cpuGraph`는 `overall`·`cores`만 받는다. 저장한 적 없거나 프론트가 모르는 값이면 `machine`·`overall`이다
 - 설정 파일은 설정 하나를 바꿀 때 읽기부터 쓰기까지 잠그므로(`prefs` `update`), 위젯과 바로가기를 동시에 저장해도 서로를 지우지 않는다
-- 프론트 저장소(`widgets/store.ts`, `shortcuts/store.ts`, "모든 앱" 설정)는 같은 저장 큐(`api/saveQueue.ts`)로 저장 요청을 하나씩 보내고, 보내는 동안 바뀐 값은 마지막 것만 이어서 보낸다. 실패하면 로컬 값을 유지하고 다음 변경 때 다시 보낸다. 각 저장소는 따로 `GET /api/preferences`를 부르지만 동시에 부른 요청은 클라이언트가 하나로 합친다(`fetchPreferences`)
+- 프론트 저장소(`widgets/store.ts`, `shortcuts/store.ts`, "모든 앱" 설정, 시스템 정보 창 설정)는 같은 저장 큐(`api/saveQueue.ts`)로 저장 요청을 하나씩 보내고, 보내는 동안 바뀐 값은 마지막 것만 이어서 보낸다. 실패하면 로컬 값을 유지하고 다음 변경 때 다시 보낸다. 각 저장소는 따로 `GET /api/preferences`를 부르지만 동시에 부른 요청은 클라이언트가 하나로 합친다(`fetchPreferences`)
 
 #### 주기 요청
 
 - 탭이 보이지 않으면(`document.visibilityState`) 위젯과 창 모두 주기 요청을 멈추고, 다시 보이면 바로 한 번 가져온다(`addons/common/usePageVisible.ts`). 창·위젯 틀이 보기의 `active`에 넣으므로 애드온은 따로 처리하지 않는다
 - 위젯은 늘 떠 있으므로 창보다 길게 갱신한다(시스템 정보: 창 2초, 위젯 5초)
-- 알려진 한계: 시스템 정보의 CPU 사용률은 백엔드가 직전 샘플과 비교해 계산하므로, 창과 위젯이 함께 열려 있으면 위젯 값은 5초 평균이 아니라 직전 요청(창 포함) 이후의 평균이다
+- 알려진 한계: 시스템 정보 위젯의 CPU 사용률(`/api/system`)은 백엔드가 직전 샘플과 비교해 계산하므로, 다른 탭·세션의 위젯이 함께 부르면 5초 평균이 아니라 직전 요청 이후의 평균이다. 창은 누적 카운터로 보기마다 계산하므로 이 한계가 없다
 
 ### 현황 내장 애드온
 
 | id | 이름 | requires | provider (우선순위) | 위젯 / 창 갱신 |
 |---|---|---|---|---|
+| `system-info` | 시스템 정보 | 없음(프로세스 목록은 admin) | `proc`, `proc-processes`(admin) | 5초 / 2초 |
 | `storage` | 디스크 용량 | 없음 | `proc` | 1분 / 15초 |
 | `network` | 네트워크 | 없음 | `proc` | 5초 / 2초 |
 | `temperature` | 온도 | 없음 | `hwmon`, `omv-cputemp`(cputemp 플러그인), `omv-smart`(admin, 캐시만) | 10초 / 5초 |
@@ -232,7 +234,7 @@
 #### 네트워크 (`network`)
 
 - `/proc/net/dev` 누적 카운터와 `/sys/class/net/<if>/operstate`·`speed`. `lo`와 `veth*`는 뺀다. `device` 링크가 있으면 물리 인터페이스이고, 나머지(브리지, docker0, VPN)는 `virtual`로 창에서만 접어 둔다. MAC·IP는 보여 주지 않는다
-- 속도는 **프론트가 계산**한다. 백엔드는 누적 카운터와 단조 시각(`sampledAtMs`, 백엔드 프로세스 시작 기준)을 주고, 보기마다 직전 응답과의 차이로 구한다(`computeRates`). 그래서 창과 위젯이 서로의 샘플에 영향을 주지 않는다(시스템 정보 CPU 사용률의 한계를 피함). 첫 값은 두 번째 응답부터 나오고, 간격이 30초를 넘거나 카운터가 줄면 다음 샘플을 기다린다
+- 속도는 **프론트가 계산**한다. 백엔드는 누적 카운터와 단조 시각(`sampledAtMs`, 백엔드 프로세스 시작 기준)을 주고, 보기마다 직전 응답과의 차이로 구한다(`computeRates`). 그래서 창과 위젯이 서로의 샘플에 영향을 주지 않는다(시스템 정보 위젯 CPU 사용률의 한계를 피함). 첫 값은 두 번째 응답부터 나오고, 간격이 30초를 넘거나 카운터가 줄면 다음 샘플을 기다린다
 
 #### 온도 (`temperature`)
 
@@ -282,11 +284,25 @@
   - set이 성공하고 적용이 실패하면 설정은 바뀐 채 적용 대기로 남는다(OMV workbench에 표시됨). `action_failed`로 알린다
 - 끄기 확인 문구는 서비스마다 무엇이 끊기는지 알려 준다(SSH 세션, SMB·NFS 클라이언트, rsync 백업)
 
-### 시스템 정보
+### 시스템 정보 (`system-info`)
 
-- 시스템 정보 창이 첫 내장 애드온(창 보기, provider `proc`)이다
+- 시스템 정보 창이 첫 내장 애드온이다. 위젯은 `/api/system`(`Reader.System`, CPU는 백엔드가 직전 샘플과 비교), 창은 `GET /api/addons/system-info`(`Reader.Stats`)를 쓴다
 - CPU 사용률·RAM·가동 시간 요약이 첫 위젯(`SystemInfoWidget`, 기본 3×2, 2×2~4×3)이다. 2칸 너비에서는 메모리 용량을 빼고 가동 시간을 두 줄로 나눈다
-- 창 보기를 프로세스 모니터로 확장하는 일은 `ROADMAP.md`에 있다
+- 창 데이터는 누적 카운터와 단조 시각(`sampledAtMs`)이다: `/proc/stat`의 전체·코어별(`cpuN`, 꺼진 코어는 빠지므로 id로 맞춤) tick, `/proc/meminfo`, `/proc/uptime`, 물리 인터페이스 합계(네트워크 애드온의 reader, `virtual` 제외), 물리 디스크 합계(`/proc/diskstats` 중 `/sys/block/<이름>/device` 링크가 있는 장치. 파티션·loop·md·dm·zram은 빠진다). 네트워크·디스크를 읽지 못하면 그 값만 뺀다
+- 사용률·속도는 창이 직전 응답과의 차이로 구한다(`stats.ts`의 `appendSample`). 규칙은 네트워크의 `computeRates`와 같다: 간격이 30초를 넘거나 백엔드가 다시 시작하면 기록을 새로 시작하고, 카운터가 줄면 그 점만 비운다. 첫 값이 주기(2초)만큼 늦지 않게 공유 폴러의 `warmupMs`(500ms)로 두 번째 요청을 빨리 보낸다
+- 관리자에게는 [개요] [프로세스] 탭을, 그 밖의 사용자에게는 탭 막대 없이 개요만 보인다. 데이터 훅은 탭의 부모(`SystemInfoWindow`)에 있어 탭을 바꿔도 기록과 프로세스 CPU 값이 이어진다
+- 개요: 가동 시간과 CPU·메모리·네트워크(수신·송신)·디스크(읽기·쓰기) 그래프. 기록은 창을 연 동안 브라우저에 최근 60초만 쌓고(백엔드 상태 없음) 창을 닫으면 버린다
+  - 그래프는 의존성 없는 SVG다(`UsageChart.tsx`, 좌표는 `chart.ts`). 십자선과 모든 계열의 값을 담은 툴팁(포인터, 키보드 좌우 화살표)이 있고, 두 계열 그래프는 범례를 둔다. 한 그래프에 축은 하나다(네트워크와 디스크는 그래프를 나눈다). %는 0~100 고정, 속도 축은 1·2·5 × 1024ⁿ(`niceMax`)이다
+  - 계열 색은 dataviz 기준 팔레트 1·2번을 창 배경(light·dark)에 맞춰 검사한 값이다(`system-info.css`의 `--sysinfo-series-*`). 글자에는 계열색을 쓰지 않는다
+  - CPU 카드 우클릭 메뉴(Shift+F10, 길게 누르기)로 전체 사용률과 코어별 작은 그래프(작업 관리자의 논리 프로세서 보기)를 바꾼다. 코어별이면 카드가 두 열을 모두 쓰고, 격자가 포커스를 받아 키보드로도 메뉴를 연다
+- 프로세스(관리자): provider `proc-processes`(`Requires{Admin}`)가 `/proc/<pid>/stat`(comm은 마지막 `)`에서 자르고, 커널 스레드는 flags의 `PF_KTHREAD`로 판단. 좀비도 명령줄이 비므로 명령줄로 판단하지 않는다), `status`(실제 uid, VmRSS), `cmdline`(512바이트에서 글자 경계로 자름)을 읽는다. 사용자 이름은 `os/user`로 찾고 모르면 uid다. 읽는 사이 끝난 프로세스는 건너뛰고, 목록을 읽지 못하면 `failedSources`로 알린다
+  - 일반 사용자 응답에는 넣지 않는다. 명령줄에 비밀이 있을 수 있고, OMV도 `System.getTopInfo`를 관리자 전용으로 둔다
+  - CPU 사용률은 프로세스 tick 차이 / 모든 코어 tick 차이(전체 대비 0~100%)이고, 표의 우클릭 메뉴("CPU 사용률 기준 ▸")에서 코어당 100%(top 방식, × 코어 수)로 바꾼다. 개요의 전체 CPU는 늘 0~100%다. PID 재사용은 시작 시각(`startTicks`)으로 구분한다
+  - 검색(이름·명령줄·사용자·PID), 커널 스레드 표시(기본 숨김), 열 정렬(기본 CPU 내림차순, 값이 없는 행은 뒤)은 창 상태라 저장하지 않는다. 좁은 창에서는 상태·사용자 열을 숨긴다(컨테이너 쿼리)
+  - 관리자는 개요 탭에서도 목록을 받는다(수백 개면 2초마다 수십 KB, LAN 전제). 탭을 바꾸자마자 CPU 값이 나오게 하기 위해서다
+- 두 우클릭 메뉴의 설정(`cpuGraph`, `cpuScale`)은 사용자별로 저장한다(`PUT /api/preferences/system-info`, `sysinfoPrefsStore.ts`). 창이 열려 있는 동안 불러오고, 불러오기 전이나 실패하면 기본값을 보이고 메뉴 항목을 비활성으로 둔다
+- 창 기본 크기는 관리자의 개요가 스크롤 없이 들어가는 720×520(실측), 최소 440×360이다
+- 프로세스 종료 같은 조작은 `ROADMAP.md`에 있다
 
 ## 내장 애드온
 

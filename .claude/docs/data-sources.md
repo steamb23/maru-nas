@@ -21,6 +21,8 @@
 | SMART | 불가 (`smartctl`은 root 필요) | `Smart.getList` (admin): 디스크마다 `overallstatus`, `temperature` 포함. 세부 항목은 `Smart.getAttributes`, `Smart.getInformation` (admin) | - |
 | 온도 | `/sys/class/hwmon/*/temp*_input` (CPU `coretemp`·`k10temp`, NVMe, `acpitz` 등) | SATA 디스크 온도는 `Smart.getList` (admin)로만 얻는다. `drivetemp` 커널 모듈이 로드되어 있으면 hwmon으로도 보인다 | `CpuTemp.get`/`get2`~`get4`/`getSensors` (모두), `TempMon.getAll` (모두) |
 | 네트워크 | `/proc/net/dev` (누적 바이트·패킷). 속도는 프론트가 두 응답의 차이로 계산한다(백엔드는 단조 시각 `sampledAtMs`를 함께 준다). 링크 상태·속도는 `/sys/class/net/<if>/operstate`, `speed` | `Network.enumerateDevicesList` (admin): 주소, 링크, 속도, 누적 카운터 | - |
+| 프로세스 | `/proc/<pid>/stat`·`status`·`cmdline` (hidepid가 없으면 모든 PID가 보인다. `io`는 같은 사용자나 root만 읽어 쓰지 않는다) | `System.getTopInfo` (admin): `top -b -n 1` 출력(`format: json`이면 `jc`로 바꿈) | - |
+| 디스크 I/O | `/proc/diskstats` (누적 섹터, 항상 512바이트 단위). 물리 디스크는 `/sys/block/<이름>/device` 링크로 고른다 | 없음 | diskstats 플러그인은 `Rrd.getGraph` PNG만 준다 |
 | 컨테이너 | 하지 않음 (소켓 접근은 root와 같은 권한) | 없음 | `Compose.getContainers` (모두), 상세는 admin 전용 메서드 (아래 "컨테이너 런타임") |
 
 ### 주의할 응답 형태
@@ -40,6 +42,8 @@
 - 온도: hwmon, `CpuTemp.get`(hwmon에 CPU 센서가 없을 때만), SMART 캐시의 디스크 온도(관리자)
 - SMART: `Smart.getList`(admin)를 하루 한 번·새로고침 때만. 백그라운드 버전 `getListBg`는 쓰지 않았다(백엔드 캐시가 같은 역할)
 - 컨테이너: `Compose.getContainers`(모두)
+- 시스템 정보 창: 직접 읽기만. 프로세스 목록은 `System.getTopInfo`(admin) 대신 `/proc`를 읽는다. 그 RPC는 호출마다 `top`(과 `jc`)을 실행하므로 2초 주기에는 무겁다. 대신 OMV와 같이 관리자에게만 준다(provider 조건)
+- 디스크 I/O는 물리 디스크의 합계다. mdadm RAID1의 미러 쓰기와 RAID5·6의 패리티 쓰기까지 세므로 볼륨에 쓴 양이 아니라 장치가 처리한 양이다. 파티션·md·dm은 이중으로 세지 않게 뺀다
 
 ### 조작에 쓴 출처
 

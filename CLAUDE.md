@@ -157,6 +157,7 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 
 - provider 내부 RPC 경로(`GET /api/addons/{id}` → OMV)를 실제 OMV로 확인한다: 컨테이너(`Compose.getContainers`), SMART(`Smart.getList`, 관리자), cputemp(hwmon에 CPU 센서가 없을 때만). 지금은 Go 테스트(omvfake)로만 검증했다. `/api/rpc` 중계 통과 경로도 아직 실제 OMV로 확인하지 않았다
 - Podman 모드의 컨테이너 목록(미검증 표시 중)
+- 시스템 정보 창을 설치본(유닛 하드닝)에서 확인한다(사용자가). 프로세스 목록에 모든 PID와 사용자 이름이 나오는지(유닛에 `ProtectProc=`·`ProcSubset=`을 더하면 사라진다), 디스크 I/O 합계가 나오는지(`/sys/block`). 지금은 사용자 권한의 `make dev-fake`로만 확인했다
 - 컨테이너·서비스 조작을 실제 OMV로 확인한다(사용자가 `make dev`로). 컨테이너: `Compose.doContainerCommand` → `Exec.isRunning` 흐름, 실패한 docker 명령이 `Exec.isRunning` 예외로 오는지. 서비스: `Services.getStatus`의 실제 이름·값, 어댑터별 get → set(스키마 속성만) → `Config.applyChangesBg` → `Exec.isRunning` 흐름, 적용 대기 중 거절. 지금은 omvfake로만 검증했다
 
 - 설정 앱을 실제 OMV·설치본으로 확인한다(사용자가). 유닛 하드닝 아래에서 `site.json`·`images/` 쓰기와 이미지 올리기(리버스 프록시의 본문 크기 제한이 20MB보다 작으면 413), 워크벤치 주소·SMART 시각 덮어쓰기가 재시작 뒤에도 유지되는지. 지금은 가짜 OMV와 `make dev-fake`로만 확인했다
