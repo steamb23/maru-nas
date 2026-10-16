@@ -271,10 +271,11 @@ func TestAppearanceRoundTrip(t *testing.T) {
 			off := false
 			if err := s.UpdateAppearance("alice", func(a *api.AppearancePrefs) {
 				*a = api.AppearancePrefs{
-					Theme:        api.ThemeDark,
-					Wallpaper:    &api.Wallpaper{Kind: api.WallpaperImage},
-					Animations:   &off,
-					TaskbarAlign: api.TaskbarAlignLeft,
+					Theme:         api.ThemeDark,
+					Wallpaper:     &api.Wallpaper{Kind: api.WallpaperImage},
+					Animations:    &off,
+					TaskbarAlign:  api.TaskbarAlignLeft,
+					WidgetsLocked: true,
 				}
 			}); err != nil {
 				t.Fatal(err)
@@ -289,7 +290,8 @@ func TestAppearanceRoundTrip(t *testing.T) {
 			}
 			p, err := s.Get("alice")
 			if err != nil || p.Appearance == nil || p.Appearance.Theme != api.ThemeDark || p.Appearance.Wallpaper != nil ||
-				p.Appearance.Animations == nil || *p.Appearance.Animations || p.Appearance.TaskbarAlign != api.TaskbarAlignLeft {
+				p.Appearance.Animations == nil || *p.Appearance.Animations || p.Appearance.TaskbarAlign != api.TaskbarAlignLeft ||
+				!p.Appearance.WidgetsLocked {
 				t.Fatalf("appearance %+v, %v", p.Appearance, err)
 			}
 			// 다른 설정은 그대로다.
