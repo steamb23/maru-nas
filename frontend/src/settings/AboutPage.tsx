@@ -6,9 +6,10 @@ import type { WindowViewProps } from '../addons/types'
 import { fetchAbout } from '../api/client'
 import type { AboutResponse } from '../api/types.gen'
 import lockupUrl from '../assets/logo/onmaru-lockup.svg?url'
+import { useAuthStore } from '../auth/store'
 import { BRAND_COPYRIGHT, BRAND_NAME, BRAND_ROMANIZED, BRAND_TAGLINE } from '../brand'
 import { useLanguage } from '../i18n'
-import { formatRevisionTime, shortRevision } from './about/about'
+import { formatOMVVersion, formatRevisionTime, shortRevision } from './about/about'
 import { NOTICES } from './about/notices'
 import { ClawdParade } from './ClawdParade'
 import { SettingsCard, SettingsRow, SettingsSection } from './controls'
@@ -18,6 +19,8 @@ type AboutState = { status: 'loading' } | { status: 'ready'; about: AboutRespons
 export function AboutPage({ active }: WindowViewProps) {
   const { t } = useTranslation()
   const lang = useLanguage()
+  // OMV 버전은 백엔드가 관리자에게만 준다(OMV System.getInformation과 같은 기준).
+  const admin = useAuthStore((s) => s.user)?.admin === true
   const [state, setState] = useState<AboutState>({ status: 'loading' })
 
   useEffect(() => {
@@ -34,6 +37,7 @@ export function AboutPage({ active }: WindowViewProps) {
   const about = state.status === 'ready' ? state.about : null
   const notRecorded = t('settings.about.notRecorded')
   const revisionTime = about ? formatRevisionTime(about, lang) : null
+  const omvVersion = about ? formatOMVVersion(about) : null
 
   return (
     <>
@@ -62,6 +66,13 @@ export function AboutPage({ active }: WindowViewProps) {
             <SettingsRow label={t('settings.about.goVersion')}>
               <span className="about-value selectable">{about?.goVersion ?? '…'}</span>
             </SettingsRow>
+            {admin && (
+              <SettingsRow label={t('settings.about.omvVersion')}>
+                <span className="about-value selectable">
+                  {about ? (omvVersion ?? t('settings.about.unknown')) : '…'}
+                </span>
+              </SettingsRow>
+            )}
           </SettingsCard>
         )}
       </SettingsSection>

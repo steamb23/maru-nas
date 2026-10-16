@@ -34,20 +34,23 @@ type OMV interface {
 	Call(ctx context.Context, r omv.Request) (omv.Response, error)
 }
 
-// PluginDetector는 OMV 플러그인 설치 여부를 알려 준다. *addons.Detector가 구현한다.
+// PluginDetector는 OMV 플러그인 설치 여부와 OMV 버전을 알려 준다. *addons.Detector가 구현한다.
 type PluginDetector interface {
 	// Plugins는 설치된 플러그인 패키지 집합이다.
 	Plugins() map[string]bool
+	// OMV는 설치된 OMV의 버전과 코드명이다. 모르는 값은 빈 문자열이다.
+	OMV() addons.OMVInfo
 	// Refresh는 바로 다시 확인한다.
 	Refresh()
 	// Invalidate는 다음 Plugins 호출 때 다시 확인하게 한다.
 	Invalidate()
 }
 
-// noPlugins는 아무 플러그인도 설치되지 않은 것으로 보는 PluginDetector다.
+// noPlugins는 아무 플러그인도 설치되지 않고 OMV 버전도 모르는 것으로 보는 PluginDetector다.
 type noPlugins struct{}
 
 func (noPlugins) Plugins() map[string]bool { return map[string]bool{} }
+func (noPlugins) OMV() addons.OMVInfo      { return addons.OMVInfo{} }
 func (noPlugins) Refresh()                 {}
 func (noPlugins) Invalidate()              {}
 
@@ -203,8 +206,15 @@ func (h *handler) capabilities(w http.ResponseWriter, _ *http.Request, s auth.Se
 }
 
 // aboutInfo는 온마루 버전과 빌드 정보다. 로그인한 사용자는 누구나 본다.
-func (h *handler) aboutInfo(w http.ResponseWriter, _ *http.Request, _ auth.Session) {
-	writeJSON(w, http.StatusOK, h.about)
+// OMV 버전·코드명은 관리자에게만 준다. OMV도 System.getInformation에서 version을 관리자에게만 준다.
+// 실행 중에 OMV를 업그레이드할 수 있으므로 시작할 때 읽어 둔 h.about에 넣지 않고 요청마다 채운다.
+func (h *handler) aboutInfo(w http.ResponseWriter, _ *http.Request, s auth.Session) {
+	resp := h.about
+	if s.Admin {
+		omv := h.Plugins.OMV()
+		resp.OMVVersion, resp.OMVVersionName = omv.Version, omv.VersionName
+	}
+	writeJSON(w, http.StatusOK, resp)
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) {

@@ -6,6 +6,7 @@ import (
 	"maps"
 	"os"
 	"slices"
+	"strings"
 	"testing"
 	"testing/fstest"
 	"time"
@@ -28,14 +29,38 @@ func TestParseInstalledPackages(t *testing.T) {
 	if keys := slices.Sorted(maps.Keys(got)); !slices.Equal(keys, want) {
 		t.Errorf("installed = %v, want %v", keys, want)
 	}
+	// 버전은 문단마다 따로 읽는다. 설명 뒤에 와도 된다.
+	if got["openmediavault"] != "8.0.0-1" || got["openmediavault-compose"] != "8.0.0" {
+		t.Errorf("versions = %v", got)
+	}
+}
+
+func TestParseProductInfo(t *testing.T) {
+	f, err := os.Open("testdata/productinfo.xml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	got, err := ParseProductInfo(f)
+	if err != nil || got != "Synthetic" {
+		t.Errorf("version name = %q, %v", got, err)
+	}
+
+	// 다른 XML 문서는 제품 정보가 아니다.
+	if _, err := ParseProductInfo(strings.NewReader("<other><versionname>X</versionname></other>")); err == nil {
+		t.Error("accepted a non-productinfo document")
+	}
 }
 
 type detectorEnv struct {
 	d    *Detector
-	rpc  fstest.MapFS
+	omv  fstest.MapFS
 	dpkg fstest.MapFS
 	now  time.Time
 }
+
+// rpcFile은 OMV 디렉터리 안의 RPC 파일 경로다.
+func rpcFile(name string) string { return "engined/rpc/" + name }
 
 func newDetectorEnv(t *testing.T) *detectorEnv {
 	t.Helper()
@@ -43,17 +68,22 @@ func newDetectorEnv(t *testing.T) *detectorEnv {
 	if err != nil {
 		t.Fatal(err)
 	}
+	product, err := os.ReadFile("testdata/productinfo.xml")
+	if err != nil {
+		t.Fatal(err)
+	}
 	e := &detectorEnv{
 		// cputemp는 파일은 있지만 dpkg 상태가 설치가 아니고, bcache는 설치됐지만 파일이 없다.
-		rpc: fstest.MapFS{
-			"compose.inc": {},
-			"cputemp.inc": {},
-			"kvm.inc":     {},
+		omv: fstest.MapFS{
+			rpcFile("compose.inc"): {},
+			rpcFile("cputemp.inc"): {},
+			rpcFile("kvm.inc"):     {},
+			"productinfo.xml":      {Data: product},
 		},
 		dpkg: fstest.MapFS{"status": {Data: status}},
 		now:  time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
 	}
-	e.d = NewDetectorFS(e.rpc, e.dpkg)
+	e.d = NewDetectorFS(e.omv, e.dpkg)
 	e.d.Now = func() time.Time { return e.now }
 	return e
 }
@@ -73,7 +103,7 @@ func TestDetectorRechecks(t *testing.T) {
 	e.d.Plugins()
 
 	// 플러그인을 지워도 TTL 안에서는 이전 결과를 쓴다.
-	delete(e.rpc, "kvm.inc")
+	delete(e.omv, rpcFile("kvm.inc"))
 	e.now = e.now.Add(e.d.TTL - time.Second)
 	if got := pluginNames(e.d.Plugins()); len(got) != 2 {
 		t.Errorf("within ttl: %v", got)
@@ -85,16 +115,16 @@ func TestDetectorRechecks(t *testing.T) {
 	}
 
 	// Invalidate 뒤에는 TTL과 상관없이 다시 확인한다.
-	delete(e.rpc, "compose.inc")
+	delete(e.omv, rpcFile("compose.inc"))
 	e.d.Invalidate()
 	if got := e.d.Plugins(); len(got) != 0 {
 		t.Errorf("after invalidate: %v", got)
 	}
 
 	// Refresh는 바로 다시 확인한다.
-	e.rpc["kvm.inc"] = &fstest.MapFile{}
+	e.omv[rpcFile("kvm.inc")] = &fstest.MapFile{}
 	e.d.Refresh()
-	e.rpc["compose.inc"] = &fstest.MapFile{}
+	e.omv[rpcFile("compose.inc")] = &fstest.MapFile{}
 	if got := pluginNames(e.d.Plugins()); !slices.Equal(got, []string{"openmediavault-kvm"}) {
 		t.Errorf("after refresh: %v", got)
 	}
@@ -121,6 +151,73 @@ func TestDetectorKeepsResultOnReadError(t *testing.T) {
 	empty := NewDetectorFS(fstest.MapFS{}, fstest.MapFS{})
 	if got := empty.Plugins(); got == nil || len(got) != 0 {
 		t.Errorf("plugins without status = %v", got)
+	}
+	if got := empty.OMV(); got != (OMVInfo{}) {
+		t.Errorf("omv without files = %+v", got)
+	}
+}
+
+func TestDetectorOMV(t *testing.T) {
+	e := newDetectorEnv(t)
+	want := OMVInfo{Version: "8.0.0-1", VersionName: "Synthetic"}
+	if got := e.d.OMV(); got != want {
+		t.Errorf("omv = %+v, want %+v", got, want)
+	}
+
+	// 실행 중에 업그레이드하면 TTL이 지난 뒤 새 버전을 읽는다.
+	e.dpkg["status"] = &fstest.MapFile{Data: []byte("Package: openmediavault\nStatus: install ok installed\nVersion: 8.1.0-1\n")}
+	e.now = e.now.Add(e.d.TTL)
+	if got := e.d.OMV().Version; got != "8.1.0-1" {
+		t.Errorf("version after upgrade = %q", got)
+	}
+
+	// OMV 패키지가 없으면 버전을 모른다.
+	e.dpkg["status"] = &fstest.MapFile{Data: []byte("Package: other\nStatus: install ok installed\nVersion: 1\n")}
+	e.d.Refresh()
+	if got := e.d.OMV().Version; got != "" {
+		t.Errorf("version without package = %q", got)
+	}
+}
+
+func TestDetectorProductInfoErrors(t *testing.T) {
+	logs := &bytes.Buffer{}
+	prev := log.Writer()
+	log.SetOutput(logs)
+	t.Cleanup(func() { log.SetOutput(prev) })
+
+	e := newDetectorEnv(t)
+	e.d.OMV()
+
+	// 깨진 제품 정보는 코드명만 직전 값을 유지하고 남긴다. 플러그인·버전은 그대로 읽는다.
+	e.omv["productinfo.xml"] = &fstest.MapFile{Data: []byte("<productinfo>")}
+	delete(e.omv, rpcFile("kvm.inc"))
+	e.d.Refresh()
+	if got := e.d.OMV(); got != (OMVInfo{Version: "8.0.0-1", VersionName: "Synthetic"}) {
+		t.Errorf("omv after bad product info = %+v", got)
+	}
+	if got := pluginNames(e.d.Plugins()); !slices.Equal(got, []string{"openmediavault-compose"}) {
+		t.Errorf("plugins after bad product info = %v", got)
+	}
+	if logs.Len() == 0 {
+		t.Error("product info error not logged")
+	}
+
+	// 파일이 없으면(OMV가 없는 개발 환경) 코드명 없이 조용히 넘어간다.
+	logs.Reset()
+	delete(e.omv, "productinfo.xml")
+	e.d.Refresh()
+	if got := e.d.OMV(); got != (OMVInfo{Version: "8.0.0-1"}) {
+		t.Errorf("omv without product info = %+v", got)
+	}
+	if logs.Len() != 0 {
+		t.Errorf("missing product info logged: %s", logs)
+	}
+
+	// dpkg 상태를 읽지 못하면 버전도 직전 값을 유지한다.
+	delete(e.dpkg, "status")
+	e.d.Refresh()
+	if got := e.d.OMV().Version; got != "8.0.0-1" {
+		t.Errorf("version after read error = %q", got)
 	}
 }
 

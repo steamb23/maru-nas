@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<productinfo>
+	<name>openmediavault</name>
+	<versionname>Synthetic</versionname>
+	<url>https://example.invalid</url>
+	<copyright>Synthetic test fixture.</copyright>
+	<packagename>openmediavault</packagename>
+	<distribution>synthetic</distribution>
+</productinfo>

@@ -274,6 +274,8 @@
       "modified": "Modified",
       "commitTime": "Commit date",
       "goVersion": "Go version",
+      "omvVersion": "OMV version",
+      "unknown": "Unknown",
       "notRecorded": "Not recorded",
       "loadFailed": "Couldn't load the version information.",
       "license": "License",

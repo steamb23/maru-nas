@@ -361,7 +361,9 @@ export function isAboutResponse(v: unknown): v is AboutResponse {
     isStr(v.goVersion) &&
     isOptional(v.revision, isStr) &&
     isOptional(v.revisionTime, isStr) &&
-    isOptional(v.modified, isBool)
+    isOptional(v.modified, isBool) &&
+    isOptional(v.omvVersion, isStr) &&
+    isOptional(v.omvVersionName, isStr)
   )
 }
 

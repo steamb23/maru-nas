@@ -900,6 +900,14 @@ export interface AboutResponse {
    * GoVersion은 빌드한 Go 버전이다.
    */
   goVersion: string;
+  /**
+   * OMVVersion은 설치된 openmediavault 패키지 버전이다(예: 8.0.0-1). 관리자에게만 주며, 읽지 못하면 없다.
+   */
+  omvVersion?: string;
+  /**
+   * OMVVersionName은 OMV 릴리스 코드명이다(예: Synchrony). 관리자에게만 주며, 읽지 못하면 없다.
+   */
+  omvVersionName?: string;
 }
 /**
  * LoginRequest는 POST /api/login의 요청 본문이다.

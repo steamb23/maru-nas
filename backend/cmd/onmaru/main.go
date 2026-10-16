@@ -97,6 +97,11 @@ func main() {
 	plugins := addons.NewDetector()
 	plugins.Refresh()
 	log.Printf("detected omv plugins: %v", slices.Sorted(maps.Keys(plugins.Plugins())))
+	if omv := plugins.OMV(); omv.Version != "" && omv.VersionName != "" {
+		log.Printf("detected omv: %s (%s)", omv.Version, omv.VersionName)
+	} else if omv.Version != "" {
+		log.Printf("detected omv: %s", omv.Version)
+	}
 
 	runtime := runtimeSettings(explicitFlags(), os.LookupEnv, []runtimeEntry{
 		{flag: "listen", env: "ONMARU_LISTEN", value: *listen},

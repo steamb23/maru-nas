@@ -42,10 +42,11 @@ func testRegistry(t *testing.T, list ...addons.Addon) *addons.Registry {
 	return r
 }
 
-// fakePlugins는 고정된 플러그인 집합을 돌려주고 호출 횟수를 센다.
+// fakePlugins는 고정된 플러그인 집합과 OMV 정보를 돌려주고 호출 횟수를 센다.
 type fakePlugins struct {
 	mu          sync.Mutex
 	installed   map[string]bool
+	omv         addons.OMVInfo
 	refreshes   int
 	invalidates int
 }
@@ -54,6 +55,12 @@ func (f *fakePlugins) Plugins() map[string]bool {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	return f.installed
+}
+
+func (f *fakePlugins) OMV() addons.OMVInfo {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.omv
 }
 
 func (f *fakePlugins) Refresh() {

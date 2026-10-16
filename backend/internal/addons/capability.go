@@ -2,12 +2,14 @@ package addons
 
 import (
 	"bufio"
+	"encoding/xml"
 	"errors"
 	"io"
 	"io/fs"
 	"log"
 	"maps"
 	"os"
+	"path"
 	"slices"
 	"strings"
 	"sync"
@@ -27,13 +29,32 @@ var knownPlugins = map[string]string{
 	"openmediavault-mergerfs": "mergerfs.inc",
 }
 
-// Detector는 OMV 플러그인 설치 여부를 감지한다. 플러그인은 RPC 파일이 있고 dpkg 상태가
-// "install ok installed"일 때만 설치된 것으로 본다. 두 곳 모두 root 없이 읽힌다.
+const (
+	// omvPackage는 OMV 본체 패키지다. OMV 버전은 이 패키지의 dpkg 버전이다
+	// (OMV ProductInfo::getVersion도 dpkg-query로 같은 값을 읽는다).
+	omvPackage = "openmediavault"
+	// rpcDir는 OMV 디렉터리 안의 RPC 파일 위치다.
+	rpcDir = "engined/rpc"
+	// productInfoFile은 OMV 디렉터리 안의 제품 정보 파일이다. 릴리스 코드명(versionname)이 들어 있다.
+	productInfoFile = "productinfo.xml"
+)
+
+// OMVInfo는 설치된 OMV의 버전과 릴리스 코드명이다. 모르는 값은 빈 문자열이다.
+type OMVInfo struct {
+	// Version은 openmediavault 패키지 버전이다(예: 8.0.0-1).
+	Version string
+	// VersionName은 릴리스 코드명이다(예: Synchrony).
+	VersionName string
+}
+
+// Detector는 OMV 플러그인 설치 여부와 OMV 버전을 감지한다. 플러그인은 RPC 파일이 있고 dpkg 상태가
+// "install ok installed"일 때만 설치된 것으로 본다. OMV 버전은 dpkg 상태에서, 코드명은 제품 정보
+// 파일에서 읽는다. 모두 root 없이 읽힌다.
 //
 // 결과는 TTL 동안 보관하고, 지난 뒤 처음 묻는 요청에서 다시 확인한다(백그라운드 고루틴 없음).
-// 실행 중에 플러그인을 설치하거나 지운 경우를 반영하기 위해서다.
+// 실행 중에 플러그인이나 OMV를 설치·업그레이드하거나 지운 경우를 반영하기 위해서다.
 type Detector struct {
-	rpcDir  fs.FS
+	omvDir  fs.FS
 	dpkgDir fs.FS
 	// TTL은 감지 결과를 다시 확인하기까지의 시간이다.
 	TTL time.Duration
@@ -41,28 +62,43 @@ type Detector struct {
 
 	mu      sync.Mutex
 	plugins map[string]bool
+	omv     OMVInfo
 	checked time.Time
 	stale   bool
 }
 
-// NewDetector는 호스트의 OMV RPC 디렉터리와 dpkg 상태를 읽는 Detector를 반환한다.
+// NewDetector는 호스트의 OMV 디렉터리와 dpkg 상태를 읽는 Detector를 반환한다.
 func NewDetector() *Detector {
-	return NewDetectorFS(os.DirFS("/usr/share/openmediavault/engined/rpc"), os.DirFS("/var/lib/dpkg"))
+	return NewDetectorFS(os.DirFS("/usr/share/openmediavault"), os.DirFS("/var/lib/dpkg"))
 }
 
-// NewDetectorFS는 rpcDir(OMV RPC 파일)과 dpkgDir(status 파일)을 읽는 Detector를 반환한다.
-func NewDetectorFS(rpcDir, dpkgDir fs.FS) *Detector {
-	return &Detector{rpcDir: rpcDir, dpkgDir: dpkgDir, TTL: 5 * time.Minute, Now: time.Now, stale: true}
+// NewDetectorFS는 omvDir(/usr/share/openmediavault 형태: engined/rpc/, productinfo.xml)과
+// dpkgDir(status 파일)을 읽는 Detector를 반환한다.
+func NewDetectorFS(omvDir, dpkgDir fs.FS) *Detector {
+	return &Detector{omvDir: omvDir, dpkgDir: dpkgDir, TTL: 5 * time.Minute, Now: time.Now, stale: true}
 }
 
 // Plugins는 설치된 알려진 플러그인 집합을 반환한다. 결과가 오래됐으면 다시 확인한다.
 func (d *Detector) Plugins() map[string]bool {
 	d.mu.Lock()
 	defer d.mu.Unlock()
+	d.refreshIfStaleLocked()
+	return maps.Clone(d.plugins)
+}
+
+// OMV는 설치된 OMV의 버전과 코드명을 반환한다. 결과가 오래됐으면 다시 확인한다.
+func (d *Detector) OMV() OMVInfo {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	d.refreshIfStaleLocked()
+	return d.omv
+}
+
+// refreshIfStaleLocked는 결과가 오래됐거나 Invalidate됐으면 다시 확인한다. d.mu를 잡고 부른다.
+func (d *Detector) refreshIfStaleLocked() {
 	if d.stale || d.Now().Sub(d.checked) >= d.TTL {
 		d.refreshLocked()
 	}
-	return maps.Clone(d.plugins)
 }
 
 // Refresh는 바로 다시 확인한다. 백엔드 시작과 로그인 때 부른다.
@@ -81,7 +117,7 @@ func (d *Detector) Invalidate() {
 }
 
 func (d *Detector) refreshLocked() {
-	plugins, err := d.detect()
+	plugins, version, err := d.detect()
 	if err != nil {
 		// 읽지 못하면 직전 결과를 유지한다. 처음이면 아무것도 설치되지 않은 것으로 본다.
 		log.Printf("plugin detection: %v", err)
@@ -89,45 +125,78 @@ func (d *Detector) refreshLocked() {
 			d.plugins = map[string]bool{}
 		}
 	} else {
-		d.plugins = plugins
+		d.plugins, d.omv.Version = plugins, version
+	}
+	// 코드명은 표시용이라 읽지 못해도 플러그인·버전 감지는 그대로 쓴다.
+	if name, err := d.versionName(); err != nil {
+		log.Printf("omv product info: %v", err)
+	} else {
+		d.omv.VersionName = name
 	}
 	d.checked, d.stale = d.Now(), false
 }
 
-func (d *Detector) detect() (map[string]bool, error) {
+// detect는 설치된 알려진 플러그인과 OMV 패키지 버전(설치되지 않았으면 빈 문자열)을 읽는다.
+func (d *Detector) detect() (map[string]bool, string, error) {
 	f, err := d.dpkgDir.Open("status")
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	defer f.Close()
 	installed, err := ParseInstalledPackages(f)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	out := make(map[string]bool)
 	for pkg, file := range knownPlugins {
-		if !installed[pkg] {
+		if _, ok := installed[pkg]; !ok {
 			continue
 		}
-		if _, err := fs.Stat(d.rpcDir, file); err == nil {
+		if _, err := fs.Stat(d.omvDir, path.Join(rpcDir, file)); err == nil {
 			out[pkg] = true
 		} else if !errors.Is(err, fs.ErrNotExist) {
-			return nil, err
+			return nil, "", err
 		}
 	}
-	return out, nil
+	return out, installed[omvPackage], nil
 }
 
-// ParseInstalledPackages는 dpkg status 파일에서 상태가 "install ok installed"인 패키지 이름을 읽는다.
-// 문단은 빈 줄로 나뉘고, 공백으로 시작하는 줄은 앞 필드의 연속이다.
-func ParseInstalledPackages(r io.Reader) (map[string]bool, error) {
-	out := make(map[string]bool)
-	var pkg, status string
+// versionName은 제품 정보 파일의 코드명이다. 파일이 없으면(OMV가 없는 개발 환경 등) 빈 문자열이다.
+func (d *Detector) versionName() (string, error) {
+	f, err := d.omvDir.Open(productInfoFile)
+	if errors.Is(err, fs.ErrNotExist) {
+		return "", nil
+	}
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+	return ParseProductInfo(f)
+}
+
+// ParseProductInfo는 OMV productinfo.xml에서 릴리스 코드명(versionname)을 읽는다
+// (OMV ProductInfo::getVersionName과 같은 값).
+func ParseProductInfo(r io.Reader) (string, error) {
+	var info struct {
+		XMLName     xml.Name `xml:"productinfo"`
+		VersionName string   `xml:"versionname"`
+	}
+	if err := xml.NewDecoder(r).Decode(&info); err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(info.VersionName), nil
+}
+
+// ParseInstalledPackages는 dpkg status 파일에서 상태가 "install ok installed"인 패키지의 이름과
+// 버전을 읽는다. 문단은 빈 줄로 나뉘고, 공백으로 시작하는 줄은 앞 필드의 연속이다.
+func ParseInstalledPackages(r io.Reader) (map[string]string, error) {
+	out := make(map[string]string)
+	var pkg, status, version string
 	flush := func() {
 		if pkg != "" && status == "install ok installed" {
-			out[pkg] = true
+			out[pkg] = version
 		}
-		pkg, status = "", ""
+		pkg, status, version = "", "", ""
 	}
 	sc := bufio.NewScanner(r)
 	sc.Buffer(make([]byte, 64<<10), 1<<20)
@@ -140,6 +209,8 @@ func ParseInstalledPackages(r io.Reader) (map[string]bool, error) {
 			pkg = strings.TrimSpace(strings.TrimPrefix(line, "Package:"))
 		case strings.HasPrefix(line, "Status:"):
 			status = strings.Join(strings.Fields(strings.TrimPrefix(line, "Status:")), " ")
+		case strings.HasPrefix(line, "Version:"):
+			version = strings.TrimSpace(strings.TrimPrefix(line, "Version:"))
 		}
 	}
 	if err := sc.Err(); err != nil {

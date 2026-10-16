@@ -13,3 +13,10 @@ export function formatRevisionTime(about: AboutResponse, locale: string, timeZon
   if (Number.isNaN(d.getTime())) return null
   return new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short', timeZone }).format(d)
 }
+
+// formatOMVVersion은 OMV 버전을 OMV 대시보드처럼 "버전 (코드명)"으로 보여 준다.
+// 코드명이 없으면 버전만, 버전이 없으면 null(코드명만으로는 보여 주지 않는다).
+export function formatOMVVersion(about: AboutResponse): string | null {
+  if (!about.omvVersion) return null
+  return about.omvVersionName ? `${about.omvVersion} (${about.omvVersionName})` : about.omvVersion
+}

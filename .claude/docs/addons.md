@@ -52,6 +52,7 @@
   - 백엔드 시작 시 확인하고, 로그인할 때와 일정 주기마다 다시 확인한다. 실행 중에 플러그인을 설치하거나 지운 경우를 반영하기 위해서다
   - 구현은 `addons.Detector`다. 결과를 5분 보관하고, 지난 뒤 처음 묻는 요청에서 다시 확인한다(백그라운드 고루틴 없음). 읽지 못하면 직전 결과를 유지한다
   - `.inc` 파일 이름은 패키지마다 `knownPlugins` 표에 둔다. 표에 넣을 때 `dpkg -S`로 소속을 확인한다
+- OMV 버전: 같은 `addons.Detector`가 같은 주기로 `/var/lib/dpkg/status`의 `openmediavault` 패키지 버전과 `/usr/share/openmediavault/productinfo.xml`의 코드명(`versionname`)을 읽는다. OMV `ProductInfo`와 같은 출처다. `/api/about`이 관리자에게만 주고 설정의 정보 페이지가 "버전 (코드명)"으로 보여 준다(OMV `System.getInformation`도 `version`을 관리자에게만 준다)
 - 세션 역할: 로그인 응답의 `permissions.role`에서 얻은 admin 여부
 - `/api/capabilities`는 두 정보를 합쳐 애드온마다 다음 값을 돌려준다. 함께 `plugins`(감지한 알려진 플러그인 목록)도 준다
   - `available`: manifest의 `requires`를 만족하고, 쓸 수 있는 provider가 하나 이상 있다

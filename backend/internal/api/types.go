@@ -613,6 +613,10 @@ type AboutResponse struct {
 	Modified bool `json:"modified,omitempty"`
 	// GoVersion은 빌드한 Go 버전이다.
 	GoVersion string `json:"goVersion"`
+	// OMVVersion은 설치된 openmediavault 패키지 버전이다(예: 8.0.0-1). 관리자에게만 주며, 읽지 못하면 없다.
+	OMVVersion string `json:"omvVersion,omitempty"`
+	// OMVVersionName은 OMV 릴리스 코드명이다(예: Synchrony). 관리자에게만 주며, 읽지 못하면 없다.
+	OMVVersionName string `json:"omvVersionName,omitempty"`
 }
 
 // LoginRequest는 POST /api/login의 요청 본문이다.
