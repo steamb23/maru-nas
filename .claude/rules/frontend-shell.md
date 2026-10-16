@@ -13,7 +13,7 @@ paths:
 
 # 데스크톱 셸과 창 시스템
 
-`src/windows/`(창 저장소·앱 목록·위치 제한·타일링), `src/widgets/`(위젯 그리드·배치·저장소), `src/shortcuts/`(바로가기 목록·저장소), `src/shell/`의 `*Anim.ts`, `taskbarDrag.ts`, `clock.ts`, `profileMenu.ts`, `contextMenu.ts`, `contextMenuStore.ts`, `windowMenu.ts`, `menuNav.ts`, `modalStack.ts`, `dialogs.ts`, `appDrawerStore.ts`, `appDrawerPrefsStore.ts`, `appSort.ts`, `gridNav.ts`, `appSearch.ts`, `hangul.ts`는 DOM에 의존하지 않는 계산 모듈이다. 컴포넌트는 이 결과를 그리기만 한다.
+`src/windows/`(창 저장소·앱 목록·위치 제한·타일링), `src/widgets/`(위젯 그리드·배치·저장소), `src/shortcuts/`(바로가기 목록·저장소), `src/shell/`의 `*Anim.ts`, `taskbarDrag.ts`, `taskbarFit.ts`, `clock.ts`, `profileMenu.ts`, `contextMenu.ts`, `contextMenuStore.ts`, `windowMenu.ts`, `menuNav.ts`, `modalStack.ts`, `dialogs.ts`, `appDrawerStore.ts`, `appDrawerPrefsStore.ts`, `appSort.ts`, `gridNav.ts`, `appSearch.ts`, `hangul.ts`는 DOM에 의존하지 않는 계산 모듈이다. 컴포넌트는 이 결과를 그리기만 한다.
 
 ## 창 순서와 DOM
 
@@ -109,13 +109,19 @@ paths:
   - CSS 전환도 같은 기준이다. 사용자가 끄면 `<html data-animations="off">`(`appearance/dom.ts`의 `applyAnimations`)를 두고, `base.css`가 이 속성과 `prefers-reduced-motion` 미디어 쿼리에서 모든 `transition`을 끈다. 파일마다 전환 끄기 규칙을 따로 두지 않는다. 키프레임 애니메이션(진행 표시 등)은 이 규칙에 들지 않으므로 각 파일에서 다룬다
 - 닫기: 저장소의 `close`는 창을 바로 지워 작업표시줄·포커스가 즉시 바뀐다. `Desktop`은 `useClosingWindows`로 지워진 창의 마지막 상태와 타일 비율(`ClosingWindow`)을 받아 두고, 애니메이션이 끝나 `onClosed`가 불릴 때까지 그 상태로 그린다(`stableOrder`의 `keep`). 닫히는 창은 클릭을 받지 않고 창 내용의 주기 요청도 바로 멈춘다
 - 작업표시줄 버튼: 등장은 `li`의 ref(`enterTask`), 퇴장은 `Taskbar`가 너비·투명도를 애니메이션한다. 닫힌 창의 버튼은 `useClosingWindows`로 받아 `.leaving` 버튼으로 남긴다(`withLeaving`)
-- 작업표시줄 드래그 정렬: 드래그 중에는 transform으로만 움직이고 놓은 뒤 순서를 반영한다. 전환 효과는 부모가 아닌 각 `li` 클래스에 둔다. 배치 계산에서 `.leaving` 버튼은 뺀다
+- 작업표시줄 드래그 정렬: 드래그 중에는 transform으로만 움직이고 놓은 뒤 순서를 반영한다. 전환 효과는 부모가 아닌 각 `li` 클래스에 둔다. 배치 계산에서 `.leaving` 버튼과 접힌 버튼(`li.overflowed`)은 뺀다
 - 로그인 ↔ 데스크톱 전환(`screenAnim.ts`, 재생은 `screenTransition.ts`): 배경은 움직이지 않고 내용(`.login-card`, `.desktop-area`·`.taskbar`)만 움직인다. 로그인 배경과 바탕화면이 다르면 배경 레이어가 따로 페이드한다(아래 "화면 설정"). 나가는 애니메이션은 auth 저장소가 화면을 바꾸기 전에 `beforeScreenChange` 훅(`leaveScreen`)으로, 들어오는 애니메이션은 각 화면이 처음 그려질 때 재생한다
 
 ## 작업표시줄 트레이와 프로필 메뉴
 
 - 트레이는 `[시계][프로필]` 순서이며 프로필 버튼이 오른쪽 끝에 고정된다
 - "모든 앱" 버튼과 창 버튼 목록은 함께 정렬된다. 정렬은 사용자 화면 설정(`appearance.taskbarAlign`, 계산은 `appearance/taskbar.ts`)이고 기본은 가운데(관리자 기본값 없음)다. 가운데는 `.taskbar.centered`에서 앞쪽 빈 칸(`::before`)과 트레이를 같은 비율로 늘려 전체 너비의 가운데에 두며, 창이 없으면 빈 목록 앞의 gap을 지운다. 드래그 정렬이 `ul`의 자식을 재므로 "모든 앱" 버튼은 목록 밖에 둔다
+- 창 버튼이 다 들어가지 않으면 단계적으로 줄인다(계산은 `taskbarFit.ts`, 측정은 `Taskbar`의 `measureFit`). 스크롤과 두 줄 감싸기는 쓰지 않는다(드래그 정렬의 슬롯, 터치 끌기, 최소화 목표, 고정된 `--taskbar-reserve`와 맞지 않는다)
+  - 제목 모드: 모든 버튼에 같은 최대 너비(`--task-cap`)를 걸어 긴 제목부터 말줄임으로 줄인다. 최대 너비가 `TASK_LABEL_MIN`(한글 세 글자와 말줄임표)보다 작아지면 아이콘 모드(`ul.icons`)로 바꾼다
+  - 아이콘만으로도 넘치면 뒤쪽 버튼을 `li.overflowed`로 숨기고 "더 보기" 버튼(`.taskbar-more`, ⋯)의 메뉴(컨텍스트 메뉴 모델)로 보인다. 순서(`windows[]`)는 바꾸지 않는다. 접힌 창이 활성 창이면 "더 보기" 버튼에 밑줄, 메뉴에는 체크를 표시하고, 항목을 고르면 그 창 버튼을 누른 것과 같다(`onTaskClick`). "더 보기" 버튼도 드래그 정렬 때문에 목록 밖, 목록과 트레이 사이에 둔다
+  - 측정 입력은 결과(최대 너비, 아이콘 모드, 접기)에 따라 바뀌지 않아야 한다. 버튼 너비는 제목 span의 `scrollWidth`로 재므로, 아이콘 모드는 제목을 지우지 않고 너비 0으로 접고, 접힌 버튼도 `display: none`이 아니라 `position: absolute; visibility: hidden`으로 둔다(`display: none`이면 너비가 0이 되어 넓어진 화면에서 다시 펼치지 못한다). 트레이는 늘어난 너비가 아니라 자식 너비의 합으로 잰다
+  - 제목이 잘린 버튼과 아이콘 버튼에만 `title` 툴팁을 붙인다
+  - 접힌 창을 최소화하면 "더 보기" 버튼으로 줄어들고(`useWindowAnimation.ts`의 `minimizeTarget`), 닫으면 퇴장 애니메이션 없이 뺀다(닫히는 순간 접혀 있었는지를 `useClosingWindows`의 snapshot에 남긴다)
 - 프로필 메뉴 항목은 `profileMenu.ts`의 `PROFILE_MENU_ITEMS`에 데이터로 둔다(`requires`로 거름: `admin`은 관리자만, `workbench`는 OMV 웹 UI 주소가 있을 때만). 항목은 `action`과 `submenu` 두 종류다. `action` 항목을 추가하면 `ProfileMenu.tsx`의 `actions`에 동작도 넣는다
 - 프로필 메뉴 머리글(아바타·이름·역할)은 메뉴 항목 버튼이며 누르면 설정 창의 프로필 페이지를 연다. 메뉴에 따로 "설정" 항목은 두지 않는다. `ProfileMenu`는 데스크톱 크기를 모르므로 `Desktop`이 `onOpenSettings`를 `Taskbar`를 거쳐 넘긴다
 - 아바타 그리기는 `ProfileAvatar` 한 곳에 모은다. 프로필 사진(`profile/store.ts`, 로그인한 동안 불러옴)이 있으면 원형 이미지로, 없거나 받지 못하면 기본 아이콘으로 그린다
