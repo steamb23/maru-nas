@@ -273,7 +273,7 @@ nas.example.com {
 
 ## 개발
 
-개발 명령과 설계 문서는 `CLAUDE.md`와 `.claude/` 디렉터리에 있습니다. `make dev-fake`를 실행하면 가짜 OMV에 연결된 개발 서버가 뜹니다.
+기여 방법(개발 환경, 브랜치와 풀 리퀘스트, 번역)은 [CONTRIBUTING.md](CONTRIBUTING.md)(영어)와 [CONTRIBUTING.ko.md](CONTRIBUTING.ko.md)에 있습니다. 개발 명령과 설계 문서는 `CLAUDE.md`와 `.claude/` 디렉터리에 있습니다. `make dev-fake`를 실행하면 가짜 OMV에 연결된 개발 서버가 뜹니다.
 
 개발 도구는 "빌드 및 설치"의 빌드 도구와 같습니다. 다만 테스트(`make test`, `make check`)에 쓰는 Vitest 5는 Node.js 22.12 이상을 공식 지원합니다. Debian 13의 Node.js 20.19에서도 테스트가 통과하지만 지원 범위 밖입니다.
 

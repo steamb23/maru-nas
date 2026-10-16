@@ -126,6 +126,7 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 - 브랜치의 작업이 모두 끝나면 변경 요약을 제시하고, `main` 병합은 사용자가 승인한 뒤에만 한다
 - 커밋 전에 `make check`를 실행한다. 프론트엔드나 embed 관련 변경이면 `make build`도 확인한다
 - `main`으로의 push와 모든 PR은 GitHub Actions(`.github/workflows/ci.yml`)가 `make check`와 `make build`로 검사한다. 외부 기여는 fork → PR로 받고, 유지자가 `main`에 rebase 병합한다(머지 커밋 없음)
+- 커밋 메시지는 한국어로 쓴다(사용자와 Claude의 작업 언어). 외부 기여자의 커밋·주석 언어는 자유이고 영어 또는 한국어를 권장한다. 기여자용 안내는 `CONTRIBUTING.md`(영어 원본)와 `CONTRIBUTING.ko.md`이며, 기여자에게 보이는 규칙(브랜치 이름, 권한 규칙, 번역 절차 등)을 바꾸면 두 파일을 함께 고친다
 - 새 의존성을 추가하기 전에 이유와 대안을 먼저 설명한다
 - OMV RPC의 서비스·메서드 이름과 역할이 확실하지 않으면 추측하지 말고 OMV 소스(`/usr/share/openmediavault/engined/rpc/`, 로그인 관련은 `/var/www/openmediavault/rpc/session.inc`)를 읽는다
 - 실제 시스템 값에 의존하는 로직은 샘플 데이터로도 테스트할 수 있게 입력부를 분리한다
