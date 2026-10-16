@@ -252,9 +252,11 @@
       "unknown": "Het verzoek is mislukt."
     }
   },
+  "sidebar": {
+    "showNav": "Onderdelen tonen"
+  },
   "settings": {
     "nav": "Onderdelen van instellingen",
-    "showNav": "Onderdelen tonen",
     "groups": {
       "user": "Gebruiker",
       "admin": "Beheer"

@@ -28,7 +28,11 @@ interface Props {
   maxLabel?: string
   // 축·키보드 이동이 없는 작은 그래프(코어별). 툴팁은 있다.
   compact?: boolean
-  // 지금 값을 담은 접근성 이름
+  // 꾸밈용 작은 그래프(성능 페이지의 자원 목록). compact에 더해 툴팁과 접근성 이름이 없다(값은 옆 글자로 읽는다).
+  decorative?: boolean
+  // 높이를 부모에 맞춰 채운다(성능 페이지의 큰 그래프). 없으면 CSS의 고정 높이다.
+  fill?: boolean
+  // 지금 값을 담은 접근성 이름. decorative면 쓰지 않는다.
   label: string
   // 연결이 끊겨 마지막 값을 흐리게 보여 주는 중인지
   stale?: boolean
@@ -39,7 +43,9 @@ interface Props {
 type Hover = { by: 'pointer'; x: number } | { by: 'key'; t: number } | null
 
 // UsageChart는 최근 60초 사용량 선 그래프다. 계열이 하나면 선 아래를 옅게 채운다.
-export function UsageChart({ times, series, now, max, format, maxLabel, compact, label, stale }: Props) {
+export function UsageChart(props: Props) {
+  const { times, series, now, max, format, maxLabel, decorative, fill, label, stale } = props
+  const compact = props.compact || decorative
   const { t } = useTranslation()
   const lang = useLanguage()
   const plotRef = useRef<HTMLDivElement>(null)
@@ -87,16 +93,19 @@ export function UsageChart({ times, series, now, max, format, maxLabel, compact,
 
   const ago = index >= 0 ? Math.round((now - times[index]) / 1000) : 0
   const single = series.length === 1
+  const rootClass = ['sysinfo-chart', compact && 'compact', decorative && 'decorative', fill && 'fill', stale && 'stale']
+    .filter(Boolean)
+    .join(' ')
 
   return (
-    <div className={`sysinfo-chart${compact ? ' compact' : ''}${stale ? ' stale' : ''}`}>
+    <div className={rootClass} aria-hidden={decorative || undefined}>
       <div
         ref={plotRef}
         className="sysinfo-chart-plot"
-        role="img"
-        aria-label={label}
+        role={decorative ? undefined : 'img'}
+        aria-label={decorative ? undefined : label}
         tabIndex={compact ? undefined : 0}
-        onPointerMove={onPointerMove}
+        onPointerMove={decorative ? undefined : onPointerMove}
         onPointerLeave={() => setHover((h) => (h?.by === 'pointer' ? null : h))}
         onKeyDown={compact ? undefined : onKeyDown}
         onBlur={() => setHover((h) => (h?.by === 'key' ? null : h))}

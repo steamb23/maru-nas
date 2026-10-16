@@ -1,0 +1,141 @@
+/* 사이드바 창 틀(SidebarLayout). 사이드바와 내용 두 열이다. 설정 앱과 시스템 정보 창이 쓴다.
+   창이 좁으면(.narrow, narrowWidth) 사이드바를 숨기고 메뉴 단추로 내용 위에 덮어 연다(.overlay).
+   사이드바 너비는 --sidebar-width로 창마다 바꾼다. */
+.sidebar-layout {
+  --sidebar-width: 232px;
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+  height: 100%;
+  overflow: hidden;
+}
+
+.sidebar-layout.narrow {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 0;
+  padding: 12px 8px;
+  overflow-y: auto;
+  border-right: 1px solid var(--window-border);
+  background: var(--titlebar-bg);
+}
+
+.sidebar-layout.narrow .sidebar-nav:not(.overlay) {
+  display: none;
+}
+
+.sidebar-layout.narrow .sidebar-nav.overlay {
+  position: absolute;
+  inset: 0 auto 0 0;
+  z-index: 2;
+  width: min(280px, 85%);
+  box-shadow: 4px 0 24px rgb(0 0 0 / 0.25);
+}
+
+.sidebar-nav.closing {
+  pointer-events: none;
+}
+
+.sidebar-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: rgb(0 0 0 / 0.3);
+}
+
+.sidebar-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sidebar-nav-item:hover,
+.sidebar-nav-item:focus-visible {
+  background: var(--hover-bg);
+  outline: none;
+}
+
+/* 사이드바 행은 누르면 페이지가 바뀌므로 줄어들지 않고 배경만 바뀐다. */
+.sidebar-nav-item:active {
+  background: var(--press-bg);
+}
+
+.sidebar-nav-item[aria-current='page'] {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  font-weight: 600;
+}
+
+.sidebar-nav-item[aria-current='page']:active {
+  background: color-mix(in srgb, var(--accent) 28%, transparent);
+}
+
+.sidebar-nav-item[aria-current='page'] .symbolic-icon {
+  color: var(--accent);
+}
+
+.sidebar-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.sidebar-header {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  padding: 18px 24px 10px;
+}
+
+.sidebar-layout.narrow .sidebar-header {
+  padding: 10px 12px 8px;
+}
+
+.sidebar-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.sidebar-layout.narrow .sidebar-title {
+  font-size: 16px;
+}
+
+.sidebar-menu-button {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  cursor: pointer;
+  transition: scale var(--press-out) ease;
+}
+
+.sidebar-menu-button:hover,
+.sidebar-menu-button:focus-visible {
+  background: var(--hover-bg);
+  outline: none;
+}
+
+.sidebar-menu-button:active {
+  background: var(--press-bg);
+  scale: var(--press-scale);
+  transition-duration: var(--press-in);
+}

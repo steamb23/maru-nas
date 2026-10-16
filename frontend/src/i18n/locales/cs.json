@@ -264,9 +264,11 @@
       "unknown": "Požadavek selhal."
     }
   },
+  "sidebar": {
+    "showNav": "Zobrazit části"
+  },
   "settings": {
     "nav": "Části nastavení",
-    "showNav": "Zobrazit části",
     "groups": {
       "user": "Uživatel",
       "admin": "Správa"

@@ -20,7 +20,7 @@ describe('애드온 앱', () => {
       titleKey: 'apps.systemInfo',
       icon: 'utilities-system-monitor',
       kind: 'addon',
-      defaultSize: { width: 720, height: 520 },
+      defaultSize: { width: 960, height: 600 },
       minSize: { width: 440, height: 360 },
     })
   })

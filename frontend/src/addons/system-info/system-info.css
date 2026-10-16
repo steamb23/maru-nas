@@ -1,162 +1,228 @@
-/* 시스템 정보 창: 탭, 개요(사용량 그래프), 프로세스 표 */
+/* 시스템 정보 창: 사이드바 틀(shell/SidebarLayout.css) 안의 성능 페이지와 프로세스 표.
+   관리자가 아니면 사이드바 없이 성능 페이지만 그린다(.single). */
 
 /* 그래프 계열 색. dataviz 기준 팔레트 1·2번을 창 배경(--window-bg)에 맞춰 light·dark 모두 검사했다
-   (validate_palette.js). 표시와 글자에는 쓰지 않고 선·면·키에만 쓴다. */
+   (validate_palette.js). 표시와 글자에는 쓰지 않고 선·면·키에만 쓴다.
+   --sysinfo-gutter는 페이지 내용의 좌우 여백으로, 사이드바 틀의 제목 머리(.sidebar-header)와 맞춘다. */
 .sysinfo {
   --sysinfo-series-1: light-dark(#2a78d6, #3987e5);
   --sysinfo-series-2: light-dark(#eb6834, #d95926);
   --sysinfo-grid: light-dark(rgb(0 0 0 / 0.08), rgb(255 255 255 / 0.08));
+  --sysinfo-gutter: 24px;
+  --sidebar-width: 200px;
+}
+
+.sysinfo.narrow {
+  --sysinfo-gutter: 12px;
+}
+
+.sysinfo.single {
+  --sysinfo-gutter: 16px;
   display: flex;
   flex-direction: column;
   height: 100%;
   min-height: 0;
+  padding-top: 16px;
 }
 
-.sysinfo-tabs {
+.sysinfo-body {
   display: flex;
-  flex: none;
-  gap: 4px;
-  padding: 0 12px;
-  border-bottom: 1px solid var(--window-border);
-}
-
-.sysinfo-tab {
-  position: relative;
-  padding: 9px 10px;
-  border: 0;
-  border-radius: 6px 6px 0 0;
-  background: none;
-  color: var(--text-muted);
-  font: inherit;
-  cursor: pointer;
-}
-
-.sysinfo-tab:hover {
-  background: var(--hover-bg);
-  color: var(--text);
-}
-
-.sysinfo-tab:active {
-  background: var(--press-bg);
-}
-
-.sysinfo-tab[aria-selected='true'] {
-  color: var(--text);
-  font-weight: 600;
-}
-
-.sysinfo-tab[aria-selected='true']::after {
-  position: absolute;
-  right: 8px;
-  bottom: -1px;
-  left: 8px;
-  height: 2px;
-  border-radius: 1px;
-  background: var(--accent);
-  content: '';
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  container: sysinfo-body / inline-size;
 }
 
 .sysinfo-banner {
   flex: none;
-  margin: 12px 16px 0;
+  margin: 0 var(--sysinfo-gutter) 12px;
 }
 
-.sysinfo-panel {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  min-height: 0;
-}
+/* 성능 페이지: 왼쪽 자원 목록, 오른쪽 고른 자원의 큰 그래프와 세부 값(Windows 11 작업 관리자 방식) */
 
-/* 개요 */
-
-.sysinfo-overview {
-  flex: 1;
-  min-height: 0;
-  padding: 12px 16px 16px;
-  overflow: auto;
-}
-
-.sysinfo-uptime {
-  display: flex;
-  gap: 8px;
-  margin: 0 0 12px;
-  font-variant-numeric: tabular-nums;
-}
-
-.sysinfo-uptime-label {
-  color: var(--text-muted);
-}
-
-.sysinfo-cards {
+.sysinfo-perf {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 12px;
+  flex: 1;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 16px;
+  min-height: 0;
+  padding: 0 var(--sysinfo-gutter) 16px;
 }
 
-.sysinfo-card {
+.sysinfo-resources {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  min-width: 0;
-  padding: 10px 12px 8px;
-  border: 1px solid var(--window-border);
-  border-radius: 8px;
+  gap: 4px;
+  min-height: 0;
+  overflow-y: auto;
 }
 
-/* 코어별 그래프는 두 열을 모두 쓴다. */
-.sysinfo-card.wide {
-  grid-column: 1 / -1;
-}
-
-.sysinfo-card-head {
+.sysinfo-resource {
   display: flex;
+  flex: none;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sysinfo-resource:hover {
+  background: var(--hover-bg);
+}
+
+/* 고르면 내용이 바뀌는 행이라 줄어들지 않고 배경만 바뀐다(사이드바 행과 같다). */
+.sysinfo-resource:active {
+  background: var(--press-bg);
+}
+
+.sysinfo-resource:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.sysinfo-resource[aria-selected='true'] {
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+.sysinfo-resource[aria-selected='true']:active {
+  background: color-mix(in srgb, var(--accent) 24%, transparent);
+}
+
+/* 자원 목록의 작은 그래프는 꾸밈이다. 툴팁 없이 행이 포인터를 받는다. */
+.sysinfo-resource .sysinfo-chart {
+  flex: none;
+  width: 64px;
+  pointer-events: none;
+}
+
+.sysinfo-resource .sysinfo-chart-plot {
+  height: 40px;
+}
+
+.sysinfo-resource-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.sysinfo-resource-name {
+  font-weight: 600;
+}
+
+.sysinfo-resource-value {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 8px;
+  overflow: hidden;
+  font-size: 12px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.sysinfo-resource-rate {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sysinfo-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.sysinfo-pane-head {
+  display: flex;
+  flex: none;
   align-items: baseline;
   justify-content: space-between;
   gap: 8px;
 }
 
-.sysinfo-card-title {
+.sysinfo-pane-title {
   margin: 0;
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 600;
 }
 
-.sysinfo-card-value {
-  font-size: 18px;
+.sysinfo-pane-value {
+  font-size: 20px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 
-.sysinfo-card-detail {
-  font-size: 12px;
-  color: var(--text-muted);
-  font-variant-numeric: tabular-nums;
-}
-
-.sysinfo-legend {
+.sysinfo-pane-chart {
   display: flex;
-  flex-wrap: wrap;
-  gap: 2px 16px;
-  margin: 0;
-  padding: 0;
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
-  list-style: none;
+  flex: 1;
+  flex-direction: column;
+  min-height: 140px;
 }
 
-.sysinfo-legend li {
+.sysinfo-stats {
+  display: grid;
+  flex: none;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 8px 16px;
+  margin: 0;
+}
+
+.sysinfo-stat {
+  min-width: 0;
+}
+
+.sysinfo-stat dt {
   display: flex;
   align-items: center;
   gap: 6px;
-}
-
-.sysinfo-legend-value {
-  font-weight: 600;
-}
-
-.sysinfo-legend-label {
+  font-size: 12px;
   color: var(--text-muted);
+}
+
+.sysinfo-stat dd {
+  margin: 2px 0 0;
+  overflow: hidden;
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 좁은 페이지에서는 자원 목록을 그래프 위 한 줄로 바꾸고 작은 그래프를 뺀다. */
+@container sysinfo-body (max-width: 560px) {
+  .sysinfo-perf {
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .sysinfo-resources {
+    flex-direction: row;
+    overflow: hidden;
+  }
+
+  .sysinfo-resource {
+    flex: 1 1 0;
+    padding: 6px 8px;
+  }
+
+  .sysinfo-resource .sysinfo-chart,
+  .sysinfo-resource-extra {
+    display: none;
+  }
 }
 
 /* 범례·툴팁의 계열 키(선 모양) */
@@ -179,11 +245,6 @@
   transition: opacity 0.2s;
 }
 
-/* 같은 줄 카드의 그래프 아래쪽을 맞춘다(카드마다 머리 줄 수가 다르다). */
-.sysinfo-card > .sysinfo-chart {
-  margin-top: auto;
-}
-
 /* 연결이 끊기면 마지막 그래프를 흐리게 보여 준다. */
 .sysinfo-chart.stale {
   opacity: 0.45;
@@ -200,6 +261,20 @@
 .sysinfo-cores:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+/* 높이를 부모에 맞춰 채우는 큰 그래프(성능 페이지) */
+.sysinfo-chart.fill {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.sysinfo-chart.fill .sysinfo-chart-plot {
+  flex: 1;
+  height: auto;
+  min-height: 120px;
 }
 
 .sysinfo-chart.compact .sysinfo-chart-plot {
@@ -320,6 +395,34 @@
   min-width: 0;
 }
 
+/* 성능 페이지의 코어별 격자는 그래프 영역을 채운다. 열 수는 --cores-cols(PerformancePanel)이고,
+   칸이 96px보다 좁아지면 열을 줄인다. */
+.sysinfo-pane-chart > .sysinfo-cores {
+  flex: 1;
+  grid-template-columns: repeat(
+    auto-fit,
+    minmax(max(96px, calc((100% - (var(--cores-cols) - 1) * 8px) / var(--cores-cols))), 1fr)
+  );
+  grid-auto-rows: minmax(72px, 1fr);
+}
+
+.sysinfo-pane-chart > .sysinfo-cores .sysinfo-core {
+  display: flex;
+  flex-direction: column;
+}
+
+.sysinfo-pane-chart > .sysinfo-cores .sysinfo-chart {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+
+.sysinfo-pane-chart > .sysinfo-cores .sysinfo-chart-plot {
+  flex: 1;
+  height: auto;
+  min-height: 40px;
+}
+
 .sysinfo-core-head {
   display: flex;
   justify-content: space-between;
@@ -351,7 +454,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 8px 16px;
-  padding: 10px 16px;
+  padding: 0 var(--sysinfo-gutter) 10px;
 }
 
 .sysinfo-search {
@@ -461,12 +564,12 @@
 
 .sysinfo-table th:first-child button,
 .sysinfo-table td:first-child {
-  padding-left: 16px;
+  padding-left: var(--sysinfo-gutter);
 }
 
 .sysinfo-table th:last-child button,
 .sysinfo-table td:last-child {
-  padding-right: 16px;
+  padding-right: var(--sysinfo-gutter);
 }
 
 .sysinfo-table tbody tr:hover {

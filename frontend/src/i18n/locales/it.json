@@ -258,9 +258,11 @@
       "unknown": "La richiesta non è riuscita."
     }
   },
+  "sidebar": {
+    "showNav": "Mostra le sezioni"
+  },
   "settings": {
     "nav": "Sezioni delle impostazioni",
-    "showNav": "Mostra le sezioni",
     "groups": {
       "user": "Utente",
       "admin": "Amministrazione"

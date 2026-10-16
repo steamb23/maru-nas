@@ -19,6 +19,7 @@ import panStart from '@colloid/actions/symbolic/pan-start-symbolic.svg?url'
 import systemLockScreen from '@colloid/actions/symbolic/system-lock-screen-symbolic.svg?url'
 import systemLogOut from '@colloid/actions/symbolic/system-log-out-symbolic.svg?url'
 import viewAppGrid from '@colloid/actions/symbolic/view-app-grid-symbolic.svg?url'
+import viewList from '@colloid/actions/symbolic/view-list-symbolic.svg?url'
 import viewMore from '@colloid/actions/symbolic/view-more-symbolic.svg?url'
 import viewRefresh from '@colloid/actions/symbolic/view-refresh-symbolic.svg?url'
 import viewSortAscending from '@colloid/actions/symbolic/view-sort-ascending-symbolic.svg?url'
@@ -36,6 +37,7 @@ import utilitiesSystemMonitor from '@colloid/apps/scalable/utilities-system-moni
 import preferencesDesktopAppearance from '@colloid/apps/symbolic/preferences-desktop-appearance-symbolic.svg?url'
 import preferencesSystemSymbolic from '@colloid/apps/symbolic/preferences-system-symbolic.svg?url'
 import systemUsers from '@colloid/apps/symbolic/system-users-symbolic.svg?url'
+import utilitiesSystemMonitorSymbolic from '@colloid/apps/symbolic/utilities-system-monitor-symbolic.svg?url'
 import preferencesDesktopLocale from '@colloid/categories/symbolic/preferences-desktop-locale-symbolic.svg?url'
 import driveHarddisk from '@colloid/devices/scalable/drive-harddisk.svg?url'
 import folder from '@colloid/places/scalable/folder.svg?url'
@@ -74,6 +76,8 @@ export const COLLOID_ICONS = {
   'preferences-desktop-appearance-symbolic': { url: preferencesDesktopAppearance, kind: 'symbolic' },
   'preferences-system-symbolic': { url: preferencesSystemSymbolic, kind: 'symbolic' },
   'system-users-symbolic': { url: systemUsers, kind: 'symbolic' },
+  'view-list-symbolic': { url: viewList, kind: 'symbolic' },
+  'utilities-system-monitor-symbolic': { url: utilitiesSystemMonitorSymbolic, kind: 'symbolic' },
   'network-server-symbolic': { url: networkServer, kind: 'symbolic' },
   'utilities-system-monitor': { url: utilitiesSystemMonitor, kind: 'color' },
   'preferences-system-network-ethernet': { url: preferencesSystemNetworkEthernet, kind: 'color' },

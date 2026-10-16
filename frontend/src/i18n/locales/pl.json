@@ -264,9 +264,11 @@
       "unknown": "Żądanie nie powiodło się."
     }
   },
+  "sidebar": {
+    "showNav": "Pokaż sekcje"
+  },
   "settings": {
     "nav": "Sekcje ustawień",
-    "showNav": "Pokaż sekcje",
     "groups": {
       "user": "Użytkownik",
       "admin": "Administracja"

@@ -258,9 +258,11 @@
       "unknown": "La solicitud falló."
     }
   },
+  "sidebar": {
+    "showNav": "Mostrar secciones"
+  },
   "settings": {
     "nav": "Secciones de configuración",
-    "showNav": "Mostrar secciones",
     "groups": {
       "user": "Usuario",
       "admin": "Administración"

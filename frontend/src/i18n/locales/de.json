@@ -252,9 +252,11 @@
       "unknown": "Die Anfrage ist fehlgeschlagen."
     }
   },
+  "sidebar": {
+    "showNav": "Bereiche anzeigen"
+  },
   "settings": {
     "nav": "Einstellungsbereiche",
-    "showNav": "Bereiche anzeigen",
     "groups": {
       "user": "Benutzer",
       "admin": "Verwaltung"

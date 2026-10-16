@@ -11,17 +11,18 @@ import (
 const ID = "system-info"
 
 // Manifest는 시스템 정보 애드온의 선언이다. /proc, /sys만 읽으므로 플러그인·RPC가 필요 없다.
-// 요약(개요)은 누구나 보고, 프로세스 목록은 provider(proc-processes)가 관리자에게만 준다.
+// 성능 페이지는 누구나 보고, 프로세스 목록은 provider(proc-processes)가 관리자에게만 준다.
 var Manifest = api.Manifest{
 	ID:    ID,
 	Title: "apps.systemInfo",
 	Icon:  "utilities-system-monitor",
 	Views: api.AddonViews{
-		// 개요(그래프 카드)와 프로세스 표. 기본 크기는 관리자의 개요(탭 막대, 전체 사용률 그래프, 카드 2×2)가
-		// 스크롤 없이 들어가는 높이다(Chrome 실측 511px, ko·en 같음, 10px 단위로 올림). 최소 크기에서는 카드가
-		// 한 열이 되어 스크롤하고, 프로세스 표는 상태·사용자 열을 숨긴다. 창 내용을 바꾸면 다시 잰다.
+		// 사이드바(프로세스, 성능)와 성능 페이지(자원 목록 + 큰 그래프). 기본 크기는 관리자 화면에서 사이드바,
+		// 자원 목록, 그래프와 세부 값이 나란히 넉넉하게 들어가는 크기다(Chrome 실측, ko·en). 720px보다 좁으면
+		// 사이드바를 덮어 열고, 성능 페이지가 560px보다 좁으면 자원 목록을 그래프 위 한 줄로 바꾸며,
+		// 프로세스 표는 상태·사용자 열을 숨긴다. 최소 크기에서는 세부 값을 스크롤한다. 창 내용을 바꾸면 다시 잰다.
 		Window: &api.WindowView{
-			DefaultSize: api.Size{Width: 720, Height: 520},
+			DefaultSize: api.Size{Width: 960, Height: 600},
 			MinSize:     &api.Size{Width: 440, Height: 360},
 		},
 		// CPU·RAM·가동 시간 요약. 위젯 내용을 바꾸면 브라우저에서 다시 잰다.

@@ -12,8 +12,8 @@ export const MANIFESTS = {
     "views": {
       "window": {
         "defaultSize": {
-          "width": 720,
-          "height": 520
+          "width": 960,
+          "height": 600
         },
         "minSize": {
           "width": 440,

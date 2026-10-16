@@ -258,9 +258,11 @@
       "unknown": "O pedido falhou."
     }
   },
+  "sidebar": {
+    "showNav": "Mostrar secções"
+  },
   "settings": {
     "nav": "Secções das definições",
-    "showNav": "Mostrar secções",
     "groups": {
       "user": "Utilizador",
       "admin": "Administração"

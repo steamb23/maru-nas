@@ -246,9 +246,11 @@
       "unknown": "请求失败。"
     }
   },
+  "sidebar": {
+    "showNav": "显示菜单"
+  },
   "settings": {
     "nav": "设置菜单",
-    "showNav": "显示菜单",
     "groups": {
       "user": "用户",
       "admin": "管理"

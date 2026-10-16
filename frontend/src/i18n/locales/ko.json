@@ -90,10 +90,20 @@
     "read": "읽기",
     "write": "쓰기",
     "core": "코어 {{id}}",
-    "tabs": {
-      "label": "시스템 정보 보기",
-      "overview": "개요",
-      "processes": "프로세스"
+    "nav": {
+      "label": "시스템 정보 페이지",
+      "processes": "프로세스",
+      "performance": "성능"
+    },
+    "perf": {
+      "resources": "자원",
+      "utilization": "사용률",
+      "cores": "코어",
+      "processCount": "프로세스",
+      "threads": "스레드",
+      "inUse": "사용 중",
+      "available": "사용 가능",
+      "total": "전체"
     },
     "chart": {
       "ago": "{{time}} 전",
@@ -315,9 +325,11 @@
       "unknown": "요청이 실패했습니다."
     }
   },
+  "sidebar": {
+    "showNav": "메뉴 보기"
+  },
   "settings": {
     "nav": "설정 메뉴",
-    "showNav": "메뉴 보기",
     "groups": {
       "user": "사용자",
       "admin": "관리"

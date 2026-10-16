@@ -258,9 +258,11 @@
       "unknown": "La requête a échoué."
     }
   },
+  "sidebar": {
+    "showNav": "Afficher les sections"
+  },
   "settings": {
     "nav": "Sections des paramètres",
-    "showNav": "Afficher les sections",
     "groups": {
       "user": "Utilisateur",
       "admin": "Administration"

@@ -90,10 +90,20 @@
     "read": "Read",
     "write": "Write",
     "core": "Core {{id}}",
-    "tabs": {
-      "label": "System information views",
-      "overview": "Overview",
-      "processes": "Processes"
+    "nav": {
+      "label": "System information pages",
+      "processes": "Processes",
+      "performance": "Performance"
+    },
+    "perf": {
+      "resources": "Resources",
+      "utilization": "Utilization",
+      "cores": "Cores",
+      "processCount": "Processes",
+      "threads": "Threads",
+      "inUse": "In use",
+      "available": "Available",
+      "total": "Total"
     },
     "chart": {
       "ago": "{{time}} ago",
@@ -315,9 +325,11 @@
       "unknown": "The request failed."
     }
   },
+  "sidebar": {
+    "showNav": "Show sections"
+  },
   "settings": {
     "nav": "Settings sections",
-    "showNav": "Show sections",
     "groups": {
       "user": "User",
       "admin": "Administration"

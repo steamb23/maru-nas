@@ -246,9 +246,11 @@
       "unknown": "要求失敗。"
     }
   },
+  "sidebar": {
+    "showNav": "顯示選單"
+  },
   "settings": {
     "nav": "設定選單",
-    "showNav": "顯示選單",
     "groups": {
       "user": "使用者",
       "admin": "管理"

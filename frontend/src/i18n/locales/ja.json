@@ -246,9 +246,11 @@
       "unknown": "リクエストに失敗しました。"
     }
   },
+  "sidebar": {
+    "showNav": "メニューを表示"
+  },
   "settings": {
     "nav": "設定メニュー",
-    "showNav": "メニューを表示",
     "groups": {
       "user": "ユーザー",
       "admin": "管理"
