@@ -72,7 +72,7 @@
     "network": "ネットワーク",
     "temperature": "温度",
     "containers": "コンテナ",
-    "smart": "ディスクの状態",
+    "smart": "ディスク状態",
     "services": "サービス",
     "workbench": "OMV ワークベンチ",
     "settings": "設定"

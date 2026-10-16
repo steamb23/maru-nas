@@ -19,6 +19,10 @@ describe('normalize', () => {
     // 조합형(NFD) 한글도 완성형으로 비교한다.
     expect(normalize('네트워크'.normalize('NFD'))).toBe('네트워크')
   })
+
+  it('소프트 하이픈을 지운다', () => {
+    expect(normalize('Almacena­miento')).toBe('almacenamiento')
+  })
 })
 
 describe('searchApps', () => {

@@ -66,13 +66,13 @@
     "openProfile": "Profil öffnen"
   },
   "apps": {
-    "systemInfo": "Systeminformationen",
+    "systemInfo": "Systeminfo",
     "files": "Dateien",
     "storage": "Speicher",
     "network": "Netzwerk",
     "temperature": "Temperatur",
     "containers": "Container",
-    "smart": "Datenträgerzustand",
+    "smart": "Zustand der Datenträger",
     "services": "Dienste",
     "workbench": "OMV-Workbench",
     "settings": "Einstellungen"
@@ -80,7 +80,7 @@
   "sysinfo": {
     "disconnected": "Verbindung getrennt – wird neu verbunden…",
     "cpu": "CPU",
-    "memory": "Arbeitsspeicher",
+    "memory": "RAM",
     "uptime": "Betriebszeit"
   },
   "language": {

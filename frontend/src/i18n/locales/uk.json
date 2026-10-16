@@ -14,7 +14,7 @@
     "password": "Пароль",
     "signIn": "Увійти",
     "signingIn": "Вхід…",
-    "footnote": "Увійдіть за допомогою облікового запису OpenMediaVault.",
+    "footnote": "Увійдіть з обліковим записом OpenMediaVault.",
     "withCountdown": "{{message}} ({{remaining}})",
     "error": {
       "network": "Не вдається з'єднатися із сервером. Перевірте підключення до мережі.",
@@ -75,7 +75,7 @@
     "smart": "Стан дисків",
     "services": "Служби",
     "workbench": "OMV Workbench",
-    "settings": "Налаштування"
+    "settings": "Налашту\u00adвання"
   },
   "sysinfo": {
     "disconnected": "Немає з'єднання — повторне підключення…",
@@ -325,7 +325,7 @@
       }
     },
     "image": {
-      "upload": "Передати зображення…",
+      "upload": "Додати фон…",
       "uploading": "Передавання…",
       "uploaded": "Передане зображення",
       "delete": "Видалити передане зображення",
