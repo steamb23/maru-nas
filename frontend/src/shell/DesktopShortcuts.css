@@ -40,9 +40,3 @@
 .desktop-icons > li.picked {
   visibility: hidden;
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .desktop-icons > li.shifting {
-    transition: none;
-  }
-}

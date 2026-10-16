@@ -11,9 +11,3 @@
 .widget-preview.hidden {
   opacity: 0;
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .widget-preview {
-    transition: none;
-  }
-}

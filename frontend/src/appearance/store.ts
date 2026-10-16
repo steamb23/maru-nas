@@ -97,7 +97,12 @@ export const useAppearanceStore = createAppearanceStore({
   saveAppearance: (p) => client.saveAppearance(p),
 })
 
+// allowsAnimations는 화면 설정이 애니메이션을 끄지 않았는지다. 값이 비어 있으면(불러오기 전 포함) 켜진 것으로 본다.
+export function allowsAnimations(prefs: AppearancePrefs): boolean {
+  return prefs.animations !== false
+}
+
 // animationsAllowed는 사용자가 애니메이션을 끄지 않았는지다. 불러오기 전에는 켜진 것으로 본다.
 export function animationsAllowed(): boolean {
-  return useAppearanceStore.getState().prefs.animations !== false
+  return allowsAnimations(useAppearanceStore.getState().prefs)
 }

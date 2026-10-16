@@ -2,6 +2,7 @@
 //
 // - 테마: 로그인한 동안은 사용자 값 → 관리자 기본 테마. 로그인 화면은 이 브라우저의 마지막 테마(힌트)를,
 //   없으면 관리자 기본 테마를 쓴다(로그아웃했다고 테마가 바뀌어 번쩍이지 않게).
+// - 애니메이션: 사용자가 끄면 CSS 전환도 끈다. Web Animations 재생(animationsEnabled)과 같은 기준이다.
 // - 배경: 로그인한 동안은 사용자 바탕화면 → 관리자 기본 바탕화면 → 대시보드 기본. 로그인 화면·연결 끊김 화면은
 //   로그인 배경. 세션 확인 중에는 마지막 바탕화면(힌트)을 보여 준다(대부분 로그인한 채 새로 고침한 경우다).
 //   다만 그 세션이 이미 끝났을 것 같으면(로그아웃했거나 예상 만료 시각이 지남) 로그인 배경(힌트)을 보여 준다.
@@ -10,6 +11,7 @@ import { useEffect, useMemo } from 'react'
 import { siteImageUrl, wallpaperImageUrl } from '../api/client'
 import { useAuthStore } from '../auth/store'
 import {
+  applyAnimations,
   applyTheme,
   markWallpaperHintSignedOut,
   readLoginBackgroundHint,
@@ -21,7 +23,7 @@ import {
   writeWallpaperHint,
 } from './dom'
 import { useSiteStore } from './siteStore'
-import { useAppearanceStore } from './store'
+import { allowsAnimations, useAppearanceStore } from './store'
 import { effectiveTheme } from './theme'
 import { DEFAULT_VIEW, type WallpaperView, imageUrlOf, resolveWallpaper } from './wallpapers'
 
@@ -70,6 +72,13 @@ export function useAppliedTheme() {
     if (hint) applyTheme(hint)
     else if (siteLoaded) applyTheme(effectiveTheme(undefined, siteTheme))
   }, [status, ready, userTheme, siteTheme, siteLoaded])
+}
+
+// useAppliedAnimations는 화면 설정의 애니메이션 켜기·끄기를 문서에 적용한다. 설정을 받기 전과 로그아웃한 뒤에는
+// 켜진 것으로 본다(animationsAllowed와 같다).
+export function useAppliedAnimations() {
+  const allowed = useAppearanceStore((s) => allowsAnimations(s.prefs))
+  useEffect(() => applyAnimations(allowed), [allowed])
 }
 
 // WallpaperChoice는 지금 그릴 배경이다. view가 null이면 지금 배경을 그대로 둔다.

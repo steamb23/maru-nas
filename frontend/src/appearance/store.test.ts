@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { Preferences } from '../api/types.gen'
-import { type AppearanceApi, createAppearanceStore } from './store'
+import { type AppearanceApi, allowsAnimations, createAppearanceStore } from './store'
 
 function setup(prefs: Preferences = {}, api: Partial<AppearanceApi> = {}) {
   const full: AppearanceApi = {
@@ -72,5 +72,17 @@ describe('appearance store', () => {
     expect(store.getState().saveFailed).toBe(true)
     store.getState().clear()
     expect(store.getState()).toMatchObject({ status: 'idle', prefs: {}, image: null, saveFailed: false })
+  })
+
+  it('애니메이션은 꺼 둔 경우만 끄고, 값이 없으면 켜진 것으로 본다', async () => {
+    expect(allowsAnimations({})).toBe(true)
+    expect(allowsAnimations({ animations: true })).toBe(true)
+    expect(allowsAnimations({ animations: false })).toBe(false)
+    const { store } = setup({ appearance: { animations: false } })
+    expect(allowsAnimations(store.getState().prefs)).toBe(true)
+    await store.getState().load()
+    expect(allowsAnimations(store.getState().prefs)).toBe(false)
+    store.getState().clear()
+    expect(allowsAnimations(store.getState().prefs)).toBe(true)
   })
 })

@@ -31,11 +31,21 @@
   --press-out: 150ms;
 }
 
-/* 동작 줄이기면 누름 전환 없이 바로 바뀐다(배경·크기 변화는 남긴다). */
+/* 애니메이션을 끄면(화면 설정의 data-animations, 시스템의 '동작 줄이기') CSS 전환을 모두 끈다.
+   값은 바로 바뀌고(누름 배경·크기, 스위치, 작업표시줄 표시 등) 움직이는 과정만 사라진다.
+   Web Animations 재생은 animationsEnabled가, 키프레임 애니메이션(진행 표시)은 각 파일이 따로 다룬다.
+   파일마다 전환 끄기 규칙을 따로 두지 않는다. */
+:root[data-animations='off'] *,
+:root[data-animations='off'] *::before,
+:root[data-animations='off'] *::after {
+  transition: none !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  :root {
-    --press-in: 0s;
-    --press-out: 0s;
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
   }
 }
 

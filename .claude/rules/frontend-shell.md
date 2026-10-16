@@ -99,13 +99,14 @@ paths:
 ## 애니메이션
 
 - 재생은 Web Animations API로 하며 transform·opacity만 움직인다. 설정값과 FLIP 계산은 DOM 없는 `*Anim.ts`에 둔다
+  - 예외: 위젯 가이드처럼 목표가 계속 바뀌는 추적은 애니메이션을 재시작하면 속도가 끊기므로 requestAnimationFrame 스프링으로 transform을 바꾼다(`WidgetPreview`)
 - 누름 피드백: 클릭 가능한 요소에는 `:hover` 옆에 `:active`를 둔다. 토큰은 `base.css`의 `--press-bg`, `--press-scale`, `--press-in`·`--press-out`이다
   - 아이콘·타일·버튼류는 진한 배경과 줄어듦(`scale: var(--press-scale)`, 평소 `transition: scale var(--press-out)`, 누를 때 `transition-duration: var(--press-in)`), 누르면 닫히거나 이동하는 메뉴·사이드바 행은 배경만 바꾼다. 선택 상태(활성 창 버튼, 현재 페이지)의 배경이 hover와 같으면 hover·누름을 한 단계 진하게 한다
   - 줄어듦은 `transform: scale()`이 아니라 개별 속성 `scale`로 한다(끌기가 요소 style의 `transform`을 직접 쓴다). 끌 수 있는 요소는 끄는 동안 `:active`가 남으므로 주인의 끌기 클래스(`li.dragging` 등)에서 `scale: 1`로 되돌린다
   - `button`이 아닌 클릭 요소(label, 위젯 틀)에는 `-webkit-tap-highlight-color: transparent`를 함께 둔다(`button`은 `base.css`가 끈다)
-  - 예외: 위젯 가이드처럼 목표가 계속 바뀌는 추적은 애니메이션을 재시작하면 속도가 끊기므로 requestAnimationFrame 스프링으로 transform을 바꾼다(`WidgetPreview`)
 - 창 밖(작업표시줄 메뉴)에서 배치를 바꿀 때는 `captureWindowLayout(id)`로 그 창의 `captureFrom`을 부른다. 숨겨진(최소화된) 창은 재지 않고 복원 애니메이션이 새 배치로 재생된다
 - 애니메이션 켜기/끄기는 사용자 화면 설정(`appearance/store.ts`의 `animations`, 불러오기 전에는 켜짐)이고, 시스템의 '동작 줄이기'가 켜져 있으면 늘 끈다(`animationsEnabled`). 창·메뉴·화면 전환·배경 페이드가 함께 따른다
+  - CSS 전환도 같은 기준이다. 사용자가 끄면 `<html data-animations="off">`(`appearance/dom.ts`의 `applyAnimations`)를 두고, `base.css`가 이 속성과 `prefers-reduced-motion` 미디어 쿼리에서 모든 `transition`을 끈다. 파일마다 전환 끄기 규칙을 따로 두지 않는다. 키프레임 애니메이션(진행 표시 등)은 이 규칙에 들지 않으므로 각 파일에서 다룬다
 - 닫기: 저장소의 `close`는 창을 바로 지워 작업표시줄·포커스가 즉시 바뀐다. `Desktop`은 `useClosingWindows`로 지워진 창의 마지막 상태와 타일 비율(`ClosingWindow`)을 받아 두고, 애니메이션이 끝나 `onClosed`가 불릴 때까지 그 상태로 그린다(`stableOrder`의 `keep`). 닫히는 창은 클릭을 받지 않고 창 내용의 주기 요청도 바로 멈춘다
 - 작업표시줄 버튼: 등장은 `li`의 ref(`enterTask`), 퇴장은 `Taskbar`가 너비·투명도를 애니메이션한다. 닫힌 창의 버튼은 `useClosingWindows`로 받아 `.leaving` 버튼으로 남긴다(`withLeaving`)
 - 작업표시줄 드래그 정렬: 드래그 중에는 transform으로만 움직이고 놓은 뒤 순서를 반영한다. 전환 효과는 부모가 아닌 각 `li` 클래스에 둔다. 배치 계산에서 `.leaving` 버튼은 뺀다

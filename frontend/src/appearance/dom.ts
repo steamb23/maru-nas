@@ -23,6 +23,14 @@ export function applyTheme(mode: ThemeMode) {
   else root.dataset.theme = mode
 }
 
+// applyAnimations는 화면 설정에서 애니메이션을 끄면 <html data-animations="off">를 둔다. base.css가 이 속성으로
+// CSS 전환을 모두 끈다. 시스템의 '동작 줄이기'는 CSS가 미디어 쿼리로 직접 따르므로 여기서 보지 않는다.
+export function applyAnimations(allowed: boolean) {
+  const root = document.documentElement
+  if (allowed) delete root.dataset.animations
+  else root.dataset.animations = 'off'
+}
+
 function read(key: string): string | null {
   try {
     return localStorage.getItem(key)

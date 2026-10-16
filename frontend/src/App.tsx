@@ -1,7 +1,13 @@
 import { useEffect } from 'react'
 import { useCapabilities } from './addons/useCapabilities'
 import { setUnauthorizedHandler } from './api/client'
-import { useAppearanceLoader, useAppliedTheme, useSiteInfoLoader, useWallpaperView } from './appearance/useAppearance'
+import {
+  useAppearanceLoader,
+  useAppliedAnimations,
+  useAppliedTheme,
+  useSiteInfoLoader,
+  useWallpaperView,
+} from './appearance/useAppearance'
 import { LoginScreen, OfflineScreen } from './auth/LoginScreen'
 import { useAuthStore } from './auth/store'
 import { useAvatarLoader } from './profile/useAvatar'
@@ -43,9 +49,10 @@ export default function App() {
   // 다른 요청이 401을 받으면(세션 만료 등) 로그인 화면으로 보낸다.
   useEffect(() => setUnauthorizedHandler(expire), [])
   useEffect(() => void restore(), [])
-  // 화면 설정(테마, 배경)은 로그인 화면에도 적용한다.
+  // 화면 설정(테마, 배경, 애니메이션)은 로그인 화면에도 적용한다.
   useSiteInfoLoader()
   useAppliedTheme()
+  useAppliedAnimations()
   const wallpaper = useWallpaperView()
 
   return (

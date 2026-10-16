@@ -175,7 +175,8 @@ export function Taskbar({
     p.commit = keep && layout.to !== p.from ? { id: p.id, to: layout.to } : null
     const end = keep ? layout : { ...layout, settle: 0, shifts: layout.shifts.map(() => 0) }
     // 이미 도착 위치에 있으면 transform이 바뀌지 않아 transitionend가 오지 않는다.
-    if (Math.abs(end.settle - layout.dx) < 0.5) {
+    // 애니메이션이 꺼져 있으면 CSS 전환도 꺼져 있으므로(base.css) 기다리지 않는다.
+    if (Math.abs(end.settle - layout.dx) < 0.5 || !animationsEnabled()) {
       finish()
       return
     }

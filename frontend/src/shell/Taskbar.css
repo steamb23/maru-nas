@@ -170,14 +170,6 @@
   opacity: 0.65;
 }
 
-/* 버튼 상태 전환(배경, 활성 표시, 최소화 흐림)은 동작 줄이기 설정이면 끈다. */
-@media (prefers-reduced-motion: reduce) {
-  .task,
-  .task::after {
-    transition: none;
-  }
-}
-
 .task-title {
   overflow: hidden;
   white-space: nowrap;

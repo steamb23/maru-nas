@@ -98,13 +98,6 @@
   transform: translateX(18px);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .switch,
-  .switch-thumb {
-    transition: none;
-  }
-}
-
 /* 페이지 위쪽 안내(SettingsNotice) */
 .settings-notice {
   margin: 0 0 16px;
