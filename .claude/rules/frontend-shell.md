@@ -133,12 +133,17 @@ paths:
 - 어느 페이지를 보일지는 창 저장소가 아니라 `navStore.ts`에 둔다(창 밖에서 특정 페이지로 열 때 `show` 후 `launchApp`). 창이 닫히면 기본 페이지로 되돌린다. 창 저장소를 구독해 창이 사라질 때 되돌리며, 창 컴포넌트의 정리 함수는 쓰지 않는다(StrictMode 개발 모드에서 마운트 직후에도 불린다)
 - 프로필 페이지(`profile`)는 사이드바 목록에 넣지 않고(`nav: 'card'`) 사이드바 맨 위 사용자 카드 버튼으로 연다. 볼 수 없는 페이지를 요청하면 기본 페이지(화면)로 간다
 - 프로필 사진 자르기 편집기(`AvatarEditor.tsx`, 계산은 `profile/avatarCrop.ts`)는 창 범위 대화상자다. 끌기는 `usePointerDrag`, 휠은 passive가 아닌 네이티브 리스너로 받고, 저장은 512px WebP(안 되면 PNG)다. OMV 사용자 편집 화면은 워크벤치 앱과 같은 이름 붙은 탭으로 연다(`launchApp.ts`의 `openWorkbenchRoute`, 라우트는 `windows/links.ts`)
-- 창 너비가 `SETTINGS_NARROW_WIDTH`(640px)보다 좁으면(ResizeObserver로 재서 `.narrow`) 사이드바를 숨기고 메뉴 단추(☰, `hamburger-menu-symbolic`)로 내용 위에 덮어 연다. 열린 동안 내용은 `inert`이고, Esc·바깥 누르기·페이지 고르기로 닫으며 닫힌 뒤(내용의 `inert`가 풀린 뒤) 메뉴 단추로 포커스를 돌려준다. 열기·닫기 값은 `navAnim.ts`
-- 페이지 제목과 내용은 창 틀(`SettingsWindow.css`)이 최대 폭(`--settings-page-width`, 720px) 열로 가운데 정렬한다. `.settings-header`와 `.settings-page`의 좌우 padding을 같은 퍼센트 식으로 계산해 스크롤바가 생겨도 왼쪽 끝이 맞는다. 페이지마다 폭을 따로 정하지 않는다
+- 사이드바 틀은 `shell/SidebarLayout`이다(시스템 정보 창도 쓴다. 아래 "사이드바 틀"). 설정의 좁은 기준은 `SETTINGS_NARROW_WIDTH`(640px)이고, 사용자 카드·그룹·페이지 영역(`.settings-body`)은 설정 것이다
+- 페이지 제목과 내용은 창 틀(`SettingsWindow.css`)이 최대 폭(`--settings-page-width`, 720px) 열로 가운데 정렬한다. 제목 머리(`.settings .sidebar-header`)와 `.settings-page`의 좌우 padding을 같은 퍼센트 식으로 계산해 스크롤바가 생겨도 왼쪽 끝이 맞는다. 페이지마다 폭을 따로 정하지 않는다
 - 페이지가 함께 쓰는 틀과 컨트롤은 `controls.tsx`(절, 묶음 카드, 행, 스위치, 안내), 테마·배경 고르기는 `pickers.tsx`(숨긴 기본 라디오 버튼이라 키보드·화면 읽기는 브라우저 기본 동작)다
 - 사용자 값은 바로 적용·저장한다(저장 큐). 전역 설정은 고른 값을 먼저 보여 주고 저장한 뒤 서버 값을 다시 받으며, 실패하면 되돌린다(`siteSettings.ts`)
 - 페이지 보기는 창의 `active`를 받는다(`pageViews.ts`). 페이지 위에 겹쳐 그리는 레이어는 `.settings-page`(위치 지정 없음) 안에서 absolute로 그려 기준 상자 `.settings-body`(제목 머리 아래 페이지 영역)에 붙인다. 스크롤 컨테이너에 잘리거나 함께 스크롤되지 않는다
 - 정보 페이지 대기 이스터에그(`ClawdParade.tsx`): Claude Code에 대한 오마주로, 정보 페이지에서 30초 동안 누르지 않으면(`shell/useIdle.ts`) Clawd가 페이지 영역 좌우 가장자리에서 한 마리씩 기어 들어와 자기 줄에서 쉬거나 배회하고, 아무 곳이나 누르면 모두 점프한 뒤 가까운 가장자리로 도망친다. 그림은 코드 안 12×8 픽셀 데이터(`about/clawd.ts`, 외부 이미지 파일 없음), 움직임 계산은 `about/clawdParade.ts`, 프레임마다 요소 style만 바꾼다. 창을 최소화하거나 닫거나 다른 페이지로 가면, 또는 애니메이션이 꺼져 있으면 연출 없이 없앤다. 탭이 숨겨진 동안은 없애지 않고 멈춰 두었다가 이어서 움직이며, 대기 시간은 숨겨진 동안에도 잰다(창의 `active`는 탭 숨김에도 false라 `usePageVisible`로 구분한다). 문구가 없어 현지화 대상이 아니다. 문제가 되면 통째로 지운다
+
+## 사이드바 틀
+
+- `SidebarLayout`(`shell/SidebarLayout.tsx`·`.css`)은 왼쪽 사이드바와 오른쪽 내용(제목 머리 + 본문)으로 나눈 창 내용 틀이다. 설정 앱과 시스템 정보 창이 쓴다. 항목은 쓰는 쪽이 그리고(공통 모양 `.sidebar-nav-item`, 지금 페이지에 `aria-current="page"`), 너비는 `--sidebar-width`로 바꾼다
+- 창 너비가 `narrowWidth`보다 좁으면(ResizeObserver로 재서 `.narrow`) 사이드바를 숨기고 메뉴 단추(☰, `hamburger-menu-symbolic`)로 내용 위에 덮어 연다. 열면 지금 페이지 항목에 포커스하고, 열린 동안 내용은 `inert`이며, Esc·바깥 누르기·항목(`navItems`) 누르기로 닫는다. 닫힌 뒤(내용의 `inert`가 풀린 뒤) 메뉴 단추로 포커스를 돌려준다. 열기·닫기 값은 `sidebarAnim.ts`
 
 ## 화면 설정(테마·배경)
 
