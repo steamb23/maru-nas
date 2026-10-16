@@ -1,50 +1,512 @@
+/* 시스템 정보 창: 탭, 개요(사용량 그래프), 프로세스 표 */
+
+/* 그래프 계열 색. dataviz 기준 팔레트 1·2번을 창 배경(--window-bg)에 맞춰 light·dark 모두 검사했다
+   (validate_palette.js). 표시와 글자에는 쓰지 않고 선·면·키에만 쓴다. */
 .sysinfo {
+  --sysinfo-series-1: light-dark(#2a78d6, #3987e5);
+  --sysinfo-series-2: light-dark(#eb6834, #d95926);
+  --sysinfo-grid: light-dark(rgb(0 0 0 / 0.08), rgb(255 255 255 / 0.08));
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 16px;
+  height: 100%;
+  min-height: 0;
 }
 
-.sysinfo-banner {
-  margin: 0;
-  padding: 8px 12px;
-  border-radius: 6px;
-  background: light-dark(#fde8e8, #4a2224);
-  color: light-dark(#b42318, #ffb4ab);
+.sysinfo-tabs {
+  display: flex;
+  flex: none;
+  gap: 4px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--window-border);
+}
+
+.sysinfo-tab {
+  position: relative;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 6px 6px 0 0;
+  background: none;
+  color: var(--text-muted);
+  font: inherit;
+  cursor: pointer;
+}
+
+.sysinfo-tab:hover {
+  background: var(--hover-bg);
+  color: var(--text);
+}
+
+.sysinfo-tab:active {
+  background: var(--press-bg);
+}
+
+.sysinfo-tab[aria-selected='true'] {
+  color: var(--text);
   font-weight: 600;
 }
 
-.sysinfo-list {
+.sysinfo-tab[aria-selected='true']::after {
+  position: absolute;
+  right: 8px;
+  bottom: -1px;
+  left: 8px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--accent);
+  content: '';
+}
+
+.sysinfo-banner {
+  flex: none;
+  margin: 12px 16px 0;
+}
+
+.sysinfo-panel {
   display: flex;
+  flex: 1;
   flex-direction: column;
-  gap: 16px;
-  margin: 0;
-  transition: opacity 0.2s;
+  min-height: 0;
 }
 
-/* 연결이 끊기면 마지막 값을 흐리게 보여 준다. */
-.sysinfo-list.stale {
-  opacity: 0.45;
+/* 개요 */
+
+.sysinfo-overview {
+  flex: 1;
+  min-height: 0;
+  padding: 12px 16px 16px;
+  overflow: auto;
 }
 
-.sysinfo-row dt {
-  margin-bottom: 4px;
-  font-size: 12px;
+.sysinfo-uptime {
+  display: flex;
+  gap: 8px;
+  margin: 0 0 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.sysinfo-uptime-label {
   color: var(--text-muted);
 }
 
-.sysinfo-row dd {
-  margin: 0;
+.sysinfo-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
 }
 
-.sysinfo-value {
+.sysinfo-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding: 10px 12px 8px;
+  border: 1px solid var(--window-border);
+  border-radius: 8px;
+}
+
+/* 코어별 그래프는 두 열을 모두 쓴다. */
+.sysinfo-card.wide {
+  grid-column: 1 / -1;
+}
+
+.sysinfo-card-head {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 8px;
+}
+
+.sysinfo-card-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.sysinfo-card-value {
   font-size: 18px;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
+
+.sysinfo-card-detail {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.sysinfo-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 16px;
+  margin: 0;
+  padding: 0;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  list-style: none;
+}
+
+.sysinfo-legend li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sysinfo-legend-value {
+  font-weight: 600;
+}
+
+.sysinfo-legend-label {
+  color: var(--text-muted);
+}
+
+/* 범례·툴팁의 계열 키(선 모양) */
+.sysinfo-key {
+  flex: none;
+  width: 12px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--sysinfo-series-1);
+}
+
+.sysinfo-key.s2 {
+  background: var(--sysinfo-series-2);
+}
+
+/* 그래프 */
+
+.sysinfo-chart {
+  min-width: 0;
+  transition: opacity 0.2s;
+}
+
+/* 연결이 끊기면 마지막 그래프를 흐리게 보여 준다. */
+.sysinfo-chart.stale {
+  opacity: 0.45;
+}
+
+.sysinfo-chart-plot {
+  position: relative;
+  height: 96px;
+  border-radius: 4px;
+  touch-action: pan-y;
+}
+
+.sysinfo-chart.compact .sysinfo-chart-plot {
+  height: 36px;
+  box-shadow: inset 0 0 0 1px var(--sysinfo-grid);
+}
+
+.sysinfo-chart-plot svg {
+  display: block;
+  overflow: hidden;
+}
+
+.sysinfo-grid {
+  stroke: var(--sysinfo-grid);
+  stroke-width: 1;
+}
+
+.sysinfo-line {
+  fill: none;
+  stroke: var(--sysinfo-series-1);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+.sysinfo-line.s2 {
+  stroke: var(--sysinfo-series-2);
+}
+
+.sysinfo-area {
+  fill: var(--sysinfo-series-1);
+  fill-opacity: 0.1;
+}
+
+.sysinfo-crosshair {
+  stroke: var(--text-muted);
+  stroke-width: 1;
+}
+
+/* 점은 창 배경색 테두리로 선과 겹쳐도 보이게 한다. */
+.sysinfo-dot {
+  fill: var(--sysinfo-series-1);
+  stroke: var(--window-bg);
+  stroke-width: 2;
+}
+
+.sysinfo-dot.s2 {
+  fill: var(--sysinfo-series-2);
+}
+
+.sysinfo-chart-max {
+  position: absolute;
+  top: 2px;
+  left: 4px;
+  font-size: 11px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+.sysinfo-chart-empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.sysinfo-chart-axis {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.sysinfo-tooltip {
+  position: absolute;
+  top: 4px;
+  z-index: 1;
+  padding: 5px 8px;
+  border: 1px solid var(--window-border);
+  border-radius: 6px;
+  background: var(--window-bg);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.15);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.sysinfo-tooltip-time {
+  margin-bottom: 2px;
+  color: var(--text-muted);
+}
+
+.sysinfo-tooltip-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sysinfo-tooltip-label {
+  color: var(--text-muted);
+}
+
+/* 코어별 작은 그래프 */
+
+.sysinfo-cores {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  gap: 8px;
+}
+
+.sysinfo-core {
+  min-width: 0;
+}
+
+.sysinfo-core-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+  margin-bottom: 2px;
+  font-size: 11px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.sysinfo-core-value {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* 프로세스 */
+
+.sysinfo-processes {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.sysinfo-toolbar {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  padding: 10px 16px;
+}
+
+.sysinfo-search {
+  flex: 1 1 160px;
+  min-width: 0;
+  max-width: 280px;
+  padding: 5px 8px;
+  border: 1px solid var(--window-border);
+  border-radius: 6px;
+  background: var(--window-bg);
+  color: inherit;
+  font: inherit;
+}
+
+.sysinfo-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.sysinfo-count {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.sysinfo-table-wrap {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  container-type: inline-size;
+  transition: opacity 0.2s;
+}
+
+.sysinfo-table-wrap.stale {
+  opacity: 0.45;
+}
+
+.sysinfo-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.sysinfo-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 0;
+  border-bottom: 1px solid var(--window-border);
+  background: var(--window-bg);
+  font-weight: 600;
+  text-align: left;
+}
+
+.sysinfo-table th button {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  padding: 6px 8px;
+  border: 0;
+  background: none;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.sysinfo-table th.num button {
+  justify-content: flex-end;
+}
+
+.sysinfo-table th[aria-sort] button {
+  color: var(--text);
+}
+
+.sysinfo-table th button:hover {
+  background: var(--hover-bg);
+}
+
+.sysinfo-table th button:active {
+  background: var(--press-bg);
+}
+
+.sysinfo-sort {
+  font-size: 9px;
+}
+
+.sysinfo-table td {
+  padding: 5px 8px;
+  overflow: hidden;
+  border-bottom: 1px solid var(--sysinfo-grid);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: top;
+}
+
+.sysinfo-table td.num {
+  text-align: right;
+}
+
+.sysinfo-table th:first-child button,
+.sysinfo-table td:first-child {
+  padding-left: 16px;
+}
+
+.sysinfo-table th:last-child button,
+.sysinfo-table td:last-child {
+  padding-right: 16px;
+}
+
+.sysinfo-table tbody tr:hover {
+  background: var(--hover-bg);
+}
+
+.sysinfo-table .col-pid,
+.sysinfo-table .col-cpu {
+  width: 72px;
+}
+
+.sysinfo-table .col-user,
+.sysinfo-table .col-state {
+  width: 96px;
+}
+
+.sysinfo-table .col-memory {
+  width: 104px;
+}
+
+.sysinfo-proc-name,
+.sysinfo-proc-cmd {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sysinfo-proc-cmd {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.sysinfo-table-notice {
+  margin: 16px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+/* 좁은 창에서는 덜 쓰는 열부터 숨긴다. */
+@container (max-width: 600px) {
+  .sysinfo-table .col-state {
+    display: none;
+  }
+}
+
+@container (max-width: 480px) {
+  .sysinfo-table .col-user {
+    display: none;
+  }
+}
+
+/* 위젯(SystemInfoWidget). .sysinfo-detail, .sysinfo-bar*는 위젯이 쓴다. */
 
 .sysinfo-detail {
   font-size: 12px;

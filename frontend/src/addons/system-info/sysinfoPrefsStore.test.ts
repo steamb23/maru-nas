@@ -107,4 +107,10 @@ describe('menus', () => {
     if (core.kind === 'action') core.onSelect()
     expect(select).toHaveBeenCalledWith('core')
   })
+
+  it('설정을 불러오지 못했으면 항목을 비활성으로 둔다', () => {
+    expect(cpuGraphMenuItems('overall', vi.fn(), true).every((i) => i.kind === 'action' && i.disabled)).toBe(true)
+    const [sub] = processMenuItems('machine', vi.fn(), true)
+    expect(sub.kind === 'submenu' && sub.disabled).toBe(true)
+  })
 })
