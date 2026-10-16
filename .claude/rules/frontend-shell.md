@@ -99,6 +99,10 @@ paths:
 ## 애니메이션
 
 - 재생은 Web Animations API로 하며 transform·opacity만 움직인다. 설정값과 FLIP 계산은 DOM 없는 `*Anim.ts`에 둔다
+- 누름 피드백: 클릭 가능한 요소에는 `:hover` 옆에 `:active`를 둔다. 토큰은 `base.css`의 `--press-bg`, `--press-scale`, `--press-in`·`--press-out`이다
+  - 아이콘·타일·버튼류는 진한 배경과 줄어듦(`scale: var(--press-scale)`, 평소 `transition: scale var(--press-out)`, 누를 때 `transition-duration: var(--press-in)`), 누르면 닫히거나 이동하는 메뉴·사이드바 행은 배경만 바꾼다. 선택 상태(활성 창 버튼, 현재 페이지)의 배경이 hover와 같으면 hover·누름을 한 단계 진하게 한다
+  - 줄어듦은 `transform: scale()`이 아니라 개별 속성 `scale`로 한다(끌기가 요소 style의 `transform`을 직접 쓴다). 끌 수 있는 요소는 끄는 동안 `:active`가 남으므로 주인의 끌기 클래스(`li.dragging` 등)에서 `scale: 1`로 되돌린다
+  - `button`이 아닌 클릭 요소(label, 위젯 틀)에는 `-webkit-tap-highlight-color: transparent`를 함께 둔다(`button`은 `base.css`가 끈다)
   - 예외: 위젯 가이드처럼 목표가 계속 바뀌는 추적은 애니메이션을 재시작하면 속도가 끊기므로 requestAnimationFrame 스프링으로 transform을 바꾼다(`WidgetPreview`)
 - 창 밖(작업표시줄 메뉴)에서 배치를 바꿀 때는 `captureWindowLayout(id)`로 그 창의 `captureFrom`을 부른다. 숨겨진(최소화된) 창은 재지 않고 복원 애니메이션이 새 배치로 재생된다
 - 애니메이션 켜기/끄기는 사용자 화면 설정(`appearance/store.ts`의 `animations`, 불러오기 전에는 켜짐)이고, 시스템의 '동작 줄이기'가 켜져 있으면 늘 끈다(`animationsEnabled`). 창·메뉴·화면 전환·배경 페이드가 함께 따른다

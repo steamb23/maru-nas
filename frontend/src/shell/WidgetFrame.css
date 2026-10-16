@@ -18,6 +18,7 @@
 
 .widget.opens-window {
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* 창을 여는 위젯은 hover·누름을 배경 위 덮개(background-image)로 보인다. 크기는 바꾸지 않는다(놓기 애니메이션이

@@ -24,6 +24,7 @@
   border: 1px solid var(--window-border);
   border-radius: 10px;
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .theme-option:hover {
@@ -147,6 +148,7 @@
   background: none;
   text-align: center;
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .wallpaper-swatch {
