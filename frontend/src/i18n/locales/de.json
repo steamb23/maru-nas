@@ -66,13 +66,13 @@
     "openProfile": "Profil öffnen"
   },
   "apps": {
-    "systemInfo": "System­informationen",
+    "systemInfo": "System\u00adinformationen",
     "files": "Dateien",
     "storage": "Speicher",
     "network": "Netzwerk",
     "temperature": "Temperatur",
     "containers": "Container",
-    "smart": "Datenträger­zustand",
+    "smart": "Datenträger\u00adzustand",
     "services": "Dienste",
     "workbench": "OMV-Workbench",
     "settings": "Einstellungen"

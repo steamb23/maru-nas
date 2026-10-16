@@ -30,6 +30,17 @@ function placeholders(s: string): string[] {
   return [...s.matchAll(/\{\{\s*([\w.]+)[^}]*\}\}/g)].map((m) => m[1]).sort()
 }
 
+// 카탈로그 파일 원문. 보이지 않는 문자가 그대로 들어갔는지 본다.
+const sources = Object.fromEntries(
+  Object.entries(import.meta.glob<string>('./locales/*.json', { eager: true, query: '?raw', import: 'default' })).map(
+    ([path, src]) => [path.replace(/^.*\/(.+)\.json$/, '$1'), src],
+  ),
+)
+
+// 편집기에서 보이지 않는 문자: 서식 문자(소프트 하이픈, 폭 없는 공백, 방향 표시 등)와 줄바꿈 없는 공백.
+// 카탈로그에는 \u 이스케이프로 써야 사람이 읽고 고칠 수 있다.
+const INVISIBLE = /[\p{Cf}\xA0]/gu
+
 const base = flatten(en)
 
 // 복수형 키는 <기준>_<범주>다(i18next JSON v4). 범주는 언어마다 다르다(Intl.PluralRules):
@@ -75,6 +86,14 @@ describe('번역 카탈로그', () => {
 
     it('치환자가 en과 같다', () => {
       for (const [k, v] of flat) expect(placeholders(v), k).toEqual(placeholders(reference(lang, k) ?? ''))
+    })
+
+    it('보이지 않는 문자를 이스케이프로 쓴다', () => {
+      const lines = sources[lang].split('\n')
+      const found = lines.flatMap((line, i) =>
+        [...line.matchAll(INVISIBLE)].map((m) => `${i + 1}행 U+${m[0].codePointAt(0)!.toString(16).toUpperCase().padStart(4, '0')}`),
+      )
+      expect(found).toEqual([])
     })
 
     it('빈 문구가 없다', () => {

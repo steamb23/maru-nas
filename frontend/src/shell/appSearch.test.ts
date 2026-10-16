@@ -21,7 +21,7 @@ describe('normalize', () => {
   })
 
   it('소프트 하이픈을 지운다', () => {
-    expect(normalize('Almacena­miento')).toBe('almacenamiento')
+    expect(normalize('Almacena\u00admiento')).toBe('almacenamiento')
   })
 })
 
