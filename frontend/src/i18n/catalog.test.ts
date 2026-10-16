@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { SUPPORTED_LANGUAGES } from './languages'
 import en from './locales/en.json'
 
 // 1차 지원 언어. 카탈로그가 완전해야 한다(키가 빠지면 실패). 나중에 추가하는 언어는 일부만 번역해도 되고
@@ -31,24 +32,62 @@ function placeholders(s: string): string[] {
 
 const base = flatten(en)
 
+// 복수형 키는 <기준>_<범주>다(i18next JSON v4). 범주는 언어마다 다르다(Intl.PluralRules):
+// en·de는 one·other, ru·pl·cs·uk는 one·few·many·other, ja·zh·ko는 other뿐이다.
+const PLURAL_KEY = /^(.+)_(zero|one|two|few|many|other)$/
+
+// en에서 <기준>_other가 있는 복수형 기준 키들.
+const pluralBases = new Set(
+  [...base.keys()].flatMap((k) => {
+    const m = PLURAL_KEY.exec(k)
+    return m && m[2] === 'other' ? [m[1]] : []
+  }),
+)
+
+function pluralCategories(lang: string): string[] {
+  return new Intl.PluralRules(lang).resolvedOptions().pluralCategories
+}
+
+// reference는 그 언어의 키 k에 대응하는 en 문구다. en에 같은 키가 없어도 그 언어의 복수형 범주이면
+// (ru의 _few 등) en의 <기준>_other와 대응한다. 대응하는 문구가 없으면 undefined다.
+function reference(lang: string, k: string): string | undefined {
+  if (base.has(k)) return base.get(k)
+  const m = PLURAL_KEY.exec(k)
+  if (m && pluralBases.has(m[1]) && pluralCategories(lang).includes(m[2])) return base.get(`${m[1]}_other`)
+  return undefined
+}
+
 describe('번역 카탈로그', () => {
   it('1차 지원 언어 카탈로그가 모두 있다', () => {
     for (const lang of COMPLETE) expect(Object.keys(catalogs)).toContain(lang)
   })
 
+  it('지원 언어마다 카탈로그가 하나씩 있다', () => {
+    expect(Object.keys(catalogs).sort()).toEqual([...SUPPORTED_LANGUAGES].sort())
+  })
+
   describe.each(Object.keys(catalogs))('%s', (lang) => {
     const flat = flatten(catalogs[lang])
 
-    it('en에 없는 키가 없다', () => {
-      expect([...flat.keys()].filter((k) => !base.has(k))).toEqual([])
+    it('en에 대응하는 문구가 없는 키가 없다', () => {
+      expect([...flat.keys()].filter((k) => reference(lang, k) === undefined)).toEqual([])
     })
 
     it('치환자가 en과 같다', () => {
-      for (const [k, v] of flat) expect(placeholders(v), k).toEqual(placeholders(base.get(k) ?? ''))
+      for (const [k, v] of flat) expect(placeholders(v), k).toEqual(placeholders(reference(lang, k) ?? ''))
     })
 
     it('빈 문구가 없다', () => {
       expect([...flat].filter(([, v]) => v.trim() === '').map(([k]) => k)).toEqual([])
+    })
+
+    it('번역한 복수형은 그 언어의 범주를 모두 갖는다', () => {
+      // 범주가 하나라도 빠지면 그 수에서는 영어 문구가 나온다.
+      const missing = [...pluralBases].flatMap((b) => {
+        const translated = [...flat.keys()].some((k) => PLURAL_KEY.exec(k)?.[1] === b)
+        return translated ? pluralCategories(lang).flatMap((c) => (flat.has(`${b}_${c}`) ? [] : [`${b}_${c}`])) : []
+      })
+      expect(missing).toEqual([])
     })
 
     it.runIf(COMPLETE.includes(lang))('빠진 키가 없다', () => {

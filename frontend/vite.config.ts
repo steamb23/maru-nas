@@ -86,6 +86,9 @@ export default defineConfig(({ mode }) => {
       environment: 'node',
       // Vitest는 CSS를 빈 문자열로 바꾼다. import 목록을 검사하는 styles.test.ts만 index.css 원문을 읽는다.
       css: { include: [/\/src\/index\.css/] },
+      // 변환 결과를 파일로 캐시하면 import.meta.glob 결과도 함께 남아, 파일을 더하거나 지워도 테스트 파일이
+      // 바뀌기 전까지 옛 목록으로 검사한다(catalog.test.ts의 카탈로그, resolver.test.ts·styles.test.ts의 목록).
+      fsModuleCache: false,
     },
   }
 })
