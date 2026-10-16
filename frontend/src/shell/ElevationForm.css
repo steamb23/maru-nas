@@ -1,0 +1,30 @@
+/* 권한 상승 대화상자 내용(ElevationForm.tsx). 단추 줄(.modal-buttons)은 Modal.css의 모양을 그대로 쓴다. */
+
+.elevation-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 12px;
+}
+
+.elevation-input {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--window-border);
+  border-radius: 6px;
+  background: var(--window-bg);
+  font: inherit;
+  color: inherit;
+}
+
+.elevation-input:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  outline-offset: 1px;
+}
+
+.elevation-error {
+  margin: 8px 0 0;
+  color: light-dark(#c5352b, #f28b82);
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}

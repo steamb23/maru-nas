@@ -1,4 +1,4 @@
-// 설정의 서버 페이지(관리자): 웹에서 바꾸는 가동 설정(워크벤치 주소, SMART 확인 시각)과 가동 설정 현황.
+// 설정의 서버 페이지(관리자): 웹에서 바꾸는 가동 설정(워크벤치 주소, SMART 확인 시각), 권한 도우미, 가동 설정 현황.
 // 나머지 가동 설정은 /etc/default/onmaru에서 바꾸고 서비스를 다시 시작해야 하므로 값·출처와 방법만 보여 준다.
 import type { ParseKeys } from 'i18next'
 import { useEffect, useState } from 'react'
@@ -7,6 +7,7 @@ import { useCapabilitiesStore } from '../addons/capabilities'
 import { ApiError, fetchCapabilities, fetchServerSettings, saveServerSettings } from '../api/client'
 import type { ServerSettings } from '../api/types.gen'
 import { IconImage } from '../icons/IconImage'
+import { HelperSection } from './HelperSection'
 import { SettingsCard, SettingsNotice, SettingsRow, SettingsSection } from './controls'
 import { OVERRIDE_FLAGS, type OverrideKey, SOURCE_LABELS, overridesWith, runtimeLabelKey } from './server'
 
@@ -91,6 +92,8 @@ export function ServerPage() {
           </SettingsCard>
         </SettingsSection>
       )}
+
+      <HelperSection />
 
       {data && (
         <SettingsSection title={t('settings.server.runtime')} description={t('settings.server.runtimeDesc')}>

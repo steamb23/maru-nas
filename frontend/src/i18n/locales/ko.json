@@ -231,6 +231,19 @@
     "ok": "확인",
     "cancel": "취소"
   },
+  "elevation": {
+    "title": "관리자 인증",
+    "description": "비밀번호를 입력하면 이 세션에서 5분 동안 root 권한을 씁니다.",
+    "password": "비밀번호",
+    "confirm": "인증",
+    "confirming": "확인 중…",
+    "wrongPassword": "비밀번호가 올바르지 않습니다.",
+    "rateLimited": "시도가 너무 많습니다. {{remaining}} 뒤에 다시 시도하세요.",
+    "notAllowed": "이 계정은 관리자 권한을 쓸 수 없습니다.",
+    "reauth": "도우미 세션이 끝났습니다. 로그아웃한 뒤 다시 로그인하세요.",
+    "unavailable": "권한 도우미를 쓸 수 없습니다.",
+    "failed": "인증하지 못했습니다. 다시 시도하세요."
+  },
   "linkNotice": {
     "title": "새 탭에서 열기",
     "workbench": "OMV 워크벤치는 브라우저의 새 탭에서 열립니다. 새 탭에서 OMV에 다시 로그인해야 합니다.",
@@ -383,8 +396,39 @@
         "cookiePath": "쿠키 경로",
         "stateDir": "상태 디렉터리",
         "workbenchUrl": "OMV 워크벤치 주소",
-        "smartRefreshAt": "SMART 확인 시각"
+        "smartRefreshAt": "SMART 확인 시각",
+        "helperSocket": "권한 도우미 소켓"
       }
+    },
+    "helper": {
+      "title": "권한 도우미",
+      "desc": "root로 도는 별도 서비스를 거쳐, 온마루가 내 Linux 계정 권한으로, 그리고 비밀번호를 다시 입력하면 몇 분 동안 root 권한으로 일할 수 있게 합니다.",
+      "status": "상태",
+      "state": {
+        "disabled": "설치 안 됨",
+        "unavailable": "연결 안 됨",
+        "none": "이 세션에 없음",
+        "reauth": "다시 로그인 필요",
+        "active": "사용 중"
+      },
+      "stateDesc": {
+        "disabled": "./install.sh를 다시 실행해 도우미 설치를 고르세요.",
+        "unavailable": "온마루가 도우미에 연결하지 못했습니다. 서버에서 systemctl status onmaru-helper.socket을 확인하세요.",
+        "none": "로그인할 때 도우미가 이 계정을 받지 않았습니다(시스템 계정이거나 연결하지 못한 경우 등). 다시 로그인하면 다시 시도합니다.",
+        "reauth": "도우미가 다시 시작되어 이 세션을 잊었습니다. 로그아웃한 뒤 다시 로그인하세요.",
+        "active": "이 세션은 도우미를 쓸 수 있습니다."
+      },
+      "identity": "실행 권한",
+      "identityValue": "{{user}} (uid {{uid}})",
+      "groups": "그룹: {{groups}}",
+      "root": "root 권한",
+      "rootDesc": "일부 관리자 기능에 필요합니다. 5분이 지나면 저절로 끝납니다.",
+      "notAllowed": "이 계정은 권한을 상승할 수 없습니다. openmediavault-admin과 도우미의 상승 그룹(기본 sudo)에 모두 속해야 합니다.",
+      "elevated": "켜짐 · {{time}} 남음",
+      "elevate": "권한 상승",
+      "drop": "지금 끝내기",
+      "rootIdentity": "실행 권한(root)",
+      "loadFailed": "도우미 상태를 불러오지 못했습니다."
     },
     "profile": {
       "editor": {

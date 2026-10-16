@@ -11,6 +11,7 @@ const RUNTIME_LABELS: Record<string, ParseKeys> = {
   'state-dir': 'settings.server.flags.stateDir',
   'workbench-url': 'settings.server.flags.workbenchUrl',
   'smart-refresh-at': 'settings.server.flags.smartRefreshAt',
+  'helper-socket': 'settings.server.flags.helperSocket',
 }
 
 export function runtimeLabelKey(flag: string): ParseKeys | null {

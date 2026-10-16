@@ -8,7 +8,11 @@ import type {
   ChallengeInfo,
   DrawerPrefs,
   DrawerRequest,
+  ElevationRequest,
   ErrorResponse,
+  HelperIdentity,
+  HelperIdentityResponse,
+  HelperStatus,
   ImageInfo,
   LoginResponse,
   OverridableSetting,
@@ -59,6 +63,11 @@ const ERROR_CODES: readonly ErrorCode[] = [
   'image_too_large',
   'unsupported_image',
   'profile_readonly',
+  'helper_unavailable',
+  'helper_reauth',
+  'elevation_failed',
+  'elevation_not_allowed',
+  'elevation_required',
 ]
 
 export class ApiError extends Error {
@@ -559,4 +568,53 @@ export async function saveProfile(change: ProfileRequest): Promise<ProfileSaveRe
   const data = await (await request('PUT', '/profile', { body })).json()
   if (!isObj(data) || !isBool(data.applied)) throw new Error('/profile: unexpected response shape')
   return { applied: data.applied }
+}
+
+const HELPER_STATES = ['disabled', 'unavailable', 'none', 'reauth', 'active'] as const
+
+export function isHelperStatus(v: unknown): v is HelperStatus {
+  return isObj(v) && isOneOf(v.state, HELPER_STATES) && isBool(v.canElevate) && isNum(v.elevatedSeconds)
+}
+
+function isHelperIdentity(v: unknown): v is HelperIdentity {
+  return (
+    isObj(v) &&
+    isNum(v.uid) &&
+    isNum(v.gid) &&
+    isStr(v.user) &&
+    isArrayOf(v.groups, (g): g is HelperIdentity['groups'][number] => isObj(g) && isNum(g.id) && isStr(g.name))
+  )
+}
+
+export function isHelperIdentityResponse(v: unknown): v is HelperIdentityResponse {
+  return isObj(v) && isHelperIdentity(v.user) && isOptional(v.root, isHelperIdentity)
+}
+
+// fetchHelperStatus는 이 세션의 권한 도우미 상태(상승 여부·남은 시간 포함)다.
+export async function fetchHelperStatus(signal?: AbortSignal): Promise<HelperStatus> {
+  const data = await getJSON('/helper', { signal })
+  if (!isHelperStatus(data)) throw new Error('/helper: unexpected response shape')
+  return data
+}
+
+// fetchHelperIdentity는 도우미가 이 사용자 권한으로(상승 중이면 root로도) 실행한 worker의 실제 권한이다.
+export async function fetchHelperIdentity(signal?: AbortSignal): Promise<HelperIdentityResponse> {
+  const data = await getJSON('/helper/identity', { signal })
+  if (!isHelperIdentityResponse(data)) throw new Error('/helper/identity: unexpected response shape')
+  return data
+}
+
+// elevate는 비밀번호를 다시 확인해 이 세션에 root 권한 상승을 붙인다(관리자). 비밀번호는 도우미가 직접 확인한다.
+export async function elevate(password: string): Promise<HelperStatus> {
+  const body: ElevationRequest = { password }
+  const data = await postJSON('/helper/elevation', { body })
+  if (!isHelperStatus(data)) throw new Error('/helper/elevation: unexpected response shape')
+  return data
+}
+
+// dropElevation은 상승을 바로 끝낸다.
+export async function dropElevation(): Promise<HelperStatus> {
+  const data = await (await request('DELETE', '/helper/elevation')).json()
+  if (!isHelperStatus(data)) throw new Error('/helper/elevation: unexpected response shape')
+  return data
 }

@@ -1,0 +1,23 @@
+/* 설정 서버 페이지의 권한 도우미 절(HelperSection.tsx) */
+
+.helper-state.active {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: light-dark(#1d5fc4, #8fb8ff);
+}
+
+.helper-state.unavailable,
+.helper-state.reauth {
+  background: light-dark(#fdecea, #4a2422);
+  color: light-dark(#a1261d, #f4b4ae);
+}
+
+/* root 권한이 켜져 있다는 표시는 눈에 띄게 둔다. */
+.helper-elevated {
+  background: light-dark(#fff3d6, #4a3a17);
+  color: light-dark(#8a5a00, #f5cf7a);
+  font-variant-numeric: tabular-nums;
+}
+
+.helper-value {
+  font-size: 12px;
+}

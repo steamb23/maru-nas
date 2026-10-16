@@ -231,6 +231,19 @@
     "ok": "OK",
     "cancel": "Cancel"
   },
+  "elevation": {
+    "title": "Administrator authentication",
+    "description": "Enter your password to use root rights in this session for 5 minutes.",
+    "password": "Password",
+    "confirm": "Authenticate",
+    "confirming": "Checking…",
+    "wrongPassword": "Incorrect password.",
+    "rateLimited": "Too many attempts. Try again in {{remaining}}.",
+    "notAllowed": "This account can't use administrator rights.",
+    "reauth": "Your helper session has ended. Sign out and sign in again.",
+    "unavailable": "The privileged helper isn't available.",
+    "failed": "Couldn't authenticate. Please try again."
+  },
   "linkNotice": {
     "title": "Open in a new tab",
     "workbench": "OMV Workbench opens in a new browser tab. You need to sign in to OMV again in the new tab.",
@@ -383,8 +396,39 @@
         "cookiePath": "Cookie path",
         "stateDir": "State directory",
         "workbenchUrl": "OMV Workbench address",
-        "smartRefreshAt": "SMART check time"
+        "smartRefreshAt": "SMART check time",
+        "helperSocket": "Privileged helper socket"
       }
+    },
+    "helper": {
+      "title": "Privileged helper",
+      "desc": "A separate service running as root lets Onmaru act with your own Linux account and, after you enter your password again, with root rights for a few minutes.",
+      "status": "Status",
+      "state": {
+        "disabled": "Not installed",
+        "unavailable": "Unreachable",
+        "none": "Not in this session",
+        "reauth": "Sign in again",
+        "active": "Active"
+      },
+      "stateDesc": {
+        "disabled": "Run ./install.sh again and choose to install the helper.",
+        "unavailable": "Onmaru can't reach the helper. Check systemctl status onmaru-helper.socket on the server.",
+        "none": "The helper didn't accept this account when you signed in (for example a system account, or it was unreachable). Signing in again retries.",
+        "reauth": "The helper restarted and no longer knows this session. Sign out and sign in again.",
+        "active": "This session can use the helper."
+      },
+      "identity": "Runs as",
+      "identityValue": "{{user}} (uid {{uid}})",
+      "groups": "Groups: {{groups}}",
+      "root": "Root rights",
+      "rootDesc": "Needed by some administrator features. Ends automatically after 5 minutes.",
+      "notAllowed": "This account can't elevate. It must be in openmediavault-admin and in the helper's elevate group (sudo by default).",
+      "elevated": "On · {{time}} left",
+      "elevate": "Elevate",
+      "drop": "End now",
+      "rootIdentity": "Runs as (root)",
+      "loadFailed": "Couldn't load the helper status."
     },
     "profile": {
       "editor": {

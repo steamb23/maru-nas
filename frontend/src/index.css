@@ -40,6 +40,7 @@
 @import './shell/ContextMenu.css';
 @import './shell/Modal.css';
 @import './shell/LinkNotice.css';
+@import './shell/ElevationForm.css';
 @import './shell/LanguageSelect.css';
 
 /* 로그인 */
@@ -63,6 +64,7 @@
 @import './settings/AboutPage.css';
 @import './settings/ClawdParade.css';
 @import './settings/ServerPage.css';
+@import './settings/HelperSection.css';
 @import './settings/AvatarEditor.css';
 @import './settings/ProfilePage.css';
 @import './settings/TagInput.css';
