@@ -116,6 +116,8 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 
 - 세션에서 첫 작업을 시작하기 전에 `git status`로 커밋하지 않은 변경이 남아 있는지 확인한다. 남아 있으면 내용을 요약해 보여 주고 커밋할지 사용자에게 묻는다
 - 별도 지시가 없으면 작업을 시작하기 전에 `main`에서 작업 브랜치와 git 워크트리를 만들고 그 워크트리에 들어가서 진행한다. 주 체크아웃은 다른 세션이나 사용자가 쓰고 있을 수 있다. 주 체크아웃에서 하라는 지시가 있으면 브랜치만 만든다
+  - 브랜치는 `main` 하나를 트렁크로 두고 짧게 사는 작업 브랜치만 만든다. `develop`·`release-*`·`hotfix-*` 같은 장기 브랜치는 두지 않는다. 릴리스를 가리키는 `stable`은 "버전"의 릴리스 절차로만 움직인다
+  - 작업 브랜치 이름은 `<종류>/<짧은-설명>`(영어 소문자, 하이픈)으로 짓는다. 종류는 `feat`(새 기능·앱), `fix`(버그 수정), `docs`(문서), `i18n`(번역), `chore`(빌드·CI·정리), `refactor`(동작 변화 없는 구조 변경)
   - 주 체크아웃에서 `git worktree add -b <브랜치> .claude/worktrees/<이름> main`으로 만들고 `EnterWorktree`의 `path`로 들어간다. `EnterWorktree`의 `name`은 로컬 `main`보다 뒤처질 수 있는 `origin/main`에서 갈라지므로 쓰지 않는다
   - 워크트리 안에서 `git submodule update --init --depth 1`과 `npm --prefix frontend ci`를 먼저 실행한다
   - 사용자는 주 체크아웃에서 `make dev BRANCH=<브랜치>`로 그 워크트리의 개발 서버를 띄울 수 있다
@@ -123,6 +125,7 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 - 작은 단위로 작업하고, 작업 단위 하나가 끝날 때마다 승인을 기다리지 않고 브랜치에 커밋한다
 - 브랜치의 작업이 모두 끝나면 변경 요약을 제시하고, `main` 병합은 사용자가 승인한 뒤에만 한다
 - 커밋 전에 `make check`를 실행한다. 프론트엔드나 embed 관련 변경이면 `make build`도 확인한다
+- `main`으로의 push와 모든 PR은 GitHub Actions(`.github/workflows/ci.yml`)가 `make check`와 `make build`로 검사한다. 외부 기여는 fork → PR로 받고, 유지자가 `main`에 rebase 병합한다(머지 커밋 없음)
 - 새 의존성을 추가하기 전에 이유와 대안을 먼저 설명한다
 - OMV RPC의 서비스·메서드 이름과 역할이 확실하지 않으면 추측하지 말고 OMV 소스(`/usr/share/openmediavault/engined/rpc/`, 로그인 관련은 `/var/www/openmediavault/rpc/session.inc`)를 읽는다
 - 실제 시스템 값에 의존하는 로직은 샘플 데이터로도 테스트할 수 있게 입력부를 분리한다
@@ -137,6 +140,13 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
   - 패치(`0.y.z`): 버그 수정, 번역·문구·문서 수정. 설정과 저장 형식은 그대로일 때
   - `1.0.0`: 깃허브에 공개하면서 설치·업그레이드 방법과 상태 디렉터리 형식의 호환을 약속할 수 있을 때
 - 커밋마다 올리지 않는다(정보 페이지에 커밋 해시가 나온다). 올릴 때는 버전 커밋 하나를 만들고, 공개 배포부터는 그 커밋에 `v<버전>` 태그를 붙인다
+- 릴리스 절차(공개 배포부터). 태그는 고정이고 `stable` 브랜치가 "최신 릴리스"를 가리키는 움직이는 이름이다. `README.md`의 설치 안내는 `stable`을 받는다
+  1. `main`에 버전 커밋을 만든다(`Version` 상수, 이전 버전 태그 이후의 변경 요약)
+  2. 그 커밋에 주석 태그를 붙인다: `git tag -a v<버전> -m "v<버전>"`. 붙인 태그는 옮기지 않는다
+  3. `stable`을 그 태그로 fast-forward한다: `git branch -f stable v<버전>`. `stable`은 앞으로만 가고 되감지 않으며, 태그 없는 커밋을 가리키게 하지 않는다
+  4. `main`, 태그, `stable`을 push하고(`git push origin main v<버전> stable`) GitHub Release에 변경 요약을 올린다
+  - 첫 공개 릴리스에서 `stable`을 처음 만든다. 그 전에는 `stable`이 없으므로 `README.md`의 `git clone -b stable`은 동작하지 않는다
+  - 릴리스 뒤에 급한 수정이 필요하면 `main`에서 고치고 패치 버전으로 위 절차를 반복한다. 릴리스 브랜치를 따로 만들지 않는다
 
 ## 나중에 확인할 것
 

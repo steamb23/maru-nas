@@ -41,12 +41,14 @@ sudo apt install -t trixie-backports golang-go
 - root 계정이라면 `sudo` 없이 실행합니다.
 - 빌드하는 동안 github.com(아이콘 서브모듈)과 registry.npmjs.org(npm 의존성)에 접속하며, 도구 설치와 빌드에 약 1.1GB의 여유 공간이 필요합니다(backports의 Go 기준. 기본 저장소의 Go 1.24를 쓰면 툴체인 때문에 약 0.3GB가 더 필요합니다).
 
-소스는 git으로 받습니다. 아이콘 서브모듈은 설치 스크립트가 받으므로 `--recurse-submodules`는 필요 없습니다.
+소스는 git으로 받습니다. `stable` 브랜치가 최신 릴리스이고 `main`은 개발 중인 코드이므로 설치에는 `stable`을 받습니다. 아이콘 서브모듈은 설치 스크립트가 받으므로 `--recurse-submodules`는 필요 없습니다.
 
 ```sh
-git clone https://github.com/steamb23/Onmaru.git
+git clone -b stable https://github.com/steamb23/Onmaru.git
 cd Onmaru
 ```
+
+특정 버전을 설치하려면 클론한 뒤 그 버전의 태그를 체크아웃합니다(예: `git checkout v0.10.0`). 릴리스 목록과 변경 내용은 [Releases](https://github.com/steamb23/Onmaru/releases)에 있습니다.
 
 ### 설치 스크립트
 
@@ -100,6 +102,8 @@ root로 실행했는데 저장소의 소유자가 root가 아니면(`sudo ./inst
 git pull
 ./install.sh --upgrade
 ```
+
+`stable`을 받았다면 `git pull`로 최신 릴리스가 내려옵니다. 태그를 체크아웃해 특정 버전을 쓰고 있다면 `git pull` 대신 `git fetch --tags`로 받고 새 버전의 태그를 체크아웃합니다.
 
 `--upgrade`는 지금 설치된 설정(`/etc/systemd/system/onmaru.service`의 서비스 사용자, `/etc/default/onmaru`의 나머지 설정)을 그대로 써서 빌드하고 설치합니다. 설정 질문, 요약 확인, 포트 사용 중·OMV의 Force SSL/TLS 같은 경고의 확인을 모두 건너뛰므로(경고는 표시합니다) 일반 사용자라면 sudo 비밀번호만 입력하면 됩니다.
 
