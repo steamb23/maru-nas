@@ -795,6 +795,10 @@ EOF
   fi
 
   health_check "$listen"
+  if [[ $S_HELPER == yes ]] && ! systemctl is-active --quiet "$HELPER.socket"; then
+    warn "$(t "$HELPER.socket is not active. See: systemctl status $HELPER.socket" \
+      "$HELPER.socket 이(가) 켜져 있지 않습니다. 확인: systemctl status $HELPER.socket")"
+  fi
   next_steps "$listen" "$group" "$proxy_unchanged"
 }
 
