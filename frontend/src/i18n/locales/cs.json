@@ -1,0 +1,456 @@
+{
+  "app": {
+    "title": "Onmaru"
+  },
+  "login": {
+    "sessionExpired": "Platnost relace vypršela. Přihlaste se znovu.",
+    "twoFactorRedirect": "Dvoufázové ověření tohoto účtu je nutné dokončit v OpenMediaVault.",
+    "twoFactorPrompt": "Zadejte kód dvoufázového ověření.",
+    "code": "Ověřovací kód",
+    "verify": "Ověřit",
+    "verifying": "Ověřování…",
+    "startOver": "Začít znovu",
+    "username": "Uživatelské jméno",
+    "password": "Heslo",
+    "signIn": "Přihlásit se",
+    "signingIn": "Přihlašování…",
+    "footnote": "Přihlaste se svým účtem OpenMediaVault.",
+    "withCountdown": "{{message}} ({{remaining}})",
+    "error": {
+      "network": "Nelze se spojit se serverem. Zkontrolujte připojení k síti.",
+      "invalidCredentials": "Nesprávné uživatelské jméno nebo heslo.",
+      "rateLimited": "Příliš mnoho pokusů o přihlášení. Zkuste to znovu později.",
+      "challengeFailed": "Nesprávný ověřovací kód.",
+      "challengeExpired": "Čas na ověření vypršel. Přihlaste se znovu.",
+      "omvUnavailable": "Nelze se připojit k OpenMediaVault.",
+      "badRequest": "Zadejte uživatelské jméno a heslo.",
+      "unauthorized": "Nejste přihlášeni. Přihlaste se znovu.",
+      "httpStatus": "Přihlášení se nezdařilo (HTTP {{status}})."
+    }
+  },
+  "offline": {
+    "title": "Odpojeno",
+    "message": "Nelze se spojit se serverem nástěnky. Za chvíli se připojí znovu.",
+    "retry": "Připojit znovu"
+  },
+  "desktop": {
+    "label": "Plocha",
+    "openScreenSettings": "Otevřít nastavení obrazovky"
+  },
+  "window": {
+    "minimize": "Minimalizovat",
+    "maximize": "Maximalizovat",
+    "restore": "Obnovit z maximalizace",
+    "close": "Zavřít",
+    "placeholder": "Již brzy"
+  },
+  "view": {
+    "loadFailed": "Tuto obrazovku se nepodařilo načíst. Obnovte stránku a zkuste to znovu.",
+    "loadFailedShort": "Nepodařilo se načíst",
+    "reload": "Obnovit stránku"
+  },
+  "taskbar": {
+    "label": "Hlavní panel",
+    "restore": "Obnovit",
+    "closeOthers": "Zavřít ostatní",
+    "closeRight": "Zavřít vpravo",
+    "closeAll": "Zavřít vše"
+  },
+  "profile": {
+    "menu": "Uživatelská nabídka ({{username}})",
+    "roleAdmin": "Správce",
+    "roleUser": "Uživatel",
+    "logout": "Odhlásit se",
+    "logoutConfirm": "Odhlásit se? Všechna otevřená okna se zavřou.",
+    "openWorkbench": "Otevřít OMV Workbench",
+    "openProfile": "Otevřít profil"
+  },
+  "apps": {
+    "systemInfo": "Informace o systému",
+    "files": "Soubory",
+    "storage": "Úložiště",
+    "network": "Síť",
+    "temperature": "Teplota",
+    "containers": "Kontejnery",
+    "smart": "Stav disků",
+    "services": "Služby",
+    "workbench": "OMV Workbench",
+    "settings": "Nastavení"
+  },
+  "sysinfo": {
+    "disconnected": "Odpojeno — obnovování připojení…",
+    "cpu": "Procesor",
+    "memory": "Paměť",
+    "uptime": "Doba provozu"
+  },
+  "language": {
+    "label": "Jazyk"
+  },
+  "addons": {
+    "pluginMissing": "Tato aplikace potřebuje zásuvný modul OpenMediaVault, který není nainstalovaný.",
+    "adminRequired": "Tuto aplikaci mohou používat jen správci.",
+    "requiredPlugins": "Potřebné zásuvné moduly: {{plugins}}"
+  },
+  "widgets": {
+    "label": "Widgety",
+    "disconnected": "Odpojeno",
+    "pluginMissing": "Vyžaduje zásuvný modul",
+    "adminRequired": "Jen pro správce",
+    "open": "Otevřít",
+    "remove": "Odebrat widget",
+    "add": "Přidat widget",
+    "noSpace": "Není místo",
+    "more": "a další ({{count}})",
+    "empty": "Nic k zobrazení"
+  },
+  "shortcuts": {
+    "open": "Otevřít",
+    "add": "Přidat zástupce",
+    "remove": "Odebrat zástupce",
+    "addToDesktop": "Přidat zástupce na plochu"
+  },
+  "drawer": {
+    "title": "Všechny aplikace",
+    "search": "Hledat aplikace",
+    "empty": "Žádné odpovídající aplikace",
+    "sort": "Seřadit",
+    "sortLabel": "Řazení: {{method}}",
+    "sortRecommended": "Doporučené",
+    "sortName": "Název"
+  },
+  "storage": {
+    "root": "Systém",
+    "empty": "Nebyly nalezeny žádné souborové systémy.",
+    "readOnly": "Jen pro čtení",
+    "usage": "Využito {{used}} z {{total}} · volno {{free}}"
+  },
+  "addonWindow": {
+    "disconnected": "Odpojeno — obnovování připojení…",
+    "partial": "Některé informace se nepodařilo načíst."
+  },
+  "network": {
+    "empty": "Nebyla nalezena žádná síťová rozhraní.",
+    "rx": "Stahování",
+    "tx": "Odesílání",
+    "up": "Připojeno",
+    "down": "Odpojeno",
+    "totals": "Přijato {{rx}} · Odesláno {{tx}}",
+    "errors": "Chyby {{errors}} · Zahozeno {{dropped}}",
+    "virtual_one": "{{count}} virtuální rozhraní",
+    "virtual_few": "{{count}} virtuální rozhraní",
+    "virtual_many": "{{count}} virtuálního rozhraní",
+    "virtual_other": "{{count}} virtuálních rozhraní"
+  },
+  "temperature": {
+    "empty": "Nebyla nalezena žádná teplotní čidla.",
+    "cpu": "Procesor",
+    "sensor": "Čidlo {{n}}",
+    "checkedAt": "Zjištěno: {{time}}"
+  },
+  "containers": {
+    "empty": "Žádné kontejnery.",
+    "running_one": "Spuštěno: {{count}}",
+    "running_few": "Spuštěno: {{count}}",
+    "running_many": "Spuštěno: {{count}}",
+    "running_other": "Spuštěno: {{count}}",
+    "stopped_one": "Zastaveno: {{count}}",
+    "stopped_few": "Zastaveno: {{count}}",
+    "stopped_many": "Zastaveno: {{count}}",
+    "stopped_other": "Zastaveno: {{count}}",
+    "unknownRuntime": "Neznámé běhové prostředí",
+    "podmanUnverified": "Režim Podman nebyl s touto nástěnkou ověřen. Některé informace mohou být chybné.",
+    "state": {
+      "running": "Běží",
+      "paused": "Pozastaveno",
+      "restarting": "Restartuje se",
+      "exited": "Zastaveno",
+      "created": "Vytvořeno",
+      "dead": "Ukončeno chybou",
+      "removing": "Odstraňuje se",
+      "unknown": "Neznámý"
+    },
+    "health": {
+      "healthy": "V pořádku",
+      "unhealthy": "Nefunkční",
+      "starting": "Ověřuje se"
+    },
+    "action": {
+      "start": "Spustit",
+      "stop": "Zastavit",
+      "restart": "Restartovat",
+      "starting": "Spouštění…",
+      "stopping": "Zastavování…",
+      "restarting": "Restartování…",
+      "confirmStart": "Spustit {{name}}?",
+      "confirmStop": "Zastavit {{name}}? Služby v tomto kontejneru budou nedostupné, dokud ho znovu nespustíte.",
+      "confirmRestart": "Restartovat {{name}}? Služby v tomto kontejneru budou krátce přerušeny."
+    }
+  },
+  "smart": {
+    "checking": "Kontrola disků…",
+    "noDisks": "Žádné disky s podporou SMART.",
+    "allGood": "Všechny disky jsou v pořádku",
+    "problems_one": "{{count}} disk vyžaduje pozornost",
+    "problems_few": "{{count}} disky vyžadují pozornost",
+    "problems_many": "{{count}} disku vyžaduje pozornost",
+    "problems_other": "{{count}} disků vyžaduje pozornost",
+    "checkedShort": "Zkontrolováno: {{time}}",
+    "checkedAt": "Poslední kontrola: {{time}}",
+    "refresh": "Zkontrolovat nyní",
+    "refreshing": "Kontrola…",
+    "wakeHint": "Kontrola probouzí uspané disky, proto se automaticky provádí jen jednou denně.",
+    "notMonitored": "Nesledováno",
+    "status": {
+      "good": "V pořádku",
+      "warning": "Varování",
+      "failing": "Kritický",
+      "unknown": "Neznámý"
+    }
+  },
+  "services": {
+    "empty": "Žádné služby.",
+    "running_one": "Běží: {{count}}",
+    "running_few": "Běží: {{count}}",
+    "running_many": "Běží: {{count}}",
+    "running_other": "Běží: {{count}}",
+    "attention_one": "{{count}} problém",
+    "attention_few": "{{count}} problémy",
+    "attention_many": "{{count}} problému",
+    "attention_other": "{{count}} problémů",
+    "state": {
+      "running": "Běží",
+      "stopped": "Stále zastavena",
+      "disabled": "Vypnuta",
+      "disabledRunning": "Stále běží"
+    },
+    "action": {
+      "enable": "Zapnout",
+      "disable": "Vypnout",
+      "enabling": "Zapínání…",
+      "disabling": "Vypínání…",
+      "confirmEnable": "Zapnout {{name}}?",
+      "confirmDisable": "Vypnout {{name}}? OpenMediaVault změnu použije okamžitě.",
+      "confirmDisableSsh": "Vypnout {{name}}? Aktuální relace SSH se mohou přerušit a přes SSH se nebude možné přihlásit, dokud službu znovu nezapnete.",
+      "confirmDisableSamba": "Vypnout {{name}}? Klienti, kteří používají sdílené složky přes SMB, budou odpojeni.",
+      "confirmDisableNfs": "Vypnout {{name}}? Klienti, kteří používají sdílení NFS, budou odpojeni.",
+      "confirmDisableRsyncd": "Vypnout {{name}}? Zálohy a synchronizace, které se připojují k tomuto serveru rsync, selžou."
+    },
+    "toggleHint": "Zde lze zapínat a vypínat jen SSH, SMB/CIFS, NFS a server RSync. Ostatní služby nastavte v OpenMediaVault."
+  },
+  "dialog": {
+    "ok": "OK",
+    "cancel": "Zrušit"
+  },
+  "linkNotice": {
+    "title": "Otevřít na nové kartě",
+    "workbench": "OMV Workbench se otevře na nové kartě prohlížeče. Na nové kartě se budete muset do OMV přihlásit znovu.",
+    "dontShowAgain": "Příště nezobrazovat",
+    "open": "Otevřít"
+  },
+  "actions": {
+    "working": "Zpracování…",
+    "dismiss": "Zavřít",
+    "rowLabel": "{{action}} {{name}}",
+    "failedPrefix": "Akce „{{action}}“ selhala:",
+    "error": {
+      "action_busy": "U této položky ještě probíhá jiná operace.",
+      "action_failed": "OMV nemohl operaci dokončit. Podrobnosti najdete v OMV.",
+      "action_timeout": "OMV odpovídá příliš dlouho. Za chvíli stav zkontrolujte znovu.",
+      "config_dirty": "OMV obsahuje nepoužité změny konfigurace. Nejprve je v OMV použijte nebo vraťte zpět.",
+      "admin_required": "Toto mohou dělat jen správci.",
+      "plugin_missing": "Potřebný zásuvný modul OpenMediaVault není nainstalovaný.",
+      "omv_error": "Nelze se spojit s OpenMediaVault.",
+      "unknown": "Požadavek selhal."
+    }
+  },
+  "settings": {
+    "nav": "Části nastavení",
+    "showNav": "Zobrazit části",
+    "groups": {
+      "user": "Uživatel",
+      "admin": "Správa"
+    },
+    "pages": {
+      "screen": "Obrazovka",
+      "general": "Obecné",
+      "loginScreen": "Přihlašovací obrazovka",
+      "defaultScreen": "Výchozí obrazovka",
+      "server": "Server",
+      "about": "O aplikaci",
+      "profile": "Profil"
+    },
+    "about": {
+      "build": "Informace o verzi",
+      "version": "Verze",
+      "commit": "Commit",
+      "modified": "Upraveno",
+      "commitTime": "Datum commitu",
+      "goVersion": "Verze Go",
+      "omvVersion": "Verze OMV",
+      "unknown": "Neznámá",
+      "notRecorded": "Nezaznamenáno",
+      "loadFailed": "Informace o verzi se nepodařilo načíst.",
+      "license": "Licence",
+      "licenseText": "Onmaru je svobodný software šířený pod licencí GNU General Public License v3.0.",
+      "notices": "Upozornění k open source",
+      "noticesIntro": "Onmaru obsahuje následující software a prostředky třetích stran.",
+      "notes": {
+        "omvLogo": "Používá se jen k označení samotného openmediavault. Neznamená to podporu ani spojení.",
+        "pretendard": "Použito pro písmo v logu Onmaru, převedené na obrysy.",
+        "go": "Standardní knihovna zkompilovaná do backendu."
+      }
+    },
+    "common": {
+      "loading": "Načítání nastavení…",
+      "loadFailed": "Nastavení se nepodařilo načíst. Zkouší se znovu…",
+      "saveFailed": "Změnu se nepodařilo uložit. Uloží se spolu s vaší další změnou.",
+      "siteSaveFailed": "Nastavení se nepodařilo uložit. Znovu se zobrazuje předchozí hodnota."
+    },
+    "screen": {
+      "theme": "Motiv",
+      "modes": {
+        "auto": "Automaticky",
+        "light": "Světlý",
+        "dark": "Tmavý"
+      },
+      "wallpaper": "Pozadí plochy",
+      "following": "Používá se výchozí hodnota nastavená správcem.",
+      "useDefault": "Použít výchozí",
+      "taskbar": "Hlavní panel",
+      "taskbarAlign": "Zarovnání ikon",
+      "taskbarAlignDesc": "Kde jsou na hlavním panelu tlačítko „Všechny aplikace“ a tlačítka oken.",
+      "taskbarAligns": {
+        "center": "Na střed",
+        "left": "Vlevo"
+      }
+    },
+    "image": {
+      "upload": "Nahrát obrázek…",
+      "uploading": "Nahrávání…",
+      "uploaded": "Nahraný obrázek",
+      "delete": "Smazat nahraný obrázek",
+      "deleteButton": "Smazat",
+      "deleteConfirm": "Smazat nahraný obrázek? Pokud se používá, zobrazí se místo něj výchozí pozadí.",
+      "hint": "PNG, JPEG nebo WebP, nejvýše 20 MB.",
+      "tooLarge": "Obrázek je příliš velký. Nahrajte obrázek o velikosti nejvýše 20 MB.",
+      "unsupported": "Nahrát lze jen obrázky PNG, JPEG a WebP.",
+      "failed": "Obrázek se nepodařilo nahrát ani smazat."
+    },
+    "general": {
+      "language": "Jazyk",
+      "languageDesc": "Platí jen pro tento prohlížeč.",
+      "motion": "Pohyb",
+      "animations": "Animace",
+      "animationsDesc": "Animovat okna, nabídky a změny pozadí.",
+      "reducedMotion": "V nastavení zařízení je zapnuté „Omezit pohyb“, proto animace zůstávají vypnuté."
+    },
+    "loginScreen": {
+      "intro": "Tato nastavení platí pro přihlašovací obrazovku všech uživatelů. Výsledek uvidíte po odhlášení.",
+      "background": "Pozadí přihlášení",
+      "backgroundHint": "Obrázek se zobrazuje před přihlášením, takže ho uvidí každý, kdo se dostane k nástěnce. PNG, JPEG nebo WebP, nejvýše 20 MB.",
+      "idle": "Při čekání",
+      "easterEgg": "Animace při čekání",
+      "easterEggDesc": "Zobrazí animaci, když přihlašovací obrazovka zůstane 30 sekund bez použití."
+    },
+    "defaultScreen": {
+      "intro": "Platí pro uživatele, kteří si v nastavení obrazovky nevybrali vlastní motiv ani pozadí."
+    },
+    "server": {
+      "intro": "Nastavení, se kterým Onmaru běží. Dvě hodnoty níže lze změnit zde, ostatní se nastavují v konfiguračním souboru serveru.",
+      "loadFailed": "Nastavení serveru se nepodařilo načíst.",
+      "saveFailed": "Nastavení se nepodařilo uložit.",
+      "invalid": "Hodnota nemá platný formát.",
+      "editable": "Změnit zde",
+      "editableDesc": "Platí okamžitě a má přednost před hodnotou z konfiguračního souboru.",
+      "workbenchDesc": "Adresa, na které prohlížeč otevírá webové rozhraní OMV. Ponechte prázdné, chcete-li aplikaci OMV Workbench skrýt.",
+      "smartDesc": "Informace SMART se znovu načítají jednou denně po tomto čase (čas serveru).",
+      "fromServer": "Používá se hodnota serveru: {{base}}",
+      "overridden": "Změněno zde. Hodnota serveru: {{base}}",
+      "save": "Uložit",
+      "reset": "Použít hodnotu serveru",
+      "empty": "(nenastaveno)",
+      "runtime": "Aktuální nastavení",
+      "runtimeDesc": "Hodnoty, se kterými se server spustil, a jejich původ.",
+      "overriddenBadge": "Změněno zde",
+      "howTo": "Změna ostatních nastavení",
+      "howToDesc": "Tyto hodnoty jsou proměnné prostředí v /etc/default/onmaru. Po úpravě službu restartujte. Pokud změníte adresu pro naslouchání, upravte i reverzní proxy.",
+      "howToInstall": "Můžete také znovu spustit ./install.sh z repozitáře a odpovědět na jeho otázky.",
+      "copy": "Kopírovat příkazy",
+      "copied": "Zkopírováno",
+      "sources": {
+        "default": "Výchozí",
+        "env": "Proměnná prostředí",
+        "flag": "Volba příkazového řádku",
+        "systemd": "systemd"
+      },
+      "flags": {
+        "listen": "Adresa pro naslouchání",
+        "allowNonLoopback": "Povolit naslouchání mimo loopback",
+        "omvUrl": "Adresa OMV",
+        "cookiePath": "Cesta souboru cookie",
+        "stateDir": "Adresář stavu",
+        "workbenchUrl": "Adresa OMV Workbench",
+        "smartRefreshAt": "Čas kontroly SMART"
+      }
+    },
+    "profile": {
+      "editor": {
+        "title": "Upravit fotku",
+        "view": "Poloha fotky. Přetáhněte ji nebo ji posuňte šipkami, klávesami + a - ji přibližte či oddalte.",
+        "zoom": "Přiblížení",
+        "hint": "Přetažením fotku umístěte. Vnitřek kruhu bude vaše profilová fotka.",
+        "save": "Uložit"
+      },
+      "changePhoto": "Změnit fotku…",
+      "removePhoto": "Odebrat fotku",
+      "removePhotoConfirm": "Odebrat profilovou fotku? Místo ní se zobrazí výchozí avatar.",
+      "account": "Účet",
+      "loadFailed": "Informace o vašem účtu se z OMV nepodařilo načíst.",
+      "username": "Uživatelské jméno",
+      "role": "Role",
+      "email": "E-mail",
+      "groups": "Skupiny",
+      "none": "(žádné)",
+      "readOnly": {
+        "system": "Jde o vestavěný systémový účet OMV, proto nelze měnit jeho e-mail ani štítky.",
+        "locked": "Změny tohoto účtu jsou v OMV zakázané."
+      },
+      "saving": "Ukládání…",
+      "savedApplied": "Uloženo a použito v OMV.",
+      "savedPending": "Uloženo. V OMV teď čeká změna, kterou musí správce použít ve webovém rozhraní OMV.",
+      "saveConfigDirty": "Neuloženo: OMV obsahuje změny, které ještě nebyly použity. Nejprve je použijte ve webovém rozhraní OMV.",
+      "saveApplyFailed": "Informace o účtu se změnily, ale jejich použití v OMV se nezdařilo. Použijte je ve webovém rozhraní OMV.",
+      "saveBusy": "Vaše předchozí změna se stále ukládá.",
+      "saveFailed": "Informace o účtu se nepodařilo uložit.",
+      "omv": "Účet OMV",
+      "editInOmv": "Upravit v OMV",
+      "omvHintAdmin": "Heslo, skupiny a další údaje změníte na stránce úprav uživatele v OMV. Otevře se na nové kartě.",
+      "omvHintSystem": "Vestavěný účet správce OMV se ve správě uživatelů OMV nezobrazuje.",
+      "omvHintNoWorkbench": "Nastavte v nastavení serveru adresu OMV Workbench, abyste odsud mohli otevírat stránku úprav uživatele v OMV.",
+      "omvHintUser": "Heslo a další údaje účtu může změnit správce ve webovém rozhraní OMV.",
+      "tags": "Štítky",
+      "tagsDesc": "Totéž co Tags ve správě uživatelů OMV. Štítky oddělujte čárkou nebo klávesou Enter.",
+      "addTag": "Přidat štítek",
+      "removeTag": "Odebrat štítek {{tag}}",
+      "emailPlaceholder": "jmeno@example.com",
+      "emailInvalid": "Toto nevypadá jako e-mailová adresa.",
+      "tagsInvalid": "Štítky nesmí obsahovat čárky (,) ani dvojtečky (:) a dohromady smí mít nejvýše 255 bajtů a 32 štítků.",
+      "invalid": "Zkontrolujte e-mailovou adresu a štítky.",
+      "saveDescAdmin": "Uložením se změna v OMV okamžitě použije.",
+      "saveDescUser": "Po uložení správce použije čekající změnu ve webovém rozhraní OMV."
+    }
+  },
+  "appearance": {
+    "presets": {
+      "dusk": "Soumrak",
+      "aurora": "Polární záře",
+      "ocean": "Oceán",
+      "forest": "Les",
+      "sunset": "Západ slunce",
+      "night": "Noční obloha",
+      "graphite": "Grafit",
+      "slate": "Břidlice",
+      "plum": "Švestka"
+    }
+  }
+}

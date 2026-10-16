@@ -2,16 +2,20 @@
 //
 // 언어를 추가하려면 locales/<code>.json을 만들고 SUPPORTED_LANGUAGES에 넣는다.
 
-// 지원 언어. 순서는 언어 선택 목록의 순서이며, 그 언어 자신의 이름(languageName)을 라틴 문자, 한자·가나·한글
-// 순으로 놓았다. 지역·문자 변형은 BCP 47 태그로 쓴다(zh-Hans 간체, zh-Hant 번체, pt-PT 유럽 포르투갈어).
+// 지원 언어. 순서는 언어 선택 목록의 순서이며, 그 언어 자신의 이름(languageName)을 라틴 문자, 키릴 문자,
+// 한자·가나·한글 순으로 놓았다. 지역·문자 변형은 BCP 47 태그로 쓴다(zh-Hans 간체, zh-Hant 번체, pt-PT 유럽 포르투갈어).
 export const SUPPORTED_LANGUAGES = [
+  'cs',
   'de',
   'en',
   'es',
   'fr',
   'it',
   'nl',
+  'pl',
   'pt-PT',
+  'ru',
+  'uk',
   'ja',
   'zh-Hans',
   'zh-Hant',

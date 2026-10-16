@@ -65,6 +65,8 @@ describe('languageName', () => {
   it('소문자로 시작하는 이름은 첫 글자를 대문자로 쓴다', () => {
     expect(languageName('fr')).toBe('Français')
     expect(languageName('es')).toBe('Español')
+    expect(languageName('cs')).toBe('Čeština')
+    expect(languageName('uk')).toBe('Українська')
   })
 
   it('모든 지원 언어가 이름을 가진다', () => {
