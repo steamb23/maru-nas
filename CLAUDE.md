@@ -164,12 +164,7 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 - 강제 테마(라이트·다크)에서 묶음 로고(`<img>` 안 SVG의 `prefers-color-scheme`) 글자색이 따라가는지 Firefox·Safari에서 확인한다. Chromium에서는 따라간다. 따르지 않으면 로고를 `?raw`로 인라인한다
 - `install.sh`로 실제 설치한 뒤(사용자가 실행): 유닛 하드닝(`ProtectSystem=strict`, `DevicePolicy=closed`, `RestrictAddressFamilies` 등. `PrivateDevices=yes`는 `/dev/disk/by-label`을 숨겨 파일시스템 라벨이 사라지므로 쓰지 않는다) 아래에서 모든 애드온 데이터가 나오는지, Docker Caddy의 `/run/onmaru` 바인드 마운트가 서비스 재시작·재부팅 후에도 유지되는지. 지금은 `systemd-run --user`로 비슷한 제한을 걸어 가짜 OMV로만 확인했다
 - OMV 워크벤치 링크 앱을 실제 OMV로 확인한다(사용자가 `make dev`에 `ONMARU_WORKBENCH_URL`을 두고). 같은 탭을 다시 쓸 때 브라우저가 그 탭으로 전환하는지(Chrome·Firefox), 그 탭의 OMV 로그인이 유지되는지. 지금은 가짜 OMV와 같은 출처 주소로만 확인했다
-- 권한 도우미를 실제 설치로 확인한다(사용자가 `./install.sh`에서 도우미를 고르고). 지금은 root 없이 Go 테스트(가짜 계정, 테스트 실행 파일을 worker로)와 `make dev-fake`로만 확인했다
-  - `systemctl status onmaru-helper.socket`, 소켓 권한(`ls -l /run/onmaru-helper/`: 서비스 사용자 소유 `0600`), onmaru(`ProtectSystem=strict`)가 소켓에 connect되는지
-  - 다른 계정(예: 프록시 사용자)으로 접속하면 거절되고 `journalctl -u onmaru-helper`에 `rejected connection`이 남는지
-  - 로그인 뒤 서버 페이지의 "실행 권한"이 내 uid·그룹인지(실제 강등, `os/user` 순수 Go의 보조 그룹), 틀린 비밀번호·맞는 비밀번호로 상승하고 "실행 권한(root)"이 uid 0인지, 5분 뒤 끝나는지
-  - 유닛 하드닝(`CapabilityBoundingSet=CAP_SETUID CAP_SETGID CAP_KILL`, `PrivateNetwork=yes`, `PrivateDevices=yes`, `MemoryDenyWriteExecute`, `SystemCallFilter=@system-service`) 아래에서 `unix_chkpwd`가 `/etc/shadow`를 읽는지, worker 강등과 시간 초과 종료(`CAP_KILL`)가 되는지, `/srv` 아래 나중에 마운트한 디스크가 보이는지. `systemd-analyze security onmaru-helper`
-  - 유휴 종료(10분) 뒤 다음 요청에 소켓 활성화로 다시 뜨는지, 도우미를 다시 시작하면 서버 페이지가 "다시 로그인 필요"를 보이는지
-  - `--upgrade`가 도우미 선택(`ONMARU_HELPER_SOCKET`)과 상승 그룹을 기억하는지, `--no-helper`·`--uninstall`이 도우미를 지우는지
+- 권한 도우미를 이 NAS(실제 설치)에서 확인한다(사용자가 `./install.sh`에서 도우미를 고르고). 순정 OMV 8.3.1 테스트 VM(`~/.cache/onmaru-vm`)에서는 2026-10-17에 확인했다: 소켓 소유·`0600`과 onmaru의 connect, 다른 uid의 접속 거절(`forbidden_peer`, `rejected connection` 로그), 실제 강등(사용자 uid·보조 그룹, 남의 홈과 root 소유 `0600` 파일은 읽지 못함, 올린 파일의 소유자·`0664`), 상승(틀린·맞는 비밀번호, root uid 0, 5분 뒤 끝남, 사용해도 늘지 않음, 해제), `openmediavault-admin`만 있는 계정과 내장 `admin`의 상승 거절, 실패 제한, 하드닝(`CapBnd` `0xe0`, `NoNewPrivs`, seccomp, `systemd-analyze security` 1.8), 시작 뒤 `/srv`에 마운트한 디스크, 유휴 종료와 소켓 재활성화, 도우미 재시작 뒤 "다시 로그인 필요", `--upgrade`·`--no-helper`·`--uninstall`
+  - 남은 것: 이 NAS의 실제 계정·공유 폴더 ACL에서의 동작, Docker Caddy(`/run/onmaru` 바인드 마운트)와 함께 돌 때, 시간 초과로 worker를 강제 종료하는 경로(`CAP_KILL`), OMV 8.5의 2차 인증 계정에서 대기 티켓이 활성화되는지(VM은 8.3.1이라 2차 인증이 없다)
 - (보류: 새 탭 방식을 택했다) 같은 출처에서 OMV workbench를 iframe 창으로 띄울 수 있는지
 - (보류) 같은 탭 iframe은 sessionStorage를 공유하므로, 대시보드 로그인 후 OMV 창도 로그인 상태로 보이게 할 수 있는지. OMV 내부 저장 키(`username`, `permissions`)에 의존하는 실험이라 OMV 업데이트 시 깨질 수 있다. 실험 브랜치에서만 다룬다

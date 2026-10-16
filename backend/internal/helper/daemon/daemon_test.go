@@ -3,6 +3,7 @@ package daemon
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -361,6 +362,20 @@ func TestOpenRateLimit(t *testing.T) {
 	if resp := e.expect(proto.CodeRateLimited, bad); resp.RetryAfterSeconds != 60 {
 		t.Fatalf("second lock = %ds, want 60", resp.RetryAfterSeconds)
 	}
+}
+
+// brokenVerifier는 확인 도구가 고장 난 경우(unix_chkpwd 실행 실패)를 흉내 낸다.
+type brokenVerifier struct{}
+
+func (brokenVerifier) Verify(context.Context, string, string) error { return errors.New("exec failed") }
+
+// 확인 자체를 못 한 시도는 실패로 세지 않는다. 세면 도구가 고장 났을 때 정상 사용자까지 잠긴다.
+func TestBrokenVerifierDoesNotLock(t *testing.T) {
+	e := newEnv(t, func(c *Config) { c.Verifier = brokenVerifier{} })
+	for range failLimit + 2 {
+		e.expect(proto.CodeInternal, proto.Request{Op: proto.OpOpen, User: "alice", Password: "alice-pw"})
+	}
+	e.logs.wait(t, "cannot verify password")
 }
 
 func TestPendingTicket(t *testing.T) {

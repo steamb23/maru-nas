@@ -41,11 +41,11 @@
 
 ## 티켓과 상승
 
-- 티켓: 256비트 난수, 도우미 메모리에 SHA-256 키로만 보관. 유휴 24시간, 최대 1000개. 사용할 때마다 계정이 그대로인지(같은 uid, 정책 통과) 다시 확인하고 아니면 폐기한다. 도우미가 다시 시작하면 모두 사라진다
+- 티켓: 256비트 난수, 도우미 메모리에 SHA-256 키로만 보관. 유휴 24시간, 최대 1000개. 상태 확인(`session.status`)도 사용으로 치므로 실제 수명은 onmaru 세션이 정한다(세션이 끝나면 삭제 훅이 닫는다). 유휴 기한은 onmaru가 닫지 못한 티켓의 상한이다. 사용할 때마다 계정이 그대로인지(같은 uid, 정책 통과) 다시 확인하고 아니면 폐기한다. 도우미가 다시 시작하면 모두 사라진다
 - 발급 조건(OMV `UserMgmt.authUser`와 같다): 비밀번호(`unix_chkpwd <user> nonull` + `chkexpiry`), uid 0 아님, `openmediavault-admin`이거나 `UID_MIN..UID_MAX` 안
 - onmaru는 OMV 로그인에 성공하면 같은 비밀번호로 `open`한다(5초 제한, 실패해도 로그인은 진행하고 도우미 기능만 없다). 2차 인증이면 `pending` 티켓을 `auth.Pending`에 두고 인증을 마치면 `activate`해 세션으로 옮긴다(`Store.ClaimPending`). 세션이 어떻게 끝나든 `auth.Store`의 삭제 훅(`OnRemove`, `OnRemovePending`)이 `close`한다. onmaru가 시작할 때 `reset`으로 이전 실행의 티켓을 지운다
 - 상승: `openmediavault-admin`과 상승 그룹(`-elevate-group`, 기본 `sudo`)에 모두 속한 사용자가 비밀번호를 다시 확인하면 그 티켓에 5분. 절대 시간이고 연산마다 늘리지 않는다. root 연산마다 그룹을 다시 읽어 빠졌으면 상승을 거둔다
-- 실패 제한(도우미 자체): 사용자별 5분 안 3번 실패부터 30초에서 두 배씩 최대 15분, 사용자별 동시 확인 1개, 전체 4개, 실패 응답 전 1초. `unix_chkpwd`는 `pam_faillock`을 거치지 않는다(OMV의 webgui PAM은 `deny=3 unlock_time=0`이라 그 길로 확인하면 계정이 영구히 잠길 수 있다)
+- 실패 제한(도우미 자체): 사용자별 5분 안 3번 실패부터 30초에서 두 배씩 최대 15분, 사용자별 동시 확인 1개, 전체 4개, 실패 응답 전 1초. 확인 자체를 못 한 시도(`unix_chkpwd` 실행 실패)는 실패로 세지 않는다(도구가 고장 났을 때 정상 사용자가 잠기지 않게). 상승할 수 없는 계정은 비밀번호를 확인하기 전에 거절한다. `unix_chkpwd`는 `pam_faillock`을 거치지 않는다(OMV의 webgui PAM은 `deny=3 unlock_time=0`이라 그 길로 확인하면 계정이 영구히 잠길 수 있다)
 - Go로 shadow 해시를 직접 검증하지 않는다(stdlib에 crypt/yescrypt가 없다). `sudo -S`로 확인하는 방식은 setuid 실행이 필요해 도우미의 `NoNewPrivileges`를 꺼야 하고 sudoers에 없는 OMV 관리자(내장 admin)는 확인할 수 없어 쓰지 않았다
 
 ## worker
@@ -63,7 +63,7 @@
 - 실제로 열 수 있는지는 커널이 사용자 권한(소유권·ACL)으로 정한다. 기준 정책은 onmaru가 뚫렸을 때 닿는 범위를 줄이는 겹침이다. 공유 폴더 단위로 더 좁히는 일은 onmaru의 파일 API(파일 탐색기)가 OMV RPC로 한다
 - 기준 디렉터리 자체는 지우거나 옮기거나 덮어쓸 수 없다. 이름 바꾸기는 같은 기준 안에서만 하고 대상이 있으면 `exists`다
 - 읽기는 일반 파일만(`O_NONBLOCK`으로 열어 FIFO에서 멈추지 않음). 목록은 1만 개까지(`truncated`). umask는 0002(OMV Samba의 create mask 0664 / directory mask 0775)
-- 덮어쓰기는 새 inode로 바꾸므로 소유자는 올린 사용자가 되고 ACL은 폴더의 기본 ACL을 따른다. 권한 비트는 되도록 유지한다. 덮어쓰지 않을 때는 하드 링크로 같은 이름이 없는지 원자적으로 확인하고, 하드 링크를 못 쓰는 파일시스템이면 다시 확인한 뒤 이름을 바꾼다
+- 덮어쓰기는 새 inode로 바꾸므로 소유자는 올린 사용자가 되고 ACL은 폴더의 기본 ACL을 따른다. rwx 권한 비트는 되도록 유지하고(소유자일 때만 바뀐다) setuid·setgid·sticky는 옮기지 않는다. 덮어쓰지 않을 때는 하드 링크로 같은 이름이 없는지 원자적으로 확인하고, 하드 링크를 못 쓰는 파일시스템이면 다시 확인한 뒤 이름을 바꾼다
 - 올리기가 실패하면 worker가 임시 파일(`.onmaru-upload-<난수>.part`)을 지운다. 시간 초과로 worker가 강제 종료되면(SIGKILL) 지우지 못하고 남는다. 이 접두사의 이름으로는 올릴 수 없다
 
 ## systemd

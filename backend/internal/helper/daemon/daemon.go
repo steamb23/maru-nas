@@ -301,17 +301,20 @@ func (s *Server) verify(ctx context.Context, user, password, step string) error 
 		return err
 	}
 	err = s.cfg.Verifier.Verify(ctx, user, password)
-	done(err == nil)
 	switch {
 	case err == nil:
+		done(passed)
 		return nil
 	case errors.Is(err, ErrAuth):
+		done(failed)
 		s.cfg.Logf("%s failed: user=%q: wrong password or expired account", step, user)
 		if s.cfg.FailDelay > 0 {
 			time.Sleep(s.cfg.FailDelay)
 		}
 		return proto.NewError(proto.CodeAuthFailed)
 	default:
+		// 확인 도구가 고장 난 것이지 비밀번호가 틀린 것이 아니므로 실패로 세지 않는다.
+		done(unchecked)
 		s.cfg.Logf("%s failed: user=%q: cannot verify password: %v", step, user, err)
 		return proto.NewError(proto.CodeInternal)
 	}

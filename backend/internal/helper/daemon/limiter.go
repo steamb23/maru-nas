@@ -26,6 +26,19 @@ const (
 	slotWait = 5 * time.Second
 )
 
+// outcome은 비밀번호 확인 결과다.
+type outcome int
+
+const (
+	// passed는 비밀번호가 맞았다는 뜻이다. 그 사용자의 실패 기록을 지운다.
+	passed outcome = iota
+	// failed는 비밀번호가 틀렸거나 계정이 만료됐다는 뜻이다. 실패로 센다.
+	failed
+	// unchecked는 확인 자체를 하지 못했다는 뜻이다(unix_chkpwd 실행 실패 등). 실패로 세지 않는다.
+	// 세면 확인 도구가 고장 났을 때 정상 사용자까지 잠긴다.
+	unchecked
+)
+
 type attempts struct {
 	fails       []time.Time
 	level       int
@@ -46,8 +59,8 @@ func newLimiter(now func() time.Time) *limiter {
 }
 
 // begin은 user의 비밀번호 확인을 시작한다. 잠겨 있으면 rate_limited, 같은 사용자의 확인이
-// 진행 중이거나 자리가 없으면 busy다. 확인이 끝나면 done(성공 여부)을 반드시 부른다.
-func (l *limiter) begin(ctx context.Context, user string) (done func(ok bool), err error) {
+// 진행 중이거나 자리가 없으면 busy다. 확인이 끝나면 done(결과)을 반드시 부른다.
+func (l *limiter) begin(ctx context.Context, user string) (done func(outcome), err error) {
 	l.mu.Lock()
 	now := l.now()
 	a := l.users[user]
@@ -84,13 +97,16 @@ func (l *limiter) begin(ctx context.Context, user string) (done func(ok bool), e
 		release()
 		return nil, proto.NewError(proto.CodeBusy)
 	}
-	return func(ok bool) {
+	return func(res outcome) {
 		<-l.slots
 		l.mu.Lock()
 		defer l.mu.Unlock()
 		a.busy = false
-		if ok {
+		switch res {
+		case passed:
 			delete(l.users, user)
+			return
+		case unchecked:
 			return
 		}
 		now := l.now()
