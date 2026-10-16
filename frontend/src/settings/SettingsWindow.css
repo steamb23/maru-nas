@@ -189,6 +189,17 @@
   outline: none;
 }
 
+/* 페이지 영역(제목 머리 아래). 페이지 위에 겹쳐 그리는 레이어(정보 페이지의 .clawd-layer)의 기준 상자다.
+   .settings-page는 위치 지정이 없어, 그 안에서 absolute로 그린 레이어는 스크롤 컨테이너에 잘리거나
+   함께 스크롤되지 않고 이 상자에 붙는다. 너비가 .settings-main과 같으므로 .settings-page의 퍼센트 padding도 그대로다. */
+.settings-body {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
 .settings-page {
   flex: 1;
   min-height: 0;

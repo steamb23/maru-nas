@@ -33,7 +33,7 @@ function play(el: Element | null, from: Keyframe, to: Keyframe, opening: boolean
   if (onFinish) anim.onfinish = onFinish
 }
 
-export function SettingsWindow(_props: WindowViewProps) {
+export function SettingsWindow({ active }: WindowViewProps) {
   const { t } = useTranslation()
   const user = useAuthStore((s) => s.user)
   const admin = user?.admin === true
@@ -195,8 +195,12 @@ export function SettingsWindow(_props: WindowViewProps) {
           )}
           <h2 className="settings-title">{t(current.labelKey)}</h2>
         </header>
-        <div className="settings-page" key={current.id}>
-          <PageView />
+        {/* 페이지 위에 겹쳐 그리는 레이어(정보 페이지의 Clawd)의 기준 상자. 스크롤 컨테이너 밖에 있어야
+            레이어가 내용과 함께 스크롤되지 않는다. */}
+        <div className="settings-body">
+          <div className="settings-page" key={current.id}>
+            <PageView active={active} />
+          </div>
         </div>
       </div>
     </div>
