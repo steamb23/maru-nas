@@ -1,8 +1,4 @@
 /* 설정의 정보 페이지(AboutPage.tsx). */
-.about {
-  max-width: 720px;
-}
-
 .about-brand {
   display: flex;
   flex-direction: column;

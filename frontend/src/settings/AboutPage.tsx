@@ -33,7 +33,7 @@ export function AboutPage() {
   const revisionTime = about ? formatRevisionTime(about, lang) : null
 
   return (
-    <div className="about">
+    <>
       <div className="about-brand">
         <img className="about-lockup" src={lockupUrl} alt={`${BRAND_NAME} (${BRAND_ROMANIZED})`} draggable={false} />
         <p className="about-tagline">{BRAND_TAGLINE}</p>
@@ -90,6 +90,6 @@ export function AboutPage() {
           ))}
         </SettingsCard>
       </SettingsSection>
-    </div>
+    </>
   )
 }

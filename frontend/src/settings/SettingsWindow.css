@@ -1,6 +1,8 @@
 /* 설정 앱 창. 사이드바와 내용 두 열이다.
-   창이 좁으면(.narrow, pages.ts의 SETTINGS_NARROW_WIDTH) 사이드바를 숨기고 메뉴 단추로 내용 위에 덮어 연다(.overlay). */
+   창이 좁으면(.narrow, pages.ts의 SETTINGS_NARROW_WIDTH) 사이드바를 숨기고 메뉴 단추로 내용 위에 덮어 연다(.overlay).
+   페이지 제목과 내용은 최대 폭(--settings-page-width) 열로 가운데 정렬한다. */
 .settings {
+  --settings-page-width: 720px;
   position: relative;
   display: grid;
   grid-template-columns: 232px minmax(0, 1fr);
@@ -192,6 +194,14 @@
   min-height: 0;
   padding: 4px 24px 24px;
   overflow: auto;
+}
+
+/* 넓은 창에서 내용이 끝없이 늘어나지 않게 좌우 여백으로 가운데 열을 만든다. 퍼센트 padding은 머리와 내용 모두
+   .settings-main 너비 기준이라 제목과 내용의 왼쪽 끝이 늘 같다. 세로 스크롤바는 내용 오른쪽만 줄인다.
+   좁은 배치의 padding(.settings.narrow 규칙)은 명시도가 높아 그대로 이긴다. */
+.settings-header,
+.settings-page {
+  padding-inline: max(24px, calc((100% - var(--settings-page-width)) / 2));
 }
 
 .settings.narrow .settings-page {

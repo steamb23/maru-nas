@@ -122,6 +122,7 @@ paths:
 - 프로필 페이지(`profile`)는 사이드바 목록에 넣지 않고(`nav: 'card'`) 사이드바 맨 위 사용자 카드 버튼으로 연다. 볼 수 없는 페이지를 요청하면 기본 페이지(화면)로 간다
 - 프로필 사진 자르기 편집기(`AvatarEditor.tsx`, 계산은 `profile/avatarCrop.ts`)는 창 범위 대화상자다. 끌기는 `usePointerDrag`, 휠은 passive가 아닌 네이티브 리스너로 받고, 저장은 512px WebP(안 되면 PNG)다. OMV 사용자 편집 화면은 워크벤치 앱과 같은 이름 붙은 탭으로 연다(`launchApp.ts`의 `openWorkbenchRoute`, 라우트는 `windows/links.ts`)
 - 창 너비가 `SETTINGS_NARROW_WIDTH`(640px)보다 좁으면(ResizeObserver로 재서 `.narrow`) 사이드바를 숨기고 메뉴 단추(☰, `hamburger-menu-symbolic`)로 내용 위에 덮어 연다. 열린 동안 내용은 `inert`이고, Esc·바깥 누르기·페이지 고르기로 닫으며 닫힌 뒤(내용의 `inert`가 풀린 뒤) 메뉴 단추로 포커스를 돌려준다. 열기·닫기 값은 `navAnim.ts`
+- 페이지 제목과 내용은 창 틀(`SettingsWindow.css`)이 최대 폭(`--settings-page-width`, 720px) 열로 가운데 정렬한다. `.settings-header`와 `.settings-page`의 좌우 padding을 같은 퍼센트 식으로 계산해 스크롤바가 생겨도 왼쪽 끝이 맞는다. 페이지마다 폭을 따로 정하지 않는다
 - 페이지가 함께 쓰는 틀과 컨트롤은 `controls.tsx`(절, 묶음 카드, 행, 스위치, 안내), 테마·배경 고르기는 `pickers.tsx`(숨긴 기본 라디오 버튼이라 키보드·화면 읽기는 브라우저 기본 동작)다
 - 사용자 값은 바로 적용·저장한다(저장 큐). 전역 설정은 고른 값을 먼저 보여 주고 저장한 뒤 서버 값을 다시 받으며, 실패하면 되돌린다(`siteSettings.ts`)
 
