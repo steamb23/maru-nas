@@ -31,6 +31,7 @@ paths:
 - `src/widgets/`와 `src/windows/`는 서로 import하지 않는다. 위젯이 창을 여는 일은 `shell/WidgetFrame.tsx`가 창 저장소의 `open`을 불러 처리한다
 - 저장 배치는 `widgets/store.ts`, 화면 배치는 `fitLayout`으로 렌더링 때 계산한다. 저장 배치는 사용자가 바꾼 위젯만 `commitPlacement`로 바꾼다(화면 크기 변화로 바꾸지 않는다)
 - 끄는 동안 위치·크기는 렌더링 없이 요소 style을 직접 바꾼다. 끝나면 지우지 말고 지금 자리의 값으로 되돌린다(React는 값이 바뀌지 않은 style을 다시 넣지 않는다)
+- 위젯 잠금은 `WidgetLayer`가 화면 설정 저장소(`appearance/store.ts`의 `widgetsLocked`)에서 읽어 `WidgetFrame`의 `locked`로 넘긴다. 잠기면 끌기를 시작하지 않고 크기 조절 핸들을 그리지 않는다. 끌기를 시작했는지는 `mode`가 아니라 ref(`moving`)로 판단한다(놓는 순간 `mode`가 아직 렌더되지 않았을 수 있다). 끄는 도중 잠겨도 시작한 끌기는 끝낸다
 - 포인터 끌기 공통 처리는 `usePointerDrag`(임계 거리, pointer capture, 취소)를 쓴다. 창(`Window.tsx`)의 끌기 코드는 아직 이 훅으로 옮기지 않았다
 - 가이드(`WidgetPreview`)는 타일링 가이드와 같은 모양(`.tile-preview`)을 쓰고, 칸이 바뀌면 임계 감쇠 스프링으로 따라간다(`widgetPreviewAnim.ts`). 끄는 동안 렌더 없이 핸들(`moveTo`)로 움직이고, 놓을 수 없는 자리에서는 숨기기만 한다
 
