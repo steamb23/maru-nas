@@ -361,6 +361,14 @@ const (
 	ThemeDark  = "dark"
 )
 
+// 작업표시줄 정렬. AppearancePrefs.TaskbarAlign에 들어간다.
+const (
+	// TaskbarAlignCenter는 "모든 앱" 버튼과 창 버튼을 작업표시줄 가운데에 둔다(Windows 11처럼).
+	TaskbarAlignCenter = "center"
+	// TaskbarAlignLeft는 "모든 앱" 버튼과 창 버튼을 작업표시줄 왼쪽 끝부터 둔다.
+	TaskbarAlignLeft = "left"
+)
+
 // 배경 종류. Wallpaper.Kind에 들어간다.
 const (
 	// WallpaperPreset은 프론트에 들어 있는 배경(그라데이션·단색)이다.
@@ -386,6 +394,8 @@ type AppearancePrefs struct {
 	Wallpaper *Wallpaper `json:"wallpaper,omitempty"`
 	// Animations는 창·메뉴 애니메이션을 켤지다. 없으면 켠다.
 	Animations *bool `json:"animations,omitempty"`
+	// TaskbarAlign은 TaskbarAlign* 중 하나다. 비어 있으면 가운데다(관리자 기본값은 없다).
+	TaskbarAlign string `json:"taskbarAlign,omitempty" tstype:"'center' | 'left'"`
 }
 
 // ImageInfo는 저장된 배경 이미지의 정보다.

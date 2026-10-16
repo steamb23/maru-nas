@@ -62,6 +62,11 @@ func validTheme(theme string) bool {
 	return theme == "" || theme == api.ThemeAuto || theme == api.ThemeLight || theme == api.ThemeDark
 }
 
+// validTaskbarAlign은 작업표시줄 정렬 값을 검사한다. 빈 값은 기본값(가운데)을 따른다는 뜻이라 받는다.
+func validTaskbarAlign(align string) bool {
+	return align == "" || align == api.TaskbarAlignCenter || align == api.TaskbarAlignLeft
+}
+
 // setAppearance는 화면 설정 전체를 바꾼다. 다른 설정은 그대로 둔다. 바탕화면을 올린 이미지로 고르는 것은
 // 이미지가 없어도 받는다(프론트가 기본 배경으로 그린다).
 func (h *handler) setAppearance(w http.ResponseWriter, r *http.Request, s auth.Session) {
@@ -73,7 +78,8 @@ func (h *handler) setAppearance(w http.ResponseWriter, r *http.Request, s auth.S
 		writeError(w, http.StatusBadRequest, api.ErrBadRequest, "appearance is required")
 		return
 	}
-	if !validTheme(req.Appearance.Theme) || !validWallpaper(req.Appearance.Wallpaper) {
+	if !validTheme(req.Appearance.Theme) || !validWallpaper(req.Appearance.Wallpaper) ||
+		!validTaskbarAlign(req.Appearance.TaskbarAlign) {
 		writeError(w, http.StatusBadRequest, api.ErrBadRequest, "invalid appearance")
 		return
 	}

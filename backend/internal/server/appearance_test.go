@@ -44,9 +44,10 @@ func TestAppearanceRoundTrip(t *testing.T) {
 	b := e.browser()
 	off := false
 	want := api.AppearancePrefs{
-		Theme:      api.ThemeDark,
-		Wallpaper:  &api.Wallpaper{Kind: api.WallpaperPreset, Preset: "dusk"},
-		Animations: &off,
+		Theme:        api.ThemeDark,
+		Wallpaper:    &api.Wallpaper{Kind: api.WallpaperPreset, Preset: "dusk"},
+		Animations:   &off,
+		TaskbarAlign: api.TaskbarAlignLeft,
 	}
 	wantCode(t, b.do(http.MethodPut, "/api/preferences/appearance", api.AppearanceRequest{Appearance: &want}),
 		http.StatusUnauthorized, api.ErrUnauthorized)
@@ -56,7 +57,8 @@ func TestAppearanceRoundTrip(t *testing.T) {
 	wantStatus(t, b.do(http.MethodPut, "/api/preferences/appearance", api.AppearanceRequest{Appearance: &want}), http.StatusNoContent)
 	got := decode[api.Preferences](t, b.do(http.MethodGet, "/api/preferences", nil))
 	if got.Appearance == nil || got.Appearance.Theme != api.ThemeDark || got.Appearance.Wallpaper == nil ||
-		got.Appearance.Wallpaper.Preset != "dusk" || got.Appearance.Animations == nil || *got.Appearance.Animations {
+		got.Appearance.Wallpaper.Preset != "dusk" || got.Appearance.Animations == nil || *got.Appearance.Animations ||
+		got.Appearance.TaskbarAlign != api.TaskbarAlignLeft {
 		t.Fatalf("appearance = %+v", got.Appearance)
 	}
 	if got.Drawer == nil || got.Drawer.Sort != api.DrawerSortName {
@@ -66,7 +68,8 @@ func TestAppearanceRoundTrip(t *testing.T) {
 	wantStatus(t, b.do(http.MethodPut, "/api/preferences/appearance", api.AppearanceRequest{Appearance: &api.AppearancePrefs{}}),
 		http.StatusNoContent)
 	got = decode[api.Preferences](t, b.do(http.MethodGet, "/api/preferences", nil))
-	if got.Appearance == nil || got.Appearance.Theme != "" || got.Appearance.Wallpaper != nil || got.Appearance.Animations != nil {
+	if got.Appearance == nil || got.Appearance.Theme != "" || got.Appearance.Wallpaper != nil || got.Appearance.Animations != nil ||
+		got.Appearance.TaskbarAlign != "" {
 		t.Errorf("cleared appearance = %+v", got.Appearance)
 	}
 }
@@ -84,6 +87,7 @@ func TestSetAppearanceRejectsInvalid(t *testing.T) {
 		"empty preset":     map[string]any{"appearance": map[string]any{"wallpaper": map[string]any{"kind": "preset"}}},
 		"image with id":    map[string]any{"appearance": map[string]any{"wallpaper": map[string]any{"kind": "image", "preset": "dusk"}}},
 		"animations type":  map[string]any{"appearance": map[string]any{"animations": "no"}},
+		"unknown align":    map[string]any{"appearance": map[string]any{"taskbarAlign": "right"}},
 		"wallpaper string": map[string]any{"appearance": map[string]any{"wallpaper": "dusk"}},
 	}
 	for name, body := range cases {
