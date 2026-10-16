@@ -13,6 +13,7 @@
   cursor: pointer;
   /* 터치로 끌 때 브라우저가 포인터를 스크롤용으로 가져가지 않게 한다. */
   touch-action: none;
+  transition: scale var(--press-out) ease;
 }
 
 .desktop-icon:hover {
@@ -23,6 +24,13 @@
   outline: none;
   border-color: rgb(255 255 255 / 0.6);
   background: rgb(255 255 255 / 0.2);
+}
+
+/* 끄는 동안에는 원래 크기로 돌아온다(DesktopShortcuts.css의 li.dragging). */
+.desktop-icon:active {
+  background: rgb(255 255 255 / 0.26);
+  scale: var(--press-scale);
+  transition-duration: var(--press-in);
 }
 
 .desktop-icon-label {

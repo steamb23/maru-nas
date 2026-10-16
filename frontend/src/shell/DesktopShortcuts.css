@@ -30,8 +30,10 @@
   z-index: 1;
 }
 
+/* pointer capture 동안 :active가 남으므로 누름 줄어듦을 풀어 원래 크기로 끈다. */
 .desktop-icons > li.dragging > .desktop-icon {
   cursor: grabbing;
+  scale: 1;
 }
 
 /* "모든 앱"에서 끌고 있는 앱이 이미 바탕화면에 있으면 고스트가 대신 보인다. */

@@ -21,6 +21,22 @@
   --titlebar-active-bg: light-dark(#e1e6ee, #353a42);
   --taskbar-bg: light-dark(rgb(246 247 249 / 0.88), rgb(28 30 34 / 0.88));
   --hover-bg: light-dark(rgb(0 0 0 / 0.07), rgb(255 255 255 / 0.1));
+
+  /* 누름 피드백: hover보다 진한 배경, 아이콘·타일·버튼류는 살짝 줄어든다(scale 속성).
+     transform은 끌기·애니메이션이 직접 쓰므로 줄어듦에는 개별 속성 scale만 쓴다.
+     누를 때는 빠르게(--press-in), 뗄 때는 조금 천천히(--press-out) 돌아온다. */
+  --press-bg: light-dark(rgb(0 0 0 / 0.14), rgb(255 255 255 / 0.18));
+  --press-scale: 0.96;
+  --press-in: 60ms;
+  --press-out: 150ms;
+}
+
+/* 동작 줄이기면 누름 전환 없이 바로 바뀐다(배경·크기 변화는 남긴다). */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --press-in: 0s;
+    --press-out: 0s;
+  }
 }
 
 /* 화면 설정의 테마. auto면 data-theme이 없어 브라우저(OS) 설정을 따른다(appearance/dom.ts의 applyTheme).
@@ -66,4 +82,6 @@ textarea,
 button {
   font: inherit;
   color: inherit;
+  /* 모바일 기본 탭 덮개 대신 각 요소의 누름 상태(:active)를 보인다. */
+  -webkit-tap-highlight-color: transparent;
 }

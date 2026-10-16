@@ -89,14 +89,26 @@
   border-radius: 6px;
   background: none;
   cursor: pointer;
+  transition: scale var(--press-out) ease;
 }
 
 .win-btn:hover {
   background: var(--hover-bg);
 }
 
+.win-btn:active {
+  background: var(--press-bg);
+  scale: var(--press-scale);
+  transition-duration: var(--press-in);
+}
+
 .win-btn.close:hover {
   background: #e5484d;
+  color: #fff;
+}
+
+.win-btn.close:active {
+  background: #c4383d;
   color: #fff;
 }
 

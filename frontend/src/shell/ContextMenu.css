@@ -42,6 +42,11 @@
   outline: none;
 }
 
+/* 메뉴 행은 누르면 닫히므로 줄어들지 않고 배경만 바뀐다. */
+.context-menu-item:active:not([aria-disabled='true']) {
+  background: var(--press-bg);
+}
+
 .context-menu-item[aria-disabled='true'] {
   color: var(--text-muted);
   cursor: default;

@@ -13,11 +13,18 @@
   border-radius: 6px;
   background: none;
   cursor: pointer;
+  transition: scale var(--press-out) ease;
 }
 
 .profile-button:hover,
 .profile-button[aria-expanded='true'] {
   background: var(--hover-bg);
+}
+
+.profile-button:active {
+  background: var(--press-bg);
+  scale: var(--press-scale);
+  transition-duration: var(--press-in);
 }
 
 .profile-avatar {
@@ -74,6 +81,10 @@
 .profile-menu-header:focus-visible {
   background: var(--hover-bg);
   outline: none;
+}
+
+.profile-menu-header:active {
+  background: var(--press-bg);
 }
 
 .profile-menu-header-chevron {
@@ -148,6 +159,12 @@
 
 .profile-menu-item[aria-expanded='true'] {
   background: var(--hover-bg);
+}
+
+/* 메뉴 행은 누르면 닫히거나 하위 메뉴가 열리므로 줄어들지 않고 배경만 바뀐다.
+   하위 메뉴가 열린 항목([aria-expanded])도 덮도록 그 규칙 뒤에 둔다. */
+.profile-menu-item:active {
+  background: var(--press-bg);
 }
 
 .profile-menu-chevron {

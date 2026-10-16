@@ -61,11 +61,18 @@
   background: none;
   color: var(--text);
   cursor: pointer;
+  transition: scale var(--press-out) ease;
 }
 
 .taskbar-launcher:hover,
 .taskbar-launcher[aria-expanded='true'] {
   background: var(--hover-bg);
+}
+
+.taskbar-launcher:active {
+  background: var(--press-bg);
+  scale: var(--press-scale);
+  transition-duration: var(--press-in);
 }
 
 .taskbar-items {
@@ -93,6 +100,11 @@
   z-index: 1;
 }
 
+/* pointer capture 동안 :active가 남으므로 누름 줄어듦을 풀어 원래 크기로 끈다. */
+.taskbar-items > li.dragging > .task {
+  scale: 1;
+}
+
 .task {
   position: relative;
   display: flex;
@@ -109,7 +121,8 @@
   touch-action: none;
   transition:
     background-color 120ms ease,
-    opacity 200ms ease;
+    opacity 200ms ease,
+    scale var(--press-out) ease;
 }
 
 .task:hover {
@@ -118,6 +131,18 @@
 
 .task.active {
   background: var(--hover-bg);
+}
+
+/* 활성 창 버튼은 평소 배경이 hover와 같으므로 hover는 한 단계 진하게 보인다. */
+.task.active:hover {
+  background: var(--press-bg);
+}
+
+/* 누르면 배경은 바로 바뀌고(지연 없이) 버튼이 살짝 줄어든다. */
+.task:active {
+  background: var(--press-bg);
+  scale: var(--press-scale);
+  transition-duration: 0s, 200ms, var(--press-in);
 }
 
 /* 활성 창은 긴 밑줄, 열려 있는 창은 짧은 점으로 표시한다. */

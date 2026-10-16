@@ -85,6 +85,7 @@
   font: inherit;
   white-space: nowrap;
   cursor: pointer;
+  transition: scale var(--press-out) ease;
 }
 
 .app-drawer-sort:hover {
@@ -95,6 +96,12 @@
   outline: none;
   border-color: rgb(255 255 255 / 0.6);
   background: rgb(255 255 255 / 0.2);
+}
+
+.app-drawer-sort:active {
+  background: rgb(255 255 255 / 0.3);
+  scale: var(--press-scale);
+  transition-duration: var(--press-in);
 }
 
 /* 앱이 많거나 화면이 낮으면 격자만 스크롤한다. */
@@ -127,6 +134,7 @@
   cursor: pointer;
   /* 터치로는 끌지 않으므로 격자 스크롤을 브라우저에 맡긴다(두 번 눌러 확대만 막는다). */
   touch-action: manipulation;
+  transition: scale var(--press-out) ease;
 }
 
 .app-drawer-tile:hover {
@@ -137,6 +145,12 @@
   outline: none;
   border-color: rgb(255 255 255 / 0.6);
   background: rgb(255 255 255 / 0.2);
+}
+
+.app-drawer-tile:active {
+  background: rgb(255 255 255 / 0.26);
+  scale: var(--press-scale);
+  transition-duration: var(--press-in);
 }
 
 .app-drawer-tile-label {
