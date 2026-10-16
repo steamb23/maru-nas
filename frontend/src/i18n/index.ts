@@ -81,9 +81,15 @@ async function applyLanguage(lang: Language): Promise<boolean> {
   }
 }
 
-// i18nReady는 처음 고른 언어로 바뀌면 끝난다. 그 언어를 받지 못하면 영어로 끝난다(실패하지 않는다).
-// main.tsx는 영어로 먼저 그렸다가 바뀌지 않게 이걸 기다린 뒤 그린다.
-export const i18nReady: Promise<void> = applyLanguage(pickLanguage(readSaved(), navigator.languages)).then(() => {})
+// 처음 고른 언어를 기다리는 최대 시간(ms). 넘으면 영어로 먼저 그리고, 받는 대로 그 언어로 바뀐다.
+const READY_TIMEOUT_MS = 3000
+
+// i18nReady는 처음 고른 언어로 바뀌면 끝난다. 그 언어를 받지 못하거나 READY_TIMEOUT_MS가 지나면 영어인 채로
+// 끝난다(실패하지 않는다). main.tsx는 영어로 먼저 그렸다가 바뀌지 않게 이걸 기다린 뒤 그린다.
+export const i18nReady: Promise<void> = Promise.race([
+  applyLanguage(pickLanguage(readSaved(), navigator.languages)).then(() => {}),
+  new Promise<void>((resolve) => setTimeout(resolve, READY_TIMEOUT_MS)),
+])
 
 // currentLanguage는 지금 쓰는 지원 언어다.
 export function currentLanguage(): Language {
