@@ -41,6 +41,114 @@ export interface MemoryInfo {
   availableBytes: number /* uint64 */;
 }
 /**
+ * SystemStatsResponse는 GET /api/addons/system-info의 응답이다(시스템 정보 창).
+ * 사용률·속도는 누적 카운터로 주고, 프론트가 같은 백엔드의 두 응답 차이로 계산한다.
+ * 그래서 창과 다른 세션의 요청이 서로의 측정 구간에 영향을 주지 않는다(/api/system과 다른 점).
+ */
+export interface SystemStatsResponse extends AddonSources {
+  /**
+   * SampledAtMs는 값을 읽은 시각이다. 백엔드 프로세스 시작 기준의 단조 시각(밀리초)이며,
+   * 같은 백엔드의 두 응답 차이를 구하는 데만 쓴다(벽시계 시각이 아니다).
+   */
+  sampledAtMs: number /* int64 */;
+  cpu: CPUCounters;
+  memory: MemoryInfo;
+  uptimeSeconds: number /* float64 */;
+  /**
+   * Network는 물리 인터페이스의 누적 바이트 합계다. 읽지 못하면 없다.
+   */
+  network?: NetTotals;
+  /**
+   * Disk는 물리 디스크의 누적 바이트 합계다. 읽지 못하면 없다.
+   */
+  disk?: DiskTotals;
+  /**
+   * Processes는 프로세스 목록이다(PID 순서). 관리자에게만 준다(provider proc-processes).
+   */
+  processes?: Process[];
+}
+/**
+ * CPUCounters는 /proc/stat의 누적 CPU 시간이다. 단위는 clock tick(USER_HZ)이다.
+ */
+export interface CPUCounters {
+  /**
+   * TotalTicks는 모든 코어를 합한 시간이다(guest 제외). Process.CPUTicks와 단위가 같다.
+   */
+  totalTicks: number /* uint64 */;
+  /**
+   * IdleTicks는 idle + iowait다.
+   */
+  idleTicks: number /* uint64 */;
+  /**
+   * Cores는 켜져 있는 코어별 값이다(cpuN 순서). 꺼진 코어는 빠지므로 ID로 맞춘다.
+   */
+  cores: CoreTicks[];
+}
+/**
+ * CoreTicks는 코어 하나의 누적 CPU 시간이다.
+ */
+export interface CoreTicks {
+  /**
+   * ID는 cpuN의 N이다.
+   */
+  id: number /* int */;
+  totalTicks: number /* uint64 */;
+  idleTicks: number /* uint64 */;
+}
+/**
+ * NetTotals는 물리 네트워크 인터페이스의 누적 바이트 합계다.
+ */
+export interface NetTotals {
+  rxBytes: number /* uint64 */;
+  txBytes: number /* uint64 */;
+}
+/**
+ * DiskTotals는 물리 디스크의 누적 바이트 합계다. 파티션·RAID·LVM 장치는 빼서 이중으로 세지 않는다.
+ */
+export interface DiskTotals {
+  readBytes: number /* uint64 */;
+  writeBytes: number /* uint64 */;
+}
+/**
+ * Process는 프로세스 하나다.
+ */
+export interface Process {
+  pid: number /* int */;
+  /**
+   * StartTicks는 부팅 후 시작 시각(clock tick)이다. PID가 다시 쓰였는지 구분하는 데 쓴다.
+   */
+  startTicks: number /* uint64 */;
+  /**
+   * Name은 커널이 아는 이름(comm)이다. 15바이트로 잘려 있을 수 있다.
+   */
+  name: string;
+  /**
+   * Command는 명령줄이다(인자를 공백으로 이음, 길면 잘림). 커널 스레드와 좀비는 없다.
+   */
+  command?: string;
+  /**
+   * User는 실제 사용자 이름이다. 이름을 모르면 uid 숫자다.
+   */
+  user: string;
+  /**
+   * State는 커널 상태 글자다(R, S, D, Z, T, I 등).
+   */
+  state: string;
+  /**
+   * CPUTicks는 누적 CPU 시간(utime + stime, clock tick)이다.
+   */
+  cpuTicks: number /* uint64 */;
+  /**
+   * RSSBytes는 실제 메모리 사용량(VmRSS)이다.
+   */
+  rssBytes: number /* uint64 */;
+  threads: number /* int */;
+  /**
+   * Kernel은 커널 스레드인지다.
+   */
+  kernel?: boolean;
+}
+/**
  * Manifest는 애드온 하나의 선언이다. 백엔드 정적 목록(internal/addons/builtin)이 원본이며,
  * 프론트 목록(frontend/src/addons/manifests.gen.ts)은 여기서 생성한다.
  */

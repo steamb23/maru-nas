@@ -5,14 +5,18 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"os"
+	"slices"
 	"strings"
 	"testing"
+	"testing/fstest"
 	"time"
 
 	"onmaru/backend/internal/addons"
 	"onmaru/backend/internal/addons/containers"
 	"onmaru/backend/internal/addons/services"
 	"onmaru/backend/internal/addons/smart"
+	"onmaru/backend/internal/addons/sysinfo"
 	"onmaru/backend/internal/api"
 	"onmaru/backend/internal/omv/omvfake"
 )
@@ -196,6 +200,48 @@ func TestAddonDataBuiltinContainers(t *testing.T) {
 	got := decode[api.ContainersResponse](t, r)
 	if got.Runtime != "docker" || len(got.Containers) != len(omvfake.DefaultPluginData().Containers) {
 		t.Errorf("got %+v", got)
+	}
+}
+
+// 시스템 정보 창의 데이터: 요약은 누구나, 프로세스 목록은 관리자에게만 준다(provider 조건).
+func TestAddonDataBuiltinSystemInfo(t *testing.T) {
+	proc := fstest.MapFS{
+		"stat":      {Data: []byte("cpu 10 0 10 80 0\ncpu0 10 0 10 80 0\n")},
+		"meminfo":   {Data: []byte("MemTotal: 1000 kB\nMemAvailable: 500 kB\n")},
+		"uptime":    {Data: []byte("5.0 1.0\n")},
+		"diskstats": {Data: []byte("8 0 sda 1 0 8 0 1 0 16 0 0 0 0\n")},
+		"1/stat":    {Data: []byte("1 (init) S 0 0 0 0 0 4194560 0 0 0 0 5 5 0 0 0 0 1 0 2 0 0\n")},
+		"1/status":  {Data: []byte("Uid:\t0\t0\t0\t0\nVmRSS:\t100 kB\n")},
+		"1/cmdline": {Data: []byte("/sbin/init\x00")},
+	}
+	block := fstest.MapFS{"sda/device": {Data: []byte("../../0:0:0:0"), Mode: os.ModeSymlink}}
+	e, _, _ := newDataEnv(t, sysinfo.New(
+		sysinfo.NewReaderFS(proc, block, nil),
+		sysinfo.NewProcessesFS(proc, func(string) string { return "root" }),
+	))
+	for _, c := range []struct {
+		user    string
+		sources []string
+		procs   int
+	}{
+		{"user", []string{"proc"}, 0},
+		{"admin", []string{"proc", sysinfo.SourceProcesses}, 1},
+	} {
+		b := e.browser()
+		wantStatus(t, b.login(c.user, c.user), http.StatusOK)
+		caps := decode[api.CapabilitiesResponse](t, b.do(http.MethodGet, "/api/capabilities", nil))
+		if len(caps.Addons) != 1 || !caps.Addons[0].Available || !slices.Equal(caps.Addons[0].Sources, c.sources) {
+			t.Errorf("%s: capability %+v", c.user, caps.Addons)
+		}
+		r := b.do(http.MethodGet, "/api/addons/system-info", nil)
+		wantStatus(t, r, http.StatusOK)
+		got := decode[api.SystemStatsResponse](t, r)
+		if got.CPU.TotalTicks != 100 || len(got.CPU.Cores) != 1 || got.Disk == nil || got.Disk.WriteBytes != 16*512 {
+			t.Errorf("%s: stats %+v", c.user, got)
+		}
+		if len(got.Processes) != c.procs || !slices.Equal(got.Sources, c.sources) {
+			t.Errorf("%s: processes %+v, sources %v", c.user, got.Processes, got.Sources)
+		}
 	}
 }
 

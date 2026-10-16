@@ -12,12 +12,12 @@ export const MANIFESTS = {
     "views": {
       "window": {
         "defaultSize": {
-          "width": 420,
-          "height": 360
+          "width": 720,
+          "height": 560
         },
         "minSize": {
-          "width": 320,
-          "height": 270
+          "width": 440,
+          "height": 360
         }
       },
       "widget": {

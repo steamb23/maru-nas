@@ -1,9 +1,11 @@
 package sysinfo
 
 import (
+	"errors"
 	"io"
 	"io/fs"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -17,26 +19,35 @@ const (
 	minSampleGap = 250 * time.Millisecond
 )
 
-// Reader는 /proc 형태의 파일 시스템에서 시스템 정보를 읽는다.
+// NetSource는 네트워크 인터페이스 카운터를 준다. *network.Reader가 구현한다.
+type NetSource interface {
+	Network() (api.NetworkResponse, error)
+}
+
+// Reader는 /proc 형태의 파일 시스템에서 시스템 정보를 읽는 provider다(이름 proc).
 type Reader struct {
 	proc  fs.FS
+	block fs.FS
+	net   NetSource
 	sleep func(time.Duration)
 	now   func() time.Time
+	// start는 sampledAtMs의 기준 시각이다.
+	start time.Time
 
 	mu       sync.Mutex
 	prev     CPUTimes
 	prevTime time.Time
 }
 
-// NewReader는 호스트의 /proc를 읽는 Reader를 반환한다.
-func NewReader() *Reader {
-	return NewReaderFS(os.DirFS("/proc"))
+// NewReader는 호스트의 /proc, /sys/block과 net을 읽는 Reader를 반환한다.
+func NewReader(net NetSource) *Reader {
+	return NewReaderFS(os.DirFS("/proc"), os.DirFS("/sys/block"), net)
 }
 
-// NewReaderFS는 proc를 읽는 Reader를 반환한다.
-// proc에는 "stat", "meminfo", "uptime" 파일이 있어야 한다.
-func NewReaderFS(proc fs.FS) *Reader {
-	return &Reader{proc: proc, sleep: time.Sleep, now: time.Now}
+// NewReaderFS는 proc와 block(/sys/block 형태)을 읽는 Reader를 반환한다.
+// proc에는 "stat", "meminfo", "uptime", "diskstats" 파일이 있어야 한다. net이 nil이면 네트워크 합계가 없다.
+func NewReaderFS(proc, block fs.FS, net NetSource) *Reader {
+	return &Reader{proc: proc, block: block, net: net, sleep: time.Sleep, now: time.Now, start: time.Now()}
 }
 
 // System은 현재 CPU, 메모리, 가동 시간 값을 반환한다.
@@ -85,6 +96,91 @@ func (r *Reader) cpuUsage() (float64, error) {
 	}
 	r.prev, r.prevTime = cur, r.now()
 	return CPUUsagePercent(prev, cur), nil
+}
+
+// Stats는 시스템 정보 창이 쓰는 누적 카운터를 반환한다. 사용률·속도는 프론트가 두 응답의 차이로 계산한다.
+// 네트워크·디스크 합계는 읽지 못하면 빼고 나머지로 응답한다.
+func (r *Reader) Stats() (api.SystemStatsResponse, error) {
+	cpu, err := readFile(r.proc, "stat", ParseCPUStat)
+	if err != nil {
+		return api.SystemStatsResponse{}, err
+	}
+	mem, err := readFile(r.proc, "meminfo", ParseMemInfo)
+	if err != nil {
+		return api.SystemStatsResponse{}, err
+	}
+	up, err := readFile(r.proc, "uptime", ParseUptime)
+	if err != nil {
+		return api.SystemStatsResponse{}, err
+	}
+	res := api.SystemStatsResponse{
+		AddonSources: api.AddonSources{Sources: []string{r.Name()}},
+		SampledAtMs:  r.now().Sub(r.start).Milliseconds(),
+		CPU: api.CPUCounters{
+			TotalTicks: cpu.All.Total,
+			IdleTicks:  cpu.All.Idle,
+			Cores:      make([]api.CoreTicks, 0, len(cpu.Cores)),
+		},
+		Memory: api.MemoryInfo{
+			TotalBytes:     mem.Total,
+			UsedBytes:      mem.Used(),
+			AvailableBytes: mem.Available,
+		},
+		UptimeSeconds: up,
+	}
+	for _, c := range cpu.Cores {
+		res.CPU.Cores = append(res.CPU.Cores, api.CoreTicks{ID: c.ID, TotalTicks: c.Total, IdleTicks: c.Idle})
+	}
+	if t, err := r.netTotals(); err == nil {
+		res.Network = &t
+	}
+	if t, err := r.diskTotals(); err == nil {
+		res.Disk = &t
+	}
+	return res, nil
+}
+
+// netTotals는 물리 인터페이스의 누적 바이트 합계다. 브리지·본딩 같은 가상 인터페이스는
+// 아래 물리 인터페이스와 같은 트래픽을 다시 세므로 뺀다.
+func (r *Reader) netTotals() (api.NetTotals, error) {
+	if r.net == nil {
+		return api.NetTotals{}, errors.New("no network source")
+	}
+	n, err := r.net.Network()
+	if err != nil {
+		return api.NetTotals{}, err
+	}
+	var t api.NetTotals
+	for _, i := range n.Interfaces {
+		if !i.Virtual {
+			t.RxBytes += i.RxBytes
+			t.TxBytes += i.TxBytes
+		}
+	}
+	return t, nil
+}
+
+// diskTotals는 물리 디스크 전체 장치의 누적 바이트 합계다. /sys/block에 device 링크가 있는 장치만 센다.
+// 파티션은 /sys/block에 없고, loop·md·dm·zram은 device 링크가 없어 빠진다(이중 계산 방지).
+func (r *Reader) diskTotals() (api.DiskTotals, error) {
+	disks, err := readFile(r.proc, "diskstats", ParseDiskStats)
+	if err != nil {
+		return api.DiskTotals{}, err
+	}
+	var t api.DiskTotals
+	for _, d := range disks {
+		// sysfs는 장치 이름의 '/'를 '!'로 쓴다(cciss/c0d0 → cciss!c0d0).
+		name := strings.ReplaceAll(d.Name, "/", "!")
+		if !fs.ValidPath(name) {
+			continue
+		}
+		if _, err := fs.ReadLink(r.block, name+"/device"); err != nil {
+			continue
+		}
+		t.ReadBytes += d.ReadSectors * SectorBytes
+		t.WriteBytes += d.WriteSectors * SectorBytes
+	}
+	return t, nil
 }
 
 func readFile[T any](fsys fs.FS, name string, parse func(io.Reader) (T, error)) (T, error) {

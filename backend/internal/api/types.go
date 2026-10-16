@@ -29,6 +29,77 @@ type MemoryInfo struct {
 	AvailableBytes uint64 `json:"availableBytes"`
 }
 
+// SystemStatsResponse는 GET /api/addons/system-info의 응답이다(시스템 정보 창).
+// 사용률·속도는 누적 카운터로 주고, 프론트가 같은 백엔드의 두 응답 차이로 계산한다.
+// 그래서 창과 다른 세션의 요청이 서로의 측정 구간에 영향을 주지 않는다(/api/system과 다른 점).
+type SystemStatsResponse struct {
+	AddonSources `tstype:",extends"`
+	// SampledAtMs는 값을 읽은 시각이다. 백엔드 프로세스 시작 기준의 단조 시각(밀리초)이며,
+	// 같은 백엔드의 두 응답 차이를 구하는 데만 쓴다(벽시계 시각이 아니다).
+	SampledAtMs   int64       `json:"sampledAtMs"`
+	CPU           CPUCounters `json:"cpu"`
+	Memory        MemoryInfo  `json:"memory"`
+	UptimeSeconds float64     `json:"uptimeSeconds"`
+	// Network는 물리 인터페이스의 누적 바이트 합계다. 읽지 못하면 없다.
+	Network *NetTotals `json:"network,omitempty"`
+	// Disk는 물리 디스크의 누적 바이트 합계다. 읽지 못하면 없다.
+	Disk *DiskTotals `json:"disk,omitempty"`
+	// Processes는 프로세스 목록이다(PID 순서). 관리자에게만 준다(provider proc-processes).
+	Processes []Process `json:"processes,omitempty"`
+}
+
+// CPUCounters는 /proc/stat의 누적 CPU 시간이다. 단위는 clock tick(USER_HZ)이다.
+type CPUCounters struct {
+	// TotalTicks는 모든 코어를 합한 시간이다(guest 제외). Process.CPUTicks와 단위가 같다.
+	TotalTicks uint64 `json:"totalTicks"`
+	// IdleTicks는 idle + iowait다.
+	IdleTicks uint64 `json:"idleTicks"`
+	// Cores는 켜져 있는 코어별 값이다(cpuN 순서). 꺼진 코어는 빠지므로 ID로 맞춘다.
+	Cores []CoreTicks `json:"cores"`
+}
+
+// CoreTicks는 코어 하나의 누적 CPU 시간이다.
+type CoreTicks struct {
+	// ID는 cpuN의 N이다.
+	ID         int    `json:"id"`
+	TotalTicks uint64 `json:"totalTicks"`
+	IdleTicks  uint64 `json:"idleTicks"`
+}
+
+// NetTotals는 물리 네트워크 인터페이스의 누적 바이트 합계다.
+type NetTotals struct {
+	RxBytes uint64 `json:"rxBytes"`
+	TxBytes uint64 `json:"txBytes"`
+}
+
+// DiskTotals는 물리 디스크의 누적 바이트 합계다. 파티션·RAID·LVM 장치는 빼서 이중으로 세지 않는다.
+type DiskTotals struct {
+	ReadBytes  uint64 `json:"readBytes"`
+	WriteBytes uint64 `json:"writeBytes"`
+}
+
+// Process는 프로세스 하나다.
+type Process struct {
+	PID int `json:"pid"`
+	// StartTicks는 부팅 후 시작 시각(clock tick)이다. PID가 다시 쓰였는지 구분하는 데 쓴다.
+	StartTicks uint64 `json:"startTicks"`
+	// Name은 커널이 아는 이름(comm)이다. 15바이트로 잘려 있을 수 있다.
+	Name string `json:"name"`
+	// Command는 명령줄이다(인자를 공백으로 이음, 길면 잘림). 커널 스레드와 좀비는 없다.
+	Command string `json:"command,omitempty"`
+	// User는 실제 사용자 이름이다. 이름을 모르면 uid 숫자다.
+	User string `json:"user"`
+	// State는 커널 상태 글자다(R, S, D, Z, T, I 등).
+	State string `json:"state"`
+	// CPUTicks는 누적 CPU 시간(utime + stime, clock tick)이다.
+	CPUTicks uint64 `json:"cpuTicks"`
+	// RSSBytes는 실제 메모리 사용량(VmRSS)이다.
+	RSSBytes uint64 `json:"rssBytes"`
+	Threads  int    `json:"threads"`
+	// Kernel은 커널 스레드인지다.
+	Kernel bool `json:"kernel,omitempty"`
+}
+
 // Manifest는 애드온 하나의 선언이다. 백엔드 정적 목록(internal/addons/builtin)이 원본이며,
 // 프론트 목록(frontend/src/addons/manifests.gen.ts)은 여기서 생성한다.
 type Manifest struct {

@@ -113,7 +113,7 @@ func TestReaderSystem(t *testing.T) {
 	clock := time.Unix(0, 0)
 	statIdx := 0
 	setStat(0)
-	r := NewReaderFS(fsys)
+	r := NewReaderFS(fsys, fstest.MapFS{}, nil)
 	r.now = func() time.Time { return clock }
 	r.sleep = func(d time.Duration) {
 		clock = clock.Add(d)
