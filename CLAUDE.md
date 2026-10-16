@@ -4,7 +4,7 @@
 
 OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표시줄·아이콘이 있는 데스크톱형 웹 대시보드.
 
-영역별 상세 규칙은 `.claude/rules/`에 있고 해당 파일을 다룰 때 로드된다: `auth-omv.md`(OMV 8 동작, 인증 설계), `backend.md`, `frontend.md`, `frontend-shell.md`(창·작업표시줄·애니메이션), `i18n.md`, `icons.md`. 작업 전 설계를 논의할 때는 해당 파일을 직접 읽는다.
+영역별 상세 규칙은 `.claude/rules/`에 있고 해당 파일을 다룰 때 로드된다: `auth-omv.md`(OMV 8 동작, 인증 설계), `backend.md`, `helper.md`(권한 도우미), `frontend.md`, `frontend-shell.md`(창·작업표시줄·애니메이션), `i18n.md`, `icons.md`. 작업 전 설계를 논의할 때는 해당 파일을 직접 읽는다.
 
 ## 목표와 범위
 
@@ -23,6 +23,7 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 - OMV가 관리하는 설정 파일(`/etc/` 아래 서비스 설정, OMV 설정 DB)을 직접 수정하지 않는다. OMV는 자기 DB를 기준으로 Salt로 설정 파일을 다시 생성하므로 직접 수정은 덮어써진다. 설정 변경은 반드시 로그인한 사용자의 세션으로 `rpc.php`를 호출해서 한다
 - `omv-rpc` CLI는 쓰지 않는다. 엔진 소켓(`/var/lib/openmediavault/engined.sock`)에 직접 붙어 비밀번호 확인 없이 관리자로 실행되므로, root나 `openmediavault-engined` 그룹만 쓸 수 있다. 어떤 계정도 이 그룹에 추가하는 방안을 제안하지 않는다(사실상 root 권한 부여)
 - 서비스 계정을 `docker` 그룹에도 넣지 않는다. root가 필요한 정보(SMART, SATA 디스크 온도, 컨테이너)는 OMV RPC로만 가져오며, Docker·Podman 소켓을 직접 읽는 코드는 만들지 않는다
+- OMV RPC로 할 수 없는 권한 작업(사용자 자신의 파일 접근, root 작업)은 권한 도우미(`onmaru-helper`)의 정해진 연산으로만 한다. 임의 명령 실행 연산을 만들지 않고, root 연산을 더할 때는 `.claude/docs/helper.md`의 절차를 따른다
 - `sudo`나 root 권한이 필요한 명령은 실행하지 않는다. 필요하면 명령과 이유를 제시하고 사용자가 직접 실행하게 한다
 - 시스템 상태를 바꾸는 RPC(서비스 재시작, 디스크·파일시스템·공유 폴더 변경 등)는 코드로 작성만 하고, 실제 호출 테스트는 사용자에게 맡긴다
 - 비밀번호, OMV 세션 ID, 토큰을 로그·파일·커밋·테스트 픽스처에 남기지 않는다
@@ -40,10 +41,11 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
     - 2단계 구조: `./install.sh`가 설정 질문과 확인, 실행한 계정으로 빌드(1단계)를 한 뒤, root가 아니면 설정을 옵션으로 넘겨 `sudo ./install.sh --service-install ...`로 자신을 다시 실행해 사용자 생성·유닛 작성·시작(2단계)을 한다. 2단계는 받은 설정을 다시 검증하고, 설정이 모두 있으면 묻지 않는다. root만 있는 환경은 sudo 없이 이어서 진행한다. 일반 사용자가 sudo로 실행하면 root로 빌드하지 않는다
     - `--upgrade`는 기존 설치(유닛의 `User=`, `/etc/default/onmaru`)의 설정으로 질문·확인 없이 진행하고, 기존 설치에 없는 설정만 묻는다. 설치 설정을 새로 더하면 `load_installed_settings`에서도 읽게 한다
   - 사용자 대상 설치·설정·프록시 안내는 `README.md`에 둔다. 플래그를 추가·변경하면 `README.md`의 설정 표와 `install.sh`도 함께 고친다
-- **백엔드는 얇은 API 서버**다. 역할은 (1) 현황 읽기: `/proc`·`/sys` 직접 읽기, root가 필요한 정보는 OMV RPC, (2) 설정 변경 요청을 OMV `rpc.php`로 전달, (3) 대시보드 설정(사용자별 위젯 배치·바로가기·화면 설정, 관리자의 전역 설정, 배경 이미지) 저장, 세 가지뿐이다
+- **백엔드는 얇은 API 서버**다. 역할은 (1) 현황 읽기: `/proc`·`/sys` 직접 읽기, root가 필요한 정보는 OMV RPC, (2) 설정 변경 요청을 OMV `rpc.php`로 전달, (3) 대시보드 설정(사용자별 위젯 배치·바로가기·화면 설정, 관리자의 전역 설정, 배경 이미지) 저장, 세 가지뿐이다. OMV RPC로 할 수 없는 권한 작업은 (4) 권한 도우미에 맡긴다(아래 "권한 도우미")
   - (3)은 대시보드 자신의 상태만 다룬다. 상태 디렉터리(`-state-dir`, systemd `StateDirectory=`)의 사용자별 JSON 파일, 관리자가 바꾸는 전역 설정(`site.json`), 올린 배경 이미지(`images/`)이며 OMV 설정·시스템 파일과 무관하다(`internal/prefs`)
   - 설정 창 앱(`src/settings/`)이 프로필(사진, 자기 OMV 계정의 전자 우편·태그), 화면(테마·바탕화면) 같은 사용자 설정과 관리자 전용 전역 설정(로그인 화면, 기본 화면, 서버), 정보 페이지를 맡는다. 전역에 적용되는 설정은 관리자만 바꾼다. 그 밖의 OMV·OS 설정은 넣지 않고, 넣게 되면 페이지 그룹으로 더한다
   - 가동 설정 중 재시작 없이 바뀌는 워크벤치 주소와 SMART 확인 시각만 웹에서 덮어쓴다(`site.json`, 플래그보다 우선). 나머지는 `/etc/default/onmaru`를 root가 고치며, 웹에서 sudo로 바꾸는 방식은 `ROADMAP.md`에 있다
+- **권한 도우미**(`onmaru-helper`, 선택 설치): root로 도는 별도 실행 파일이 systemd 소켓 활성화(`/run/onmaru-helper/helper.sock`)로 onmaru 서비스 사용자의 연결만 받는다. 로그인할 때 도우미가 비밀번호를 `unix_chkpwd`로 직접 확인해 세션에 티켓을 주고, 연산마다 자식 프로세스를 그 사용자 권한으로 강등해 실행한다(홈과 `/srv` 아래 마운트의 파일 연산). root 연산은 `openmediavault-admin`과 상승 그룹(기본 `sudo`)에 속한 관리자가 비밀번호를 다시 입력하면 그 세션에서 5분 동안만, 정해진 목록에서만 쓸 수 있다(지금은 `id`뿐). onmaru 쪽 설정은 `-helper-socket`(비우면 끔). 상세는 `.claude/docs/helper.md`, 규칙은 `.claude/rules/helper.md`
 - **OMV RPC는 항상 백엔드가 중계한다**: 브라우저 → `/api/rpc` → 백엔드 → OMV `rpc.php`. 브라우저가 `rpc.php`를 직접 호출하지 않는다
   - 백엔드는 대시보드 세션마다 OMV 세션을 메모리에 보관하고, 항상 같은 주소(127.0.0.1)와 고정 User-Agent로 OMV를 호출한다
   - 브라우저의 쿠키를 OMV에 그대로 전달하지 않는다. OMV는 User-Agent가 다르면 세션을 파기하므로 사용자를 로그아웃시키게 된다
@@ -78,8 +80,8 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 | 명령 | 내용 |
 |---|---|
 | `make dev` | 개발 서버. 백엔드 `127.0.0.1:8090`(`go run`) + Vite `0.0.0.0:5173`. 접속은 `http://<NAS-IP>:5173/`. Ctrl+C로 둘 다 종료. 실제 OMV에 연결하므로 `frontend/.env.local`에 `ONMARU_OMV_URL`(이 NAS의 OMV 주소)을 둔다. git 워크트리에서 실행하면 주 체크아웃의 `frontend/.env.local`(워크트리에 있으면 그 값이 우선)과 `.dev-state`를 쓴다. `make dev BRANCH=<브랜치>`(`make dev-fake`도 같다)는 그 브랜치가 체크아웃된 워크트리의 코드를 같은 방식으로 실행하므로 워크트리에 들어가지 않아도 된다. 실행은 부른 쪽의 `scripts/dev.sh`가 한다 |
-| `make dev-fake` | `make dev`와 같지만 가짜 OMV(`127.0.0.1:8091`)를 함께 띄워 연결한다. `FAKEOMV_TIMEOUT=1m make dev-fake`처럼 세션 timeout을 분 단위로 바꿀 수 있고, `FAKEOMV_VERSION=8.3`처럼 옛 OMV 버전의 응답을 흉내 낼 수 있다(`omvfake.Version`). 포트는 `ONMARU_LISTEN`(백엔드), `FAKEOMV_LISTEN`(가짜 OMV), `DEV_PORT`(Vite)로 바꾼다 |
-| `make build` | 프론트 빌드 → `backend/internal/web/static/dist/` → `bin/onmaru` 단일 실행 파일 |
+| `make dev-fake` | `make dev`와 같지만 가짜 OMV(`127.0.0.1:8091`)와 가짜 권한 도우미(상태 디렉터리의 `helper.sock`, 파일 연산은 `helper-root/` 아래에서만)를 함께 띄워 연결한다. `FAKEOMV_TIMEOUT=1m make dev-fake`처럼 세션 timeout을 분 단위로 바꿀 수 있고, `FAKEOMV_VERSION=8.3`처럼 옛 OMV 버전의 응답을 흉내 낼 수 있다(`omvfake.Version`). 포트는 `ONMARU_LISTEN`(백엔드), `FAKEOMV_LISTEN`(가짜 OMV), `DEV_PORT`(Vite)로 바꾼다 |
+| `make build` | 프론트 빌드 → `backend/internal/web/static/dist/` → `bin/onmaru` 단일 실행 파일, 권한 도우미 `bin/onmaru-helper`(`CGO_ENABLED=0`) |
 | `make lint` | `gofmt -l`, `go vet`, oxlint, `tsc -b` |
 | `make test` | `go test -count=1 ./...`(모듈 밖 생성물 검사가 캐시로 통과하지 않게), `vitest run` |
 | `make check` | lint + test |
@@ -111,6 +113,8 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 | `admin` | `admin` | 관리자 | |
 | `user` | `user` | 일반 사용자 | |
 | `totp` | `totp` | 관리자 | 2차 인증 코드 `123456` |
+
+가짜 도우미(`helperfake.DefaultUsers`)는 같은 계정·비밀번호를 쓴다. `admin`은 OMV 내장 관리자처럼 sudo 그룹이 아니라 권한 상승을 할 수 없고, `totp`만 상승할 수 있다. 권한을 바꾸지 않으므로 `id`는 가짜 계정의 uid·그룹을 돌려준다.
 
 ## 작업 방식
 
@@ -160,5 +164,12 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 - 강제 테마(라이트·다크)에서 묶음 로고(`<img>` 안 SVG의 `prefers-color-scheme`) 글자색이 따라가는지 Firefox·Safari에서 확인한다. Chromium에서는 따라간다. 따르지 않으면 로고를 `?raw`로 인라인한다
 - `install.sh`로 실제 설치한 뒤(사용자가 실행): 유닛 하드닝(`ProtectSystem=strict`, `DevicePolicy=closed`, `RestrictAddressFamilies` 등. `PrivateDevices=yes`는 `/dev/disk/by-label`을 숨겨 파일시스템 라벨이 사라지므로 쓰지 않는다) 아래에서 모든 애드온 데이터가 나오는지, Docker Caddy의 `/run/onmaru` 바인드 마운트가 서비스 재시작·재부팅 후에도 유지되는지. 지금은 `systemd-run --user`로 비슷한 제한을 걸어 가짜 OMV로만 확인했다
 - OMV 워크벤치 링크 앱을 실제 OMV로 확인한다(사용자가 `make dev`에 `ONMARU_WORKBENCH_URL`을 두고). 같은 탭을 다시 쓸 때 브라우저가 그 탭으로 전환하는지(Chrome·Firefox), 그 탭의 OMV 로그인이 유지되는지. 지금은 가짜 OMV와 같은 출처 주소로만 확인했다
+- 권한 도우미를 실제 설치로 확인한다(사용자가 `./install.sh`에서 도우미를 고르고). 지금은 root 없이 Go 테스트(가짜 계정, 테스트 실행 파일을 worker로)와 `make dev-fake`로만 확인했다
+  - `systemctl status onmaru-helper.socket`, 소켓 권한(`ls -l /run/onmaru-helper/`: 서비스 사용자 소유 `0600`), onmaru(`ProtectSystem=strict`)가 소켓에 connect되는지
+  - 다른 계정(예: 프록시 사용자)으로 접속하면 거절되고 `journalctl -u onmaru-helper`에 `rejected connection`이 남는지
+  - 로그인 뒤 서버 페이지의 "실행 권한"이 내 uid·그룹인지(실제 강등, `os/user` 순수 Go의 보조 그룹), 틀린 비밀번호·맞는 비밀번호로 상승하고 "실행 권한(root)"이 uid 0인지, 5분 뒤 끝나는지
+  - 유닛 하드닝(`CapabilityBoundingSet=CAP_SETUID CAP_SETGID CAP_KILL`, `PrivateNetwork=yes`, `PrivateDevices=yes`, `MemoryDenyWriteExecute`, `SystemCallFilter=@system-service`) 아래에서 `unix_chkpwd`가 `/etc/shadow`를 읽는지, worker 강등과 시간 초과 종료(`CAP_KILL`)가 되는지, `/srv` 아래 나중에 마운트한 디스크가 보이는지. `systemd-analyze security onmaru-helper`
+  - 유휴 종료(10분) 뒤 다음 요청에 소켓 활성화로 다시 뜨는지, 도우미를 다시 시작하면 서버 페이지가 "다시 로그인 필요"를 보이는지
+  - `--upgrade`가 도우미 선택(`ONMARU_HELPER_SOCKET`)과 상승 그룹을 기억하는지, `--no-helper`·`--uninstall`이 도우미를 지우는지
 - (보류: 새 탭 방식을 택했다) 같은 출처에서 OMV workbench를 iframe 창으로 띄울 수 있는지
 - (보류) 같은 탭 iframe은 sessionStorage를 공유하므로, 대시보드 로그인 후 OMV 창도 로그인 상태로 보이게 할 수 있는지. OMV 내부 저장 키(`username`, `permissions`)에 의존하는 실험이라 OMV 업데이트 시 깨질 수 있다. 실험 브랜치에서만 다룬다

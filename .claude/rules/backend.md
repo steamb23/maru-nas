@@ -16,7 +16,8 @@ paths:
 - 전역 설정 쓰기(`/api/site/*`)는 `requireAdmin`(관리자가 아니면 403 `admin_required`)을 거친다. 로그인 화면이 쓰는 `GET /api/site`(화면 꾸밈 정보만, 가동 설정·주소는 넣지 않음)와 로그인 배경 이미지만 인증 없이 준다
 - 배경 이미지는 자리(`prefs.SiteImage`, `prefs.UserWallpaper`)마다 하나다. 올리기는 원시 이미지 본문(`image/png|jpeg|webp`, 20MiB 이하, multipart 아님)이고 형식은 내용으로 다시 판별해 저장한다(SVG·HTML 거부). 보낼 때는 `serveImage`로 저장 형식, `nosniff`, `Content-Security-Policy: default-src 'none'; sandbox`, ETag(내용 해시 리비전)를 붙인다. 이미지를 지우면 그 이미지를 가리키던 배경 서술자도 지운다
 - 웹에서 덮어쓰는 가동 설정은 재시작 없이 바뀌는 워크벤치 주소와 SMART 확인 시각뿐이다. 덮어쓴 값은 `site.json`에 두고 `handler.over`에 올려 바로 반영한다(`/api/capabilities`, `smart.Cache.SetRefreshAt`). 가동 설정 현황(값·출처)은 `main.go`가 `flag.Visit`·환경 변수로 만들어 `Config.Runtime`으로 넘긴다. 플래그를 더하면 그 목록에도 넣는다
-- `cmd/fakeomv`와 `internal/omv/omvfake`는 개발·테스트용이다. 운영 바이너리(`cmd/onmaru`)에서 import하지 않는다
+- `cmd/fakeomv`와 `internal/omv/omvfake`, `internal/helper/helperfake`는 개발·테스트용이다. 운영 바이너리(`cmd/onmaru`, `cmd/onmaru-helper`)에서 import하지 않는다
+- `-helper-socket`(`ONMARU_HELPER_SOCKET`, 기본 빈 값)은 권한 도우미 소켓의 절대 경로다. 비우면 `Config.Helper`가 nil이고 도우미 기능(`/api/helper*`)은 `disabled`·503이다. 시작할 때 도우미에 `reset`을 보낸다. 도우미 쪽 규칙은 `.claude/rules/helper.md`
 - `/api/*` 경로는 대시보드 루트 기준이다. 대시보드를 경로 접두사 아래에 두면 리버스 프록시가 접두사를 제거한다. 쿠키 Path는 `-cookie-path`(기본 `/`)
 - `internal/web/static/`에는 `.gitkeep`만 커밋한다. `dist/`는 빌드 결과다
   - 캐시: 해시가 붙은 `assets/*`는 `Cache-Control: public, max-age=31536000, immutable`, 그 밖의 파일(`index.html`)은 `no-cache`다. embed 파일은 수정 시각이 0이라 `Last-Modified`가 없으므로 시작할 때 내용 해시로 ETag를 만든다. 없는 파일(업그레이드 전 탭이 요청한 옛 청크)의 404에는 캐시 헤더를 붙이지 않는다(`internal/web`)
@@ -36,7 +37,7 @@ paths:
 
 ## 테스트
 
-- 서버 테스트는 `internal/server/server_test.go`의 `newEnv`·`browser`를 쓴다. `omvfake`를 `httptest`로 띄우고 실제 `omv.Client`와 서버 핸들러를 연결한다
+- 서버 테스트는 `internal/server/server_test.go`의 `newEnv`·`browser`를 쓴다. `omvfake`를 `httptest`로 띄우고 실제 `omv.Client`와 서버 핸들러를 연결한다. 도우미가 필요하면 `envOptions{helper: true}`가 `helperfake`를 임시 소켓에 띄워 실제 `client.Client`로 연결한다
 - 시계는 주입한다. OMV 세션 만료는 `omvfake.Expire(user)`로 흉내 낸다
 - 옛 OMV 8 버전의 응답은 `omvfake.SetVersion`(`Version82`, `Version80`)으로 흉내 낸다. 버전마다 RPC가 다른 기능은 해당 버전대도 테스트한다(`auth-omv.md`의 "OMV 8 버전별 차이")
 - 새 RPC를 쓰는 기능은 `omvfake`에 그 RPC의 합성 응답을 추가해 같은 방식으로 테스트한다. 응답 형식은 OMV 소스(`/usr/share/openmediavault/engined/rpc/`)를 읽고 만들며 NAS 실제 출력을 넣지 않는다
