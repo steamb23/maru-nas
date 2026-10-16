@@ -11,8 +11,8 @@ import { CLAWD_COLS, CLAWD_ROWS, type ClawdPose } from './clawd'
 
 export type Rng = () => number
 
-// 입력 없이 이만큼 지나면 연출을 시작한다(로그인 대기 이스터에그와 같은 30초).
-export const CLAWD_IDLE_MS = 30_000
+// 입력 없이 이만큼 지나면 연출을 시작한다. 정보 페이지는 오래 머무는 곳이 아니므로 로그인 대기 이스터에그(30초)보다 짧다.
+export const CLAWD_IDLE_MS = 10_000
 
 // 그림 한 칸의 CSS px. 64칸 격자 로고처럼 정수 px에 맞도록 정수로 둔다.
 export const CLAWD_PX = 4
