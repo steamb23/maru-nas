@@ -261,10 +261,17 @@
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
+  transition: scale var(--press-out) ease;
 }
 
 .addon-button:hover:not(:disabled) {
   background: color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.addon-button:active:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
+  scale: var(--press-scale);
+  transition-duration: var(--press-in);
 }
 
 .addon-button:disabled {
@@ -281,6 +288,10 @@
   background: light-dark(#b9271d, #dd4a3f);
 }
 
+.addon-button.danger:active:not(:disabled) {
+  background: light-dark(#9a1f17, #e8685e);
+}
+
 .addon-button.primary {
   background: var(--accent);
   color: #fff;
@@ -288,6 +299,10 @@
 
 .addon-button.primary:hover:not(:disabled) {
   background: color-mix(in srgb, var(--accent) 85%, #000);
+}
+
+.addon-button.primary:active:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 70%, #000);
 }
 
 .row-actions {
@@ -308,12 +323,20 @@
   background: none;
   color: var(--text-muted);
   cursor: pointer;
+  transition: scale var(--press-out) ease;
 }
 
 .row-action-button:hover,
 .row-action-button.pressed {
   background: var(--hover-bg);
   color: var(--text);
+}
+
+.row-action-button:active {
+  background: var(--press-bg);
+  color: var(--text);
+  scale: var(--press-scale);
+  transition-duration: var(--press-in);
 }
 
 .row-actions-progress {

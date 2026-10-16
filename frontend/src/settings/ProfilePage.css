@@ -21,6 +21,10 @@
   filter: brightness(1.08);
 }
 
+.profile-photo:active:not(:disabled) {
+  filter: brightness(0.92);
+}
+
 .profile-photo:focus-visible {
   outline: 2px solid color-mix(in srgb, var(--accent) 60%, transparent);
   outline-offset: 3px;

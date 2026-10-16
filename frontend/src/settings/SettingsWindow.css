@@ -72,8 +72,16 @@
   outline: none;
 }
 
+.settings-user:active {
+  background: var(--press-bg);
+}
+
 .settings-user[aria-current='page'] {
   background: color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.settings-user[aria-current='page']:active {
+  background: color-mix(in srgb, var(--accent) 28%, transparent);
 }
 
 .settings-user-text {
@@ -132,9 +140,18 @@
   outline: none;
 }
 
+/* 사이드바 행은 누르면 페이지가 바뀌므로 줄어들지 않고 배경만 바뀐다. */
+.settings-nav-item:active {
+  background: var(--press-bg);
+}
+
 .settings-nav-item[aria-current='page'] {
   background: color-mix(in srgb, var(--accent) 18%, transparent);
   font-weight: 600;
+}
+
+.settings-nav-item[aria-current='page']:active {
+  background: color-mix(in srgb, var(--accent) 28%, transparent);
 }
 
 .settings-nav-item[aria-current='page'] .symbolic-icon {
@@ -181,12 +198,19 @@
   border-radius: 6px;
   background: none;
   cursor: pointer;
+  transition: scale var(--press-out) ease;
 }
 
 .settings-menu-button:hover,
 .settings-menu-button:focus-visible {
   background: var(--hover-bg);
   outline: none;
+}
+
+.settings-menu-button:active {
+  background: var(--press-bg);
+  scale: var(--press-scale);
+  transition-duration: var(--press-in);
 }
 
 /* 페이지 영역(제목 머리 아래). 페이지 위에 겹쳐 그리는 레이어(정보 페이지의 .clawd-layer)의 기준 상자다.

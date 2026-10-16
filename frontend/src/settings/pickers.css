@@ -30,6 +30,11 @@
   background: var(--hover-bg);
 }
 
+/* 고르면 선택 테두리가 바뀌므로 줄어들지 않고 배경만 바뀐다. */
+.theme-option:active:not(:has(.picker-input:disabled)) {
+  background: var(--press-bg);
+}
+
 .theme-option:has(.picker-input:checked) {
   border-color: var(--accent);
   box-shadow: 0 0 0 1px var(--accent);
@@ -156,6 +161,11 @@
   filter: brightness(1.08);
 }
 
+.wallpaper-option:active:not(:has(.picker-input:disabled)) .wallpaper-swatch,
+.wallpaper-upload:active:not(:disabled) .wallpaper-swatch {
+  filter: brightness(0.92);
+}
+
 .wallpaper-option:has(.picker-input:checked) .wallpaper-swatch {
   box-shadow:
     0 0 0 2px var(--window-bg),
@@ -210,12 +220,19 @@
   background: rgb(0 0 0 / 0.55);
   color: #fff;
   cursor: pointer;
+  transition: scale var(--press-out) ease;
 }
 
 .wallpaper-delete:hover:not(:disabled),
 .wallpaper-delete:focus-visible {
   background: #d93025;
   outline: none;
+}
+
+.wallpaper-delete:active:not(:disabled) {
+  background: #b0261d;
+  scale: var(--press-scale);
+  transition-duration: var(--press-in);
 }
 
 .wallpaper-delete:disabled {

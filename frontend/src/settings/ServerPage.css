@@ -74,10 +74,17 @@
   border-radius: 6px;
   background: none;
   cursor: pointer;
+  transition: scale var(--press-out) ease;
 }
 
 .server-copy:hover,
 .server-copy:focus-visible {
   background: var(--hover-bg);
   outline: none;
+}
+
+.server-copy:active {
+  background: var(--press-bg);
+  scale: var(--press-scale);
+  transition-duration: var(--press-in);
 }
