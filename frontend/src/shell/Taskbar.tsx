@@ -24,8 +24,11 @@ const { closeMany, minimize, raiseGroup, reorder, restore, toggleMaximize } = us
 const DRAG_THRESHOLD = 4
 // Taskbar.css의 작업표시줄 li 전환 시간과 맞춘다. transitionend를 놓쳤을 때의 대비용이다.
 const SETTLE_MS = 200
-// 작업표시줄의 앱 아이콘과 "모든 앱" 버튼 아이콘 크기. 작업표시줄 두께(base.css의 --taskbar-height)와 함께 바꾼다.
+// 작업표시줄의 앱 아이콘 크기. 작업표시줄 두께(base.css의 --taskbar-height)와 함께 바꾼다.
 const ICON_SIZE = 24
+// "모든 앱" 버튼 아이콘 크기. 창 버튼과 구분되게 앱 아이콘보다 크게 그린다.
+// 16px 격자의 symbolic 아이콘이라 2배인 32px에서 점이 정수 픽셀에 맞는다.
+const LAUNCHER_ICON_SIZE = 32
 
 // 작업표시줄 버튼: 활성 창은 최소화, 그 밖의 창은 복원해 맨 앞으로. 타일 그룹의 창이면 짝 창도 함께 앞으로 온다.
 // "모든 앱" 화면이 열려 있으면 닫고 그 창을 보인다(화면에 가려져 있던 활성 창을 최소화하지 않는다).
@@ -317,7 +320,7 @@ export function Taskbar({
             useAppDrawerStore.getState().toggle(viaTouch)
           }}
         >
-          <IconImage name="view-app-grid-symbolic" size={ICON_SIZE} />
+          <IconImage name="view-app-grid-symbolic" size={LAUNCHER_ICON_SIZE} />
         </button>
         <ul ref={listRef} className="taskbar-items">
           {renderIds.map((id) => {
