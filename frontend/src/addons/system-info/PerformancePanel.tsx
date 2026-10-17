@@ -95,7 +95,7 @@ export function PerformancePanel({ sample, stale, resource, onResource }: Props)
       max,
       maxLabel: formatRate(max, lang, 0),
       format: (x: number) => formatRate(x, lang),
-      // 두 값은 한 줄에 들어가지 않으면 다음 줄로 넘긴다.
+      // 두 값은 늘 두 줄로 둔다(값 길이에 따라 항목 높이가 바뀌지 않게).
       summary: (
         <>
           <span className="sysinfo-resource-rate">
@@ -140,16 +140,18 @@ export function PerformancePanel({ sample, stale, resource, onResource }: Props)
         pick(points, (p) => p.memory),
         point?.memory,
       ),
-      // 좁은 페이지(자원 목록이 한 줄)에서는 사용량을 빼고 백분율만 보인다(.sysinfo-resource-extra).
+      // 둘째 줄은 사용량/전체다. 좁은 페이지(자원 목록이 한 줄)에서는 빼고 백분율만 보인다(.sysinfo-resource-extra).
       summary: mem ? (
-        <span>
-          {pct(point?.memory)}
-          <span className="sysinfo-resource-extra"> · {bytes(mem.usedBytes)}</span>
-        </span>
+        <>
+          <span>{pct(point?.memory)}</span>
+          <span className="sysinfo-resource-extra">
+            {bytes(mem.usedBytes)} / {bytes(mem.totalBytes)}
+          </span>
+        </>
       ) : (
         none
       ),
-      summaryLabel: mem ? `${pct(point?.memory)}, ${bytes(mem.usedBytes)}` : none,
+      summaryLabel: mem ? `${pct(point?.memory)}, ${bytes(mem.usedBytes)} / ${bytes(mem.totalBytes)}` : none,
       stats: [
         { label: t('sysinfo.perf.inUse'), value: bytes(mem?.usedBytes) },
         { label: t('sysinfo.perf.available'), value: bytes(mem?.availableBytes) },

@@ -107,31 +107,39 @@
   height: 40px;
 }
 
+/* 글자 영역은 이름 한 줄과 값 두 줄 높이로 고정한다. 값의 줄 수·길이에 따라 항목 높이가 달라지지 않게 한다. */
 .sysinfo-resource-text {
   display: flex;
   flex-direction: column;
+  justify-content: center;
   gap: 2px;
   min-width: 0;
+  min-height: calc(20px + 2px + 2 * 16px);
 }
 
 .sysinfo-resource-name {
   font-weight: 600;
+  line-height: 20px;
 }
 
 .sysinfo-resource-value {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0 8px;
-  overflow: hidden;
+  flex-direction: column;
+  min-width: 0;
   font-size: 12px;
+  line-height: 16px;
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
+.sysinfo-resource-value > * {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .sysinfo-resource-rate {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: 4px;
 }
