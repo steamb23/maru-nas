@@ -14,7 +14,8 @@
 # 일반 사용자가 sudo ./install.sh로 실행하면 root로 빌드하지 않는다(저장소에 root 소유 파일이 생기고,
 # sudo의 PATH에는 사용자의 go·npm이 없을 수 있다). 이때는 기존 실행 파일로 설치만 할지 묻는다.
 #
-# 권한 도우미(onmaru-helper, root로 도는 소켓 활성화 서비스)는 물어서 고른 경우에만 설치한다(--helper).
+# 권한 도우미(onmaru-helper, root로 도는 소켓 활성화 서비스)는 기본으로 설치한다. 질문에 n으로 답하거나
+# --no-helper를 주면 설치하지 않고, 이미 설치된 도우미는 지운다.
 # 리버스 프록시 설정은 하지 않는다. README.md의 "리버스 프록시"를 참고한다.
 # 생성하는 설정 파일(유닛, /etc/default/onmaru)의 주석은 언어와 상관없이 영어로 쓴다.
 set -euo pipefail
@@ -479,8 +480,11 @@ ask_settings() {
   5분 동안 정해진 root 연산을 onmaru가 실행할 수 있게 합니다. 설치하지 않으면 그런 기능을 쓸 수 없습니다.
   README.md의 \"권한 도우미\"를 참고하세요."
     echo
-    local helper_def=n
-    [[ -f $HELPER_SERVICE_UNIT ]] && helper_def=y
+    # 기본은 설치한다. 기존 설치가 도우미를 설치하지 않기로 했으면(ONMARU_HELPER_SOCKET=이 빈 값) 그 선택을 기본값으로 둔다.
+    local helper_def=y
+    if grep -qs '^ONMARU_HELPER_SOCKET=' "$ENV_FILE" && [[ -z $(env_get ONMARU_HELPER_SOCKET) ]]; then
+      helper_def=n
+    fi
     if confirm "$(t "Install the privileged helper?" "권한 도우미를 설치할까요?")" "$helper_def"; then
       S_HELPER=yes
     else
