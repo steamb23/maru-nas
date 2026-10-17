@@ -26,6 +26,19 @@ const (
 	MaxPending = 100
 )
 
+// Assurance는 세션이 거친 확인의 수준이다(보안 강화 모드). 높을수록 강하며, 높은 수준은 낮은 수준의 조건도 만족한다.
+// 세션의 속성이라 따로 만료가 없다(세션이 끝나면 함께 끝난다).
+type Assurance int
+
+const (
+	// AssuranceLogin은 로그인만 한 세션이다. 로그인할 때 넣은 비밀번호는 재확인으로 치지 않는다(세션을 빼앗은 쪽도 이 수준이다).
+	AssuranceLogin Assurance = iota
+	// AssurancePassword는 세션 중에 비밀번호를 다시 확인한 세션이다.
+	AssurancePassword
+	// AssuranceTwoFactor는 2차 인증(패스키, TOTP, 복구 코드, OMV 2차 인증)을 거친 세션이다.
+	AssuranceTwoFactor
+)
+
 // Session은 로그인한 대시보드 세션이다.
 type Session struct {
 	ID       string
@@ -48,6 +61,16 @@ type Session struct {
 	HelperTicket string
 	// HelperLost는 티켓이 도우미에서 사라졌다는 표시다(도우미 재시작 등). 다시 로그인해야 한다.
 	HelperLost bool
+	// Assurance는 이 세션이 거친 확인의 수준이다. 올라가기만 한다(Raise).
+	Assurance Assurance
+	// ManageUntil은 인증 수단을 등록·삭제할 수 있는 관리 창이 끝나는 시각이다. 비밀번호와 등록한 수단을
+	// 다시 확인하면 잠깐 열린다.
+	ManageUntil time.Time
+}
+
+// Raise는 보증 수준을 a로 올린다. 이미 더 높으면 그대로 둔다.
+func (s *Session) Raise(a Assurance) {
+	s.Assurance = max(s.Assurance, a)
 }
 
 // ExpiresAt은 OMV 세션의 예상 만료 시각이다. 모르거나 자동 로그아웃이 꺼져 있으면 false다.
@@ -171,6 +194,39 @@ func (s *Store) Delete(id string) (Session, bool) {
 	delete(s.sessions, id)
 	gone.sessions = append(gone.sessions, *ss)
 	return *ss, true
+}
+
+// DeleteUser는 username의 세션과 2차 인증 대기를 모두 지우고 지운 세션 수를 돌려준다. 관리자가 그 사용자의
+// 인증 수단을 초기화할 때 쓴다(이미 강화된 세션이 남지 않게).
+func (s *Store) DeleteUser(username string) int {
+	var gone removed
+	defer gone.notify(s)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for id, ss := range s.sessions {
+		if ss.Username == username {
+			delete(s.sessions, id)
+			gone.sessions = append(gone.sessions, *ss)
+		}
+	}
+	for id, p := range s.pending {
+		if p.Username == username {
+			delete(s.pending, id)
+			gone.pending = append(gone.pending, *p)
+		}
+	}
+	return len(gone.sessions)
+}
+
+// List는 보관 중인 세션의 복사본이다(순서 없음). 정책이 바뀌었을 때 세션마다 확인하는 데 쓴다.
+func (s *Store) List() []Session {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	out := make([]Session, 0, len(s.sessions))
+	for _, ss := range s.sessions {
+		out = append(out, *ss)
+	}
+	return out
 }
 
 // Len은 보관 중인 세션 수다.

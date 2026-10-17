@@ -1,5 +1,5 @@
 // Package prefs는 대시보드 설정을 저장한다: 사용자별 설정(위젯 배치, 바로가기, 화면 등), 모든 사용자에게
-// 적용하는 전역 설정(site.go), 배경 이미지(images.go).
+// 적용하는 전역 설정(site.go), 배경 이미지(images.go), 보안 강화 모드의 수단 기록(security.go).
 //
 // 대시보드 자신의 상태만 다룬다. OMV 설정이나 시스템 파일은 건드리지 않는다.
 // 운영에서는 상태 디렉터리(systemd StateDirectory) 아래 파일(FileStore)에,
@@ -11,6 +11,7 @@ import (
 	"sync"
 
 	"onmaru/backend/internal/api"
+	"onmaru/backend/internal/security"
 )
 
 // Store는 사용자 설정 저장소다. 여러 고루틴에서 함께 써도 된다.
@@ -30,19 +31,24 @@ type Store interface {
 	UpdateAppearance(username string, apply func(*api.AppearancePrefs)) error
 }
 
-// MemoryStore는 프로세스 메모리에 두는 Store, SiteStore, ImageStore다. 백엔드를 재시작하면 사라진다.
+// MemoryStore는 프로세스 메모리에 두는 Store, SiteStore, ImageStore, security.Store다. 백엔드를 재시작하면 사라진다.
 type MemoryStore struct {
-	mu     sync.Mutex
-	users  map[string]api.Preferences
-	site   api.SiteSettings
-	images map[ImageKey]memImage
+	mu      sync.Mutex
+	users   map[string]api.Preferences
+	site    api.SiteSettings
+	images  map[ImageKey]memImage
+	records map[string]security.Record
 	// rev는 이미지 리비전을 만드는 카운터다.
 	rev int
 }
 
 // NewMemoryStore는 빈 MemoryStore를 반환한다.
 func NewMemoryStore() *MemoryStore {
-	return &MemoryStore{users: make(map[string]api.Preferences), images: make(map[ImageKey]memImage)}
+	return &MemoryStore{
+		users:   make(map[string]api.Preferences),
+		images:  make(map[ImageKey]memImage),
+		records: make(map[string]security.Record),
+	}
 }
 
 func (m *MemoryStore) Get(username string) (api.Preferences, error) {

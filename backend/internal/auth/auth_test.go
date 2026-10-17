@@ -145,6 +145,42 @@ func TestStoreRemoveHooks(t *testing.T) {
 	}
 }
 
+func TestStoreDeleteUser(t *testing.T) {
+	clk := newClock()
+	s := newTestStore(clk)
+	var removed, removedPending []string
+	s.OnRemove = func(ss Session) { removed = append(removed, ss.Username) }
+	s.OnRemovePending = func(p Pending) { removedPending = append(removedPending, p.Username) }
+	s.Create("alice", false, "a1")
+	s.Create("alice", false, "a2")
+	bob := s.Create("bob", false, "b")
+	s.CreatePending("alice", "a3", "t")
+	s.CreatePending("bob", "b2", "t")
+
+	if n := s.DeleteUser("alice"); n != 2 {
+		t.Fatalf("deleted %d sessions", n)
+	}
+	if len(removed) != 2 || removed[0] != "alice" || len(removedPending) != 1 {
+		t.Errorf("hooks: %v %v", removed, removedPending)
+	}
+	list := s.List()
+	if len(list) != 1 || list[0].ID != bob.ID {
+		t.Errorf("left %+v", list)
+	}
+}
+
+func TestSessionRaise(t *testing.T) {
+	var ss Session
+	if ss.Assurance != AssuranceLogin {
+		t.Fatal("new session is not login-only")
+	}
+	ss.Raise(AssuranceTwoFactor)
+	ss.Raise(AssurancePassword)
+	if ss.Assurance != AssuranceTwoFactor {
+		t.Errorf("assurance lowered to %d", ss.Assurance)
+	}
+}
+
 func TestStoreCapNotifies(t *testing.T) {
 	clk := newClock()
 	s := newTestStore(clk)

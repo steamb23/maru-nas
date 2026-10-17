@@ -8,7 +8,9 @@
 package security
 
 import (
+	"bytes"
 	"errors"
+	"slices"
 	"time"
 )
 
@@ -48,6 +50,25 @@ type TOTP struct {
 
 // HasMethods는 2차 인증 수단(패스키, TOTP)이 하나라도 있는지다. 복구 코드는 수단으로 치지 않는다.
 func (r Record) HasMethods() bool { return len(r.Passkeys) > 0 || r.TOTP != nil }
+
+// Clone은 고쳐도 원래 값에 영향이 없는 복사본이다.
+func (r Record) Clone() Record {
+	if r.Passkeys != nil {
+		ps := make([]Passkey, len(r.Passkeys))
+		for i, p := range r.Passkeys {
+			p.PublicKey = bytes.Clone(p.PublicKey)
+			ps[i] = p
+		}
+		r.Passkeys = ps
+	}
+	if r.TOTP != nil {
+		t := *r.TOTP
+		r.TOTP = &t
+	}
+	r.Recovery = slices.Clone(r.Recovery)
+	r.Handle = bytes.Clone(r.Handle)
+	return r
+}
 
 // Passkey는 id의 패스키다. 없으면 nil이다.
 func (r *Record) Passkey(id string) *Passkey {
