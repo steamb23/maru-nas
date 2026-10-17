@@ -45,7 +45,8 @@ func New(r *Reader, procs *Processes) addons.Addon {
 			if err != nil {
 				return nil, err
 			}
-			if req.Has(SourceProcesses) {
+			// 목록은 무거우므로(수백 개) 프로세스 페이지가 보일 때 브라우저가 processes=1로 요청한다.
+			if req.Has(SourceProcesses) && req.Query.Get("processes") == "1" {
 				if list, err := procs.List(); err != nil {
 					res.FailedSources = append(res.FailedSources, SourceProcesses)
 				} else {

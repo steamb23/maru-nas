@@ -9,7 +9,7 @@
 //   보기는 자기 상태에 마지막 값을 들고 있으므로 다시 붙을 때 빈 화면이 되지 않는다.
 // - refresh는 백엔드 캐시를 건너뛰는 요청 하나를 보내고 결과를 모든 보기에 보낸다.
 
-import { createPoller } from './poller'
+import { type Scheduler, createPoller, timeoutScheduler } from './poller'
 
 // loading: 아직 응답이 없음. ok: 마지막 요청 성공. disconnected: 마지막 요청 실패(재시도 중).
 export type ConnectionStatus = 'loading' | 'ok' | 'disconnected'
@@ -32,6 +32,8 @@ export interface SharedPollOptions<T> {
   // warmupMs가 있으면 폴러를 (다시) 시작한 뒤 첫 응답을 받고 나서 두 번째 요청만 이만큼 뒤에 보낸다.
   // 누적 카운터의 차이로 값을 구하는 보기(시스템 정보 창)가 첫 값을 주기만큼 기다리지 않게 한다.
   warmupMs?: number
+  // 타이머(poller.ts의 Scheduler). 없으면 setTimeout이다. 숨긴 탭에서도 주기를 지켜야 하면 Worker 타이머를 넣는다.
+  schedule?: Scheduler
 }
 
 export interface SharedPoll<T> {
@@ -71,6 +73,7 @@ export function createSharedPoll<T>(opts: SharedPollOptions<T>): SharedPoll<T> {
     fetch: (signal) => opts.fetch(signal, false),
     intervalMs: nextDelay,
     timeoutMs: opts.timeoutMs,
+    schedule: opts.schedule,
     onData: (data) => {
       received++
       emit({ ...snap, data, status: 'ok' })
@@ -106,12 +109,12 @@ export function createSharedPoll<T>(opts: SharedPollOptions<T>): SharedPoll<T> {
       const ctrl = new AbortController()
       refreshCtrl = ctrl
       emit({ ...snap, refreshing: true })
-      const timer = setTimeout(
+      const cancelTimeout = (opts.schedule ?? timeoutScheduler)(
         () => ctrl.abort(new Error('request timed out')),
         opts.timeoutMs * REFRESH_TIMEOUT_FACTOR,
       )
       const settle = (patch: Partial<PollSnapshot<T>>) => {
-        clearTimeout(timer)
+        cancelTimeout()
         // 그사이 모든 보기가 떨어졌으면(reset) 결과를 버린다.
         if (refreshCtrl !== ctrl) return
         refreshCtrl = null

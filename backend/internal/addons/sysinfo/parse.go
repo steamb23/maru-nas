@@ -193,6 +193,23 @@ func ParseUptime(r io.Reader) (float64, error) {
 	return strconv.ParseFloat(fields[0], 64)
 }
 
+// ParseLoadavgThreads는 /proc/loadavg의 넷째 값("실행 중/전체")에서 전체 스케줄링 단위(스레드) 수를 읽는다.
+func ParseLoadavgThreads(r io.Reader) (int, error) {
+	b, err := io.ReadAll(io.LimitReader(r, 256))
+	if err != nil {
+		return 0, err
+	}
+	fields := strings.Fields(string(b))
+	if len(fields) < 4 {
+		return 0, fmt.Errorf("loadavg has %d fields, want >= 4", len(fields))
+	}
+	_, total, ok := strings.Cut(fields[3], "/")
+	if !ok {
+		return 0, fmt.Errorf("loadavg tasks %q", fields[3])
+	}
+	return strconv.Atoi(total)
+}
+
 // pfKthread는 /proc/<pid>/stat flags의 커널 스레드 표시(PF_KTHREAD)다.
 const pfKthread = 0x00200000
 

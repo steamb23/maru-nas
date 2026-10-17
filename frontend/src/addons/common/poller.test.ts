@@ -186,4 +186,36 @@ describe('createPoller', () => {
     expect(f.fn).toHaveBeenCalledTimes(3)
     poller.stop()
   })
+
+  it('schedule을 주면 다음 요청 예약과 요청 제한 시간에 그 타이머를 쓴다', async () => {
+    // 테스트용 타이머: 시간을 직접 넘기는 대신 걸린 예약을 꺼내 부른다.
+    const pending: { fn: () => void; ms: number; cancelled: boolean }[] = []
+    const schedule = vi.fn((fn: () => void, ms: number) => {
+      const entry = { fn, ms, cancelled: false }
+      pending.push(entry)
+      return () => {
+        entry.cancelled = true
+      }
+    })
+    const f = fakeFetch()
+    const onError = vi.fn()
+    const poller = createPoller({ fetch: f.fn, intervalMs: INTERVAL, timeoutMs: TIMEOUT, onData: vi.fn(), onError, schedule })
+    poller.start()
+    // 첫 요청의 제한 시간
+    expect(pending.map((p) => p.ms)).toEqual([TIMEOUT])
+    f.last().resolve(1)
+    await vi.advanceTimersByTimeAsync(0)
+    // 응답하면 제한 시간을 거두고 다음 요청을 예약한다.
+    expect(pending[0].cancelled).toBe(true)
+    expect(pending[1].ms).toBe(INTERVAL)
+    pending[1].fn()
+    expect(f.fn).toHaveBeenCalledTimes(2)
+    // 제한 시간이 되면 abort하고 오류로 처리한다.
+    pending[2].fn()
+    await vi.advanceTimersByTimeAsync(0)
+    expect(onError).toHaveBeenCalledOnce()
+    // stop은 대기 중인 예약을 거둔다.
+    poller.stop()
+    expect(pending[pending.length - 1].cancelled).toBe(true)
+  })
 })

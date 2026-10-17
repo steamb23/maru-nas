@@ -229,6 +229,8 @@ export interface FetchAddonOptions {
   signal?: AbortSignal
   // 백엔드 캐시를 건너뛰고 다시 가져오게 한다(SMART 새로고침 등). 캐시가 없는 애드온은 무시한다.
   refresh?: boolean
+  // 애드온이 정한 조회 파라미터(시스템 정보의 processes=1)
+  query?: Record<string, string>
 }
 
 // fetchAddon은 애드온 하나의 현황 데이터를 가져온다(GET /api/addons/{id}). guard로 응답 형태를 검사한다.
@@ -237,7 +239,10 @@ export async function fetchAddon<T>(
   guard: (v: unknown) => v is T,
   opts: FetchAddonOptions = {},
 ): Promise<T> {
-  const path = `/addons/${encodeURIComponent(id)}${opts.refresh ? '?refresh=1' : ''}`
+  const params = new URLSearchParams(opts.query)
+  if (opts.refresh) params.set('refresh', '1')
+  const search = params.toString()
+  const path = `/addons/${encodeURIComponent(id)}${search ? `?${search}` : ''}`
   const data = await getJSON(path, { signal: opts.signal })
   if (!guard(data)) {
     throw new Error(`${path}: unexpected response shape`)

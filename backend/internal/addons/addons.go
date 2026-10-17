@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/url"
 	"regexp"
 	"slices"
 	"strings"
@@ -97,6 +98,9 @@ type Request struct {
 	Sources []string
 	// Refresh는 사용자가 새로고침을 눌렀는지다(?refresh=1). 캐시를 쓰는 애드온만 본다.
 	Refresh bool
+	// Query는 요청의 조회 파라미터다. 브라우저가 보낸 값이므로 애드온이 자기가 정한 이름·값만 읽는다
+	// (시스템 정보의 processes=1). OMV에 그대로 넘기지 않는다.
+	Query url.Values
 	// RPC는 요청한 사용자의 OMV 세션으로 OMV RPC를 부른다.
 	RPC RPCCaller
 }

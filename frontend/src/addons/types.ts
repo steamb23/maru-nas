@@ -16,7 +16,8 @@ type DeepReadonly<T> = T extends (infer U)[]
 export type AddonManifest = DeepReadonly<Omit<Manifest, 'title' | 'icon'> & { title: ParseKeys; icon: IconName }>
 
 export interface WindowViewProps {
-  // 창이 최소화되거나 닫히는 중이거나 탭이 보이지 않으면 false. 이때는 주기 요청을 멈춘다.
+  // 창이 최소화되거나 닫히는 중이거나 탭이 보이지 않으면 false. 이때는 주기 요청을 멈춘다
+  // (시스템 정보 창은 사용량 기록을 이어 가려고 창이 열려 있는 동안 계속 가져오고, 다시 그리는 것만 멈춘다).
   active: boolean
 }
 

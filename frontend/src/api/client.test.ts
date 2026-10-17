@@ -292,6 +292,9 @@ describe('fetchAddon', () => {
     const fn2 = stubFetch(Response.json({ n: 2 }))
     await fetchAddon('smart', isThing, { refresh: true })
     expect(fn2.mock.calls[0][0]).toMatch(/\/api\/addons\/smart\?refresh=1$/)
+    const fn3 = stubFetch(Response.json({ n: 3 }))
+    await fetchAddon('system-info', isThing, { query: { processes: '1' }, refresh: true })
+    expect(fn3.mock.calls[0][0]).toMatch(/\/api\/addons\/system-info\?processes=1&refresh=1$/)
   })
 
   it('형식이 다르면 던진다', async () => {

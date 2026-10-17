@@ -117,7 +117,6 @@ export function PerformancePanel({ sample, stale, resource, onResource }: Props)
   }
 
   const mem = res?.memory
-  const procs = res?.processes
   const views: Record<Resource, View> = {
     cpu: {
       ...percentView(
@@ -130,14 +129,9 @@ export function PerformancePanel({ sample, stale, resource, onResource }: Props)
       stats: [
         { label: t('sysinfo.perf.utilization'), value: pct(point?.cpu) },
         { label: t('sysinfo.perf.cores'), value: count(res?.cpu.cores.length) },
+        { label: t('sysinfo.perf.processCount'), value: count(res?.tasks?.processes) },
+        { label: t('sysinfo.perf.threads'), value: count(res?.tasks?.threads) },
         { label: t('sysinfo.uptime'), value: res ? formatUptime(res.uptimeSeconds, lang, 'narrow') : none },
-        // 프로세스 목록은 관리자 응답에만 있다.
-        ...(procs
-          ? [
-              { label: t('sysinfo.perf.processCount'), value: count(procs.length) },
-              { label: t('sysinfo.perf.threads'), value: count(procs.reduce((n, p) => n + p.threads, 0)) },
-            ]
-          : []),
       ],
     },
     memory: {

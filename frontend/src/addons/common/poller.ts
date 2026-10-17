@@ -5,6 +5,16 @@
 // - stop()은 대기 중인 예약을 지우고 진행 중인 요청을 abort한다. 여러 번 불러도 된다.
 //   stop() 뒤에 도착한 응답은 버린다.
 // - intervalMs는 함수로 줄 수 있다. 다음 요청을 예약할 때마다 다시 읽는다(sharedPoll.ts).
+// - 타이머는 schedule로 바꿀 수 있다(기본 setTimeout). 숨긴 탭에서도 늦춰지지 않아야 하는 폴러는
+//   Worker 타이머(workerTimer.ts)를 넣는다. 다음 요청 예약과 요청 제한 시간에 함께 쓴다.
+
+// Scheduler는 ms 뒤에 fn을 한 번 부르고, 취소 함수를 돌려준다.
+export type Scheduler = (fn: () => void, ms: number) => () => void
+
+export const timeoutScheduler: Scheduler = (fn, ms) => {
+  const id = setTimeout(fn, ms)
+  return () => clearTimeout(id)
+}
 
 export interface PollerOptions<T> {
   fetch: (signal: AbortSignal) => Promise<T>
@@ -13,6 +23,8 @@ export interface PollerOptions<T> {
   onData: (data: T) => void
   // 네트워크 오류, HTTP 오류, 응답 형식 오류, 타임아웃을 모두 여기로 보낸다.
   onError: (err: unknown) => void
+  // 타이머. 없으면 setTimeout이다.
+  schedule?: Scheduler
 }
 
 export interface Poller {
@@ -27,27 +39,29 @@ export function createPoller<T>(opts: PollerOptions<T>): Poller {
   // start/stop마다 바뀐다. 이전 실행에서 늦게 끝난 요청을 구분하는 데 쓴다.
   let generation = 0
   let running = false
-  let timer: ReturnType<typeof setTimeout> | undefined
+  // 대기 중인 다음 요청 예약의 취소 함수
+  let timer: (() => void) | undefined
   let inflight: AbortController | undefined
   // 마지막 응답(성공·실패)을 처리한 시각(Date.now)
   let doneAt = 0
+  const after = opts.schedule ?? timeoutScheduler
   const interval = () => (typeof opts.intervalMs === 'function' ? opts.intervalMs() : opts.intervalMs)
   const schedule = (gen: number, delay: number) => {
-    timer = setTimeout(() => void tick(gen), Math.max(0, delay))
+    timer = after(() => void tick(gen), Math.max(0, delay))
   }
 
   const tick = async (gen: number) => {
     timer = undefined
     const ctrl = new AbortController()
     inflight = ctrl
-    const timeout = setTimeout(() => ctrl.abort(new Error('request timed out')), opts.timeoutMs)
+    const cancelTimeout = after(() => ctrl.abort(new Error('request timed out')), opts.timeoutMs)
     let result: { ok: true; data: T } | { ok: false; err: unknown }
     try {
       result = { ok: true, data: await opts.fetch(ctrl.signal) }
     } catch (err) {
       result = { ok: false, err }
     } finally {
-      clearTimeout(timeout)
+      cancelTimeout()
     }
     if (gen !== generation) return
     inflight = undefined
@@ -70,14 +84,14 @@ export function createPoller<T>(opts: PollerOptions<T>): Poller {
       if (!running) return
       running = false
       generation++
-      clearTimeout(timer)
+      timer?.()
       timer = undefined
       inflight?.abort()
       inflight = undefined
     },
     reschedule() {
       if (timer === undefined) return
-      clearTimeout(timer)
+      timer()
       schedule(generation, doneAt + interval() - Date.now())
     },
   }

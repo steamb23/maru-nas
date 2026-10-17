@@ -233,7 +233,8 @@ func TestAddonDataBuiltinSystemInfo(t *testing.T) {
 		if len(caps.Addons) != 1 || !caps.Addons[0].Available || !slices.Equal(caps.Addons[0].Sources, c.sources) {
 			t.Errorf("%s: capability %+v", c.user, caps.Addons)
 		}
-		r := b.do(http.MethodGet, "/api/addons/system-info", nil)
+		// 목록은 processes=1로 요청할 때만 준다(관리자만).
+		r := b.do(http.MethodGet, "/api/addons/system-info?processes=1", nil)
 		wantStatus(t, r, http.StatusOK)
 		got := decode[api.SystemStatsResponse](t, r)
 		if got.CPU.TotalTicks != 100 || len(got.CPU.Cores) != 1 || got.Disk == nil || got.Disk.WriteBytes != 16*512 {
@@ -241,6 +242,9 @@ func TestAddonDataBuiltinSystemInfo(t *testing.T) {
 		}
 		if len(got.Processes) != c.procs || !slices.Equal(got.Sources, c.sources) {
 			t.Errorf("%s: processes %+v, sources %v", c.user, got.Processes, got.Sources)
+		}
+		if plain := decode[api.SystemStatsResponse](t, b.do(http.MethodGet, "/api/addons/system-info", nil)); plain.Processes != nil {
+			t.Errorf("%s: processes without query", c.user)
 		}
 	}
 }

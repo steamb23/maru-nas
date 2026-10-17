@@ -161,6 +161,35 @@ func TestReaderStats(t *testing.T) {
 	}
 }
 
+func TestParseLoadavgThreads(t *testing.T) {
+	if n, err := ParseLoadavgThreads(strings.NewReader("0.52 0.58 0.59 2/1234 98765\n")); err != nil || n != 1234 {
+		t.Errorf("got %d, %v", n, err)
+	}
+	for _, in := range []string{"", "0.1 0.2 0.3\n", "0.1 0.2 0.3 12 4\n", "0.1 0.2 0.3 1/x 4\n"} {
+		if _, err := ParseLoadavgThreads(strings.NewReader(in)); err == nil {
+			t.Errorf("%q: expected error", in)
+		}
+	}
+}
+
+func TestReaderStatsTasks(t *testing.T) {
+	proc, block := statsFS()
+	if got, _ := NewReaderFS(proc, block, nil).Stats(); got.Tasks != nil {
+		t.Errorf("tasks without loadavg = %+v", got.Tasks)
+	}
+	proc["loadavg"] = &fstest.MapFile{Data: []byte("0.10 0.20 0.30 1/57 4321\n")}
+	proc["1/stat"] = &fstest.MapFile{Data: []byte("x")}
+	proc["42/stat"] = &fstest.MapFile{Data: []byte("x")}
+	proc["self/stat"] = &fstest.MapFile{Data: []byte("x")}
+	got, err := NewReaderFS(proc, block, nil).Stats()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Tasks == nil || *got.Tasks != (api.TaskCounts{Processes: 2, Threads: 57}) {
+		t.Errorf("tasks = %+v", got.Tasks)
+	}
+}
+
 func TestReaderStatsWithoutNetworkAndDisk(t *testing.T) {
 	proc, block := statsFS()
 	delete(proc, "diskstats")

@@ -44,8 +44,18 @@ type SystemStatsResponse struct {
 	Network *NetTotals `json:"network,omitempty"`
 	// Disk는 물리 디스크의 누적 바이트 합계다. 읽지 못하면 없다.
 	Disk *DiskTotals `json:"disk,omitempty"`
-	// Processes는 프로세스 목록이다(PID 순서). 관리자에게만 준다(provider proc-processes).
+	// Tasks는 프로세스·스레드 수다. 읽지 못하면 없다. 수만 담으므로 누구에게나 준다.
+	Tasks *TaskCounts `json:"tasks,omitempty"`
+	// Processes는 프로세스 목록이다(PID 순서). 관리자가 ?processes=1로 요청할 때만 준다(provider proc-processes).
 	Processes []Process `json:"processes,omitempty"`
+}
+
+// TaskCounts는 프로세스와 스레드(커널 스레드 포함) 수다.
+type TaskCounts struct {
+	// Processes는 /proc의 PID 디렉터리 수다.
+	Processes int `json:"processes"`
+	// Threads는 /proc/loadavg의 스케줄링 단위 수다.
+	Threads int `json:"threads"`
 }
 
 // CPUCounters는 /proc/stat의 누적 CPU 시간이다. 단위는 clock tick(USER_HZ)이다.

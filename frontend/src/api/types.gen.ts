@@ -63,9 +63,26 @@ export interface SystemStatsResponse extends AddonSources {
    */
   disk?: DiskTotals;
   /**
-   * Processes는 프로세스 목록이다(PID 순서). 관리자에게만 준다(provider proc-processes).
+   * Tasks는 프로세스·스레드 수다. 읽지 못하면 없다. 수만 담으므로 누구에게나 준다.
+   */
+  tasks?: TaskCounts;
+  /**
+   * Processes는 프로세스 목록이다(PID 순서). 관리자가 ?processes=1로 요청할 때만 준다(provider proc-processes).
    */
   processes?: Process[];
+}
+/**
+ * TaskCounts는 프로세스와 스레드(커널 스레드 포함) 수다.
+ */
+export interface TaskCounts {
+  /**
+   * Processes는 /proc의 PID 디렉터리 수다.
+   */
+  processes: number /* int */;
+  /**
+   * Threads는 /proc/loadavg의 스케줄링 단위 수다.
+   */
+  threads: number /* int */;
 }
 /**
  * CPUCounters는 /proc/stat의 누적 CPU 시간이다. 단위는 clock tick(USER_HZ)이다.

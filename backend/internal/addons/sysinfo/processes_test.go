@@ -1,6 +1,8 @@
 package sysinfo
 
 import (
+	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -25,7 +27,14 @@ func pidStat(pid, comm, state string, flags, utime, stime, threads, start uint64
 	return strings.Join(f, " ") + "\n"
 }
 
-func requestWith(sources []string) addons.Request { return addons.Request{Sources: sources} }
+// requestWith는 sources를 쓸 수 있는 사용자의 요청이다. withProcesses면 ?processes=1이다.
+func requestWith(sources []string, withProcesses bool) addons.Request {
+	req := addons.Request{Sources: sources, Query: url.Values{}}
+	if withProcesses {
+		req.Query.Set("processes", "1")
+	}
+	return req
+}
 
 func TestParsePIDStat(t *testing.T) {
 	// comm에 공백과 괄호가 들어 있어도 마지막 ')'에서 자른다.
@@ -178,20 +187,26 @@ func TestProcessesListBroken(t *testing.T) {
 func TestAddonFetchProcessesOnlyForAdmin(t *testing.T) {
 	proc, block := statsFS()
 	a := New(NewReaderFS(proc, block, nil), NewProcessesFS(processFS(), fakeLookup))
+	admin := []string{"proc", SourceProcesses}
 	for _, c := range []struct {
 		name    string
 		sources []string
+		query   bool
 		want    int
+		used    []string
 	}{
-		{"user", []string{"proc"}, 0},
-		{"admin", []string{"proc", SourceProcesses}, 4},
+		// 일반 사용자는 요청해도 받지 못한다.
+		{"user", []string{"proc"}, true, 0, []string{"proc"}},
+		// 관리자도 processes=1일 때만 목록을 읽는다(성능 페이지는 목록이 필요 없다).
+		{"admin without query", admin, false, 0, []string{"proc"}},
+		{"admin", admin, true, 4, admin},
 	} {
-		res, err := a.Fetch(t.Context(), requestWith(c.sources))
+		res, err := a.Fetch(t.Context(), requestWith(c.sources, c.query))
 		if err != nil {
 			t.Fatal(err)
 		}
 		got := res.(api.SystemStatsResponse)
-		if len(got.Processes) != c.want || len(got.Sources) != len(c.sources) {
+		if len(got.Processes) != c.want || !slices.Equal(got.Sources, c.used) {
 			t.Errorf("%s: %d processes, sources %v", c.name, len(got.Processes), got.Sources)
 		}
 	}
@@ -199,7 +214,7 @@ func TestAddonFetchProcessesOnlyForAdmin(t *testing.T) {
 	// 목록을 읽지 못하면 요약만 주고 실패한 출처로 알린다.
 	broken := NewProcessesFS(fstest.MapFS{"1/stat": {Data: []byte("garbage")}, "1/status": {Data: []byte("Uid:\t0\n")}}, fakeLookup)
 	a = New(NewReaderFS(proc, block, nil), broken)
-	res, err := a.Fetch(t.Context(), requestWith([]string{"proc", SourceProcesses}))
+	res, err := a.Fetch(t.Context(), requestWith(admin, true))
 	if err != nil {
 		t.Fatal(err)
 	}

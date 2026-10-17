@@ -5,6 +5,7 @@ import (
 	"io"
 	"io/fs"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -137,7 +138,29 @@ func (r *Reader) Stats() (api.SystemStatsResponse, error) {
 	if t, err := r.diskTotals(); err == nil {
 		res.Disk = &t
 	}
+	if t, err := r.taskCounts(); err == nil {
+		res.Tasks = &t
+	}
 	return res, nil
+}
+
+// taskCounts는 프로세스 수(/proc의 PID 디렉터리)와 스레드 수(/proc/loadavg)다. 프로세스 목록을 읽지 않고 센다.
+func (r *Reader) taskCounts() (api.TaskCounts, error) {
+	threads, err := readFile(r.proc, "loadavg", ParseLoadavgThreads)
+	if err != nil {
+		return api.TaskCounts{}, err
+	}
+	entries, err := fs.ReadDir(r.proc, ".")
+	if err != nil {
+		return api.TaskCounts{}, err
+	}
+	n := 0
+	for _, e := range entries {
+		if pid, err := strconv.Atoi(e.Name()); err == nil && pid > 0 && e.IsDir() {
+			n++
+		}
+	}
+	return api.TaskCounts{Processes: n, Threads: threads}, nil
 }
 
 // netTotals는 물리 인터페이스의 누적 바이트 합계다. 브리지·본딩 같은 가상 인터페이스는

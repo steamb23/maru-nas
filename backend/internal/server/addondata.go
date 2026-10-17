@@ -35,6 +35,7 @@ func (h *handler) addonData(w http.ResponseWriter, r *http.Request, s auth.Sessi
 		Admin:   s.Admin,
 		Sources: c.Sources,
 		Refresh: r.URL.Query().Get("refresh") == "1",
+		Query:   r.URL.Query(),
 		RPC:     caller,
 	})
 	if caller.unauthorized.Load() {

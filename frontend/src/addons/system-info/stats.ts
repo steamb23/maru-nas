@@ -11,6 +11,7 @@ import type {
   NetTotals,
   Process,
   SystemStatsResponse,
+  TaskCounts,
 } from '../../api/types.gen'
 import { percentOf } from '../common/format'
 
@@ -30,6 +31,8 @@ const isNetTotals = (v: unknown): v is NetTotals => isObj(v) && isNum(v.rxBytes)
 const isDiskTotals = (v: unknown): v is DiskTotals => isObj(v) && isNum(v.readBytes) && isNum(v.writeBytes)
 
 const isProcessList = (v: unknown): v is Process[] => isArrayOf(v, isProcess)
+
+const isTaskCounts = (v: unknown): v is TaskCounts => isObj(v) && isNum(v.processes) && isNum(v.threads)
 
 function isProcess(v: unknown): v is Process {
   return (
@@ -60,6 +63,7 @@ export function isSystemStatsResponse(v: unknown): v is SystemStatsResponse {
     isNum(v.uptimeSeconds) &&
     isOptional(v.network, isNetTotals) &&
     isOptional(v.disk, isDiskTotals) &&
+    isOptional(v.tasks, isTaskCounts) &&
     isOptional(v.processes, isProcessList)
   )
 }
