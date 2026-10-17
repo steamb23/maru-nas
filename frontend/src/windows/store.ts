@@ -35,10 +35,9 @@ interface WindowData {
 }
 
 interface WindowActions {
-  // open은 앱 창을 연다. 이미 열려 있으면 복원하고 맨 앞으로 가져온다(여러 개면 가장 앞에 있던 창). 창 id를 반환한다.
+  // open은 앱 창을 열고 창 id를 반환한다. 이미 열려 있으면 복원하고 맨 앞으로 가져온다.
+  // 창을 여러 개 여는 앱(multiInstance)은 늘 새 창을 연다.
   open: (appId: WindowAppId, bounds: Size) => string
-  // openNew는 창을 여러 개 여는 앱(multiInstance)이면 늘 새 창을 연다. 그 밖의 앱은 open과 같다.
-  openNew: (appId: WindowAppId, bounds: Size) => string
   close: (id: string) => void
   // closeMany는 여러 창을 한 번에 닫는다. 없는 id는 무시한다.
   closeMany: (ids: readonly string[]) => void
@@ -128,15 +127,13 @@ export const useWindowStore = create<WindowStore>()((set, get) => {
     ...initialWindowData,
 
     open: (appId, bounds) => {
-      const existing = topWindowOf(get().windows, appId)
+      const existing = isMultiInstance(appId) ? undefined : get().windows.find((w) => w.appId === appId)
       if (existing) {
         get().restore(existing.id)
         return existing.id
       }
       return openWindow(appId, bounds)
     },
-
-    openNew: (appId, bounds) => (isMultiInstance(appId) ? openWindow(appId, bounds) : get().open(appId, bounds)),
     close: (id) => set((s) => ({ windows: s.windows.filter((w) => w.id !== id) })),
 
     closeMany: (ids) =>
@@ -214,15 +211,6 @@ export const useWindowStore = create<WindowStore>()((set, get) => {
       }),
   }
 })
-
-// topWindowOf는 앱의 창 중 맨 앞(z가 가장 큰) 창이다. 최소화된 창도 포함한다. 없으면 undefined.
-export function topWindowOf(windows: readonly WindowState[], appId: WindowAppId): WindowState | undefined {
-  let top: WindowState | undefined
-  for (const w of windows) {
-    if (w.appId === appId && (top === undefined || w.z > top.z)) top = w
-  }
-  return top
-}
 
 // nextInstance는 앱의 새 창이 받을 번호다. 그 앱의 열린 창이 쓰지 않는 가장 작은 수(1부터)라
 // 창을 닫으면 그 번호를 다시 쓴다.

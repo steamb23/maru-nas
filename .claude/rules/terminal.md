@@ -31,7 +31,7 @@ paths:
 
 - `src/terminal/`: `TerminalWindow.tsx`(xterm.js, FitAddon, 지연 청크), 순수 모듈 `protocol.ts`(메시지·주소), `promptLine.ts`(질문 답을 받는 줄 편집기), `messages.ts`(닫힌 이유 → 안내 문구), `theme.ts`(CSS 토큰에서 계산한 배경·글자색 + 밝은·어두운 ANSI 팔레트)
 - xterm.js는 vendor 청크에서 빼고(`vite.config.ts`) 스타일(`xterm.css`)은 `TerminalWindow.tsx`가 import한다(`frontend.md`의 CSS 예외). 여백·남는 줄 높이는 우리 CSS가 터미널 배경으로 칠한다
-- 한 탭에서 터미널 창을 여러 개 연다(`apps.ts`의 `multiInstance`, 창 저장소의 `openNew`, 메뉴의 "새 창". `frontend-shell.md`의 "바로가기와 모든 앱"). 창마다 `TerminalWindow`가 따로 WebSocket을 열어 채널 하나를 쓴다. 세션당 창 수 제한은 다른 탭과 함께 세므로 프론트에서 미리 막지 않고, 넘치면 그 창 안에 `too_many_windows` 안내와 다시 연결 단추가 나온다
+- 한 탭에서 터미널 창을 여러 개 연다(`apps.ts`의 `multiInstance`. 바로가기·서랍 클릭과 작업표시줄 버튼 메뉴의 "새 창"이 늘 새 창을 연다. `frontend-shell.md`의 "바로가기와 모든 앱"). 창마다 `TerminalWindow`가 따로 WebSocket을 열어 채널 하나를 쓴다. 세션당 창 수 제한은 다른 탭과 함께 세므로 프론트에서 미리 막지 않고, 넘치면 그 창 안에 `too_many_windows` 안내와 다시 연결 단추가 나온다
   - 개발 모드(StrictMode)는 effect를 두 번 돌려 창마다 연결을 한 번 열었다 닫는다. 닫힌 연결이 아직 세어지는 사이에 다시 연결하므로, 상한 바로 앞의 창은 개발 모드에서만 `too_many_windows`가 날 수 있다(다시 연결하면 된다)
 
 ## 테스트

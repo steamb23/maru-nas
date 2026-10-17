@@ -25,7 +25,7 @@ export interface WindowAppDef extends AppBase {
   // 공통 하한보다 작은 값은 공통 하한으로 올라간다.
   minSize?: Size
   // 한 탭에서 창을 여러 개 열 수 있는지. 생략하면 앱마다 창 하나다(다시 열면 그 창을 앞으로 가져온다).
-  // 켜도 앱을 열면 기존 창을 앞으로 가져오고, 새 창은 메뉴의 "새 창"(창 저장소의 openNew)으로 연다.
+  // 켜면 앱을 열 때마다(바로가기·서랍 클릭, "열기", 작업표시줄 버튼 메뉴의 "새 창") 새 창을 연다.
   multiInstance?: boolean
 }
 

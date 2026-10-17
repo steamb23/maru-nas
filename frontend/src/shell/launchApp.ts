@@ -24,11 +24,9 @@ export function openWorkbenchRoute(route: string): void {
   if (href) confirmLinkOpen('workbench', () => window.open(href, LINK_TAB_NAMES.workbench))
 }
 
-// launchApp은 앱을 연다. 창 앱이 이미 열려 있으면 그 창을 앞으로 가져온다.
-// newWindow면 창을 여러 개 여는 앱(multiInstance)은 늘 새 창을 연다(메뉴의 "새 창").
-export function launchApp(id: AppId, bounds: Size, newWindow = false): void {
-  const windows = useWindowStore.getState()
+// launchApp은 앱을 연다. 창 앱이 이미 열려 있으면 그 창을 앞으로 가져오고,
+// 창을 여러 개 여는 앱(multiInstance)은 새 창을 연다(창 저장소의 open).
+export function launchApp(id: AppId, bounds: Size): void {
   if (isLinkApp(id)) openLink(id)
-  else if (newWindow) windows.openNew(id, bounds)
-  else windows.open(id, bounds)
+  else useWindowStore.getState().open(id, bounds)
 }

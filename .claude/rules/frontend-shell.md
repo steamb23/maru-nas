@@ -44,8 +44,8 @@ paths:
 
 - 바탕화면에는 사용자가 고른 바로가기만 놓는다(`DesktopShortcuts`). 모든 앱은 작업표시줄 왼쪽 끝 버튼으로 여는 "모든 앱" 화면(`AppDrawer`)에 있다. 화면 용어는 "바로가기"(붙여 씀)와 "모든 앱", 코드 이름은 `shortcut`과 `AppDrawer`다
 - 앱은 창 앱(`addon`, `placeholder`, 셸이 직접 그리는 `shell`)과 링크 앱(`link`, 창 없이 브라우저 탭으로 연다)이다(`windows/apps.ts`). 셸 앱의 보기 컴포넌트는 `shell/shellViews.ts`에 두어 node 테스트 대상인 `apps.ts`가 컴포넌트를 import하지 않게 한다. 창 저장소는 `WindowAppId`만 받으므로, 앱을 여는 곳(서랍 타일·바로가기·메뉴 "열기")은 `shell/launchApp.ts`의 `launchApp`을 부른다
-  - 창 앱은 앱마다 창 하나이고, 다시 열면 그 창을 복원해 앞으로 가져온다(`open`). `multiInstance` 앱(지금은 웹 터미널)만 창을 여러 개 연다. 이 앱도 클릭·"열기"는 그 앱의 창 중 가장 앞(z가 가장 큰, 최소화 포함) 창을 가져오고, 새 창은 메뉴의 "새 창"(`launchApp(id, bounds, true)` → 저장소의 `openNew`)으로만 연다
-  - 창 id는 늘 `win-<n>`이고 앱 id와 같지 않다. 창을 앱 id로 찾는 코드를 만들지 않는다(`topWindowOf`처럼 여러 창을 전제로 한다)
+  - 창 앱은 앱마다 창 하나이고, 다시 열면 그 창을 복원해 앞으로 가져온다(저장소의 `open`). `multiInstance` 앱(지금은 웹 터미널)만 열 때마다(바로가기·서랍 클릭, "열기") 새 창을 연다. 열린 창을 앞으로 가져오는 것은 작업표시줄 버튼이 한다
+  - 창 id는 늘 `win-<n>`이고 앱 id와 같지 않다. 앱 id로 창 하나를 찾는 코드는 `multiInstance` 앱에서 틀리므로, 새로 만들면 여러 창을 전제로 한다
   - 창마다 같은 앱 안의 번호(`WindowState.instance`)를 열 때 받는다(그 앱의 열린 창이 쓰지 않는 가장 작은 수, 닫으면 다시 씀). 둘째 창부터 제목에 붙이며(`windows/title.ts`의 `windowTitle`, 문구 `window.numberedTitle`), 제목을 그리는 곳(제목 표시줄, 작업표시줄 버튼·툴팁·퇴장 버튼, "더 보기" 메뉴의 `windowTitleLabel`)은 모두 이 함수를 쓴다. `windows[]` 순서로 번호를 매기지 않는다(작업표시줄에서 순서를 바꾸면 제목이 바뀐다)
   - 링크 앱(지금은 OMV 워크벤치)은 `openLink`가 `window.open(주소, 탭 이름)`으로 이름 붙은 탭 하나를 다시 쓴다. 이름 조회가 되도록 `noopener`를 주지 않으며, 팝업 차단을 피하려고 입력 처리기 안에서 동기로 부른다. 주소 계산은 `windows/links.ts`(끝에 OMV 첫 화면 `#/`를 붙여, 다시 열 때 새로 고침 없이 이동한다)
   - 열기 전에 "새 탭에서 열립니다" 데스크톱 대화상자를 띄운다(`linkNoticeDialog.tsx`의 `confirmLinkOpen`, 내용은 `LinkNotice.tsx`). 탭은 "열기" 클릭 처리 안에서 바로 연다(결과를 기다린 뒤 열면 팝업 차단). "다음에 알리지 않음"은 브라우저별 편의 설정이라 쿠키(`onmaru_link_notice_<id>=off`, 1년, Path 없음)에 두며 계산은 `linkNotice.ts`
@@ -56,7 +56,7 @@ paths:
 - 앱 이름(바탕화면 아이콘, 서랍 타일)은 띄어쓰기에서만 줄을 바꾸고(`word-break: keep-all`), 한 단어가 한 줄보다 길 때만 글자 사이에서 자른다(`overflow-wrap: anywhere`). 한글 이름이 단어 중간에서 잘리지 않게 하기 위해서다
 - 배치는 왼쪽 위부터 위에서 아래로, 넘치면 다음 열이다(`grid-auto-flow: column`). `layout.ts`의 상수와 `rowsPerColumn`은 CSS(`.desktop-icons`, `.desktop-icon`)와 맞춘다. 끄는 동안 쓰는 한 열의 아이콘 수는 그려진 목록(`gridTemplateRows`)에서 잰다(브라우저 확대로 영역 높이가 소수점이면 반올림한 `bounds`로 계산한 값과 다를 수 있다)
 - 위젯 레이어는 바로가기를 불러온 뒤(`iconsReady` = 저장소의 `loaded`)에 그린다. 먼저 그리면 아이콘 목록 너비가 0이라 위젯이 아이콘 자리에 놓였다가 밀려난다. `loaded`는 한 번 불러오면(실패 포함) 다시 시도하는 동안에도 남아, 재시도 때 위젯이 다시 마운트되지 않는다
-- 메뉴: 바로가기 → "열기"·"바로가기 제거", 빈 바탕화면 → "바로가기 추가 ▸"(이미 있는 앱은 체크·비활성), 서랍 타일 → "열기"·"바탕화면에 바로가기 추가" 또는 "바로가기 제거". `multiInstance` 앱은 바로가기·서랍 타일 메뉴의 "열기" 다음에 "새 창"(`windowMenu.ts`의 `newWindowItem`)을 둔다
+- 메뉴: 바로가기 → "열기"·"바로가기 제거", 빈 바탕화면 → "바로가기 추가 ▸"(이미 있는 앱은 체크·비활성), 서랍 타일 → "열기"·"바탕화면에 바로가기 추가" 또는 "바로가기 제거". `multiInstance` 앱도 같다("열기"가 새 창을 연다)
 - 끌기(바탕화면 순서 바꾸기, "모든 앱" → 바탕화면)
   - pointer capture는 누른 요소(바탕화면 아이콘 버튼, 서랍 타일)가 갖는다. 끄는 동안 그 요소를 지우거나 DOM에서 옮기거나 `inert`로 만들지 않는다(capture가 풀려 끌기가 취소된다). `li`의 순서는 놓거나 취소한 뒤 `settle`에서만 바뀐다
   - 끄는 버튼과 고스트는 렌더 없이 style로 움직이고, 다른 아이콘은 놓을 칸이 바뀔 때만 렌더해 transform으로 비켜 준다(`previewOffsets`, `li.shifting`). 끄는 동안 아이콘 목록은 창 위로 올라온다(`.desktop-icons.raised`)
@@ -81,7 +81,7 @@ paths:
 - 브라우저 기본 메뉴는 `nativeGuard`가 막는다(capture 단계 `preventDefault`라 React `onContextMenu`는 그대로 불린다)
 - 바탕화면 메뉴는 빈 곳(아이콘 사이 포함)에서만 연다. 메뉴 항목은 기능을 가진 쪽이 만든다(바로가기 추가는 `DesktopShortcuts`, 위젯 추가는 `WidgetLayer`의 `desktopMenuItems`). 맨 아래에는 구분선 뒤에 "화면 설정 열기"(설정의 화면 페이지, `Desktop`의 `openSettings`)를 둔다
 - 창 메뉴 항목은 `windowMenu.ts`가 만든다. 작업표시줄 버튼 메뉴(`taskMenuItems`)와 제목 표시줄 메뉴(`titlebarMenuItems`)가 상태 항목(최소화·복원, 최대화·이전 크기로)을 함께 쓴다. 여러 창은 저장소의 `closeMany`로 한 번에 닫는다
-  - 작업표시줄: (`multiInstance` 앱이면 "새 창" /) 상태 항목 / 다른 항목·오른쪽 항목·모두 닫기 / 닫기. "새 창"은 데스크톱 크기가 필요하므로 `Desktop`이 `Taskbar`의 `onNewWindow`로 넘긴다. 메뉴가 버튼 위로 열리므로 닫기는 누른 자리 가까이 오도록 맨 아래에 둔다. 최소화된 창에는 최소화 대신 복원(`raiseGroup`, 버튼 클릭과 같음)을 두고, 최소화된 창을 최대화하면 복원도 함께 한다. "오른쪽"은 `windows[]`(작업표시줄) 순서 기준이다. 메뉴는 `Taskbar`의 트리거 하나로 열고, 대상 창은 `items(el)`이 받는 버튼의 `data-window-id`로 찾는다. 끄는 중에는 열지 않는다
+  - 작업표시줄: (`multiInstance` 앱이면 "새 창" /) 상태 항목 / 다른 항목·오른쪽 항목·모두 닫기 / 닫기. "새 창"은 `launchApp`과 같고, 데스크톱 크기가 필요하므로 `Desktop`이 `Taskbar`의 `onNewWindow`로 넘긴다. 메뉴가 버튼 위로 열리므로 닫기는 누른 자리 가까이 오도록 맨 아래에 둔다. 최소화된 창에는 최소화 대신 복원(`raiseGroup`, 버튼 클릭과 같음)을 두고, 최소화된 창을 최대화하면 복원도 함께 한다. "오른쪽"은 `windows[]`(작업표시줄) 순서 기준이다. 메뉴는 `Taskbar`의 트리거 하나로 열고, 대상 창은 `items(el)`이 받는 버튼의 `data-window-id`로 찾는다. 끄는 중에는 열지 않는다
   - 제목 표시줄: 상태 항목 / 닫기. 제목 표시줄 버튼 위에서는 열지 않고(길게 누르면 버튼이 눌리지 않게), 창을 끄는 중에는 열지 않으며, 메뉴를 연 누름은 창 끌기로 이어 가지 않는다
 - 비활성 항목은 `aria-disabled`로 두어 포커스는 받게 한다(비활성 하위 메뉴는 열리지 않는다). 이유가 있으면 `detailKey`로 짧게 보여 준다(하위 메뉴는 화살표 앞)
 - 키보드 이동(`menuNav.ts`), 포커스 이동(`menuFocus.ts`), 열기·닫기 애니메이션 값(`menuAnim.ts`)은 프로필 메뉴와 함께 쓴다

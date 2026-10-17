@@ -13,16 +13,6 @@ export interface TaskMenuActions extends WindowMenuActions {
   newWindow: (appId: WindowAppId) => void
 }
 
-// newWindowItem은 창을 여러 개 여는 앱(multiInstance)의 "새 창" 항목이다. 작업표시줄 버튼, 서랍 타일,
-// 바로가기 메뉴가 함께 쓴다.
-export const newWindowItem = (onSelect: () => void): ContextMenuAction => ({
-  kind: 'action',
-  id: 'new-window',
-  labelKey: 'window.newWindow',
-  icon: 'window-new-symbolic',
-  onSelect,
-})
-
 // stateItems는 창 상태를 바꾸는 항목(최소화·복원, 최대화·이전 크기로)이다.
 function stateItems(win: WindowState, actions: WindowMenuActions): ContextMenuAction[] {
   const { id } = win
@@ -75,8 +65,18 @@ export function taskMenuItems(windows: readonly WindowState[], id: string, actio
   const others = all.filter((o) => o !== id)
   const right = all.slice(index + 1)
   const { closeMany } = actions
+  // 버튼은 그 창을 가리키므로, 같은 앱의 창을 더 여는 길을 메뉴에 둔다(바로가기·서랍 클릭은 늘 새 창이다).
   const head: ContextMenuItem[] = isMultiInstance(win.appId)
-    ? [newWindowItem(() => actions.newWindow(win.appId)), { kind: 'separator', id: 'sep-new' }]
+    ? [
+        {
+          kind: 'action',
+          id: 'new-window',
+          labelKey: 'window.newWindow',
+          icon: 'window-new-symbolic',
+          onSelect: () => actions.newWindow(win.appId),
+        },
+        { kind: 'separator', id: 'sep-new' },
+      ]
     : []
   return [
     ...head,

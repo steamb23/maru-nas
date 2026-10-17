@@ -45,35 +45,16 @@ describe('open', () => {
   })
 })
 
-describe('openNew', () => {
-  it('창을 여러 개 여는 앱은 열 때마다 새 창이 맨 앞에 열린다', () => {
+describe('여러 창을 여는 앱', () => {
+  it('열 때마다 새 창이 맨 앞에 열린다', () => {
     const a = store().open('terminal', bounds)
-    const b = store().openNew('terminal', bounds)
-    const c = store().openNew('terminal', bounds)
+    const b = store().open('terminal', bounds)
+    store().minimize(b)
+    const c = store().open('terminal', bounds)
     expect(new Set([a, b, c]).size).toBe(3)
     expect(store().windows.map((w) => w.appId)).toEqual(['terminal', 'terminal', 'terminal'])
+    expect(win(b).minimized).toBe(true)
     expect(activeId()).toBe(c)
-  })
-
-  it('창이 하나뿐인 앱은 open처럼 기존 창을 앞으로 가져온다', () => {
-    const a = store().open('system-info', bounds)
-    store().open('files', bounds)
-    expect(store().openNew('system-info', bounds)).toBe(a)
-    expect(store().windows).toHaveLength(2)
-    expect(activeId()).toBe(a)
-  })
-
-  it('여러 창이 열린 앱을 open하면 그중 가장 앞에 있던 창을 복원해 가져온다', () => {
-    const a = store().open('terminal', bounds)
-    const b = store().openNew('terminal', bounds)
-    store().open('files', bounds)
-    store().focus(a)
-    store().minimize(a)
-    // b보다 a가 나중에 앞에 있었으므로 최소화돼 있어도 a다.
-    expect(store().open('terminal', bounds)).toBe(a)
-    expect(win(a).minimized).toBe(false)
-    expect(activeId()).toBe(a)
-    expect(store().windows.filter((w) => w.id === b)).toHaveLength(1)
   })
 })
 
@@ -81,24 +62,24 @@ describe('instance', () => {
   it('같은 앱의 창은 1부터 번호를 받고, 다른 앱은 따로 센다', () => {
     const a = store().open('terminal', bounds)
     const f = store().open('files', bounds)
-    const b = store().openNew('terminal', bounds)
+    const b = store().open('terminal', bounds)
     expect([win(a).instance, win(b).instance, win(f).instance]).toEqual([1, 2, 1])
   })
 
   it('닫힌 창의 번호는 다음 창이 다시 쓴다(가장 작은 빈 번호)', () => {
     const a = store().open('terminal', bounds)
-    const b = store().openNew('terminal', bounds)
-    const c = store().openNew('terminal', bounds)
+    const b = store().open('terminal', bounds)
+    const c = store().open('terminal', bounds)
     store().close(b)
-    expect(win(store().openNew('terminal', bounds)).instance).toBe(2)
+    expect(win(store().open('terminal', bounds)).instance).toBe(2)
     store().close(a)
-    expect(win(store().openNew('terminal', bounds)).instance).toBe(1)
+    expect(win(store().open('terminal', bounds)).instance).toBe(1)
     expect(win(c).instance).toBe(3)
   })
 
   it('작업표시줄 순서를 바꿔도 번호는 그대로다', () => {
     const a = store().open('terminal', bounds)
-    const b = store().openNew('terminal', bounds)
+    const b = store().open('terminal', bounds)
     store().reorder(b, 0)
     expect([win(a).instance, win(b).instance]).toEqual([1, 2])
   })
