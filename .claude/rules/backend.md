@@ -5,7 +5,7 @@ paths:
 
 # 백엔드 (Go)
 
-- 표준 라이브러리(`net/http`)만 쓴다. 런타임 외부 의존성을 두지 않는다. tygo는 go.mod의 `tool` 지시어로 고정한 빌드 도구다
+- 표준 라이브러리(`net/http`)를 쓴다. 런타임 외부 의존성은 웹 터미널의 `golang.org/x/crypto/ssh`(`internal/terminal`)와 `github.com/coder/websocket`(`internal/server/terminal.go`)뿐이며 다른 곳에서 쓰지 않는다. 권한 도우미(`cmd/onmaru-helper`)에는 링크하지 않는다(도우미의 SSH 공개 키 확인은 `proto`가 직접 읽는다). tygo는 go.mod의 `tool` 지시어로 고정한 빌드 도구다
 - `-listen`(`ONMARU_LISTEN`, 기본 `127.0.0.1:8090`)은 루프백 TCP 주소 또는 `unix:/절대/경로`를 받는다. 루프백이 아닌 TCP 주소는 `-allow-non-loopback`(`ONMARU_ALLOW_NON_LOOPBACK`)을 명시했을 때만 허용하고 시작 시 경고를 남긴다. 기본값이 거부인 동작을 유지한다
   - Unix 소켓은 권한 `0660`으로 만들고, 남은 소켓 파일은 지우되 소켓이 아닌 파일이나 사용 중인 소켓은 건드리지 않는다(`cmd/onmaru` `listenOn`)
   - 프록시를 거치지 않은 요청은 `X-Forwarded-*`를 위조할 수 있다. 루프백·소켓 수신은 이 헤더를 믿을 근거이므로 다른 경로를 기본으로 열지 않는다
@@ -15,8 +15,8 @@ paths:
   - 설정 변경 API는 부분별로 둔다(`PUT /api/preferences/widgets`, `…/shortcuts`, `…/drawer`, `…/system-info`, `…/appearance`, 전역은 `PUT /api/site/login`, `…/defaults`, `…/server`). 서로 덮어쓰지 않게 하며, 저장소는 설정 파일을 읽고 쓰는 동안 잠가 한쪽 저장이 다른 쪽을 지우지 않게 한다
 - 전역 설정 쓰기(`/api/site/*`)는 `requireAdmin`(관리자가 아니면 403 `admin_required`)을 거친다. 로그인 화면이 쓰는 `GET /api/site`(화면 꾸밈 정보만, 가동 설정·주소는 넣지 않음)와 로그인 배경 이미지만 인증 없이 준다
 - 배경 이미지는 자리(`prefs.SiteImage`, `prefs.UserWallpaper`)마다 하나다. 올리기는 원시 이미지 본문(`image/png|jpeg|webp`, 20MiB 이하, multipart 아님)이고 형식은 내용으로 다시 판별해 저장한다(SVG·HTML 거부). 보낼 때는 `serveImage`로 저장 형식, `nosniff`, `Content-Security-Policy: default-src 'none'; sandbox`, ETag(내용 해시 리비전)를 붙인다. 이미지를 지우면 그 이미지를 가리키던 배경 서술자도 지운다
-- 웹에서 덮어쓰는 가동 설정은 재시작 없이 바뀌는 워크벤치 주소와 SMART 확인 시각뿐이다. 덮어쓴 값은 `site.json`에 두고 `handler.over`에 올려 바로 반영한다(`/api/capabilities`, `smart.Cache.SetRefreshAt`). 가동 설정 현황(값·출처)은 `main.go`가 `flag.Visit`·환경 변수로 만들어 `Config.Runtime`으로 넘긴다. 플래그를 더하면 그 목록에도 넣는다
-- `cmd/fakeomv`와 `internal/omv/omvfake`, `internal/helper/helperfake`는 개발·테스트용이다. 운영 바이너리(`cmd/onmaru`, `cmd/onmaru-helper`)에서 import하지 않는다
+- 웹에서 덮어쓰는 가동 설정은 재시작 없이 바뀌는 워크벤치 주소, SMART 확인 시각, 웹 터미널 허용(`-terminal`, 값은 `"true"`·`"false"` 문자열)뿐이다. 덮어쓴 값은 `site.json`에 두고 `handler.over`에 올려 바로 반영한다(`/api/capabilities`, `smart.Cache.SetRefreshAt`). 가동 설정 현황(값·출처)은 `main.go`가 `flag.Visit`·환경 변수로 만들어 `Config.Runtime`으로 넘긴다. 플래그를 더하면 그 목록에도 넣는다
+- `cmd/fakeomv`와 `internal/omv/omvfake`, `internal/helper/helperfake`, `internal/terminal/sshfake`는 개발·테스트용이다. 운영 바이너리(`cmd/onmaru`, `cmd/onmaru-helper`)에서 import하지 않는다
 - `-helper-socket`(`ONMARU_HELPER_SOCKET`, 기본 빈 값)은 권한 도우미 소켓의 절대 경로다. 비우면 `Config.Helper`가 nil이고 도우미 기능(`/api/helper*`)은 `disabled`·503이다. 시작할 때 도우미에 `reset`을 보낸다. 도우미 쪽 규칙은 `.claude/rules/helper.md`
 - `/api/*` 경로는 대시보드 루트 기준이다. 대시보드를 경로 접두사 아래에 두면 리버스 프록시가 접두사를 제거한다. 쿠키 Path는 `-cookie-path`(기본 `/`)
 - `internal/web/static/`에는 `.gitkeep`만 커밋한다. `dist/`는 빌드 결과다

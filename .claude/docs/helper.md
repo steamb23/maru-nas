@@ -10,6 +10,7 @@
   2. 자기가 비밀번호를 직접 확인하고 발급한 티켓인지
   3. 자기가 `/etc/passwd`·`/etc/group`·`/etc/login.defs`에서 직접 읽은 계정·그룹
 - 남는 위험(README에도 적는다): onmaru가 뚫리면 그때 로그인한 사용자의 티켓을 쓸 수 있고, 그 뒤 입력되는 비밀번호를 가로챌 수 있다. root 연산은 상승한 티켓으로 5분 동안, 정해진 목록의 연산만 가능하다
+- 웹 터미널의 임시 SSH 키(`ssh.authorize`)는 새 권한이 아니다. 티켓을 가진 쪽은 원래 `fs.write`로 사용자 홈의 `~/.ssh/authorized_keys`를 쓸 수 있다. 그래도 키 줄은 worker가 직접 만들고(옵션을 onmaru가 정할 수 없다) ed25519 공개 키만 받는다
 - OMV 관리자는 원래 OMV RPC로 root와 같은 일을 할 수 있으므로 "OMV 관리자 + 상승 그룹 + 비밀번호 재확인"은 새 권한이 아니라 더 보수적인 겹침이다
 - 2차 인증은 도우미가 직접 확인하지 않는다. onmaru가 인증을 마친 뒤에만 대기 티켓을 활성화한다(onmaru가 정상일 때 2차 인증을 건너뛸 수 없다)
 
@@ -35,7 +36,7 @@
 - 요청 머리는 모르는 필드를 거부한다. 비밀번호와 티켓이 들어 있으므로 요청을 로그에 남기지 않는다
 - 티켓 관리: `session.open`(사용자, 비밀번호, pending), `session.activate`, `session.close`, `session.reset`, `session.status`, `session.elevate`(비밀번호), `session.drop`
 - 연산: `run`(티켓, 범위 `user`|`root`, 연산, 인자, `size`). 연산 목록은 `proto.Actions`
-  - 사용자 범위: `id`, `fs.list`, `fs.stat`, `fs.read`(offset·length, 응답 뒤 스트림), `fs.write`(요청 뒤 스트림, 같은 폴더 임시 파일에 받은 뒤 이름 바꾸기), `fs.mkdir`, `fs.rename`, `fs.remove`(`recursive`)
+  - 사용자 범위: `id`, `fs.list`, `fs.stat`, `fs.read`(offset·length, 응답 뒤 스트림), `fs.write`(요청 뒤 스트림, 같은 폴더 임시 파일에 받은 뒤 이름 바꾸기), `fs.mkdir`, `fs.rename`, `fs.remove`(`recursive`), `ssh.authorize`·`ssh.revoke`(웹 터미널의 임시 SSH 키, 아래 "임시 SSH 키")
   - root 범위: `id`
 - 오류는 코드만 준다(`proto.Code*`). 경로·사용자 이름 같은 세부는 도우미 로그에만 남긴다. onmaru는 코드를 HTTP 오류 코드(`api.Err*`)로 바꾼다
 
@@ -66,6 +67,16 @@
 - 읽기는 일반 파일만(`O_NONBLOCK`으로 열어 FIFO에서 멈추지 않음). 목록은 1만 개까지(`truncated`). umask는 0002(OMV Samba의 create mask 0664 / directory mask 0775)
 - 덮어쓰기는 새 inode로 바꾸므로 소유자는 올린 사용자가 되고 ACL은 폴더의 기본 ACL을 따른다. rwx 권한 비트는 되도록 유지하고(소유자일 때만 바뀐다) setuid·setgid·sticky는 옮기지 않는다. 덮어쓰지 않을 때는 하드 링크로 같은 이름이 없는지 원자적으로 확인하고, 하드 링크를 못 쓰는 파일시스템이면 다시 확인한 뒤 이름을 바꾼다
 - 올리기가 실패하면 worker가 임시 파일(`.onmaru-upload-<난수>.part`)을 지운다. 시간 초과로 worker가 강제 종료되면(SIGKILL) 지우지 못하고 남는다. 이 접두사의 이름으로는 올릴 수 없다
+
+## 임시 SSH 키(ssh.authorize, ssh.revoke)
+
+- 웹 터미널(`internal/terminal`)이 공개 키만 받는 sshd에도 비밀번호를 다시 묻지 않고 접속하려고 쓴다. onmaru가 메모리에서 만든 ed25519 키의 공개 키를 넘기면, 사용자 범위 worker가 `<홈>/.ssh/authorized_keys`에 `restrict,pty,from="127.0.0.1,::1",expiry-time="<UTC+2분>Z" ssh-ed25519 <키> onmaru-ephemeral` 줄을 넣는다. onmaru는 인증이 끝나면 성공·실패와 관계없이 `ssh.revoke`로 지운다
+- 공개 키는 와이어 형식(`proto.ParseSSHPublicKey`)으로 직접 확인한다(도우미에 x/crypto를 링크하지 않는다). 주석·옵션·다른 키 종류는 받지 않는다
+- 다른 줄은 바이트 그대로 두고, 이 주석과 옵션 접두사를 가진 줄만 고친다. 만료됐거나 만료 시각을 읽을 수 없는 onmaru 줄은 다음 연산이 지운다(시작 시 정리 없음)
+- 홈은 `os.OpenRoot`로 가둔다. 홈이 `/`이거나 없으면 `no_home`, 홈이 다른 사용자에게 쓰기를 허용하거나 남의 소유면 sshd(`StrictModes`)가 키를 무시하므로 `ssh_strict_modes`로 거절하고 고치지 않는다. `~/.ssh`(없으면 0700으로 만듦)와 파일은 사용자 소유일 때 그룹·다른 사용자 쓰기만 뺀다(worker umask가 0002라 직접 정한다). `authorized_keys`가 심볼릭 링크 등 일반 파일이 아니면 `not_regular`
+- 같은 폴더 임시 파일(`.onmaru-keys-*`)에 쓰고 이름을 바꾸며, 동시에 고쳐 쓰지 않게 `~/.ssh` 디렉터리 fd에 `flock`을 건다
+- 감사 로그에는 공개 키 대신 SHA256 지문(`key=SHA256:...`)을 남긴다. sshd 로그의 `Accepted publickey ... SHA256:...`와 맞춰 볼 수 있다
+- 유닛 권한은 바꾸지 않았다(`ReadWritePaths=-/srv -/home`)
 
 ## systemd
 

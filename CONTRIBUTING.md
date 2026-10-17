@@ -57,7 +57,7 @@ Useful commands (run from the repository root):
 
 ## Code rules
 
-- The backend uses the Go standard library only. The frontend is TypeScript, Vite, React and Zustand.
+- The backend uses the Go standard library, plus `golang.org/x/crypto/ssh` and `github.com/coder/websocket` for the web terminal only. The privileged helper links neither. The frontend is TypeScript, Vite, React and Zustand, plus xterm.js for the web terminal.
 - Before adding a dependency, explain in the pull request why it is needed and what the alternatives were.
 - If you change a struct under `backend/internal/api` or an addon manifest, run `make types` and commit the generated files (`frontend/src/api/types.gen.ts`, `frontend/src/addons/manifests.gen.ts`). Tests check that they are up to date.
 - Identifiers, log messages and error messages stay in English.

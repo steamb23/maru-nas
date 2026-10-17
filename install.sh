@@ -111,6 +111,24 @@ env_get() {
   sed -n "s/^$1=//p" "$file" | tail -n 1 | sed 's/^"\(.*\)"$/\1/'
 }
 
+# terminal_settings: /etc/default/onmaru의 웹 터미널 설정 줄. 설치 스크립트는 묻지 않으므로(설정 앱에서도 켠다)
+# 기존 파일의 값을 그대로 옮기고, 없으면 기본값을 주석으로 적는다. 손으로 고친 값이 업그레이드로 사라지지 않게 한다.
+terminal_settings() {
+  local key def
+  for key in ONMARU_TERMINAL ONMARU_SSH_ADDR ONMARU_SSH_HOST_KEYS; do
+    case $key in
+      ONMARU_TERMINAL) def=false ;;
+      ONMARU_SSH_ADDR) def=auto ;;
+      *) def='/etc/ssh/ssh_host_*_key.pub' ;;
+    esac
+    if grep -qs "^$key=" "$ENV_FILE"; then
+      printf '%s=%s\n' "$key" "$(env_get "$key")"
+    else
+      printf '#%s=%s\n' "$key" "$def"
+    fi
+  done
+}
+
 # valid_group: 도우미의 상승 그룹 이름(onmaru-helper -elevate-group과 같은 규칙)
 valid_group() {
   [[ $1 =~ ^[A-Za-z0-9_][A-Za-z0-9_.-]{0,63}$ ]]
@@ -720,6 +738,8 @@ install_service() {
     remove_helper
   fi
 
+  local terminal_lines
+  terminal_lines=$(terminal_settings)
   write_file "$ENV_FILE" yes <<EOF
 # onmaru settings. Written by install.sh; re-run it to change them.
 # See README.md for every option.
@@ -730,6 +750,9 @@ ONMARU_SMART_REFRESH_AT=$smart_at
 ONMARU_WORKBENCH_URL=$workbench_url
 # Privileged helper socket; empty means the helper is not installed.
 ONMARU_HELPER_SOCKET=$helper_socket
+# Web terminal (SSH to this host's sshd). Off by default; admins can also turn it on in the settings app.
+# install.sh keeps these lines as they are.
+$terminal_lines
 EOF
 
   # 특정 IP에 바인딩하면 부팅 중 그 주소가 생긴 뒤에 시작해야 한다.

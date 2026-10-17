@@ -13,7 +13,8 @@ paths:
 설계·위협 모델·연산 추가 절차는 `.claude/docs/helper.md`. 사용자 설명은 `README.md`의 "권한 도우미".
 
 - 도우미는 root로 돈다. onmaru(클라이언트)가 보낸 사용자 이름·그룹·정책을 믿지 않는다. 믿는 것은 상대 uid(`SO_PEERCRED`), 자기가 발급한 티켓, 자기가 읽은 `/etc/passwd`·`/etc/group`·`/etc/login.defs`뿐이다
-- 임의 명령·셸 실행 연산을 만들지 않는다. root 연산은 `proto.Actions[ScopeRoot]`의 타입 있는 연산으로만 더하고, 브라우저가 보낸 값이 exec 인자로 그대로 가지 않게 한다. 지금 root 연산은 `id`뿐이다
+- 임의 명령·셸 실행 연산을 만들지 않는다. root 연산은 `proto.Actions[ScopeRoot]`의 타입 있는 연산으로만 더하고, 브라우저가 보낸 값이 exec 인자로 그대로 가지 않게 한다. 지금 root 연산은 `id`뿐이다. 웹 터미널은 도우미가 아니라 sshd를 거친다
+- 웹 터미널의 임시 SSH 키(`ssh.authorize`·`ssh.revoke`, 사용자 범위)는 키 줄을 worker가 직접 만들고 공개 키(ed25519)만 받는다. 옵션·만료 시각을 onmaru가 정하게 하지 않는다(`.claude/docs/helper.md`의 "임시 SSH 키")
 - root 부모(`daemon`)는 사용자 데이터를 읽거나 쓰지 않는다. 연산은 worker 자식 프로세스가 하고, 사용자 범위는 시작 전에 사용자 uid·gid·보조 그룹으로 강등한다. worker는 범위와 실제 uid가 맞는지 스스로 다시 확인한다
 - 비밀번호 확인은 `unix_chkpwd`(`daemon.ChkPwd`)로만 한다. Go로 shadow를 직접 검증하지 않고, OMV의 webgui PAM 스택(`pam_faillock deny=3 unlock_time=0`)을 거치지 않는다. 실패 제한은 도우미의 `limiter`가 한다
 - 비밀번호·티켓은 로그·응답·테스트 픽스처에 남기지 않는다. 오류는 코드만 주고(`proto.Code*`) 세부는 도우미 로그에만 남긴다. 감사 로그는 root 연산과 쓰기 연산의 경로, 읽기 연산의 연산·결과만 남긴다

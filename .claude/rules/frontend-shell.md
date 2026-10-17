@@ -46,7 +46,7 @@ paths:
 - 앱은 창 앱(`addon`, `placeholder`, 셸이 직접 그리는 `shell`)과 링크 앱(`link`, 창 없이 브라우저 탭으로 연다)이다(`windows/apps.ts`). 셸 앱의 보기 컴포넌트는 `shell/shellViews.ts`에 두어 node 테스트 대상인 `apps.ts`가 컴포넌트를 import하지 않게 한다. 창 저장소는 `WindowAppId`만 받으므로, 앱을 여는 곳(서랍 타일·바로가기·메뉴 "열기")은 `shell/launchApp.ts`의 `launchApp`을 부른다
   - 링크 앱(지금은 OMV 워크벤치)은 `openLink`가 `window.open(주소, 탭 이름)`으로 이름 붙은 탭 하나를 다시 쓴다. 이름 조회가 되도록 `noopener`를 주지 않으며, 팝업 차단을 피하려고 입력 처리기 안에서 동기로 부른다. 주소 계산은 `windows/links.ts`(끝에 OMV 첫 화면 `#/`를 붙여, 다시 열 때 새로 고침 없이 이동한다)
   - 열기 전에 "새 탭에서 열립니다" 데스크톱 대화상자를 띄운다(`linkNoticeDialog.tsx`의 `confirmLinkOpen`, 내용은 `LinkNotice.tsx`). 탭은 "열기" 클릭 처리 안에서 바로 연다(결과를 기다린 뒤 열면 팝업 차단). "다음에 알리지 않음"은 브라우저별 편의 설정이라 쿠키(`onmaru_link_notice_<id>=off`, 1년, Path 없음)에 두며 계산은 `linkNotice.ts`
-  - 링크 앱은 주소(`/api/capabilities`의 `workbenchUrl`)가 있을 때만 보인다. capability를 받기 전에도 숨긴다(`appAccess`의 예외). 프로필 메뉴의 "OMV 워크벤치 열기"는 `requires: 'workbench'`로 같은 조건을 따른다
+  - 링크 앱은 주소(`/api/capabilities`의 `workbenchUrl`)가 있을 때만 보인다. capability를 받기 전에도 숨긴다(`appAccess`의 예외). 셸 앱인 웹 터미널(`terminal`)도 같은 예외로 `capabilities.terminal`(관리자가 허용)일 때만 보인다. 프로필 메뉴의 "OMV 워크벤치 열기"는 `requires: 'workbench'`로 같은 조건을 따른다
 - 목록은 `shortcuts/store.ts`(사용자별 `/api/preferences`의 `shortcuts`, 불러오기·저장 방식은 위젯 저장소와 같다), 순서 계산은 `shortcuts/list.ts`, 칸 계산은 `shortcuts/layout.ts`가 한다
   - 저장 목록에는 지금 보이지 않는 앱(일반 사용자의 관리자 전용 앱)도 남긴다. 화면 순서와 놓을 자리는 보이는 목록 기준이며(`placeShortcut`), 보이지 않는 앱은 서로의 순서를 지킨다
   - 한 번도 저장하지 않았으면 기본 목록(시스템 정보·파일·저장소), 모두 지웠으면 빈 바탕화면이다. 모르는 앱 id는 불러올 때 뺀다
