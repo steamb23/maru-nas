@@ -25,9 +25,22 @@
   background-color: var(--terminal-bg);
 }
 
+/* 오른쪽 여백은 두지 않는다. xterm.js 6이 그리는 스크롤바(.xterm-scrollable-element > .scrollbar)가 그 안쪽,
+   곧 창 오른쪽 끝에 붙게 하기 위해서다. */
 .terminal-screen .xterm {
   height: 100%;
-  padding: 6px 4px 4px 10px;
+  padding: 6px 0 4px 10px;
+}
+
+/* .xterm-viewport는 xterm.css의 overflow-y: scroll 때문에 겹치지 않는 스크롤바를 쓰는 환경(Windows 등)에서
+   네이티브 스크롤바를 늘 그려, xterm 자신의 스크롤바와 어긋나게 겹친다. 네이티브 쪽은 보이지만 않게 하고
+   스크롤 동작은 그대로 둔다. */
+.terminal-screen .xterm .xterm-viewport {
+  scrollbar-width: none;
+}
+
+.terminal-screen .xterm .xterm-viewport::-webkit-scrollbar {
+  display: none;
 }
 
 .terminal-bar {
