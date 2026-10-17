@@ -22,7 +22,7 @@ paths:
   - 비밀번호·keyboard-interactive는 WebSocket `prompt`로 브라우저에 묻고 답을 그대로 넘긴다. 저장·기록하지 않는다. x/crypto는 방법 하나가 오류를 내도 다음 방법을 시도하므로, 한 번 취소하면 다시 묻지 않게 기억한다(`authState.canceled`)
   - sshd·fail2ban에는 접속지가 루프백으로만 보이므로 비밀번호 실패는 onmaru가 센다(`handler.terminalLimiter`, 로그인과 따로 둔 `auth.Limiter`). 물어서 인증이 실패한 접속 하나가 실패 하나다
   - 그룹 소속(`AllowGroups`)은 접속을 막는 데 쓰지 않고 실패 안내에만 쓴다(`NotAllowedGroups`). sshd가 최종 판단한다
-- 세션: 대시보드 세션 하나에 `ssh.Client` 하나, 창마다 채널(`NewSession`) 하나다(`Manager`). 인증은 첫 창에서만 하고, 같은 세션의 다른 창(다른 탭)은 기다렸다가 함께 쓴다. 세션당 창 4개(sshd `MaxSessions` 10보다 작게), 클라이언트 32개까지. 마지막 창이 닫히거나 세션이 끝나면(`auth.Store.OnRemove`, 접속 중이면 질문 대기도 취소) 닫는다
+- 세션: 대시보드 세션 하나에 `ssh.Client` 하나, 창마다 채널(`NewSession`) 하나다(`Manager`). 인증은 첫 창에서만 하고, 같은 세션의 다른 창(같은 탭의 새 창, 다른 탭)은 기다렸다가 함께 쓴다. 세션당 창 4개(sshd `MaxSessions` 10보다 작게), 클라이언트 32개까지. 마지막 창이 닫히거나 세션이 끝나면(`auth.Store.OnRemove`, 접속 중이면 질문 대기도 취소) 닫는다
 - 허용: `-terminal`(기본 끔)과 설정 앱의 덮어쓰기(`site.json`의 `server.terminal`). 꺼져 있으면 `/api/terminal`이 403 `terminal_disabled`, 끄는 순간 `Manager.CloseAll`로 열린 터미널을 닫는다. 프론트는 `capabilities.terminal`로 앱을 숨긴다
 - 프로토콜(`api.Terminal*Message`): 바이너리 프레임은 입출력 바이트, 텍스트 프레임은 JSON 제어 메시지(`resize`, `answer`, `cancel` / `status`, `prompt`). Origin은 coder/websocket 기본 검사(Host와 같아야 함). 30초마다 ping. 브라우저 메시지 하나는 64KiB까지라 프론트가 입력을 16KiB씩 나눈다
 - 세션 연장은 프론트의 키 입력(`useSessionKeeper`의 document capture `keydown`)으로 된다. 출력만으로는 연장하지 않는다(README가 tmux를 권한다)
@@ -31,7 +31,8 @@ paths:
 
 - `src/terminal/`: `TerminalWindow.tsx`(xterm.js, FitAddon, 지연 청크), 순수 모듈 `protocol.ts`(메시지·주소), `promptLine.ts`(질문 답을 받는 줄 편집기), `messages.ts`(닫힌 이유 → 안내 문구), `theme.ts`(CSS 토큰에서 계산한 배경·글자색 + 밝은·어두운 ANSI 팔레트)
 - xterm.js는 vendor 청크에서 빼고(`vite.config.ts`) 스타일(`xterm.css`)은 `TerminalWindow.tsx`가 import한다(`frontend.md`의 CSS 예외). 여백·남는 줄 높이는 우리 CSS가 터미널 배경으로 칠한다
-- 창은 앱마다 하나라(창 저장소) 한 탭에 터미널 창은 하나다. 같은 세션의 다른 터미널은 다른 브라우저 탭에서 열린다
+- 한 탭에서 터미널 창을 여러 개 연다(`apps.ts`의 `multiInstance`, 창 저장소의 `openNew`, 메뉴의 "새 창". `frontend-shell.md`의 "바로가기와 모든 앱"). 창마다 `TerminalWindow`가 따로 WebSocket을 열어 채널 하나를 쓴다. 세션당 창 수 제한은 다른 탭과 함께 세므로 프론트에서 미리 막지 않고, 넘치면 그 창 안에 `too_many_windows` 안내와 다시 연결 단추가 나온다
+  - 개발 모드(StrictMode)는 effect를 두 번 돌려 창마다 연결을 한 번 열었다 닫는다. 닫힌 연결이 아직 세어지는 사이에 다시 연결하므로, 상한 바로 앞의 창은 개발 모드에서만 `too_many_windows`가 날 수 있다(다시 연결하면 된다)
 
 ## 테스트
 
