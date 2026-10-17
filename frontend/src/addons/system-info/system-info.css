@@ -13,6 +13,7 @@
   --sysinfo-series-4: light-dark(#eda100, #c98500);
   --sysinfo-series-5: light-dark(#e87ba4, #d55181);
   --sysinfo-grid: light-dark(rgb(0 0 0 / 0.08), rgb(255 255 255 / 0.08));
+  --sysinfo-track: light-dark(rgb(0 0 0 / 0.1), rgb(255 255 255 / 0.12));
   --sysinfo-gutter: 24px;
   --sidebar-width: 200px;
 }
@@ -268,6 +269,17 @@
   background: var(--sysinfo-color, var(--sysinfo-series-1));
 }
 
+/* 막대 조각(메모리 구성)의 키는 네모다. 여유는 막대의 바탕처럼 칠한다. */
+.sysinfo-key.swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+.sysinfo-key.free {
+  background: var(--sysinfo-track);
+}
+
 .sysinfo-key.part {
   height: 8px;
   border-radius: 2px;
@@ -419,6 +431,55 @@
 
 .sysinfo-tooltip-label {
   color: var(--text-muted);
+}
+
+/* 메모리 구성: 지금 값의 가로 막대와 항목별 크기 */
+
+.sysinfo-memmap {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sysinfo-memmap-title {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* 툴팁은 막대 밖(위)에 그리므로 막대를 감싸는 틀에 둔다. */
+.sysinfo-memmap-plot {
+  position: relative;
+}
+
+/* 조각 사이는 창 배경색 틈(2px)이다. 조각은 틈을 뺀 나머지를 크기에 비례해 나눠 갖는다(flex-grow). */
+.sysinfo-memmap-bar {
+  display: flex;
+  gap: 2px;
+  height: 16px;
+  overflow: hidden;
+  border-radius: 4px;
+}
+
+.sysinfo-memmap-seg {
+  flex: 0 1 0;
+  min-width: 2px;
+  background: var(--sysinfo-color);
+  transition: opacity 0.15s;
+}
+
+.sysinfo-memmap-seg.free {
+  background: var(--sysinfo-track);
+}
+
+/* 포인터를 올린 조각만 또렷하게 둔다. */
+.sysinfo-memmap-bar:has(.hover) .sysinfo-memmap-seg:not(.hover) {
+  opacity: 0.45;
+}
+
+.sysinfo-memmap-tip {
+  top: auto;
+  bottom: calc(100% + 6px);
 }
 
 /* 코어별 작은 그래프 */

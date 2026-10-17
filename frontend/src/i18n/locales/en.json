@@ -136,7 +136,15 @@
       "running": "Running",
       "inUse": "In use",
       "available": "Available",
-      "total": "Total"
+      "total": "Total",
+      "swap": "Swap",
+      "composition": "Memory composition",
+      "apps": "Apps",
+      "shared": "Shared",
+      "compressed": "Compressed",
+      "buffers": "Buffers",
+      "cache": "Cache",
+      "free": "Free"
     },
     "chart": {
       "ago": "{{time}} ago",

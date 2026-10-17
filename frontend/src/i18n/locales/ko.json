@@ -136,7 +136,15 @@
       "running": "실행 중",
       "inUse": "사용 중",
       "available": "사용 가능",
-      "total": "전체"
+      "total": "전체",
+      "swap": "스왑",
+      "composition": "메모리 구성",
+      "apps": "앱",
+      "shared": "공유",
+      "compressed": "압축",
+      "buffers": "버퍼",
+      "cache": "캐시",
+      "free": "여유"
     },
     "chart": {
       "ago": "{{time}} 전",

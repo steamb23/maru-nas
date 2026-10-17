@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { useLanguage } from '../../i18n'
 import { useContextMenuTrigger } from '../../shell/useContextMenuTrigger'
 import { formatBytes, formatLoad, formatPercent, formatRate, formatUnit, formatUptime } from '../common/format'
+import { MemoryComposition } from './MemoryComposition'
 import { type ChartSeries, type SeriesSlot, UsageChart } from './UsageChart'
 import { loadAxisMax, niceMax } from './chart'
 import { cpuGraphMenuItems } from './menus'
@@ -156,6 +157,7 @@ export function PerformancePanel({ sample, stale, resource, onResource }: Props)
   )
 
   const mem = res?.memory
+  const memDetail = res?.memoryDetail
   const views: Record<Resource, View> = {
     cpu: {
       ...percentView(
@@ -202,6 +204,13 @@ export function PerformancePanel({ sample, stale, resource, onResource }: Props)
         { label: t('sysinfo.perf.inUse'), value: bytes(mem?.usedBytes) },
         { label: t('sysinfo.perf.available'), value: bytes(mem?.availableBytes) },
         { label: t('sysinfo.perf.total'), value: bytes(mem?.totalBytes) },
+        {
+          label: t('sysinfo.perf.swap'),
+          value:
+            memDetail && memDetail.swapTotalBytes > 0
+              ? `${bytes(memDetail.swapUsedBytes)} / ${bytes(memDetail.swapTotalBytes)}`
+              : none,
+        },
       ],
     },
     disk: rateView(
@@ -357,6 +366,7 @@ export function PerformancePanel({ sample, stale, resource, onResource }: Props)
             />
           )}
         </div>
+        {resource === 'memory' && <MemoryComposition detail={memDetail} total={mem?.totalBytes} />}
         <dl className="sysinfo-stats">
           {view.stats.map((s) => (
             <div key={s.label} className="sysinfo-stat">
