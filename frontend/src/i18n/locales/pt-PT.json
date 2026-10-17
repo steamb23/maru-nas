@@ -353,7 +353,6 @@
       "intro": "Aplica-se aos utilizadores que não escolheram o seu próprio tema ou imagem de fundo nas definições de ecrã."
     },
     "server": {
-      "intro": "Definições com que o Onmaru está a ser executado. Os dois valores abaixo podem ser alterados aqui; os restantes são definidos no ficheiro de configuração do servidor.",
       "loadFailed": "Não foi possível carregar as definições do servidor.",
       "saveFailed": "Não foi possível guardar a definição.",
       "invalid": "O valor não tem um formato válido.",

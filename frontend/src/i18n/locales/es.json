@@ -353,7 +353,6 @@
       "intro": "Se aplica a los usuarios que no han elegido su propio tema o fondo en la configuración de pantalla."
     },
     "server": {
-      "intro": "Ajustes con los que funciona Onmaru. Los dos valores siguientes se pueden cambiar aquí; el resto se define en el archivo de configuración del servidor.",
       "loadFailed": "No se pudo cargar la configuración del servidor.",
       "saveFailed": "No se pudo guardar el ajuste.",
       "invalid": "El valor no tiene un formato válido.",

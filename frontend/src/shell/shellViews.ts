@@ -8,4 +8,5 @@ import type { ShellAppId } from '../windows/apps'
 
 export const SHELL_VIEWS: Record<ShellAppId, ComponentType<WindowViewProps>> = {
   settings: lazyView(() => import('../settings/SettingsWindow'), (m) => m.SettingsWindow),
+  terminal: lazyView(() => import('../terminal/TerminalWindow'), (m) => m.TerminalWindow),
 }

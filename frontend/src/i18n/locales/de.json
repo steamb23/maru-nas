@@ -347,7 +347,6 @@
       "intro": "Gilt für Benutzer, die in den Darstellungseinstellungen kein eigenes Design und keinen eigenen Hintergrund gewählt haben."
     },
     "server": {
-      "intro": "Die Einstellungen, mit denen Onmaru läuft. Die beiden folgenden Werte lassen sich hier ändern, alle anderen werden in der Einstellungsdatei des Servers festgelegt.",
       "loadFailed": "Die Servereinstellungen konnten nicht geladen werden.",
       "saveFailed": "Die Einstellung konnte nicht gespeichert werden.",
       "invalid": "Der Wert hat kein gültiges Format.",

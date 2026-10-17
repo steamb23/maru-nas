@@ -1,0 +1,41 @@
+/* 웹 터미널 창. 창을 꽉 채우는 앱형 창이라 .addon-window 열을 쓰지 않는다. */
+.terminal-window {
+  /* 터미널 배경·글자색. xterm 테마는 이 값을 브라우저가 계산한 색으로 받는다(theme.ts). */
+  --terminal-bg: light-dark(#fafafa, #1b1d21);
+  --terminal-fg: light-dark(#383a42, #d7dae0);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: var(--terminal-bg);
+}
+
+.terminal-screen {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  background-color: var(--terminal-bg);
+  color: var(--terminal-fg);
+}
+
+/* FitAddon은 .xterm 요소의 padding을 빼고 칸 수를 계산하므로 여백은 여기에 둔다. */
+.terminal-screen .xterm {
+  height: 100%;
+  padding: 6px 4px 4px 10px;
+}
+
+.terminal-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--window-border);
+  background: var(--window-bg);
+  color: var(--text);
+  font-size: 13px;
+}
+
+.terminal-bar-text {
+  flex: 1;
+  min-width: 0;
+}

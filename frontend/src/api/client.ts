@@ -42,7 +42,7 @@ import type {
 import { isArrayOf, isBool, isNum, isObj, isOneOf, isOptional, isStr } from './guards'
 
 // BASE_URL은 Vite base 설정값이다. 개발 서버는 '/', 빌드는 './'(문서 URL 기준 상대 경로)다.
-const API_BASE = `${import.meta.env.BASE_URL}api`
+export const API_BASE = `${import.meta.env.BASE_URL}api`
 
 export type ErrorCode = NonNullable<ErrorResponse['code']>
 

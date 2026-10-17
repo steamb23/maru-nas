@@ -10,6 +10,10 @@
 // FAKEHELPER_SOCKET이 있으면 같은 가짜 계정으로 가짜 권한 도우미(internal/helper/helperfake)도
 // 그 소켓에 띄운다. 권한을 바꾸지 않으며, 파일 연산은 FAKEHELPER_ROOT(기본: 소켓 옆 helper-root)
 // 아래의 가짜 홈과 디스크에서만 한다.
+//
+// FAKESSH_LISTEN이 있으면 웹 터미널용 가짜 sshd(internal/terminal/sshfake)도 띄운다. 같은 가짜 계정으로
+// 인증하고(공개 키는 가짜 도우미의 가짜 홈에 쓴 authorized_keys로 확인), 장난감 셸만 있다. 호스트 공개 키는
+// FAKESSH_HOST_KEY 경로에 쓰고, FAKESSH_AUTH로 받을 인증 방법을 고른다(예: publickey면 공개 키만 받는 sshd).
 package main
 
 import (
@@ -25,6 +29,7 @@ import (
 
 	"onmaru/backend/internal/helper/helperfake"
 	"onmaru/backend/internal/omv/omvfake"
+	"onmaru/backend/internal/terminal/sshfake"
 )
 
 func main() {
@@ -63,6 +68,7 @@ func main() {
 			log.Printf("  account %s / %s (%s)", u.Name, u.Password, role)
 		}
 	}
+	var helper *helperfake.Server
 	if sock := os.Getenv("FAKEHELPER_SOCKET"); sock != "" {
 		root := cmp.Or(os.Getenv("FAKEHELPER_ROOT"), filepath.Join(filepath.Dir(sock), "helper-root"))
 		h, err := helperfake.Start(sock, root, helperfake.DefaultUsers(), helperfake.Options{})
@@ -70,10 +76,14 @@ func main() {
 			log.Fatalf("fake helper: %v", err)
 		}
 		defer h.Close()
+		helper = h
 		log.Printf("fake helper listening on %s (files under %s)", sock, root)
 		for _, u := range helperfake.DefaultUsers() {
 			log.Printf("  helper account %s uid %d groups %v", u.Name, u.UID, u.Groups)
 		}
+	}
+	if addr := os.Getenv("FAKESSH_LISTEN"); addr != "" {
+		startFakeSSH(addr, helper)
 	}
 	mux := http.NewServeMux()
 	mux.Handle("/rpc.php", srv)
@@ -114,6 +124,32 @@ show()
 </body>
 </html>
 `
+
+// startFakeSSH는 가짜 sshd를 addr에 띄우고 호스트 공개 키를 FAKESSH_HOST_KEY에 쓴다.
+func startFakeSSH(addr string, helper *helperfake.Server) {
+	host, _, err := net.SplitHostPort(addr)
+	if ip := net.ParseIP(host); err != nil || ip == nil || !ip.IsLoopback() {
+		log.Fatalf("FAKESSH_LISTEN must be a loopback IP, got %s", addr)
+	}
+	opts := sshfake.Options{Users: sshfake.DefaultUsers(), Logf: log.Printf}
+	if helper != nil {
+		opts.Home = helper.Home
+	}
+	if err := sshfake.ParseMethods(os.Getenv("FAKESSH_AUTH"), &opts); err != nil {
+		log.Fatal(err)
+	}
+	s, err := sshfake.Start(addr, opts)
+	if err != nil {
+		log.Fatalf("fake sshd: %v", err)
+	}
+	if path := os.Getenv("FAKESSH_HOST_KEY"); path != "" {
+		if err := s.WriteHostKey(path); err != nil {
+			log.Fatalf("fake sshd host key: %v", err)
+		}
+	}
+	log.Printf("fake sshd listening on %s (publickey %t, password %t, keyboard-interactive %t)",
+		s.Addr, !opts.NoPublicKey, !opts.NoPassword, !opts.NoKeyboardInteractive)
+}
 
 func envDuration(key string, def time.Duration) time.Duration {
 	if v := os.Getenv(key); v != "" {

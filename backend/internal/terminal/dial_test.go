@@ -42,7 +42,7 @@ func newTestEnv(t *testing.T, opts sshfake.Options) *testEnv {
 		t.Fatal(err)
 	}
 	t.Cleanup(s.Close)
-	if _, err := s.WriteHostKey(dir); err != nil {
+	if err := s.WriteHostKey(filepath.Join(dir, "ssh_host_ed25519_key.pub")); err != nil {
 		t.Fatal(err)
 	}
 	return &testEnv{t: t, helper: h, hc: helperclient.New(h.Socket), sshd: s,
@@ -239,7 +239,7 @@ func TestDialHostKeyMismatch(t *testing.T) {
 	}
 	defer other.Close()
 	dir := t.TempDir()
-	other.WriteHostKey(dir)
+	other.WriteHostKey(filepath.Join(dir, "ssh_host_ed25519_key.pub"))
 	e.dialer.HostKeys = filepath.Join(dir, "*.pub")
 	ask := &answers{next: fixed("user")}
 	_, err = e.dialer.Dial(context.Background(), "user", Auth{Ask: ask.ask})

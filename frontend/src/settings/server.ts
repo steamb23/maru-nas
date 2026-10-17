@@ -12,6 +12,9 @@ const RUNTIME_LABELS: Record<string, ParseKeys> = {
   'workbench-url': 'settings.server.flags.workbenchUrl',
   'smart-refresh-at': 'settings.server.flags.smartRefreshAt',
   'helper-socket': 'settings.server.flags.helperSocket',
+  terminal: 'settings.server.flags.terminal',
+  'ssh-addr': 'settings.server.flags.sshAddr',
+  'ssh-host-keys': 'settings.server.flags.sshHostKeys',
 }
 
 export function runtimeLabelKey(flag: string): ParseKeys | null {

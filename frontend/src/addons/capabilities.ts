@@ -26,9 +26,10 @@ const HIDDEN: AppAccess = { visible: false, notice: null }
 // 관리자 전용(admin_required)은 아이콘을 숨기고, 플러그인 없음(plugin_missing)은 아이콘을 두고
 // 창 안에 안내한다. 이미 열린 창이면 두 경우 모두 창 안에 안내한다.
 // 링크 앱은 주소가 설정되어 있을 때만 보인다. capability를 받기 전에는 열 주소를 모르므로
-// "받기 전에는 모두 보인다"의 예외로 숨긴다.
+// "받기 전에는 모두 보인다"의 예외로 숨긴다. 웹 터미널도 관리자가 허용했을 때만 보이므로 같은 예외다.
 export function appAccess(caps: CapabilitiesResponse | null, id: AppId): AppAccess {
   if (isLinkApp(id)) return linkConfigured(id, caps) ? OPEN : HIDDEN
+  if (id === 'terminal') return caps?.terminal ? OPEN : HIDDEN
   return isAddonApp(id) ? addonAccess(caps, id) : OPEN
 }
 

@@ -1,4 +1,5 @@
-// 설정의 서버 페이지(관리자): 웹에서 바꾸는 가동 설정(워크벤치 주소, SMART 확인 시각), 권한 도우미, 가동 설정 현황.
+// 설정의 서버 페이지(관리자): 웹에서 바꾸는 가동 설정(워크벤치 주소, SMART 확인 시각, 웹 터미널 허용), 권한 도우미,
+// 가동 설정 현황.
 // 나머지 가동 설정은 /etc/default/onmaru에서 바꾸고 서비스를 다시 시작해야 하므로 값·출처와 방법만 보여 준다.
 import type { ParseKeys } from 'i18next'
 import { useEffect, useState } from 'react'
@@ -8,7 +9,7 @@ import { ApiError, fetchCapabilities, fetchServerSettings, saveServerSettings } 
 import type { ServerSettings } from '../api/types.gen'
 import { IconImage } from '../icons/IconImage'
 import { HelperSection } from './HelperSection'
-import { SettingsCard, SettingsNotice, SettingsRow, SettingsSection } from './controls'
+import { SettingsCard, SettingsNotice, SettingsRow, SettingsSection, Switch } from './controls'
 import { OVERRIDE_FLAGS, type OverrideKey, SOURCE_LABELS, overridesWith, runtimeLabelKey } from './server'
 
 const HOW_TO_COMMANDS = 'sudoedit /etc/default/onmaru\nsudo systemctl restart onmaru'
@@ -42,7 +43,7 @@ export function ServerPage() {
   }
 
   // save는 key 하나를 value로 덮어쓰거나(null이면 서버 값으로 되돌림) 저장한 뒤 다시 불러온다.
-  // 워크벤치 주소는 capability로 앱 목록·프로필 메뉴에 반영되므로 capability도 다시 받는다.
+  // 워크벤치 주소와 웹 터미널 허용은 capability로 앱 목록·프로필 메뉴에 반영되므로 capability도 다시 받는다.
   const save = async (key: OverrideKey, value: string | null) => {
     if (state.status !== 'ready') return
     setSaving(key)
@@ -88,6 +89,13 @@ export function ServerPage() {
               type="time"
               busy={saving === 'smartRefreshAt'}
               onSave={(v) => void save('smartRefreshAt', v)}
+            />
+            <ToggleOverrideRow
+              label={t('settings.server.flags.terminal')}
+              description={t('settings.server.terminalDesc')}
+              setting={data.terminal}
+              busy={saving === 'terminal'}
+              onSave={(v) => void save('terminal', v)}
             />
           </SettingsCard>
         </SettingsSection>
@@ -195,6 +203,54 @@ function OverrideRow({
           </button>
         )}
       </form>
+    </SettingsRow>
+  )
+}
+
+// ToggleOverrideRow는 켜기·끄기로 덮어쓰는 설정 한 줄이다. 값은 "true"·"false" 문자열이다.
+// 스위치를 바꾸면 바로 저장하고, 덮어썼으면 서버 값(플래그·환경 변수)으로 되돌릴 수 있다.
+function ToggleOverrideRow({
+  label,
+  description,
+  setting,
+  busy,
+  onSave,
+}: {
+  label: string
+  description: string
+  setting: ServerSettings['terminal']
+  busy: boolean
+  onSave: (value: string | null) => void
+}) {
+  const { t } = useTranslation()
+  const base = setting.base === 'true' ? t('settings.server.on') : t('settings.server.off')
+  return (
+    <SettingsRow
+      label={label}
+      description={
+        <>
+          {description}
+          <span className="server-base">
+            {setting.overridden
+              ? t('settings.server.overridden', { base })
+              : t('settings.server.fromServer', { base })}
+          </span>
+        </>
+      }
+    >
+      <div className="server-override">
+        {setting.overridden && (
+          <button type="button" className="addon-button" disabled={busy} onClick={() => onSave(null)}>
+            {t('settings.server.reset')}
+          </button>
+        )}
+        <Switch
+          checked={setting.value === 'true'}
+          label={label}
+          disabled={busy}
+          onChange={(on) => onSave(on ? 'true' : 'false')}
+        />
+      </div>
     </SettingsRow>
   )
 }

@@ -34,6 +34,8 @@ import preferencesSystem from '@colloid/apps/scalable/preferences-system.svg?url
 import preferencesVirtualizationContainer from '@colloid/apps/scalable/preferences-virtualization-container.svg?url'
 import thermalMonitor from '@colloid/apps/scalable/thermal-monitor.svg?url'
 import utilitiesSystemMonitor from '@colloid/apps/scalable/utilities-system-monitor.svg?url'
+// Colloid의 utilities-terminal은 terminal.svg로 가는 링크다(links/apps/scalable).
+import utilitiesTerminal from '@colloid/apps/scalable/terminal.svg?url'
 import preferencesDesktopAppearance from '@colloid/apps/symbolic/preferences-desktop-appearance-symbolic.svg?url'
 import preferencesSystemSymbolic from '@colloid/apps/symbolic/preferences-system-symbolic.svg?url'
 import systemUsers from '@colloid/apps/symbolic/system-users-symbolic.svg?url'
@@ -88,4 +90,5 @@ export const COLLOID_ICONS = {
   'drive-harddisk': { url: driveHarddisk, kind: 'color' },
   folder: { url: folder, kind: 'color' },
   'preferences-system': { url: preferencesSystem, kind: 'color' },
+  'utilities-terminal': { url: utilitiesTerminal, kind: 'color' },
 } as const satisfies Record<string, Icon>

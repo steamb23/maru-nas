@@ -347,7 +347,6 @@
       "intro": "Geldt voor gebruikers die in de scherminstellingen geen eigen thema of achtergrond hebben gekozen."
     },
     "server": {
-      "intro": "Instellingen waarmee Onmaru draait. De twee waarden hieronder kun je hier wijzigen; de rest staat in het instellingenbestand van de server.",
       "loadFailed": "De serverinstellingen kunnen niet worden geladen.",
       "saveFailed": "De instelling kon niet worden opgeslagen.",
       "invalid": "De waarde heeft geen geldige indeling.",

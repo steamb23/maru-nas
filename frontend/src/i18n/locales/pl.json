@@ -359,7 +359,6 @@
       "intro": "Dotyczy użytkowników, którzy nie wybrali własnego motywu ani tapety w ustawieniach ekranu."
     },
     "server": {
-      "intro": "Ustawienia, z którymi działa Onmaru. Dwie poniższe wartości można zmienić tutaj, pozostałe ustawia się w pliku konfiguracyjnym serwera.",
       "loadFailed": "Nie udało się wczytać ustawień serwera.",
       "saveFailed": "Nie udało się zapisać ustawienia.",
       "invalid": "Wartość ma nieprawidłowy format.",

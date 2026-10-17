@@ -76,7 +76,33 @@
     "smart": "Disk Health",
     "services": "Services",
     "workbench": "OMV Workbench",
-    "settings": "Settings"
+    "settings": "Settings",
+    "terminal": "Terminal"
+  },
+  "terminal": {
+    "connecting": "Connecting to the SSH server as {{user}}…",
+    "passwordPrompt": "Password for {{user}}: ",
+    "reconnect": "Reconnect",
+    "closed": {
+      "exit": "The shell ended (exit code {{code}}).",
+      "sessionEnded": "The terminal was closed because you signed out.",
+      "disabled": "An administrator turned off the web terminal.",
+      "connectionLost": "The connection to the SSH server was lost.",
+      "openFailed": "Couldn't open the terminal. The web terminal may have been turned off.",
+      "unavailable": "Couldn't connect to the SSH server. Check that SSH is turned on in OMV.",
+      "hostKey": "The SSH server's host key didn't match, so the connection was stopped.",
+      "authFailed": "SSH sign-in failed.",
+      "authGroups": "SSH sign-in failed. To use SSH, your account must be in one of these groups: {{groups}}. An administrator can add it in OMV's user settings.",
+      "authStrictModes": "SSH sign-in failed. Other users can write to your home folder, so SSH ignores the keys in it. Remove write permission for group and others from your home folder (chmod go-w).",
+      "authNoHome": "SSH sign-in failed. Your account has no home folder, so a temporary key couldn't be used, and this SSH server doesn't accept passwords.",
+      "authKeyFailed": "SSH sign-in failed. The privileged helper couldn't add a temporary key, and this SSH server doesn't accept passwords.",
+      "authNoHelper": "SSH sign-in failed. This SSH server accepts only keys, and the privileged helper isn't available for this session. Sign in again, or ask an administrator.",
+      "canceled": "Canceled.",
+      "tooMany": "Too many terminal windows are open. Close one and try again.",
+      "busy": "The server has too many terminal connections. Try again later.",
+      "rateLimited": "Too many failed password attempts. Try again in {{seconds}} seconds.",
+      "failed": "Couldn't start the SSH session."
+    }
   },
   "sysinfo": {
     "disconnected": "Disconnected — reconnecting…",
@@ -426,7 +452,7 @@
       "intro": "Applied to users who haven't chosen their own theme or wallpaper in Screen settings."
     },
     "server": {
-      "intro": "Settings that Onmaru runs with. The two values below can be changed here; the rest are set in the server's settings file.",
+      "intro": "Settings that Onmaru runs with. The values in the first section can be changed here; the rest are set in the server's settings file.",
       "loadFailed": "Couldn't load the server settings.",
       "saveFailed": "Couldn't save the setting.",
       "invalid": "The value isn't in a valid format.",
@@ -434,6 +460,9 @@
       "editableDesc": "Takes effect immediately and overrides the value from the settings file.",
       "workbenchDesc": "Address the browser uses to open the OMV web UI. Leave empty to hide the OMV Workbench app.",
       "smartDesc": "SMART information is read again once a day after this time (server time).",
+      "terminalDesc": "Lets accounts that can sign in over SSH open a shell from the dashboard. Who can sign in is still decided by OMV's SSH settings.",
+      "on": "On",
+      "off": "Off",
       "fromServer": "Using the server value: {{base}}",
       "overridden": "Changed here. Server value: {{base}}",
       "save": "Save",
@@ -461,7 +490,10 @@
         "stateDir": "State directory",
         "workbenchUrl": "OMV Workbench address",
         "smartRefreshAt": "SMART check time",
-        "helperSocket": "Privileged helper socket"
+        "helperSocket": "Privileged helper socket",
+        "terminal": "Web terminal",
+        "sshAddr": "SSH server address",
+        "sshHostKeys": "SSH host keys"
       }
     },
     "helper": {

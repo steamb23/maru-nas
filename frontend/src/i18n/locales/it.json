@@ -353,7 +353,6 @@
       "intro": "Si applica agli utenti che non hanno scelto un proprio tema o sfondo nelle impostazioni dello schermo."
     },
     "server": {
-      "intro": "Impostazioni con cui è in esecuzione Onmaru. I due valori qui sotto si possono cambiare qui; gli altri si impostano nel file di configurazione del server.",
       "loadFailed": "Impossibile caricare le impostazioni del server.",
       "saveFailed": "Impossibile salvare l'impostazione.",
       "invalid": "Il formato del valore non è valido.",

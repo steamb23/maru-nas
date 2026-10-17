@@ -49,6 +49,14 @@ const PLACEHOLDER_APPS = {
 
 // 셸이 직접 그리는 창 앱. 보기 컴포넌트는 shell/shellViews.ts에 있다(이 파일은 node 테스트 대상이라 import하지 않는다).
 const SHELL_APPS = {
+  // 웹 터미널. 같은 호스트의 sshd에 대시보드 사용자로 접속한 셸이다(src/terminal). 관리자가 허용했을 때만 보인다.
+  terminal: {
+    titleKey: 'apps.terminal',
+    icon: 'utilities-terminal',
+    kind: 'shell',
+    defaultSize: { width: 800, height: 500 },
+    minSize: { width: 400, height: 240 },
+  },
   // 설정. 화면(테마·바탕화면) 같은 사용자 설정과 관리자의 전역 설정, 정보 페이지를 둔다(src/settings).
   settings: {
     titleKey: 'apps.settings',

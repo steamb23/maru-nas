@@ -30,6 +30,12 @@ describe('appAccess', () => {
     expect(appAccess(c, 'files')).toEqual({ visible: true, notice: null })
   })
 
+  it('웹 터미널은 관리자가 허용했을 때만 보인다(받기 전에는 숨긴다)', () => {
+    expect(appAccess(null, 'terminal')).toEqual({ visible: false, notice: null })
+    expect(appAccess(caps([]), 'terminal')).toEqual({ visible: false, notice: null })
+    expect(appAccess({ ...caps([]), terminal: true }, 'terminal')).toEqual({ visible: true, notice: null })
+  })
+
   it('링크 앱은 주소가 설정되어 있을 때만 보인다(받기 전에는 숨긴다)', () => {
     expect(appAccess(null, 'workbench')).toEqual({ visible: false, notice: null })
     expect(appAccess(caps([]), 'workbench')).toEqual({ visible: false, notice: null })

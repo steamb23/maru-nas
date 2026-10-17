@@ -169,7 +169,7 @@ func newEnv(t *testing.T, o envOptions) *env {
 			t.Fatal(err)
 		}
 		t.Cleanup(sshd.Close)
-		if _, err := sshd.WriteHostKey(dir); err != nil {
+		if err := sshd.WriteHostKey(filepath.Join(dir, "ssh_host_ed25519_key.pub")); err != nil {
 			t.Fatal(err)
 		}
 		manager = terminal.NewManager(&terminal.Dialer{Addr: sshd.Addr, HostKeys: filepath.Join(dir, "*.pub"),

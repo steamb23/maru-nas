@@ -353,7 +353,6 @@
       "intro": "S'applique aux utilisateurs qui n'ont pas choisi leur propre thème ou fond d'écran dans les paramètres d'affichage."
     },
     "server": {
-      "intro": "Paramètres avec lesquels Onmaru fonctionne. Les deux valeurs ci-dessous peuvent être modifiées ici ; les autres sont définies dans le fichier de configuration du serveur.",
       "loadFailed": "Impossible de charger les paramètres du serveur.",
       "saveFailed": "Impossible d'enregistrer le paramètre.",
       "invalid": "Le format de la valeur n'est pas valide.",

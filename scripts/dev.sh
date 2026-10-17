@@ -86,12 +86,18 @@ if [[ $fake == 1 ]]; then
   mkdir -p "$ONMARU_STATE_DIR"
   export FAKEHELPER_SOCKET="$ONMARU_STATE_DIR/helper.sock"
   export ONMARU_HELPER_SOCKET="$FAKEHELPER_SOCKET"
+  # 웹 터미널은 가짜 sshd에 붙는다. 호스트 공개 키는 가짜 OMV 프로세스가 시작할 때마다 새로 만들어 쓴다.
+  # 받는 인증 방법은 FAKESSH_AUTH(예: publickey)로 고른다. 웹 터미널 허용은 설정 앱이나 ONMARU_TERMINAL로 켠다.
+  export FAKESSH_LISTEN="${FAKESSH_LISTEN:-127.0.0.1:8092}"
+  export FAKESSH_HOST_KEY="$ONMARU_STATE_DIR/ssh_host_ed25519_key.pub"
+  export ONMARU_SSH_ADDR="$FAKESSH_LISTEN"
+  export ONMARU_SSH_HOST_KEYS="$FAKESSH_HOST_KEY"
 fi
 
 # 이미 떠 있는 서버가 있으면 시작하지 않는다. 일부만 떠서 다른 서버(예: 실제 OMV에 연결된
 # 백엔드)에 붙는 일을 막는다. Vite 포트(DEV_PORT)는 vite.config.ts의 server.port와 같은 기본값을 쓴다.
 ports=("${ONMARU_LISTEN##*:}" "${DEV_PORT:-5173}")
-[[ $fake == 1 ]] && ports+=("${FAKEOMV_LISTEN##*:}")
+[[ $fake == 1 ]] && ports+=("${FAKEOMV_LISTEN##*:}" "${FAKESSH_LISTEN##*:}")
 for port in "${ports[@]}"; do
   if (exec 3<>"/dev/tcp/127.0.0.1/$port") 2>/dev/null; then
     echo "[dev] port $port is already in use. Stop the running dev server first." >&2
@@ -123,7 +129,7 @@ if [[ $fake == 1 ]]; then
   pids+=($!)
 fi
 
-echo "[dev] backend: http://$ONMARU_LISTEN (omv: ${ONMARU_OMV_URL:-http://127.0.0.1}, workbench: ${ONMARU_WORKBENCH_URL:-off}, helper: ${ONMARU_HELPER_SOCKET:-off})"
+echo "[dev] backend: http://$ONMARU_LISTEN (omv: ${ONMARU_OMV_URL:-http://127.0.0.1}, workbench: ${ONMARU_WORKBENCH_URL:-off}, helper: ${ONMARU_HELPER_SOCKET:-off}, ssh: ${ONMARU_SSH_ADDR:-auto})"
 [[ $root != "$main_root" ]] && echo "[dev] worktree: $root"
 echo "[dev] state: $ONMARU_STATE_DIR"
 (cd "$root/backend" && exec setsid go run ./cmd/onmaru) &

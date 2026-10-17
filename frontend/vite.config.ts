@@ -80,9 +80,11 @@ export default defineConfig(({ mode }) => {
       fs: { allow: [fromHere('.'), vendorIcons] },
       proxy: {
         // xfwd: 브라우저 IP를 X-Forwarded-For로 넘긴다(로그인 제한·OMV 인증 로그용).
+        // ws: 웹 터미널(/api/terminal)의 WebSocket도 넘긴다.
         '/api': {
           target: `http://${backend}`,
           xfwd: true,
+          ws: true,
         },
       },
     },
@@ -93,9 +95,10 @@ export default defineConfig(({ mode }) => {
       rolldownOptions: {
         output: {
           // 라이브러리(React, i18next 등)를 앱 코드와 다른 청크로 나눈다. 진입 청크 하나가 500KB 경고 기준을
-          // 넘지 않게 하려는 것이며 내려받는 총량은 같다.
+          // 넘지 않게 하려는 것이며 내려받는 총량은 같다. 터미널 창에서만 쓰는 xterm.js는 빼서 그 창의 지연
+          // 청크에 남긴다(터미널을 열지 않으면 내려받지 않는다).
           codeSplitting: {
-            groups: [{ name: 'vendor', test: /node_modules[\\/]/ }],
+            groups: [{ name: 'vendor', test: /node_modules[\\/](?!@xterm[\\/])/ }],
           },
         },
       },

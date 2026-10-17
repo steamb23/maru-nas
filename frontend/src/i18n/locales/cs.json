@@ -359,7 +359,6 @@
       "intro": "Platí pro uživatele, kteří si v nastavení obrazovky nevybrali vlastní motiv ani pozadí."
     },
     "server": {
-      "intro": "Nastavení, se kterým Onmaru běží. Dvě hodnoty níže lze změnit zde, ostatní se nastavují v konfiguračním souboru serveru.",
       "loadFailed": "Nastavení serveru se nepodařilo načíst.",
       "saveFailed": "Nastavení se nepodařilo uložit.",
       "invalid": "Hodnota nemá platný formát.",

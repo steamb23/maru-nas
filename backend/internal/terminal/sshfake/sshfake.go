@@ -98,10 +98,31 @@ func Start(addr string, opts Options) (*Server, error) {
 // HostKey는 호스트 공개 키의 authorized_keys 형식(".pub" 파일 내용)이다.
 func (s *Server) HostKey() []byte { return ssh.MarshalAuthorizedKey(s.hostKey.PublicKey()) }
 
-// WriteHostKey는 호스트 공개 키를 dir/ssh_host_ed25519_key.pub로 쓰고 그 경로를 돌려준다.
-func (s *Server) WriteHostKey(dir string) (string, error) {
-	p := filepath.Join(dir, "ssh_host_ed25519_key.pub")
-	return p, os.WriteFile(p, s.HostKey(), 0o644)
+// WriteHostKey는 호스트 공개 키를 path(".pub" 파일)에 쓴다. onmaru의 -ssh-host-keys가 이 파일을 가리키게 한다.
+func (s *Server) WriteHostKey(path string) error {
+	return os.WriteFile(path, s.HostKey(), 0o644)
+}
+
+// ParseMethods는 "publickey,password,keyboard-interactive" 같은 목록에서 끈 방법을 Options에 넣는다.
+// 빈 값이면 모두 켠다.
+func ParseMethods(list string, o *Options) error {
+	if list == "" {
+		return nil
+	}
+	o.NoPublicKey, o.NoPassword, o.NoKeyboardInteractive = true, true, true
+	for _, m := range strings.Split(list, ",") {
+		switch strings.TrimSpace(m) {
+		case "publickey":
+			o.NoPublicKey = false
+		case "password":
+			o.NoPassword = false
+		case "keyboard-interactive":
+			o.NoKeyboardInteractive = false
+		default:
+			return fmt.Errorf("unknown ssh auth method %q", m)
+		}
+	}
+	return nil
 }
 
 // Close는 수신을 멈추고 열린 연결을 모두 끊는다.
