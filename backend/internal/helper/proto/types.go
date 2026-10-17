@@ -103,3 +103,9 @@ type RemoveParams struct {
 	Path      string `json:"path"`
 	Recursive bool   `json:"recursive,omitempty"`
 }
+
+// SSHKeyParams는 ssh.authorize·ssh.revoke의 인자다.
+type SSHKeyParams struct {
+	// PublicKey는 authorized_keys 형식의 ed25519 공개 키("ssh-ed25519 <base64>")다. 주석은 받지 않는다.
+	PublicKey string `json:"publicKey"`
+}

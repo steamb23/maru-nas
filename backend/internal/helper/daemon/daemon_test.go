@@ -2,6 +2,10 @@ package daemon
 
 import (
 	"context"
+	"crypto/ed25519"
+	"crypto/rand"
+	"encoding/base64"
+	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -554,6 +558,35 @@ func TestRunFileOps(t *testing.T) {
 	if logs := e.logs.text(); strings.Contains(logs, `action=fs.read path=`) {
 		t.Fatalf("read path logged:\n%s", logs)
 	}
+}
+
+func TestRunSSHKey(t *testing.T) {
+	e := newEnv(t, nil)
+	home := t.TempDir()
+	a, _ := e.accounts.Lookup("alice")
+	a.Home = home
+	e.accounts.set(a)
+	res := e.open("alice", false)
+	pub, _, _ := ed25519.GenerateKey(rand.Reader)
+	blob := binary.BigEndian.AppendUint32(nil, uint32(len(proto.SSHKeyType)))
+	blob = append(blob, proto.SSHKeyType...)
+	blob = binary.BigEndian.AppendUint32(blob, uint32(len(pub)))
+	blob = append(blob, pub...)
+	b64 := base64.StdEncoding.EncodeToString(blob)
+	params, _ := json.Marshal(proto.SSHKeyParams{PublicKey: proto.SSHKeyType + " " + b64})
+	for _, action := range []string{proto.ActionSSHAuthorize, proto.ActionSSHRevoke} {
+		resp, _ := e.call(proto.Request{Op: proto.OpRun, Ticket: res.Ticket, Scope: proto.ScopeUser, Action: action, Params: params}, nil)
+		if !resp.OK {
+			t.Fatalf("%s: %q", action, resp.Code)
+		}
+		// 감사 로그에는 공개 키 대신 지문만 남긴다.
+		e.logs.wait(t, `action=`+action+` key=`+proto.SSHFingerprint(blob)+` result=ok`)
+	}
+	if strings.Contains(e.logs.text(), b64) {
+		t.Fatalf("public key logged:\n%s", e.logs.text())
+	}
+	// root 범위에서는 쓸 수 없다.
+	e.expect(proto.CodeBadRequest, proto.Request{Op: proto.OpRun, Ticket: res.Ticket, Scope: proto.ScopeRoot, Action: proto.ActionSSHAuthorize, Params: params})
 }
 
 func TestWorkerLimit(t *testing.T) {

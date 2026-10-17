@@ -112,6 +112,9 @@ func TestAllowed(t *testing.T) {
 			t.Errorf("%s allowed in root scope", a)
 		}
 	}
+	if !Allowed(ScopeUser, ActionSSHAuthorize) || !Allowed(ScopeUser, ActionSSHRevoke) {
+		t.Fatal("ssh key actions not allowed in user scope")
+	}
 	if Allowed("", ActionID) || Allowed(ScopeUser, "exec") {
 		t.Fatal("unknown scope or action allowed")
 	}

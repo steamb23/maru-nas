@@ -63,11 +63,16 @@ const (
 	ActionMkdir  = "fs.mkdir"
 	ActionRename = "fs.rename"
 	ActionRemove = "fs.remove"
+	// ActionSSHAuthorize는 ~/.ssh/authorized_keys에 onmaru가 접속할 때만 쓰는 짧은 수명의 키 줄을 넣는다.
+	ActionSSHAuthorize = "ssh.authorize"
+	// ActionSSHRevoke는 그 키 줄(과 만료된 onmaru 키 줄)을 지운다.
+	ActionSSHRevoke = "ssh.revoke"
 )
 
 // Actions는 범위마다 실행할 수 있는 연산이다. root 연산은 여기에 타입 있는 함수로만 더한다.
 var Actions = map[string][]string{
-	ScopeUser: {ActionID, ActionList, ActionStat, ActionRead, ActionWrite, ActionMkdir, ActionRename, ActionRemove},
+	ScopeUser: {ActionID, ActionList, ActionStat, ActionRead, ActionWrite, ActionMkdir, ActionRename, ActionRemove,
+		ActionSSHAuthorize, ActionSSHRevoke},
 	ScopeRoot: {ActionID},
 }
 
@@ -130,7 +135,12 @@ const (
 	CodeNoSpace             = "no_space"
 	CodeBusy                = "busy"
 	CodeTimeout             = "timeout"
-	CodeInternal            = "internal"
+	// CodeNoHome은 사용자 홈 디렉터리가 없거나 쓸 수 없는 경로(/)라는 뜻이다.
+	CodeNoHome = "no_home"
+	// CodeSSHStrictModes는 홈이나 ~/.ssh가 다른 사용자에게 쓰기를 허용해 sshd(StrictModes)가
+	// authorized_keys를 무시한다는 뜻이다.
+	CodeSSHStrictModes = "ssh_strict_modes"
+	CodeInternal       = "internal"
 )
 
 // Error는 도우미가 돌려준 오류 코드다.

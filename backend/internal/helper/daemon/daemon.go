@@ -481,6 +481,7 @@ func (s *Server) acquireWorker(user string) (func(), error) {
 }
 
 // writeActions는 감사 로그에 경로를 남기는 연산이다. 읽기 연산은 사용자 데이터라 경로를 남기지 않는다.
+// ssh.authorize·ssh.revoke는 경로가 정해져 있으므로(~/.ssh/authorized_keys) 키 지문만 남긴다.
 var writeActions = map[string]bool{
 	proto.ActionWrite: true, proto.ActionMkdir: true, proto.ActionRename: true, proto.ActionRemove: true,
 }
@@ -512,6 +513,15 @@ func (s *Server) audit(user string, req proto.Request, code string) {
 			}
 			if p.Overwrite {
 				detail += " overwrite"
+			}
+		}
+	}
+	if req.Action == proto.ActionSSHAuthorize || req.Action == proto.ActionSSHRevoke {
+		// 공개 키 대신 지문을 남긴다(sshd 로그의 "Accepted publickey ... SHA256:..."와 맞춰 볼 수 있다).
+		var p proto.SSHKeyParams
+		if json.Unmarshal(req.Params, &p) == nil {
+			if blob, err := proto.ParseSSHPublicKey(p.PublicKey); err == nil {
+				detail = " key=" + proto.SSHFingerprint(blob)
 			}
 		}
 	}

@@ -48,6 +48,8 @@ type Config struct {
 	MountInfo func() (io.ReadCloser, error)
 	// IdleTimeout은 연결에서 이만큼 진행이 없으면 끊는 시간이다. 기본 60초.
 	IdleTimeout time.Duration
+	// Now는 현재 시각이다(ssh.authorize의 키 줄 만료 시각). 기본 time.Now.
+	Now func() time.Time
 }
 
 func (c Config) withDefaults() Config {
@@ -59,6 +61,9 @@ func (c Config) withDefaults() Config {
 	}
 	if c.IdleTimeout == 0 {
 		c.IdleTimeout = 60 * time.Second
+	}
+	if c.Now == nil {
+		c.Now = time.Now
 	}
 	return c
 }
@@ -159,6 +164,8 @@ func Serve(job Job, conn net.Conn, cfg Config) error {
 		err = rename(job, cfg, c)
 	case proto.ActionRemove:
 		err = remove(job, cfg, c)
+	case proto.ActionSSHAuthorize, proto.ActionSSHRevoke:
+		err = sshKey(job, cfg, c)
 	}
 	return err
 }

@@ -179,6 +179,17 @@ func (c *Client) Remove(ctx context.Context, ticket, path string, recursive bool
 	return c.run(ctx, ticket, proto.ScopeUser, proto.ActionRemove, proto.RemoveParams{Path: path, Recursive: recursive}, nil)
 }
 
+// SSHAuthorize는 사용자의 ~/.ssh/authorized_keys에 publicKey("ssh-ed25519 <base64>")를 짧은 시간 동안
+// 루프백 접속에만 받는 키 줄로 넣는다(사용자 권한). 키 줄의 옵션과 만료 시각은 도우미가 정한다.
+func (c *Client) SSHAuthorize(ctx context.Context, ticket, publicKey string) error {
+	return c.run(ctx, ticket, proto.ScopeUser, proto.ActionSSHAuthorize, proto.SSHKeyParams{PublicKey: publicKey}, nil)
+}
+
+// SSHRevoke는 SSHAuthorize로 넣은 키 줄(과 만료된 onmaru 키 줄)을 지운다(사용자 권한).
+func (c *Client) SSHRevoke(ctx context.Context, ticket, publicKey string) error {
+	return c.run(ctx, ticket, proto.ScopeUser, proto.ActionSSHRevoke, proto.SSHKeyParams{PublicKey: publicKey}, nil)
+}
+
 // Body는 도우미가 보내는 파일 내용이다. 다 읽었거나 그만 읽을 때 Close한다.
 // 도우미가 Size보다 적게 보내고 끊으면 io.ErrUnexpectedEOF다.
 type Body struct {
