@@ -1,10 +1,27 @@
 // 창 우클릭 메뉴(작업표시줄 버튼, 제목 표시줄)의 항목. DOM에 의존하지 않아 node 환경에서 테스트한다.
+import { type WindowAppId, isMultiInstance } from '../windows/apps'
 import type { WindowStore, WindowState } from '../windows/store'
 import type { ContextMenuAction, ContextMenuItem } from './contextMenu'
 
 // WindowMenuActions는 메뉴 항목이 부르는 창 저장소 동작이다.
 // 최대화 애니메이션처럼 화면 처리가 더 필요하면 호출하는 쪽이 감싸서 넘긴다.
 export type WindowMenuActions = Pick<WindowStore, 'closeMany' | 'minimize' | 'raiseGroup' | 'restore' | 'toggleMaximize'>
+
+// TaskMenuActions는 작업표시줄 버튼 메뉴의 동작이다. newWindow는 같은 앱의 새 창을 연다
+// (데스크톱 크기는 호출하는 쪽이 안다).
+export interface TaskMenuActions extends WindowMenuActions {
+  newWindow: (appId: WindowAppId) => void
+}
+
+// newWindowItem은 창을 여러 개 여는 앱(multiInstance)의 "새 창" 항목이다. 작업표시줄 버튼, 서랍 타일,
+// 바로가기 메뉴가 함께 쓴다.
+export const newWindowItem = (onSelect: () => void): ContextMenuAction => ({
+  kind: 'action',
+  id: 'new-window',
+  labelKey: 'window.newWindow',
+  icon: 'window-new-symbolic',
+  onSelect,
+})
 
 // stateItems는 창 상태를 바꾸는 항목(최소화·복원, 최대화·이전 크기로)이다.
 function stateItems(win: WindowState, actions: WindowMenuActions): ContextMenuAction[] {
@@ -49,16 +66,21 @@ export function titlebarMenuItems(win: WindowState, actions: WindowMenuActions):
 
 // taskMenuItems는 창 id의 작업표시줄 버튼 메뉴 항목이다. "오른쪽"은 windows[](작업표시줄) 순서 기준이다.
 // 닫을 창 목록은 메뉴를 연 시점의 windows로 정한다. 그 사이 닫힌 창은 closeMany가 무시한다.
-// id가 windows에 없으면 빈 목록(메뉴를 열지 않음)이다.
-export function taskMenuItems(windows: readonly WindowState[], id: string, actions: WindowMenuActions): ContextMenuItem[] {
+// id가 windows에 없으면 빈 목록(메뉴를 열지 않음)이다. 창을 여러 개 여는 앱이면 맨 위에 "새 창"을 둔다.
+export function taskMenuItems(windows: readonly WindowState[], id: string, actions: TaskMenuActions): ContextMenuItem[] {
   const index = windows.findIndex((w) => w.id === id)
   if (index < 0) return []
+  const win = windows[index]
   const all = windows.map((w) => w.id)
   const others = all.filter((o) => o !== id)
   const right = all.slice(index + 1)
   const { closeMany } = actions
+  const head: ContextMenuItem[] = isMultiInstance(win.appId)
+    ? [newWindowItem(() => actions.newWindow(win.appId)), { kind: 'separator', id: 'sep-new' }]
+    : []
   return [
-    ...stateItems(windows[index], actions),
+    ...head,
+    ...stateItems(win, actions),
     { kind: 'separator', id: 'sep-window' },
     {
       kind: 'action',

@@ -8,7 +8,7 @@ import { appAccess, useCapabilitiesStore } from '../addons/capabilities'
 import { ICON_HEIGHT, ICON_WIDTH, iconCenter, inBounds, previewOffsets, rowsPerColumn, slotAt } from '../shortcuts/layout'
 import { placeShortcut, removeShortcut, visibleShortcuts } from '../shortcuts/list'
 import { useShortcutStore } from '../shortcuts/store'
-import { APP_IDS, type AppId, getApp, isAppId } from '../windows/apps'
+import { APP_IDS, type AppId, getApp, isAppId, isMultiInstance } from '../windows/apps'
 import type { Point, Rect, Size } from '../windows/geometry'
 import { GHOST_GRAB } from './appDrawerAnim'
 import { launchApp } from './launchApp'
@@ -19,6 +19,7 @@ import { mergeHandlers, useContextMenuTrigger } from './useContextMenuTrigger'
 import { animationsEnabled } from './useWindowAnimation'
 import { DROP_MS, slideKeyframes } from './widgetPreviewAnim'
 import { EASING } from './windowAnim'
+import { newWindowItem } from './windowMenu'
 
 // DesktopShortcutsHandle은 바탕화면 메뉴(Desktop)가 바로가기에 묻는 것이다.
 export interface DesktopShortcutsHandle {
@@ -126,7 +127,7 @@ export function DesktopShortcuts({ bounds, listRef, ref }: Props) {
     return n > 0 ? n : rowsPerColumn(bounds.height)
   }
 
-  const open = (id: AppId) => launchApp(id, bounds)
+  const open = (id: AppId, newWindow = false) => launchApp(id, bounds, newWindow)
 
   const press = useRef<Press | null>(null)
   const drawerDrag = useRef<DrawerDrag | null>(null)
@@ -198,6 +199,7 @@ export function DesktopShortcuts({ bounds, listRef, ref }: Props) {
       if (!id || !isAppId(id)) return []
       return [
         { kind: 'action', id: 'open', labelKey: 'shortcuts.open', icon: 'document-open-symbolic', onSelect: () => open(id) },
+        ...(isMultiInstance(id) ? [newWindowItem(() => open(id, true))] : []),
         { kind: 'separator', id: 'sep' },
         {
           kind: 'action',

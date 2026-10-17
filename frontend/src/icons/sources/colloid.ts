@@ -45,6 +45,7 @@ import driveHarddisk from '@colloid/devices/scalable/drive-harddisk.svg?url'
 import folder from '@colloid/places/scalable/folder.svg?url'
 import networkServer from '@colloid/places/symbolic/network-server-symbolic.svg?url'
 import avatarDefault from '@colloid/status/symbolic/avatar-default-symbolic.svg?url'
+import windowNew from '@colloid/status/symbolic/window-new-symbolic.svg?url'
 import type { Icon } from '../types'
 
 export const COLLOID_ICONS = {
@@ -52,6 +53,7 @@ export const COLLOID_ICONS = {
   'window-maximize-symbolic': { url: windowMaximize, kind: 'symbolic' },
   'window-minimize-symbolic': { url: windowMinimize, kind: 'symbolic' },
   'window-restore-symbolic': { url: windowRestore, kind: 'symbolic' },
+  'window-new-symbolic': { url: windowNew, kind: 'symbolic' },
   'system-log-out-symbolic': { url: systemLogOut, kind: 'symbolic' },
   'object-select-symbolic': { url: objectSelect, kind: 'symbolic' },
   'pan-start-symbolic': { url: panStart, kind: 'symbolic' },

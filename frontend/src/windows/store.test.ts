@@ -1,6 +1,14 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { MIN_VISIBLE, TITLEBAR_HEIGHT } from './geometry'
-import { type WindowState, initialWindowData, moveItem, selectActiveId, stableOrder, useWindowStore } from './store'
+import {
+  type WindowState,
+  initialWindowData,
+  moveItem,
+  nextInstance,
+  selectActiveId,
+  stableOrder,
+  useWindowStore,
+} from './store'
 
 const bounds = { width: 1280, height: 720 }
 
@@ -34,6 +42,85 @@ describe('open', () => {
     expect(win(a).minimized).toBe(false)
     expect(win(a).z).toBeGreaterThan(win(b).z)
     expect(activeId()).toBe(a)
+  })
+})
+
+describe('openNew', () => {
+  it('창을 여러 개 여는 앱은 열 때마다 새 창이 맨 앞에 열린다', () => {
+    const a = store().open('terminal', bounds)
+    const b = store().openNew('terminal', bounds)
+    const c = store().openNew('terminal', bounds)
+    expect(new Set([a, b, c]).size).toBe(3)
+    expect(store().windows.map((w) => w.appId)).toEqual(['terminal', 'terminal', 'terminal'])
+    expect(activeId()).toBe(c)
+  })
+
+  it('창이 하나뿐인 앱은 open처럼 기존 창을 앞으로 가져온다', () => {
+    const a = store().open('system-info', bounds)
+    store().open('files', bounds)
+    expect(store().openNew('system-info', bounds)).toBe(a)
+    expect(store().windows).toHaveLength(2)
+    expect(activeId()).toBe(a)
+  })
+
+  it('여러 창이 열린 앱을 open하면 그중 가장 앞에 있던 창을 복원해 가져온다', () => {
+    const a = store().open('terminal', bounds)
+    const b = store().openNew('terminal', bounds)
+    store().open('files', bounds)
+    store().focus(a)
+    store().minimize(a)
+    // b보다 a가 나중에 앞에 있었으므로 최소화돼 있어도 a다.
+    expect(store().open('terminal', bounds)).toBe(a)
+    expect(win(a).minimized).toBe(false)
+    expect(activeId()).toBe(a)
+    expect(store().windows.filter((w) => w.id === b)).toHaveLength(1)
+  })
+})
+
+describe('instance', () => {
+  it('같은 앱의 창은 1부터 번호를 받고, 다른 앱은 따로 센다', () => {
+    const a = store().open('terminal', bounds)
+    const f = store().open('files', bounds)
+    const b = store().openNew('terminal', bounds)
+    expect([win(a).instance, win(b).instance, win(f).instance]).toEqual([1, 2, 1])
+  })
+
+  it('닫힌 창의 번호는 다음 창이 다시 쓴다(가장 작은 빈 번호)', () => {
+    const a = store().open('terminal', bounds)
+    const b = store().openNew('terminal', bounds)
+    const c = store().openNew('terminal', bounds)
+    store().close(b)
+    expect(win(store().openNew('terminal', bounds)).instance).toBe(2)
+    store().close(a)
+    expect(win(store().openNew('terminal', bounds)).instance).toBe(1)
+    expect(win(c).instance).toBe(3)
+  })
+
+  it('작업표시줄 순서를 바꿔도 번호는 그대로다', () => {
+    const a = store().open('terminal', bounds)
+    const b = store().openNew('terminal', bounds)
+    store().reorder(b, 0)
+    expect([win(a).instance, win(b).instance]).toEqual([1, 2])
+  })
+
+  it('nextInstance는 그 앱이 쓰지 않는 가장 작은 번호다', () => {
+    const base: WindowState = {
+      id: 'x',
+      appId: 'terminal',
+      instance: 1,
+      x: 0,
+      y: 0,
+      width: 100,
+      height: 100,
+      z: 1,
+      minimized: false,
+      maximized: false,
+      tile: null,
+    }
+    const w = (appId: 'terminal' | 'files', instance: number): WindowState => ({ ...base, appId, instance })
+    expect(nextInstance([], 'terminal')).toBe(1)
+    expect(nextInstance([w('terminal', 1), w('terminal', 3), w('files', 2)], 'terminal')).toBe(2)
+    expect(nextInstance([w('terminal', 1), w('terminal', 3), w('files', 2)], 'files')).toBe(1)
   })
 })
 

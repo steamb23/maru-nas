@@ -15,8 +15,9 @@ import { taskbarAlignOf } from '../appearance/taskbar'
 import { useLanguage } from '../i18n'
 import { IconImage } from '../icons/IconImage'
 import type { SettingsPageId } from '../settings/pages'
-import { getApp } from '../windows/apps'
+import { type WindowAppId, getApp } from '../windows/apps'
 import { type WindowState, type WindowStore, selectActiveId, useWindowStore } from '../windows/store'
+import { windowTitle, windowTitleLabel } from '../windows/title'
 import { APP_DRAWER_ID, useAppDrawerStore } from './appDrawerStore'
 import { Clock } from './Clock'
 import type { ContextMenuAction } from './contextMenu'
@@ -162,13 +163,16 @@ function measureFit(nav: HTMLElement, launcher: HTMLElement, list: HTMLElement, 
 }
 
 // inert이면 작업표시줄 전체가 입력을 받지 않는다(데스크톱 범위 모달이 열려 있을 때).
-// onOpenSettings는 프로필 메뉴 머리글이 설정 창을 열 때 부른다.
+// onOpenSettings는 프로필 메뉴 머리글이 설정 창을 열 때, onNewWindow는 버튼 메뉴의 "새 창"이 부른다
+// (작업표시줄은 데스크톱 크기를 모른다).
 export function Taskbar({
   inert = false,
   onOpenSettings,
+  onNewWindow,
 }: {
   inert?: boolean
   onOpenSettings: (page: SettingsPageId) => void
+  onNewWindow: (appId: WindowAppId) => void
 }) {
   const { t } = useTranslation()
   const lang = useLanguage()
@@ -220,7 +224,12 @@ export function Taskbar({
   const dragging = () => press.current !== null && press.current.phase !== 'press'
   const menu = useContextMenuTrigger({
     items: (el) =>
-      dragging() ? [] : taskMenuItems(useWindowStore.getState().windows, el.dataset.windowId ?? '', taskMenuActions),
+      dragging()
+        ? []
+        : taskMenuItems(useWindowStore.getState().windows, el.dataset.windowId ?? '', {
+            ...taskMenuActions,
+            newWindow: onNewWindow,
+          }),
     accept: () => !dragging(),
   })
 
@@ -423,7 +432,7 @@ export function Taskbar({
       return {
         kind: 'action',
         id: w.id,
-        labelKey: app.titleKey,
+        ...windowTitleLabel(t, w),
         icon: app.icon,
         checked: active,
         onSelect: () => onTaskClick(w, active),
@@ -471,7 +480,7 @@ export function Taskbar({
                 <li key={id} className={ghost.overflowed ? 'leaving overflowed' : 'leaving'} data-task-id={id} inert>
                   <button type="button" className="task">
                     <IconImage name={getApp(ghost.win.appId).icon} size={ICON_SIZE} app />
-                    <span className="task-title">{t(getApp(ghost.win.appId).titleKey)}</span>
+                    <span className="task-title">{windowTitle(t, ghost.win)}</span>
                   </button>
                 </li>
               )
@@ -485,7 +494,7 @@ export function Taskbar({
             if (i >= visibleCount) liClasses = 'overflowed'
             else if (dragging) liClasses = view.settling ? 'dragging settling' : 'dragging'
             else if (view) liClasses = 'shifting'
-            const title = t(getApp(w.appId).titleKey)
+            const title = windowTitle(t, w)
             // 제목이 잘리거나 아이콘만 그리면 마우스를 올렸을 때 제목을 보인다.
             const tip = fit.mode === 'icons' || fit.truncated[i] ? title : undefined
 

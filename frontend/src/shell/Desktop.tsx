@@ -119,7 +119,7 @@ export function Desktop() {
           ))}
         </div>
         <AppDrawer bounds={bounds} shortcuts={shortcutsRef} />
-        <Taskbar inert={blocked} onOpenSettings={openSettings} />
+        <Taskbar inert={blocked} onOpenSettings={openSettings} onNewWindow={(appId) => launchApp(appId, bounds, true)} />
         <ContextMenu />
         <div className="modal-host modal-host-desktop" ref={setModalHost} />
         <DialogOutlet scope={DESKTOP_SCOPE} />

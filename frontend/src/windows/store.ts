@@ -3,13 +3,16 @@
 // 데스크톱 영역 크기(bounds)는 호출하는 쪽이 넘긴다. DOM에 의존하지 않으므로
 // node 환경 테스트에서 그대로 쓸 수 있다.
 import { create } from 'zustand'
-import { type WindowAppId, getWindowApp } from './apps'
+import { type WindowAppId, getWindowApp, isMultiInstance } from './apps'
 import { type Rect, type Size, cascadePosition, clampPosition } from './geometry'
 import { DEFAULT_TILE_SPLIT, type TileSide, type TileZone, splitForTiling, tilePartner } from './tiling'
 
 export interface WindowState {
   id: string
   appId: WindowAppId
+  // 같은 앱의 창 번호(1부터). 열 때 그 앱의 열린 창이 쓰지 않는 가장 작은 수를 받고 바뀌지 않는다.
+  // 창을 여러 개 여는 앱(multiInstance)의 둘째 창부터 제목에 붙는다(windowTitle).
+  instance: number
   // x, y, width, height는 최대화·타일링·최소화 중에도 보존되어 복원 시 그대로 쓰인다.
   x: number
   y: number
@@ -32,8 +35,10 @@ interface WindowData {
 }
 
 interface WindowActions {
-  // open은 앱 창을 연다. 이미 열려 있으면 복원하고 맨 앞으로 가져온다. 창 id를 반환한다.
+  // open은 앱 창을 연다. 이미 열려 있으면 복원하고 맨 앞으로 가져온다(여러 개면 가장 앞에 있던 창). 창 id를 반환한다.
   open: (appId: WindowAppId, bounds: Size) => string
+  // openNew는 창을 여러 개 여는 앱(multiInstance)이면 늘 새 창을 연다. 그 밖의 앱은 open과 같다.
+  openNew: (appId: WindowAppId, bounds: Size) => string
   close: (id: string) => void
   // closeMany는 여러 창을 한 번에 닫는다. 없는 id는 무시한다.
   closeMany: (ids: readonly string[]) => void
@@ -98,33 +103,40 @@ export const useWindowStore = create<WindowStore>()((set, get) => {
     return { win: { ...w, ...patch, z: s.nextZ }, nextZ: s.nextZ + 1 }
   }
 
+  // openWindow는 앱의 새 창을 맨 앞에 열고 id를 반환한다.
+  const openWindow = (appId: WindowAppId, bounds: Size): string => {
+    const app = getWindowApp(appId)
+    const s = get()
+    const id = `win-${s.nextId}`
+    const pos = cascadePosition(s.windows.length, app.defaultSize, bounds)
+    const win: WindowState = {
+      id,
+      appId,
+      instance: nextInstance(s.windows, appId),
+      ...pos,
+      ...app.defaultSize,
+      z: s.nextZ,
+      minimized: false,
+      maximized: false,
+      tile: null,
+    }
+    set({ windows: [...s.windows, win], nextZ: s.nextZ + 1, nextId: s.nextId + 1 })
+    return id
+  }
+
   return {
     ...initialWindowData,
 
     open: (appId, bounds) => {
-      const existing = get().windows.find((w) => w.appId === appId)
+      const existing = topWindowOf(get().windows, appId)
       if (existing) {
         get().restore(existing.id)
         return existing.id
       }
-      const app = getWindowApp(appId)
-      const s = get()
-      const id = `win-${s.nextId}`
-      const pos = cascadePosition(s.windows.length, app.defaultSize, bounds)
-      const win: WindowState = {
-        id,
-        appId,
-        ...pos,
-        ...app.defaultSize,
-        z: s.nextZ,
-        minimized: false,
-        maximized: false,
-        tile: null,
-      }
-      set({ windows: [...s.windows, win], nextZ: s.nextZ + 1, nextId: s.nextId + 1 })
-      return id
+      return openWindow(appId, bounds)
     },
 
+    openNew: (appId, bounds) => (isMultiInstance(appId) ? openWindow(appId, bounds) : get().open(appId, bounds)),
     close: (id) => set((s) => ({ windows: s.windows.filter((w) => w.id !== id) })),
 
     closeMany: (ids) =>
@@ -202,6 +214,24 @@ export const useWindowStore = create<WindowStore>()((set, get) => {
       }),
   }
 })
+
+// topWindowOf는 앱의 창 중 맨 앞(z가 가장 큰) 창이다. 최소화된 창도 포함한다. 없으면 undefined.
+export function topWindowOf(windows: readonly WindowState[], appId: WindowAppId): WindowState | undefined {
+  let top: WindowState | undefined
+  for (const w of windows) {
+    if (w.appId === appId && (top === undefined || w.z > top.z)) top = w
+  }
+  return top
+}
+
+// nextInstance는 앱의 새 창이 받을 번호다. 그 앱의 열린 창이 쓰지 않는 가장 작은 수(1부터)라
+// 창을 닫으면 그 번호를 다시 쓴다.
+export function nextInstance(windows: readonly WindowState[], appId: WindowAppId): number {
+  const used = new Set(windows.filter((w) => w.appId === appId).map((w) => w.instance))
+  let n = 1
+  while (used.has(n)) n++
+  return n
+}
 
 // moveItem은 arr[from]을 to 자리로 옮긴 새 배열을 반환한다.
 export function moveItem<T>(arr: readonly T[], from: number, to: number): T[] {

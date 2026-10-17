@@ -1,6 +1,16 @@
 import { describe, expect, it } from 'vitest'
 import { MANIFESTS } from '../addons/manifests.gen'
-import { APP_IDS, type WindowAppId, getApp, getWindowApp, isAddonApp, isAppId, isLinkApp, isShellApp } from './apps'
+import {
+  APP_IDS,
+  type WindowAppId,
+  getApp,
+  getWindowApp,
+  isAddonApp,
+  isAppId,
+  isLinkApp,
+  isMultiInstance,
+  isShellApp,
+} from './apps'
 import { MIN_HEIGHT, MIN_WIDTH } from './geometry'
 
 const windowAppIds = APP_IDS.filter((id): id is WindowAppId => !isLinkApp(id))
@@ -71,5 +81,11 @@ describe('isAppId', () => {
     expect(isAppId('removed-app')).toBe(false)
     expect(isAppId('toString')).toBe(false)
     expect(isAppId('')).toBe(false)
+  })
+})
+
+describe('isMultiInstance', () => {
+  it('창을 여러 개 여는 앱은 웹 터미널뿐이다', () => {
+    expect(APP_IDS.filter(isMultiInstance)).toEqual(['terminal'])
   })
 })

@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import type { WindowState } from '../windows/store'
 import type { ContextMenuAction, ContextMenuItem } from './contextMenu'
-import { type WindowMenuActions, taskMenuItems, titlebarMenuItems } from './windowMenu'
+import { type TaskMenuActions, taskMenuItems, titlebarMenuItems } from './windowMenu'
 
 const win = (id: string): WindowState => ({
   id,
   appId: 'files',
+  instance: 1,
   x: 0,
   y: 0,
   width: 100,
@@ -21,10 +22,11 @@ const windows = ['a', 'b', 'c', 'd'].map(win)
 // recorder는 불린 동작을 기록하는 동작 묶음이다. closeMany는 calls 대신 closed에 남긴다.
 function recorder() {
   const log = { closed: null as readonly string[] | null, calls: [] as string[] }
-  const actions: WindowMenuActions = {
+  const actions: TaskMenuActions = {
     closeMany: (ids) => {
       log.closed = ids
     },
+    newWindow: (app) => log.calls.push(`newWindow ${app}`),
     minimize: (w) => log.calls.push(`minimize ${w}`),
     raiseGroup: (w) => log.calls.push(`raiseGroup ${w}`),
     restore: (w) => log.calls.push(`restore ${w}`),
@@ -34,7 +36,7 @@ function recorder() {
 }
 
 // select는 메뉴 항목 하나를 누른 결과로 닫히는 id 목록, 불린 동작 순서, 그 항목을 돌려준다.
-function select(build: (actions: WindowMenuActions) => ContextMenuItem[], item: string) {
+function select(build: (actions: TaskMenuActions) => ContextMenuItem[], item: string) {
   const { log, actions } = recorder()
   const action = build(actions).find((i): i is ContextMenuAction => i.kind === 'action' && i.id === item)
   if (!action) throw new Error(`item ${item} not found`)
@@ -103,6 +105,20 @@ describe('taskMenuItems', () => {
 
   it('없는 창이면 항목이 없다', () => {
     expect(taskMenuItems(windows, 'x', recorder().actions)).toEqual([])
+  })
+
+  it('창을 여러 개 여는 앱이면 맨 위의 새 창이 같은 앱의 새 창을 연다', () => {
+    const terminals: WindowState[] = [{ ...win('a'), appId: 'terminal' }, win('b')]
+    expect(ids(taskMenuItems(terminals, 'a', recorder().actions)).slice(0, 3)).toEqual([
+      'new-window',
+      'sep-new',
+      'minimize',
+    ])
+    expect(selectTask(terminals, 'a', 'new-window').calls).toEqual(['newWindow terminal'])
+  })
+
+  it('창이 하나뿐인 앱에는 새 창이 없다', () => {
+    expect(ids(taskMenuItems(windows, 'b', recorder().actions))).not.toContain('new-window')
   })
 })
 

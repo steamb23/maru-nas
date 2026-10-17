@@ -42,6 +42,8 @@
     "maximize": "최대화",
     "restore": "이전 크기로",
     "close": "닫기",
+    "newWindow": "새 창",
+    "numberedTitle": "{{title}} {{number}}",
     "placeholder": "준비 중"
   },
   "view": {

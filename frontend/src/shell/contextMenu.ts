@@ -9,6 +9,8 @@ interface ItemBase {
   // 같은 메뉴 안에서 고유한 값. React key로 쓴다.
   id: string
   labelKey: ParseKeys
+  // labelKey 문구의 치환값(창 번호를 붙인 제목 등)
+  labelParams?: Record<string, string | number>
   icon?: IconName
   // 비활성 항목은 보이고 포커스도 받지만 누를 수 없다(aria-disabled). 하위 메뉴는 열리지 않는다.
   disabled?: boolean

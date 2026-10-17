@@ -11,7 +11,7 @@ import { appTitles } from '../i18n/appNames'
 import { IconImage } from '../icons/IconImage'
 import { placeShortcut, removeShortcut } from '../shortcuts/list'
 import { useShortcutStore } from '../shortcuts/store'
-import { APP_IDS, type AppId, getApp, isAppId } from '../windows/apps'
+import { APP_IDS, type AppId, getApp, isAppId, isMultiInstance } from '../windows/apps'
 import type { Point, Size } from '../windows/geometry'
 import {
   DRAWER_CLOSE_MS,
@@ -38,6 +38,7 @@ import { usePointerDrag } from './usePointerDrag'
 import { mergeHandlers, useContextMenuTrigger } from './useContextMenuTrigger'
 import { animationsEnabled } from './useWindowAnimation'
 import { CLOSE_EASING, EASING } from './windowAnim'
+import { newWindowItem } from './windowMenu'
 
 interface Props {
   // 데스크톱 영역(작업표시줄 제외) 크기. 창을 열 때 쓴다.
@@ -136,9 +137,9 @@ export function AppDrawer({ bounds, shortcuts }: Props) {
   const results = searchApps(sorted, (id) => SEARCH_TERMS.get(id) ?? [id], query)
   const activeIndex = Math.min(active, Math.max(results.length - 1, 0))
 
-  const openApp = (id: AppId) => {
+  const openApp = (id: AppId, newWindow = false) => {
     close()
-    launchApp(id, bounds)
+    launchApp(id, bounds, newWindow)
   }
 
   // 열기·닫기 애니메이션. 닫는 중에 다시 열면 지금 보이는 투명도·크기에서 이어 간다.
@@ -283,6 +284,7 @@ export function AppDrawer({ bounds, shortcuts }: Props) {
       const items: ContextMenuItem[] = [
         { kind: 'action', id: 'open', labelKey: 'shortcuts.open', icon: 'document-open-symbolic', onSelect: () => openApp(id) },
       ]
+      if (isMultiInstance(id)) items.push(newWindowItem(() => openApp(id, true)))
       // 바로가기 목록을 아직 불러오지 못했으면 추가·제거를 두지 않는다.
       const shortcuts = useShortcutStore.getState()
       if (shortcuts.status !== 'ready') return items

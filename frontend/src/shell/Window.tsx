@@ -8,6 +8,7 @@ import { ADDON_VIEWS } from '../addons/registry'
 import { type WindowAppId, getWindowApp, isAddonApp, isShellApp } from '../windows/apps'
 import { type Point, type Rect, type Size, clampPosition, restoreGrab } from '../windows/geometry'
 import { type WindowState, selectActiveId, useWindowStore } from '../windows/store'
+import { windowTitle } from '../windows/title'
 import { type TileZone, layoutOf, tileRect, tileZoneAt } from '../windows/tiling'
 import { DialogOutlet } from './DialogOutlet'
 import { PlaceholderWindow } from './PlaceholderWindow'
@@ -139,7 +140,7 @@ export function Window({ id, bounds, closingState, onClosed }: Props) {
 
   if (!win) return null
   const app = getWindowApp(win.appId)
-  const title = t(app.titleKey)
+  const title = windowTitle(t, win)
   const maximizeLabel = win.maximized ? t('window.restore') : t('window.maximize')
   const layout = layoutOf(win)
 

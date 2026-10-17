@@ -42,6 +42,8 @@
     "maximize": "Maximize",
     "restore": "Restore down",
     "close": "Close",
+    "newWindow": "New window",
+    "numberedTitle": "{{title}} {{number}}",
     "placeholder": "Coming soon"
   },
   "view": {

@@ -24,6 +24,9 @@ export interface WindowAppDef extends AppBase {
   // 크기 조절로 줄일 수 있는 최소 크기. 생략하면 공통 하한(geometry의 MIN_WIDTH·MIN_HEIGHT)을 쓰며,
   // 공통 하한보다 작은 값은 공통 하한으로 올라간다.
   minSize?: Size
+  // 한 탭에서 창을 여러 개 열 수 있는지. 생략하면 앱마다 창 하나다(다시 열면 그 창을 앞으로 가져온다).
+  // 켜도 앱을 열면 기존 창을 앞으로 가져오고, 새 창은 메뉴의 "새 창"(창 저장소의 openNew)으로 연다.
+  multiInstance?: boolean
 }
 
 export interface LinkAppDef extends AppBase {
@@ -56,6 +59,9 @@ const SHELL_APPS = {
     kind: 'shell',
     defaultSize: { width: 800, height: 500 },
     minSize: { width: 400, height: 240 },
+    // 창마다 셸 하나다. 세션당 창 수 제한(백엔드 terminal.MaxWindows)은 다른 탭과 함께 세므로
+    // 여기서 막지 않고, 넘치면 그 창 안에 안내한다(too_many_windows).
+    multiInstance: true,
   },
   // 설정. 화면(테마·바탕화면) 같은 사용자 설정과 관리자의 전역 설정, 정보 페이지를 둔다(src/settings).
   settings: {
@@ -115,6 +121,11 @@ export function getApp(id: AppId): AppDef {
 // getWindowApp은 창 앱의 정의(크기 포함)다.
 export function getWindowApp(id: WindowAppId): WindowAppDef {
   return WINDOW_APPS[id]
+}
+
+// isMultiInstance는 한 탭에서 창을 여러 개 열 수 있는 앱인지 확인한다.
+export function isMultiInstance(id: AppId): id is WindowAppId {
+  return Object.hasOwn(WINDOW_APPS, id) && WINDOW_APPS[id as WindowAppId].multiInstance === true
 }
 
 // isAppId는 지금 빌드에 있는 앱 id인지 확인한다. 저장된 바로가기처럼 밖에서 온 id를 거를 때 쓴다.
