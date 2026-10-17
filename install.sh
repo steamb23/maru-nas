@@ -168,6 +168,18 @@ valid_workbench_url() {
   [[ $u == /* || $u == . || $u == .. || $u == ./* || $u == ../* ]]
 }
 
+# valid_public_origin: 백엔드 -public-origin과 같은 조건. 빈 값(패스키 끔) 또는 https://호스트[:포트][/].
+# 호스트는 도메인 이름이어야 한다(IP 주소는 패스키의 RP ID가 될 수 없다). 경로·query·fragment는 받지 않는다.
+valid_public_origin() {
+  local u=${1,,} host port
+  [[ -z $u ]] && return 0
+  [[ $u =~ ^https://([a-z0-9_]([a-z0-9_-]*[a-z0-9_])?(\.[a-z0-9_]([a-z0-9_-]*[a-z0-9_])?)*)(:([0-9]+))?/?$ ]] || return 1
+  host=${BASH_REMATCH[1]}
+  port=${BASH_REMATCH[6]}
+  [[ $host =~ ^[0-9.]+$ ]] && return 1
+  [[ -z $port ]] || valid_port "$port"
+}
+
 # omv_forces_https: OMV의 "Force SSL/TLS"가 켜져 있으면 평문 포트가 https로 리다이렉트한다.
 # 백엔드의 OMV 클라이언트는 자체 서명 인증서를 받지 않으므로 이 구성에서는 로그인할 수 없다.
 omv_forces_https() {
@@ -207,6 +219,7 @@ usage() {
   --allow-non-loopback       루프백이 아닌 --listen 주소를 허용합니다(위험)
   --omv-url URL              OMV 웹 UI 주소(루프백)
   --workbench-url URL        브라우저에서 OMV 웹 UI를 열 주소(빈 값이면 OMV 워크벤치 앱을 숨깁니다)
+  --public-origin URL        브라우저가 대시보드에 접속하는 공개 HTTPS 주소(패스키용, 빈 값이면 패스키를 끕니다)
   --smart-refresh-at HH:MM   SMART 정보를 매일 다시 가져올 시각
   --helper | --no-helper     권한 도우미(root로 도는 onmaru-helper)를 설치하거나 설치하지 않습니다(제거)
   --elevate-group GROUP      root 권한 상승에 openmediavault-admin과 함께 필요한 그룹(기본값 sudo)
@@ -231,6 +244,7 @@ Settings (only the missing ones are asked):
   --allow-non-loopback       allow a non-loopback --listen address (dangerous)
   --omv-url URL              OMV web UI address (loopback)
   --workbench-url URL        OMV web UI address for browsers (empty hides the OMV Workbench app)
+  --public-origin URL        public HTTPS address browsers use for the dashboard (for passkeys, empty turns them off)
   --smart-refresh-at HH:MM   daily SMART refresh time
   --helper | --no-helper     install, or do not install (remove), the privileged helper (onmaru-helper, runs as root)
   --elevate-group GROUP      group required together with openmediavault-admin to elevate to root (default sudo)
@@ -355,19 +369,22 @@ S_SMART=""
 # OMV 워크벤치 주소는 빈 값(끔)도 정한 값이므로 정했는지를 따로 둔다.
 S_WORKBENCH=""
 S_WORKBENCH_SET=false
+# 패스키에 쓰는 공개 주소도 빈 값(패스키 끔)이 정한 값이다.
+S_ORIGIN=""
+S_ORIGIN_SET=false
 # 권한 도우미 설치 여부(yes|no)와 상승 그룹. 설치하지 않으면 그룹은 쓰지 않는다.
 S_HELPER=""
 S_ELEVATE_GROUP=""
 
 settings_complete() {
-  [[ -n $S_USER && -n $S_LISTEN && -n $S_OMV && -n $S_SMART && $S_WORKBENCH_SET == true ]] &&
+  [[ -n $S_USER && -n $S_LISTEN && -n $S_OMV && -n $S_SMART && $S_WORKBENCH_SET == true && $S_ORIGIN_SET == true ]] &&
     [[ $S_HELPER == no || ($S_HELPER == yes && -n $S_ELEVATE_GROUP) ]]
 }
 
 # settings_args: 2단계(--service-install)로 넘길 옵션을 한 줄에 하나씩 출력한다.
 settings_args() {
   printf '%s\n' --user "$S_USER" --listen "$S_LISTEN" --omv-url "$S_OMV" --smart-refresh-at "$S_SMART" \
-    --workbench-url "$S_WORKBENCH"
+    --workbench-url "$S_WORKBENCH" --public-origin "$S_ORIGIN"
   if [[ $S_ALLOW == true ]]; then
     printf '%s\n' --allow-non-loopback
   fi
@@ -398,6 +415,10 @@ load_installed_settings() {
   if [[ $S_WORKBENCH_SET != true ]] && grep -q '^ONMARU_WORKBENCH_URL=' "$ENV_FILE"; then
     S_WORKBENCH=$(env_get ONMARU_WORKBENCH_URL)
     S_WORKBENCH_SET=true
+  fi
+  if [[ $S_ORIGIN_SET != true ]] && grep -q '^ONMARU_PUBLIC_ORIGIN=' "$ENV_FILE"; then
+    S_ORIGIN=$(env_get ONMARU_PUBLIC_ORIGIN)
+    S_ORIGIN_SET=true
   fi
   # 도우미를 설치하지 않기로 한 설치도 ONMARU_HELPER_SOCKET=(빈 값)을 남기므로 키가 있으면 정한 것이다.
   if [[ -z $S_HELPER ]] && grep -q '^ONMARU_HELPER_SOCKET=' "$ENV_FILE"; then
@@ -486,7 +507,28 @@ ask_settings() {
     S_WORKBENCH_SET=true
   fi
 
-  # 6. 권한 도우미
+  # 6. 패스키에 쓰는 공개 주소(브라우저 기준)
+  if [[ $S_ORIGIN_SET != true ]]; then
+    local origin_def
+    origin_def=$(env_get ONMARU_PUBLIC_ORIGIN)
+    echo
+    t "Security hardening mode can ask for a passkey before sensitive features (web terminal, root elevation).
+  Passkeys need the public HTTPS address browsers use for the dashboard, e.g. https://desk.example.lan
+  The browser must trust its certificate and it must be a domain name, not an IP address.
+  Enter - to turn passkeys off (authenticator apps and recovery codes still work)." \
+      "보안 강화 모드는 보안에 민감한 기능(웹 터미널, root 권한 상승) 앞에서 패스키를 물을 수 있습니다.
+  패스키에는 브라우저가 대시보드에 접속하는 공개 HTTPS 주소가 필요합니다. 예: https://desk.example.lan
+  브라우저가 믿는 인증서여야 하고 IP 주소가 아닌 도메인 이름이어야 합니다.
+  -를 입력하면 패스키를 끕니다(인증 앱과 복구 코드는 그대로 쓸 수 있습니다)."
+    echo
+    ask "$(t "Public dashboard address for passkeys (- to turn off)" "패스키에 쓸 대시보드 공개 주소(끄려면 -)")" \
+      "${origin_def:--}"
+    [[ $REPLY == - ]] && REPLY=""
+    S_ORIGIN=$REPLY
+    S_ORIGIN_SET=true
+  fi
+
+  # 7. 권한 도우미
   if [[ -z $S_HELPER ]]; then
     echo
     t "The privileged helper (onmaru-helper) is a separate service that runs as root.
@@ -622,6 +664,9 @@ validate_settings() {
   valid_workbench_url "$S_WORKBENCH" ||
     die "$(t "OMV Workbench address must start with http:// or https://, or be a path starting with / or ./ or ../ (no query or fragment): $S_WORKBENCH" \
       "OMV 워크벤치 주소는 http:// 또는 https://로 시작하거나 /·./·../로 시작하는 경로여야 합니다(query·fragment 없이): $S_WORKBENCH")"
+  valid_public_origin "$S_ORIGIN" ||
+    die "$(t "public address must be https://host[:port] with a domain name (no IP address, path, query or fragment): $S_ORIGIN" \
+      "공개 주소는 도메인 이름의 https://호스트[:포트] 형식이어야 합니다(IP 주소·경로·query·fragment 없이): $S_ORIGIN")"
 }
 
 # check_settings: validate_settings. --upgrade에서 기존 설치의 값이 이 버전의 검사를 통과하지 못하면
@@ -635,7 +680,7 @@ check_settings() {
 }
 
 show_summary() {
-  local allow_note="" workbench=${S_WORKBENCH:-"($(t "off" "끔"))"} helper
+  local allow_note="" workbench=${S_WORKBENCH:-"($(t "off" "끔"))"} origin=${S_ORIGIN:-"($(t "off" "끔"))"} helper
   [[ $S_ALLOW == true ]] && allow_note="  ($(t "non-loopback allowed" "루프백 외 주소 허용"))"
   if [[ $S_HELPER == yes ]]; then
     helper="$(t "install" "설치") ($HELPER_BIN_DST, $(t "elevate group" "상승 그룹") $S_ELEVATE_GROUP)"
@@ -651,6 +696,7 @@ show_summary() {
   수신          $S_LISTEN$allow_note
   OMV 주소      $S_OMV
   OMV 워크벤치  $workbench
+  패스키 주소   $origin
   SMART 갱신    $S_SMART
   권한 도우미   $helper
   상태 디렉터리 $STATE_DIR
@@ -666,6 +712,7 @@ Summary
   listen        $S_LISTEN$allow_note
   OMV address   $S_OMV
   OMV Workbench $workbench
+  passkey origin $origin
   SMART refresh $S_SMART
   helper        $helper
   state dir     $STATE_DIR
@@ -707,7 +754,8 @@ install_service() {
   fi
   # 설정을 물은 뒤에야 도우미를 설치할지 알 수 있으므로 실행 파일을 다시 확인한다.
   require_binary
-  local user=$S_USER listen=$S_LISTEN allow=$S_ALLOW omv_url=$S_OMV smart_at=$S_SMART workbench_url=$S_WORKBENCH group
+  local user=$S_USER listen=$S_LISTEN allow=$S_ALLOW omv_url=$S_OMV smart_at=$S_SMART workbench_url=$S_WORKBENCH \
+    public_origin=$S_ORIGIN group
 
   if ! id -u "$user" >/dev/null 2>&1; then
     info "$(t "Creating system user $user" "시스템 사용자 $user 생성")"
@@ -748,6 +796,8 @@ ONMARU_ALLOW_NON_LOOPBACK=$allow
 ONMARU_OMV_URL=$omv_url
 ONMARU_SMART_REFRESH_AT=$smart_at
 ONMARU_WORKBENCH_URL=$workbench_url
+# Public HTTPS address browsers use for the dashboard, for passkeys (security hardening mode); empty turns passkeys off.
+ONMARU_PUBLIC_ORIGIN=$public_origin
 # Privileged helper socket; empty means the helper is not installed.
 ONMARU_HELPER_SOCKET=$helper_socket
 # Web terminal (SSH to this host's sshd). Off by default; admins can also turn it on in the settings app.
@@ -995,7 +1045,7 @@ main() {
   while (($#)); do
     # --name=value 형식은 --name value로 나눈다.
     case $1 in
-      --user=* | --listen=* | --omv-url=* | --smart-refresh-at=* | --workbench-url=* | --elevate-group=* | --lang=*)
+      --user=* | --listen=* | --omv-url=* | --smart-refresh-at=* | --workbench-url=* | --public-origin=* | --elevate-group=* | --lang=*)
         set -- "${1%%=*}" "${1#*=}" "${@:2}"
         ;;
     esac
@@ -1024,6 +1074,12 @@ main() {
         [[ $# -ge 2 ]] || { usage >&2; exit 2; }
         S_WORKBENCH=$2
         S_WORKBENCH_SET=true
+        shift
+        ;;
+      --public-origin)
+        [[ $# -ge 2 ]] || { usage >&2; exit 2; }
+        S_ORIGIN=$2
+        S_ORIGIN_SET=true
         shift
         ;;
       --allow-non-loopback) S_ALLOW=true ;;

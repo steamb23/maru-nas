@@ -232,6 +232,7 @@ func TestParseOrigin(t *testing.T) {
 		"", "desk.example.lan", "http://desk.example.lan", "https://", "https://192.168.0.10", "https://[::1]:443",
 		"https://desk.example.lan/desk/", "https://desk.example.lan?x=1", "https://desk.example.lan#a",
 		"https://user@desk.example.lan", "https://desk.example.lan.", "https:desk.example.lan", "https://desk.example.lan?",
+		"https://desk.example.lan:99999", "https://desk.example.lan:0",
 	} {
 		if _, err := ParseOrigin(raw); err == nil {
 			t.Errorf("%q accepted", raw)

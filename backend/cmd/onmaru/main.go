@@ -30,6 +30,7 @@ import (
 	"onmaru/backend/internal/helper/client"
 	"onmaru/backend/internal/omv"
 	"onmaru/backend/internal/prefs"
+	"onmaru/backend/internal/security"
 	"onmaru/backend/internal/server"
 	"onmaru/backend/internal/terminal"
 	"onmaru/backend/internal/web"
@@ -62,6 +63,8 @@ func main() {
 		"웹 터미널이 접속할 sshd 주소. auto는 /etc/ssh/sshd_config의 Port로 127.0.0.1에 접속한다. 루프백 IP:포트만 허용 (환경 변수 ONMARU_SSH_ADDR)")
 	sshHostKeys := flag.String("ssh-host-keys", cmp.Or(os.Getenv("ONMARU_SSH_HOST_KEYS"), terminal.DefaultHostKeys),
 		"웹 터미널이 받을 sshd 호스트 공개 키 파일의 glob 패턴 (환경 변수 ONMARU_SSH_HOST_KEYS)")
+	publicOrigin := flag.String("public-origin", os.Getenv("ONMARU_PUBLIC_ORIGIN"),
+		"브라우저가 대시보드에 접속하는 공개 HTTPS 주소(https://호스트[:포트], 도메인 이름). 보안 강화 모드의 패스키에 쓴다. 비우면 패스키를 끈다 (환경 변수 ONMARU_PUBLIC_ORIGIN)")
 	flag.Parse()
 
 	network, address, err := parseListen(*listen, *allowNonLoopback)
@@ -85,12 +88,24 @@ func main() {
 	if err := terminal.CheckAddr(*sshAddr); err != nil {
 		log.Fatal(err)
 	}
+	var rp *security.RP
+	if *publicOrigin != "" {
+		r, err := security.ParseOrigin(*publicOrigin)
+		if err != nil {
+			log.Fatal(err)
+		}
+		rp = &r
+		log.Printf("passkeys: rp id %s (origin %s)", r.ID, r.Origin)
+	}
+	// 인증 앱에 보이는 계정 이름(<사용자>@<호스트>)에 쓴다. 읽지 못하면 사용자 이름만 쓴다.
+	hostname, _ := os.Hostname()
 
-	// store는 사용자 설정, 전역 설정, 배경 이미지를 함께 저장한다.
+	// store는 사용자 설정, 전역 설정, 배경 이미지, 보안 강화 모드의 수단 기록을 함께 저장한다.
 	var store interface {
 		prefs.Store
 		prefs.SiteStore
 		prefs.ImageStore
+		security.Store
 	}
 	if *stateDir == "" {
 		log.Printf("no state directory: preferences will not persist across restarts")
@@ -132,6 +147,8 @@ func main() {
 		{flag: "terminal", env: "ONMARU_TERMINAL", value: strconv.FormatBool(*terminalEnabled)},
 		{flag: "ssh-addr", env: "ONMARU_SSH_ADDR", value: *sshAddr},
 		{flag: "ssh-host-keys", env: "ONMARU_SSH_HOST_KEYS", value: *sshHostKeys},
+		// 빈 값은 "패스키 끔"이라는 뜻으로 일부러 넣는 값이다(install.sh).
+		{flag: "public-origin", env: "ONMARU_PUBLIC_ORIGIN", value: *publicOrigin, emptyIsSet: true},
 	})
 
 	var helper server.Helper
@@ -171,6 +188,9 @@ func main() {
 				Logf:     log.Printf,
 			}),
 			TerminalEnabled: *terminalEnabled,
+			Security:        store,
+			RP:              rp,
+			Hostname:        hostname,
 		}),
 		ReadHeaderTimeout: 10 * time.Second,
 	}

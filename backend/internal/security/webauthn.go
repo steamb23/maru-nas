@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"net"
 	"net/url"
+	"strconv"
 	"strings"
 )
 
@@ -83,6 +84,9 @@ func ParseOrigin(raw string) (RP, error) {
 	}
 	origin := "https://" + host
 	if p := u.Port(); p != "" && p != "443" {
+		if n, err := strconv.Atoi(p); err != nil || n < 1 || n > 65535 {
+			return RP{}, errors.New("public origin has an invalid port, got " + raw)
+		}
 		origin += ":" + p
 	}
 	return RP{ID: host, Origin: origin}, nil
