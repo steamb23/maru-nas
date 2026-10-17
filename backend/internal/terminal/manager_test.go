@@ -79,7 +79,7 @@ func TestManagerCloseSession(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer other.Close()
-	m.CloseSession("s1")
+	m.CloseSession("s1", ReasonSessionEnded)
 	if code, reason := w.Wait(); code != -1 || reason != ReasonSessionEnded {
 		t.Fatalf("wait = %d %q", code, reason)
 	}
@@ -108,7 +108,7 @@ func TestManagerCloseSessionWhileAsking(t *testing.T) {
 		errc <- err
 	}()
 	<-asking
-	m.CloseSession("s1")
+	m.CloseSession("s1", ReasonSessionEnded)
 	select {
 	case err := <-errc:
 		var de *Error

@@ -33,10 +33,12 @@ type Passkey struct {
 	// PublicKey는 공개 키의 SubjectPublicKeyInfo(DER)다. JSON에서는 base64다.
 	PublicKey []byte `json:"publicKey"`
 	// Alg는 COSE 알고리즘 번호다(AlgES256, AlgEdDSA, AlgRS256).
-	Alg       int       `json:"alg"`
-	SignCount uint32    `json:"signCount"`
-	Created   time.Time `json:"created"`
-	LastUsed  time.Time `json:"lastUsed,omitzero"`
+	Alg       int    `json:"alg"`
+	SignCount uint32 `json:"signCount"`
+	// Transports는 브라우저가 알려 준 연결 방식(usb, internal 등)이다. 확인할 때 브라우저에 힌트로 준다.
+	Transports []string  `json:"transports,omitempty"`
+	Created    time.Time `json:"created"`
+	LastUsed   time.Time `json:"lastUsed,omitzero"`
 }
 
 // TOTP는 등록한 인증 앱(RFC 6238) 하나다.
@@ -57,6 +59,7 @@ func (r Record) Clone() Record {
 		ps := make([]Passkey, len(r.Passkeys))
 		for i, p := range r.Passkeys {
 			p.PublicKey = bytes.Clone(p.PublicKey)
+			p.Transports = slices.Clone(p.Transports)
 			ps[i] = p
 		}
 		r.Passkeys = ps

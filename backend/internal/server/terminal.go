@@ -75,6 +75,18 @@ func (h *handler) terminal(w http.ResponseWriter, r *http.Request, s auth.Sessio
 		return
 	}
 	conn.SetReadLimit(terminalReadLimit)
+	// 보안 강화 정책을 채우지 못하면 접속하지 않는다. 브라우저는 핸드셰이크의 HTTP 상태를 읽을 수 없으므로
+	// 연결을 받은 뒤 닫힌 이유로 알린다.
+	if lvl := h.securityPolicy().Terminal; !satisfies(s, lvl) {
+		log.Printf("terminal: user=%q ip=%s: security verification required (%s)", s.Username, clientIP(r), lvl)
+		if b, err := json.Marshal(api.TerminalServerMessage{
+			Type: "status", State: "closed", Reason: terminal.ReasonSecurityRequired, Required: lvl,
+		}); err == nil {
+			conn.Write(r.Context(), websocket.MessageText, b)
+		}
+		conn.Close(websocket.StatusNormalClosure, "")
+		return
+	}
 	t := &termConn{h: h, s: s, ip: clientIP(r), conn: conn, size: size, answers: make(chan []string, 1)}
 	t.run(r.Context())
 }

@@ -79,6 +79,10 @@ func cloneSite(v api.SiteSettings) api.SiteSettings {
 		o.SmartRefreshAt = cloneString(o.SmartRefreshAt)
 		v.Server = &o
 	}
+	if v.Security != nil {
+		p := *v.Security
+		v.Security = &p
+	}
 	return v
 }
 

@@ -22,6 +22,7 @@ import (
 	"onmaru/backend/internal/omv"
 	"onmaru/backend/internal/omv/omvfake"
 	"onmaru/backend/internal/prefs"
+	"onmaru/backend/internal/security"
 	"onmaru/backend/internal/terminal"
 	"onmaru/backend/internal/terminal/sshfake"
 )
@@ -100,6 +101,9 @@ type envOptions struct {
 	terminal    bool
 	terminalOff bool
 	sshd        sshfake.Options
+	// security, rp는 Config의 Security, RP다(보안 강화 모드).
+	security security.Store
+	rp       *security.RP
 }
 
 func newEnv(t *testing.T, o envOptions) *env {
@@ -194,6 +198,8 @@ func newEnv(t *testing.T, o envOptions) *env {
 		Helper:            helper,
 		Terminal:          manager,
 		TerminalEnabled:   o.terminal && !o.terminalOff,
+		Security:          o.security,
+		RP:                o.rp,
 		CheckInterval:     o.interval,
 		FailDelay:         o.failDelay,
 		Now:               clk.Now,

@@ -67,6 +67,15 @@ func decodeTOTPSecret(secret string) ([]byte, error) {
 	return totpEncoding.DecodeString(strings.ToUpper(strings.TrimRight(secret, "=")))
 }
 
+// TOTPCode는 t의 코드다. 개발용 가짜 인증 앱과 테스트가 쓴다.
+func TOTPCode(secret string, t time.Time) (string, error) {
+	key, err := decodeTOTPSecret(secret)
+	if err != nil || len(key) == 0 {
+		return "", fmt.Errorf("%w: invalid totp secret", ErrVerify)
+	}
+	return totpCode(key, totpStep(t)), nil
+}
+
 // NormalizeCode는 사용자가 입력한 코드의 공백·하이픈을 뺀다.
 func NormalizeCode(code string) string {
 	return strings.Map(func(r rune) rune {

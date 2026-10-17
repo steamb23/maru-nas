@@ -69,7 +69,7 @@ func (h *handler) login(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	h.startSession(w, r, res, ip, ticket)
+	h.startSession(w, r, res, ip, ticket, auth.AssuranceLogin)
 }
 
 func (h *handler) verify(w http.ResponseWriter, r *http.Request) {
@@ -115,7 +115,8 @@ func (h *handler) verify(w http.ResponseWriter, r *http.Request) {
 	if claimed, ok := h.Sessions.ClaimPending(p.ID); ok {
 		ticket = h.activateHelper(r.Context(), claimed)
 	}
-	h.startSession(w, r, res, ip, ticket)
+	// OMV 2차 인증을 마친 세션은 보안 강화 모드의 2차 인증도 거친 것으로 본다.
+	h.startSession(w, r, res, ip, ticket, auth.AssuranceTwoFactor)
 }
 
 // authFailed는 로그인·2차 인증 실패를 응답한다. 틀린 값이면 FailDelay만큼 기다린다.
@@ -143,14 +144,16 @@ func (h *handler) authFailed(w http.ResponseWriter, r *http.Request, done func(a
 }
 
 // startSession은 대시보드 세션을 만든다. helperTicket은 이 세션의 도우미 티켓이다(없으면 빈 값).
-func (h *handler) startSession(w http.ResponseWriter, r *http.Request, res omv.LoginResult, ip, helperTicket string) {
+// assurance는 로그인에서 거친 확인의 수준이다(OMV 2차 인증이면 twoFactor).
+func (h *handler) startSession(w http.ResponseWriter, r *http.Request, res omv.LoginResult, ip, helperTicket string, assurance auth.Assurance) {
 	s := h.Sessions.Create(res.Username, res.Admin, res.SessionID)
-	if helperTicket != "" {
-		if upd, ok := h.Sessions.Update(s.ID, func(ss *auth.Session) { ss.HelperTicket = helperTicket }); ok {
-			s = upd
-		} else {
-			h.closeHelper(helperTicket)
-		}
+	if upd, ok := h.Sessions.Update(s.ID, func(ss *auth.Session) {
+		ss.HelperTicket = helperTicket
+		ss.Assurance = assurance
+	}); ok {
+		s = upd
+	} else {
+		h.closeHelper(helperTicket)
 	}
 	// 로그인이 OMV 세션의 마지막 접근 시각을 갱신했으므로 만료 시각 계산에 쓸 timeout만 읽는다.
 	if st, err := h.OMV.Probe(r.Context(), s.OMVSessionID, false); err != nil {
@@ -168,9 +171,9 @@ func (h *handler) startSession(w http.ResponseWriter, r *http.Request, res omv.L
 	h.setCookie(w, r, DeviceCookie, h.Limiter.Trust(res.Username, deviceToken(r)), int(auth.DeviceTTL/time.Second))
 	// 실행 중에 플러그인을 설치하거나 지웠을 수 있으므로 로그인할 때 다시 확인한다.
 	h.Plugins.Refresh()
-	log.Printf("login ok: user=%q ip=%s admin=%t helper=%t", s.Username, ip, s.Admin, s.HelperTicket != "")
+	log.Printf("login ok: user=%q ip=%s admin=%t helper=%t assurance=%s", s.Username, ip, s.Admin, s.HelperTicket != "", assuranceName(s.Assurance))
 	info := h.sessionInfo(s)
-	writeJSON(w, http.StatusOK, api.LoginResponse{Status: api.LoginAuthenticated, Session: &info})
+	writeJSON(w, http.StatusOK, api.LoginResponse{Status: api.LoginAuthenticated, Session: &info, StepUp: h.stepUpOffer(s)})
 }
 
 // applyState는 Probe로 읽은 timeout을 세션에 반영한다. 읽지 못했으면 이전 값을 둔다.
@@ -182,7 +185,7 @@ func applyState(ss *auth.Session, st omv.SessionState) {
 
 // sessionInfo는 세션의 응답 형태다. 만료까지 남은 시간을 함께 담는다.
 func (h *handler) sessionInfo(s auth.Session) api.SessionInfo {
-	info := api.SessionInfo{Username: s.Username, Admin: s.Admin}
+	info := api.SessionInfo{Username: s.Username, Admin: s.Admin, Assurance: assuranceName(s.Assurance)}
 	if exp, ok := s.ExpiresAt(); ok {
 		secs := max(0, int(exp.Sub(h.Now())/time.Second))
 		info.ExpiresInSeconds = &secs

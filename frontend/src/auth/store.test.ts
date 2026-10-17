@@ -3,8 +3,8 @@ import { ApiError } from '../api/client'
 import type { LoginResponse, SessionInfo } from '../api/types.gen'
 import { type AuthApi, type ScreenChange, createAuthStore } from './store'
 
-const admin: SessionInfo = { username: 'admin', admin: true }
-const user: SessionInfo = { username: 'user', admin: false }
+const admin: SessionInfo = { username: 'admin', admin: true, assurance: 'login' }
+const user: SessionInfo = { username: 'user', admin: false, assurance: 'login' }
 const authed = (s: SessionInfo): LoginResponse => ({ status: 'authenticated', session: s })
 const challenge: LoginResponse = { status: 'challengeRequired', challenge: { kind: 'totp' } }
 

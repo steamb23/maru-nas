@@ -537,6 +537,8 @@ type SiteSettings struct {
 	Login    *SiteLogin       `json:"login,omitempty"`
 	Defaults *SiteDefaults    `json:"defaults,omitempty"`
 	Server   *ServerOverrides `json:"server,omitempty"`
+	// Security는 보안 강화 모드의 기능별 단계다. 없으면 모두 꺼짐이다.
+	Security *SecurityPolicy `json:"security,omitempty"`
 }
 
 // SiteLogin은 로그인 화면 설정이다. 저장한 적 없으면 대시보드 기본 배경에 대기 연출을 켠다.
@@ -805,6 +807,15 @@ type LoginResponse struct {
 	Status    string         `json:"status" tstype:"'authenticated' | 'challengeRequired'"`
 	Session   *SessionInfo   `json:"session,omitempty"`
 	Challenge *ChallengeInfo `json:"challenge,omitempty"`
+	// StepUp이 있으면 로그인을 마친 뒤 2차 인증을 권한다(보안 강화 모드). 세션은 이미 만들어졌으므로
+	// 건너뛰면 일반 세션으로 쓴다. 로그인 응답에만 넣는다(세션 복원 때는 묻지 않는다).
+	StepUp *StepUpInfo `json:"stepUp,omitempty"`
+}
+
+// StepUpInfo는 로그인 직후 권하는 2차 인증이다.
+type StepUpInfo struct {
+	// Methods는 이 사용자가 쓸 수 있는 수단이다(Factor*, password 제외).
+	Methods []string `json:"methods" tstype:"Array<'passkey' | 'totp' | 'recovery'>"`
 }
 
 // SessionInfo는 GET /api/session, POST /api/session/activity의 응답이며 로그인한 사용자를 나타낸다.
@@ -816,6 +827,8 @@ type SessionInfo struct {
 	// 이 시간 뒤에 만료된다. OMV 자동 로그아웃이 꺼져 있거나 시간을 모르면 없다.
 	// 브라우저와 서버의 시계 차이에 영향받지 않도록 절대 시각 대신 남은 시간으로 준다.
 	ExpiresInSeconds *int `json:"expiresInSeconds,omitempty"`
+	// Assurance는 이 세션이 거친 확인의 수준이다(Assurance*, 보안 강화 모드).
+	Assurance string `json:"assurance" tstype:"'login' | 'password' | 'twoFactor'"`
 }
 
 // ChallengeInfo는 2차 인증 요구 정보다. 종류는 OMV 플러그인이 정한다.
@@ -867,15 +880,27 @@ const (
 	ErrElevationRequired = "elevation_required"
 	// ErrTerminalDisabled는 관리자가 웹 터미널을 허용하지 않았다는 뜻이다.
 	ErrTerminalDisabled = "terminal_disabled"
+	// ErrSecurityRequired는 보안 강화 모드의 확인(ErrorResponse.Required 단계)을 먼저 거쳐야 한다는 뜻이다.
+	ErrSecurityRequired = "security_required"
+	// ErrFactorFailed는 재확인한 비밀번호나 2차 인증 값이 틀렸다는 뜻이다.
+	ErrFactorFailed = "factor_failed"
+	// ErrManageRequired는 인증 수단을 바꾸기 전에 관리 확인(POST /api/security/manage)이 필요하다는 뜻이다.
+	ErrManageRequired = "manage_required"
+	// ErrPasskeyUnavailable은 공개 주소(-public-origin)를 설정하지 않아 패스키를 쓸 수 없다는 뜻이다.
+	ErrPasskeyUnavailable = "passkey_unavailable"
+	// ErrSecurityUnavailable은 수단 기록을 읽을 수 없다는 뜻이다(손상된 파일 등). 관리자가 초기화해야 한다.
+	ErrSecurityUnavailable = "security_unavailable"
 )
 
 // ErrorResponse는 2xx가 아닌 상태 코드와 함께 반환된다.
 type ErrorResponse struct {
 	Error string `json:"error"`
 	// Code는 화면에서 분기할 때 쓰는 오류 종류다. 없을 수 있다.
-	Code string `json:"code,omitempty" tstype:"'invalid_credentials' | 'rate_limited' | 'challenge_failed' | 'challenge_expired' | 'omv_unavailable' | 'unauthorized' | 'bad_request' | 'rpc_forbidden' | 'admin_required' | 'plugin_missing' | 'omv_error' | 'action_busy' | 'action_failed' | 'action_timeout' | 'config_dirty' | 'image_too_large' | 'unsupported_image' | 'profile_readonly' | 'helper_unavailable' | 'helper_reauth' | 'elevation_failed' | 'elevation_not_allowed' | 'elevation_required' | 'terminal_disabled'"`
+	Code string `json:"code,omitempty" tstype:"'invalid_credentials' | 'rate_limited' | 'challenge_failed' | 'challenge_expired' | 'omv_unavailable' | 'unauthorized' | 'bad_request' | 'rpc_forbidden' | 'admin_required' | 'plugin_missing' | 'omv_error' | 'action_busy' | 'action_failed' | 'action_timeout' | 'config_dirty' | 'image_too_large' | 'unsupported_image' | 'profile_readonly' | 'helper_unavailable' | 'helper_reauth' | 'elevation_failed' | 'elevation_not_allowed' | 'elevation_required' | 'terminal_disabled' | 'security_required' | 'factor_failed' | 'manage_required' | 'passkey_unavailable' | 'security_unavailable'"`
 	// RetryAfterSeconds는 rate_limited일 때 다시 시도할 수 있기까지 남은 초다.
 	RetryAfterSeconds int `json:"retryAfterSeconds,omitempty"`
+	// Required는 security_required일 때 거쳐야 하는 단계다.
+	Required string `json:"required,omitempty" tstype:"'password' | 'twoFactor'"`
 }
 
 // 권한 도우미 상태. HelperStatus.State에 들어간다.
@@ -949,9 +974,9 @@ type TerminalServerMessage struct {
 	Type  string `json:"type" tstype:"'status' | 'prompt'"`
 	State string `json:"state,omitempty" tstype:"'connecting' | 'connected' | 'closed'"`
 	// Reason은 닫힌 이유다. exit(셸이 끝남, ExitCode), 세션·설정 이유(session_ended, disabled,
-	// connection_lost), 접속 실패(ssh_unavailable, ssh_host_key, ssh_auth_failed, ssh_failed, canceled,
-	// too_many_windows, busy, rate_limited) 중 하나다.
-	Reason   string `json:"reason,omitempty" tstype:"'exit' | 'session_ended' | 'disabled' | 'connection_lost' | 'ssh_unavailable' | 'ssh_host_key' | 'ssh_auth_failed' | 'ssh_failed' | 'canceled' | 'too_many_windows' | 'busy' | 'rate_limited'"`
+	// connection_lost, security_required), 접속 실패(ssh_unavailable, ssh_host_key, ssh_auth_failed, ssh_failed,
+	// canceled, too_many_windows, busy, rate_limited) 중 하나다.
+	Reason   string `json:"reason,omitempty" tstype:"'exit' | 'session_ended' | 'disabled' | 'connection_lost' | 'security_required' | 'ssh_unavailable' | 'ssh_host_key' | 'ssh_auth_failed' | 'ssh_failed' | 'canceled' | 'too_many_windows' | 'busy' | 'rate_limited'"`
 	ExitCode *int   `json:"exitCode,omitempty"`
 	// KeyCode는 도우미 임시 키를 쓰지 못한 이유(도우미 오류 코드, 또는 sshd가 키를 받지 않았으면
 	// key_rejected)다. ssh_auth_failed의 힌트다.
@@ -960,6 +985,8 @@ type TerminalServerMessage struct {
 	NotAllowedGroups []string `json:"notAllowedGroups,omitempty"`
 	// RetryAfterSeconds는 rate_limited일 때 다시 시도할 수 있을 때까지의 초다.
 	RetryAfterSeconds int `json:"retryAfterSeconds,omitempty"`
+	// Required는 security_required일 때 거쳐야 하는 단계다. 정책이 바뀌어 열린 터미널이 닫혔을 때는 없다.
+	Required string `json:"required,omitempty" tstype:"'password' | 'twoFactor'"`
 	// Kind는 prompt의 종류다. password면 질문 문구를 프론트가 현지화하고, keyboard-interactive면
 	// sshd(PAM)가 준 Instruction과 Prompts의 문구를 그대로 보여 준다.
 	Kind        string           `json:"kind,omitempty" tstype:"'password' | 'keyboard-interactive'"`
@@ -971,4 +998,198 @@ type TerminalServerMessage struct {
 type TerminalPrompt struct {
 	Text string `json:"text"`
 	Echo bool   `json:"echo"`
+}
+
+// 보안 강화 모드. 보안에 민감한 기능(웹 터미널, root 권한 상승)을 확인을 거친 세션에서만 쓰게 한다.
+// 확인은 세션의 속성(Assurance)이라 따로 만료가 없다.
+
+// 기능별 단계. SecurityPolicy의 값이다.
+const (
+	SecurityOff       = "off"
+	SecurityPassword  = "password"
+	SecurityTwoFactor = "twoFactor"
+)
+
+// 세션의 보증 수준. SessionInfo.Assurance, SecurityStatus.Assurance에 들어간다.
+const (
+	// AssuranceLogin은 로그인만 한 세션이다. 로그인할 때 넣은 비밀번호는 재확인으로 치지 않는다.
+	AssuranceLogin     = "login"
+	AssurancePassword  = "password"
+	AssuranceTwoFactor = "twoFactor"
+)
+
+// 확인 수단. SecurityVerifyRequest.Method, StepUpInfo.Methods에 들어간다.
+const (
+	FactorPassword = "password"
+	FactorTOTP     = "totp"
+	FactorRecovery = "recovery"
+	FactorPasskey  = "passkey"
+)
+
+// SecurityPolicy는 보안 강화 모드의 기능별 단계(Security*)다. 관리자 전역 설정(site.json)이며 빈 값은 off다.
+type SecurityPolicy struct {
+	Terminal  string `json:"terminal,omitempty" tstype:"'off' | 'password' | 'twoFactor'"`
+	Elevation string `json:"elevation,omitempty" tstype:"'off' | 'password' | 'twoFactor'"`
+}
+
+// SecurityPolicyRequest는 PUT /api/site/security의 본문이다. 정책 전체를 바꾼다. 바꾸는 기능마다 이전·새 단계 중
+// 높은 쪽을 이 세션이 거쳤어야 한다(아니면 403 security_required).
+type SecurityPolicyRequest struct {
+	Security *SecurityPolicy `json:"security"`
+}
+
+// SecurityPolicyResponse는 GET /api/site/security의 응답이다(관리자).
+type SecurityPolicyResponse struct {
+	// Policy는 지금 정책이다. 모든 값이 채워져 있다.
+	Policy SecurityPolicy `json:"policy"`
+	// AutoLogoutMinutes는 OMV 자동 로그아웃 시간(분)이다. 0이면 꺼져 있어 강화 상태가 로그아웃할 때까지 남는다.
+	// 모르면 없다.
+	AutoLogoutMinutes *int `json:"autoLogoutMinutes,omitempty"`
+	// PasskeyRPID는 패스키의 RP ID(공개 주소의 호스트 이름)다. 공개 주소를 설정하지 않아 패스키를 쓸 수 없으면 없다.
+	PasskeyRPID string `json:"passkeyRpId,omitempty"`
+}
+
+// PasskeyInfo는 등록한 패스키 하나다.
+type PasskeyInfo struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+	// Created, LastUsed는 RFC 3339 시각이다. 쓴 적이 없으면 LastUsed가 없다.
+	Created  string `json:"created"`
+	LastUsed string `json:"lastUsed,omitempty"`
+}
+
+// TOTPInfo는 등록한 인증 앱(TOTP)이다.
+type TOTPInfo struct {
+	Created string `json:"created"`
+}
+
+// SecurityStatus는 GET /api/security와 확인·관리 요청의 응답이며, 로그인한 사용자 자신의 보안 상태다.
+type SecurityStatus struct {
+	Assurance string `json:"assurance" tstype:"'login' | 'password' | 'twoFactor'"`
+	// ManageSeconds는 인증 수단을 바꿀 수 있는 관리 창이 닫히기까지 남은 초다. 닫혀 있으면 0이다.
+	ManageSeconds int `json:"manageSeconds"`
+	// PasskeysAvailable은 이 서버에서 패스키를 쓸 수 있는지다(공개 주소 설정). 브라우저 지원은 프론트가 따로 본다.
+	PasskeysAvailable bool          `json:"passkeysAvailable"`
+	Passkeys          []PasskeyInfo `json:"passkeys"`
+	TOTP              *TOTPInfo     `json:"totp,omitempty"`
+	// RecoveryCodes는 남은 복구 코드 수다.
+	RecoveryCodes int `json:"recoveryCodes"`
+	// Methods는 지금 확인에 쓸 수 있는 2차 수단이다(Factor*, password 제외).
+	Methods []string       `json:"methods" tstype:"Array<'passkey' | 'totp' | 'recovery'>"`
+	Policy  SecurityPolicy `json:"policy"`
+}
+
+// SecurityVerifyRequest는 POST /api/security/verify의 본문이다. 맞으면 이 세션의 보증 수준을 올린다
+// (password는 password, 나머지는 twoFactor).
+type SecurityVerifyRequest struct {
+	Method   string `json:"method" tstype:"'password' | 'totp' | 'recovery' | 'passkey'"`
+	Password string `json:"password,omitempty"`
+	// Code는 TOTP 코드 또는 복구 코드다.
+	Code    string            `json:"code,omitempty"`
+	Passkey *PasskeyAssertion `json:"passkey,omitempty"`
+}
+
+// SecurityManageRequest는 POST /api/security/manage의 본문이다. 비밀번호와(등록한 수단이 있으면) 그 수단을 다시
+// 확인하면 이 세션에 관리 창이 잠깐 열린다. 세션을 빼앗은 쪽이 자기 수단을 등록하지 못하게 한다.
+type SecurityManageRequest struct {
+	Password string `json:"password"`
+	// Factor는 등록한 2차 수단의 확인이다. 수단이 없으면 비운다.
+	Factor *SecurityVerifyRequest `json:"factor,omitempty"`
+}
+
+// 패스키 challenge의 목적. PasskeyChallengeRequest.Purpose에 들어간다.
+const (
+	// PasskeyAssert는 확인(로그인 단계, 세션 중 확인, 관리 확인)이다.
+	PasskeyAssert = "assert"
+	// PasskeyRegister는 새 패스키 등록이다(관리 창 필요).
+	PasskeyRegister = "register"
+)
+
+// PasskeyChallengeRequest는 POST /api/security/passkeys/challenge의 본문이다.
+type PasskeyChallengeRequest struct {
+	Purpose string `json:"purpose" tstype:"'assert' | 'register'"`
+}
+
+// PasskeyOptions는 navigator.credentials.get()·create()에 넘길 값이다. 이진 값은 base64url(패딩 없음)이다.
+type PasskeyOptions struct {
+	Challenge string `json:"challenge"`
+	RPID      string `json:"rpId"`
+	// TimeoutMs는 브라우저에 주는 제한 시간이다.
+	TimeoutMs int `json:"timeoutMs"`
+	// Credentials는 확인에서는 쓸 수 있는 자격 증명(allowCredentials), 등록에서는 이미 등록한 자격 증명
+	// (excludeCredentials)이다.
+	Credentials []PasskeyDescriptor `json:"credentials"`
+	// 아래는 등록에만 있다.
+	RPName     string       `json:"rpName,omitempty"`
+	User       *PasskeyUser `json:"user,omitempty"`
+	Algorithms []int        `json:"algorithms,omitempty"`
+}
+
+// PasskeyDescriptor는 자격 증명 하나를 가리킨다.
+type PasskeyDescriptor struct {
+	ID         string   `json:"id"`
+	Transports []string `json:"transports,omitempty"`
+}
+
+// PasskeyUser는 등록할 때 인증기에 넣는 사용자 정보다. ID는 무작위 핸들이다(사용자 이름을 넣지 않는다).
+type PasskeyUser struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	DisplayName string `json:"displayName"`
+}
+
+// PasskeyAssertion은 navigator.credentials.get()의 결과다. 이진 값은 base64url이다.
+type PasskeyAssertion struct {
+	ID                string `json:"id"`
+	ClientDataJSON    string `json:"clientDataJSON"`
+	AuthenticatorData string `json:"authenticatorData"`
+	Signature         string `json:"signature"`
+	UserHandle        string `json:"userHandle,omitempty"`
+}
+
+// PasskeyRegistration은 navigator.credentials.create()의 결과다. PublicKey는 getPublicKey()의 SPKI DER이며,
+// 브라우저가 알고리즘을 모르면 비어 있다(등록하지 않는다).
+type PasskeyRegistration struct {
+	ID                 string   `json:"id"`
+	ClientDataJSON     string   `json:"clientDataJSON"`
+	AuthenticatorData  string   `json:"authenticatorData"`
+	PublicKey          string   `json:"publicKey"`
+	PublicKeyAlgorithm int      `json:"publicKeyAlgorithm"`
+	Transports         []string `json:"transports,omitempty"`
+}
+
+// PasskeyRegisterRequest는 POST /api/security/passkeys의 본문이다(관리 창 필요).
+type PasskeyRegisterRequest struct {
+	Name       string               `json:"name"`
+	Credential *PasskeyRegistration `json:"credential"`
+}
+
+// TOTPSetupResponse는 POST /api/security/totp/setup의 응답이다. 비밀 키는 확인(POST /api/security/totp)할 때까지
+// 이 세션의 메모리에만 있다.
+type TOTPSetupResponse struct {
+	Secret string `json:"secret"`
+	// URI는 인증 앱에 넣는 otpauth:// 주소다(QR 코드의 내용).
+	URI string `json:"uri"`
+}
+
+// TOTPConfirmRequest는 POST /api/security/totp의 본문이다. 인증 앱이 보여 주는 코드로 설정을 마친다.
+type TOTPConfirmRequest struct {
+	Code string `json:"code"`
+}
+
+// SecurityChangeResponse는 수단을 등록·삭제하거나 복구 코드를 다시 만든 뒤의 응답이다.
+type SecurityChangeResponse struct {
+	Status SecurityStatus `json:"status"`
+	// RecoveryCodes는 새로 만든 복구 코드다. 첫 수단을 등록했거나 다시 만들었을 때만 있고, 다시 볼 수 없다.
+	RecoveryCodes []string `json:"recoveryCodes,omitempty"`
+}
+
+// SecurityUserInfo는 GET /api/security/users(관리자)의 한 줄이며, 인증 수단 기록이 있는 사용자다.
+type SecurityUserInfo struct {
+	Username      string `json:"username"`
+	Passkeys      int    `json:"passkeys"`
+	TOTP          bool   `json:"totp"`
+	RecoveryCodes int    `json:"recoveryCodes"`
+	// Unreadable은 기록을 읽을 수 없다는 뜻이다(손상된 파일). 초기화하면 지운다.
+	Unreadable bool `json:"unreadable,omitempty"`
 }

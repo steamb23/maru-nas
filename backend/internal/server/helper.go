@@ -198,6 +198,11 @@ func (h *handler) elevate(w http.ResponseWriter, r *http.Request, s auth.Session
 	if !decodeJSON(w, r, &req) {
 		return
 	}
+	// 보안 강화 정책의 확인을 먼저 거친다(비밀번호를 묻기 전에).
+	if lvl := h.securityPolicy().Elevation; !satisfies(s, lvl) {
+		writeSecurityRequired(w, lvl)
+		return
+	}
 	if req.Password == "" {
 		writeError(w, http.StatusBadRequest, api.ErrBadRequest, "password is required")
 		return

@@ -27,6 +27,8 @@ const (
 	ReasonDisabled = "disabled"
 	// ReasonConnectionLost는 sshd와의 연결이 끊겼다는 뜻이다(sshd 재시작 등).
 	ReasonConnectionLost = "connection_lost"
+	// ReasonSecurityRequired는 보안 강화 정책을 올려 이 세션이 더는 조건을 채우지 못한다는 뜻이다.
+	ReasonSecurityRequired = "security_required"
 )
 
 // Open의 오류 코드(Error.Code). 접속 실패 코드(Code*)와 함께 쓴다.
@@ -234,13 +236,14 @@ func (m *Manager) close(c *client, reason string) {
 	}
 }
 
-// CloseSession은 key(대시보드 세션)의 클라이언트를 닫는다. 세션이 끝날 때(auth.Store.OnRemove) 부른다.
-func (m *Manager) CloseSession(key string) {
+// CloseSession은 key(대시보드 세션)의 클라이언트를 reason으로 닫는다. 세션이 끝날 때(auth.Store.OnRemove,
+// ReasonSessionEnded)와 보안 강화 정책을 올려 그 세션이 조건을 채우지 못할 때(ReasonSecurityRequired) 부른다.
+func (m *Manager) CloseSession(key, reason string) {
 	m.mu.Lock()
 	c := m.clients[key]
 	m.mu.Unlock()
 	if c != nil {
-		m.close(c, ReasonSessionEnded)
+		m.close(c, reason)
 	}
 }
 

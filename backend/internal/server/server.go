@@ -17,6 +17,7 @@ import (
 	"onmaru/backend/internal/buildinfo"
 	"onmaru/backend/internal/omv"
 	"onmaru/backend/internal/prefs"
+	"onmaru/backend/internal/security"
 	"onmaru/backend/internal/terminal"
 )
 
@@ -93,6 +94,12 @@ type Config struct {
 	Terminal *terminal.Manager
 	// TerminalEnabled는 -terminal이다. 설정의 서버 페이지에서 덮어쓴 값이 있으면 그 값이 우선한다.
 	TerminalEnabled bool
+	// Security는 보안 강화 모드의 수단 기록 저장소다. nil이면 메모리에 둔다.
+	Security security.Store
+	// RP는 패스키의 신뢰 당사자(-public-origin)다. nil이면 패스키를 쓸 수 없다(TOTP·복구 코드만 쓴다).
+	RP *security.RP
+	// Hostname은 인증 앱에 보이는 계정 이름(<사용자>@<호스트>)에 쓴다. 비우면 사용자 이름만 쓴다.
+	Hostname string
 	// CheckInterval마다 요청 처리 중에 OMV 세션이 살아 있는지 확인한다. 기본 60초.
 	// 예상 만료 시각이 지났으면 주기와 상관없이 확인한다.
 	CheckInterval time.Duration
@@ -115,6 +122,13 @@ type handler struct {
 	// 보여 원래 IP로 막을 수 없으므로 여기서 센다. 로그인 제한과 따로 둔다(입력을 기다리는 동안
 	// 동시 시도 칸을 차지하므로).
 	terminalLimiter *auth.Limiter
+	// securityLimiter는 2차 수단(TOTP, 복구 코드, 패스키) 확인의 실패 제한이다. 비밀번호 재확인은 로그인 제한을 쓴다.
+	securityLimiter *auth.Limiter
+	// policy는 지금 보안 강화 정책이다(security.go).
+	policy policyState
+	// challenges는 진행 중인 패스키 확인·등록, totpSetup은 설정 중인 TOTP 비밀이다. 대시보드 세션에 묶인다.
+	challenges *security.Ephemeral[ceremony]
+	totpSetup  *security.Ephemeral[string]
 }
 
 // New는 루트 핸들러를 반환한다. /api/ 밖의 요청은 cfg.Static이 처리한다.
@@ -152,15 +166,31 @@ func New(cfg Config) http.Handler {
 	if cfg.Images == nil {
 		cfg.Images = prefs.NewMemoryStore()
 	}
-	h := &handler{Config: cfg, actions: newInflight(), about: buildinfo.Read(), terminalLimiter: auth.NewLimiter()}
+	if cfg.Security == nil {
+		cfg.Security = prefs.NewMemoryStore()
+	}
+	h := &handler{
+		Config:          cfg,
+		actions:         newInflight(),
+		about:           buildinfo.Read(),
+		terminalLimiter: auth.NewLimiter(),
+		securityLimiter: auth.NewLimiter(),
+		challenges:      security.NewEphemeral[ceremony](challengeTTL),
+		totpSetup:       security.NewEphemeral[string](totpSetupTTL),
+	}
+	for _, l := range []*auth.Limiter{h.terminalLimiter, h.securityLimiter} {
+		l.Now = cfg.Now
+	}
+	h.challenges.Now, h.totpSetup.Now = cfg.Now, cfg.Now
 	h.loadOverrides()
+	h.loadPolicy()
 	if cfg.Helper != nil || cfg.Terminal != nil {
 		// 세션이 어떻게 끝나든(로그아웃, 만료, 밀려남, 2차 인증 포기) 도우미 티켓을 폐기하고
 		// 그 세션의 터미널을 닫는다.
 		cfg.Sessions.OnRemove = func(s auth.Session) {
 			h.closeHelper(s.HelperTicket)
 			if cfg.Terminal != nil {
-				cfg.Terminal.CloseSession(s.ID)
+				cfg.Terminal.CloseSession(s.ID, terminal.ReasonSessionEnded)
 			}
 		}
 		cfg.Sessions.OnRemovePending = func(p auth.Pending) { h.closeHelper(p.HelperTicket) }
@@ -188,6 +218,18 @@ func New(cfg Config) http.Handler {
 	mux.HandleFunc("POST /api/helper/elevation", h.requireAdmin(h.elevate))
 	mux.HandleFunc("DELETE /api/helper/elevation", h.requireSession(h.dropElevation))
 	mux.HandleFunc("GET /api/terminal", h.requireSession(h.terminal))
+	mux.HandleFunc("GET /api/security", h.requireSession(h.securityInfo))
+	mux.HandleFunc("POST /api/security/verify", h.requireSession(h.verifySecurity))
+	mux.HandleFunc("POST /api/security/manage", h.requireSession(h.manageSecurity))
+	mux.HandleFunc("POST /api/security/passkeys/challenge", h.requireSession(h.passkeyChallenge))
+	mux.HandleFunc("POST /api/security/passkeys", h.requireSession(h.registerPasskey))
+	mux.HandleFunc("DELETE /api/security/passkeys/{id}", h.requireSession(h.deletePasskey))
+	mux.HandleFunc("POST /api/security/totp/setup", h.requireSession(h.setupTOTP))
+	mux.HandleFunc("POST /api/security/totp", h.requireSession(h.confirmTOTP))
+	mux.HandleFunc("DELETE /api/security/totp", h.requireSession(h.deleteTOTP))
+	mux.HandleFunc("POST /api/security/recovery-codes", h.requireSession(h.regenerateRecovery))
+	mux.HandleFunc("GET /api/security/users", h.requireAdmin(h.securityUsers))
+	mux.HandleFunc("DELETE /api/security/users/{name}", h.requireAdmin(h.resetSecurityUser))
 	mux.HandleFunc("GET /api/addons/{id}", h.requireSession(h.addonData))
 	mux.HandleFunc("POST /api/addons/{id}/actions/{action}", h.requireSession(h.addonAction))
 	mux.HandleFunc("POST /api/rpc", h.requireSession(h.rpc))
@@ -210,6 +252,8 @@ func New(cfg Config) http.Handler {
 	mux.HandleFunc("DELETE /api/site/images/{name}", h.requireAdmin(h.deleteSiteImage))
 	mux.HandleFunc("GET /api/site/server", h.requireAdmin(h.serverSettings))
 	mux.HandleFunc("PUT /api/site/server", h.requireAdmin(h.setServerSettings))
+	mux.HandleFunc("GET /api/site/security", h.requireAdmin(h.securityPolicyInfo))
+	mux.HandleFunc("PUT /api/site/security", h.requireAdmin(h.setSecurityPolicy))
 	mux.HandleFunc("/api/", func(w http.ResponseWriter, _ *http.Request) {
 		writeJSON(w, http.StatusNotFound, api.ErrorResponse{Error: "not found"})
 	})
