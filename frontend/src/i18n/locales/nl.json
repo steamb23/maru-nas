@@ -76,7 +76,35 @@
     "smart": "Schijfstatus",
     "services": "Diensten",
     "workbench": "OMV Workbench",
-    "settings": "Instellingen"
+    "settings": "Instellingen",
+    "terminal": "Terminal"
+  },
+  "terminal": {
+    "connecting": "Verbinding maken met de SSH-server als {{user}}…",
+    "passwordPrompt": "Wachtwoord voor {{user}}: ",
+    "retry": "Toegang geweigerd, probeer het opnieuw.",
+    "reconnect": "Opnieuw verbinden",
+    "closed": {
+      "exit": "De shell is beëindigd (afsluitcode {{code}}).",
+      "sessionEnded": "De terminal is gesloten omdat je bent uitgelogd.",
+      "disabled": "Een beheerder heeft de webterminal uitgeschakeld.",
+      "connectionLost": "De verbinding met de SSH-server is verbroken.",
+      "openFailed": "Kan de terminal niet openen. De webterminal is mogelijk uitgeschakeld.",
+      "unavailable": "Kan geen verbinding maken met de SSH-server. Controleer of SSH is ingeschakeld in OMV.",
+      "hostKey": "De hostsleutel van de SSH-server kwam niet overeen, dus de verbinding is gestopt.",
+      "authFailed": "Inloggen via SSH is mislukt.",
+      "authGroups": "Inloggen via SSH is mislukt. Om SSH te gebruiken moet je account in een van deze groepen zitten: {{groups}}. Een beheerder kan je account in de gebruikersinstellingen van OMV aan een groep toevoegen.",
+      "authStrictModes": "Inloggen via SSH is mislukt. Andere gebruikers kunnen schrijven in je homemap, dus SSH negeert de sleutels erin. Verwijder de schrijfrechten voor groep en anderen van je homemap (chmod go-w).",
+      "authNoHome": "Inloggen via SSH is mislukt. Je account heeft geen homemap, dus er kon geen tijdelijke sleutel worden gebruikt, en deze SSH-server accepteert geen wachtwoorden.",
+      "authKeyRejected": "Inloggen via SSH is mislukt. De SSH-server heeft de tijdelijke sleutel niet geaccepteerd. Controleer de SSH-instellingen van OMV (bijvoorbeeld de extra opties) op regels die dit account blokkeren.",
+      "authKeyFailed": "Inloggen via SSH is mislukt. De bevoorrechte helper kon geen tijdelijke sleutel toevoegen, en deze SSH-server accepteert geen wachtwoorden.",
+      "authNoHelper": "Inloggen via SSH is mislukt. Deze SSH-server accepteert alleen sleutels en de bevoorrechte helper is niet beschikbaar voor deze sessie. Log opnieuw in of vraag het aan een beheerder.",
+      "canceled": "Geannuleerd.",
+      "tooMany": "Er zijn te veel terminalvensters geopend. Sluit er een en probeer het opnieuw.",
+      "busy": "De server heeft te veel terminalverbindingen. Probeer het later opnieuw.",
+      "rateLimited": "Te veel mislukte wachtwoordpogingen. Probeer het over {{seconds}} seconden opnieuw.",
+      "failed": "Kan de SSH-sessie niet starten."
+    }
   },
   "sysinfo": {
     "disconnected": "Verbinding verbroken — opnieuw verbinden…",
@@ -288,7 +316,10 @@
       "notes": {
         "omvLogo": "Alleen gebruikt om naar openmediavault zelf te verwijzen. Dit betekent geen goedkeuring of verbondenheid.",
         "pretendard": "Gebruikt voor de letters in het Onmaru-logo, omgezet naar contouren.",
-        "go": "Standaardbibliotheek die in de backend is gecompileerd."
+        "go": "Standaardbibliotheek die in de backend is gecompileerd.",
+        "xterm": "Tekent het scherm van de webterminal.",
+        "goX": "SSH-client van de webterminal, in de backend gecompileerd.",
+        "websocket": "WebSocket-verbinding van de webterminal, in de backend gecompileerd."
       }
     },
     "common": {
@@ -347,6 +378,7 @@
       "intro": "Geldt voor gebruikers die in de scherminstellingen geen eigen thema of achtergrond hebben gekozen."
     },
     "server": {
+      "intro": "Instellingen waarmee Onmaru draait. De waarden in het eerste gedeelte kun je hier wijzigen; de rest stel je in het instellingenbestand van de server in.",
       "loadFailed": "De serverinstellingen kunnen niet worden geladen.",
       "saveFailed": "De instelling kon niet worden opgeslagen.",
       "invalid": "De waarde heeft geen geldige indeling.",
@@ -354,6 +386,9 @@
       "editableDesc": "Werkt meteen en gaat voor op de waarde uit het instellingenbestand.",
       "workbenchDesc": "Adres waarmee de browser de webinterface van OMV opent. Laat leeg om de app OMV Workbench te verbergen.",
       "smartDesc": "SMART-informatie wordt eenmaal per dag na dit tijdstip (servertijd) opnieuw gelezen.",
+      "terminalDesc": "Laat accounts die via SSH kunnen inloggen een shell openen vanuit het dashboard. Wie mag inloggen, bepalen nog steeds de SSH-instellingen van OMV.",
+      "on": "Aan",
+      "off": "Uit",
       "fromServer": "Serverwaarde in gebruik: {{base}}",
       "overridden": "Hier gewijzigd. Serverwaarde: {{base}}",
       "save": "Opslaan",
@@ -380,7 +415,10 @@
         "cookiePath": "Cookiepad",
         "stateDir": "Statusmap",
         "workbenchUrl": "Adres van OMV Workbench",
-        "smartRefreshAt": "Tijdstip van SMART-controle"
+        "smartRefreshAt": "Tijdstip van SMART-controle",
+        "terminal": "Webterminal",
+        "sshAddr": "Adres van de SSH-server",
+        "sshHostKeys": "SSH-hostsleutels"
       }
     },
     "profile": {

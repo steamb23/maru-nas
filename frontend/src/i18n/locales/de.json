@@ -76,7 +76,35 @@
     "smart": "Datenträger\u00adzustand",
     "services": "Dienste",
     "workbench": "OMV-Workbench",
-    "settings": "Einstellungen"
+    "settings": "Einstellungen",
+    "terminal": "Terminal"
+  },
+  "terminal": {
+    "connecting": "Verbindung zum SSH-Server als {{user}} wird hergestellt…",
+    "passwordPrompt": "Passwort für {{user}}: ",
+    "retry": "Zugriff verweigert. Bitte versuchen Sie es erneut.",
+    "reconnect": "Erneut verbinden",
+    "closed": {
+      "exit": "Die Shell wurde beendet (Exitcode {{code}}).",
+      "sessionEnded": "Das Terminal wurde geschlossen, weil Sie sich abgemeldet haben.",
+      "disabled": "Ein Administrator hat das Webterminal ausgeschaltet.",
+      "connectionLost": "Die Verbindung zum SSH-Server wurde unterbrochen.",
+      "openFailed": "Das Terminal konnte nicht geöffnet werden. Möglicherweise wurde das Webterminal ausgeschaltet.",
+      "unavailable": "Die Verbindung zum SSH-Server ist nicht möglich. Prüfen Sie, ob SSH in OMV eingeschaltet ist.",
+      "hostKey": "Der Hostschlüssel des SSH-Servers stimmte nicht überein, daher wurde die Verbindung abgebrochen.",
+      "authFailed": "SSH-Anmeldung fehlgeschlagen.",
+      "authGroups": "SSH-Anmeldung fehlgeschlagen. Für SSH muss Ihr Konto in einer dieser Gruppen sein: {{groups}}. Ein Administrator kann Ihr Konto in den Benutzereinstellungen von OMV zu einer Gruppe hinzufügen.",
+      "authStrictModes": "SSH-Anmeldung fehlgeschlagen. Andere Benutzer können in Ihren Home-Ordner schreiben, daher ignoriert SSH die darin enthaltenen Schlüssel. Entfernen Sie die Schreibberechtigung für Gruppe und Andere von Ihrem Home-Ordner (chmod go-w).",
+      "authNoHome": "SSH-Anmeldung fehlgeschlagen. Ihr Konto hat keinen Home-Ordner, daher konnte kein temporärer Schlüssel verwendet werden, und dieser SSH-Server akzeptiert keine Passwörter.",
+      "authKeyRejected": "SSH-Anmeldung fehlgeschlagen. Der SSH-Server hat den temporären Schlüssel nicht akzeptiert. Prüfen Sie die SSH-Einstellungen von OMV (zum Beispiel die zusätzlichen Optionen) auf Regeln, die dieses Konto blockieren.",
+      "authKeyFailed": "SSH-Anmeldung fehlgeschlagen. Der privilegierte Helfer konnte keinen temporären Schlüssel hinzufügen, und dieser SSH-Server akzeptiert keine Passwörter.",
+      "authNoHelper": "SSH-Anmeldung fehlgeschlagen. Dieser SSH-Server akzeptiert nur Schlüssel, und der privilegierte Helfer ist für diese Sitzung nicht verfügbar. Melden Sie sich erneut an oder wenden Sie sich an einen Administrator.",
+      "canceled": "Abgebrochen.",
+      "tooMany": "Es sind zu viele Terminalfenster geöffnet. Schließen Sie eines und versuchen Sie es erneut.",
+      "busy": "Der Server hat zu viele Terminalverbindungen. Versuchen Sie es später erneut.",
+      "rateLimited": "Zu viele fehlgeschlagene Passwortversuche. Versuchen Sie es in {{seconds}} Sekunden erneut.",
+      "failed": "Die SSH-Sitzung konnte nicht gestartet werden."
+    }
   },
   "sysinfo": {
     "disconnected": "Verbindung getrennt – wird neu verbunden…",
@@ -288,7 +316,10 @@
       "notes": {
         "omvLogo": "Wird nur verwendet, um auf openmediavault selbst zu verweisen. Dies bedeutet keine Billigung oder Partnerschaft.",
         "pretendard": "Für die Schrift im Onmaru-Logo verwendet und in Konturen umgewandelt.",
-        "go": "Standardbibliothek, die in das Backend kompiliert ist."
+        "go": "Standardbibliothek, die in das Backend kompiliert ist.",
+        "xterm": "Zeichnet den Bildschirm des Webterminals.",
+        "goX": "SSH-Client des Webterminals, in das Backend kompiliert.",
+        "websocket": "WebSocket-Verbindung des Webterminals, in das Backend kompiliert."
       }
     },
     "common": {
@@ -347,6 +378,7 @@
       "intro": "Gilt für Benutzer, die in den Darstellungseinstellungen kein eigenes Design und keinen eigenen Hintergrund gewählt haben."
     },
     "server": {
+      "intro": "Einstellungen, mit denen Onmaru läuft. Die Werte im ersten Abschnitt können hier geändert werden; die übrigen werden in der Einstellungsdatei des Servers festgelegt.",
       "loadFailed": "Die Servereinstellungen konnten nicht geladen werden.",
       "saveFailed": "Die Einstellung konnte nicht gespeichert werden.",
       "invalid": "Der Wert hat kein gültiges Format.",
@@ -354,6 +386,9 @@
       "editableDesc": "Wirkt sofort und hat Vorrang vor dem Wert aus der Einstellungsdatei.",
       "workbenchDesc": "Adresse, unter der der Browser die OMV-Weboberfläche öffnet. Leer lassen, um die App OMV-Workbench auszublenden.",
       "smartDesc": "Die SMART-Informationen werden einmal täglich nach dieser Uhrzeit (Serverzeit) neu gelesen.",
+      "terminalDesc": "Ermöglicht Konten, die sich per SSH anmelden können, im Dashboard eine Shell zu öffnen. Wer sich anmelden darf, bestimmen weiterhin die SSH-Einstellungen von OMV.",
+      "on": "Ein",
+      "off": "Aus",
       "fromServer": "Serverwert wird verwendet: {{base}}",
       "overridden": "Hier geändert. Serverwert: {{base}}",
       "save": "Speichern",
@@ -380,7 +415,10 @@
         "cookiePath": "Cookie-Pfad",
         "stateDir": "Statusverzeichnis",
         "workbenchUrl": "OMV-Workbench-Adresse",
-        "smartRefreshAt": "Uhrzeit der SMART-Prüfung"
+        "smartRefreshAt": "Uhrzeit der SMART-Prüfung",
+        "terminal": "Webterminal",
+        "sshAddr": "SSH-Serveradresse",
+        "sshHostKeys": "SSH-Hostschlüssel"
       }
     },
     "profile": {

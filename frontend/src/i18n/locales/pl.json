@@ -76,7 +76,35 @@
     "smart": "Stan dysków",
     "services": "Usługi",
     "workbench": "OMV Workbench",
-    "settings": "Ustawienia"
+    "settings": "Ustawienia",
+    "terminal": "Terminal"
+  },
+  "terminal": {
+    "connecting": "Łączenie z serwerem SSH jako {{user}}…",
+    "passwordPrompt": "Hasło użytkownika {{user}}: ",
+    "retry": "Odmowa dostępu, spróbuj ponownie.",
+    "reconnect": "Połącz ponownie",
+    "closed": {
+      "exit": "Powłoka zakończyła działanie (kod wyjścia {{code}}).",
+      "sessionEnded": "Terminal został zamknięty, ponieważ nastąpiło wylogowanie.",
+      "disabled": "Administrator wyłączył terminal webowy.",
+      "connectionLost": "Utracono połączenie z serwerem SSH.",
+      "openFailed": "Nie udało się otworzyć terminala. Terminal webowy mógł zostać wyłączony.",
+      "unavailable": "Nie udało się połączyć z serwerem SSH. Sprawdź, czy SSH jest włączony w OMV.",
+      "hostKey": "Klucz hosta serwera SSH nie zgadzał się, więc połączenie zostało przerwane.",
+      "authFailed": "Logowanie przez SSH nie powiodło się.",
+      "authGroups": "Logowanie przez SSH nie powiodło się. Aby korzystać z SSH, konto musi należeć do jednej z tych grup: {{groups}}. Administrator może dodać je do grupy w ustawieniach użytkowników OMV.",
+      "authStrictModes": "Logowanie przez SSH nie powiodło się. Inni użytkownicy mogą zapisywać w Twoim katalogu domowym, więc SSH ignoruje znajdujące się w nim klucze. Odbierz grupie i innym użytkownikom uprawnienie do zapisu w katalogu domowym (chmod go-w).",
+      "authNoHome": "Logowanie przez SSH nie powiodło się. Twoje konto nie ma katalogu domowego, więc nie można było użyć klucza tymczasowego, a ten serwer SSH nie przyjmuje haseł.",
+      "authKeyRejected": "Logowanie przez SSH nie powiodło się. Serwer SSH nie przyjął klucza tymczasowego. Sprawdź w ustawieniach SSH w OMV (na przykład w opcjach dodatkowych), czy nie ma reguł blokujących to konto.",
+      "authKeyFailed": "Logowanie przez SSH nie powiodło się. Uprzywilejowany pomocnik nie mógł dodać klucza tymczasowego, a ten serwer SSH nie przyjmuje haseł.",
+      "authNoHelper": "Logowanie przez SSH nie powiodło się. Ten serwer SSH przyjmuje tylko klucze, a uprzywilejowany pomocnik jest niedostępny w tej sesji. Zaloguj się ponownie lub zwróć się do administratora.",
+      "canceled": "Anulowano.",
+      "tooMany": "Otwartych jest zbyt wiele okien terminala. Zamknij jedno i spróbuj ponownie.",
+      "busy": "Serwer ma zbyt wiele połączeń terminala. Spróbuj ponownie później.",
+      "rateLimited": "Zbyt wiele nieudanych prób podania hasła. Spróbuj ponownie za {{seconds}} s.",
+      "failed": "Nie udało się uruchomić sesji SSH."
+    }
   },
   "sysinfo": {
     "disconnected": "Brak połączenia — ponowne łączenie…",
@@ -300,7 +328,10 @@
       "notes": {
         "omvLogo": "Używane wyłącznie do wskazania samego openmediavault. Nie oznacza poparcia ani powiązania.",
         "pretendard": "Użyty w napisie logo Onmaru, zamienionym na kontury.",
-        "go": "Biblioteka standardowa skompilowana w backendzie."
+        "go": "Biblioteka standardowa skompilowana w backendzie.",
+        "xterm": "Rysuje ekran terminala webowego.",
+        "goX": "Klient SSH terminala webowego, skompilowany w backendzie.",
+        "websocket": "Połączenie WebSocket terminala webowego, skompilowane w backendzie."
       }
     },
     "common": {
@@ -359,6 +390,7 @@
       "intro": "Dotyczy użytkowników, którzy nie wybrali własnego motywu ani tapety w ustawieniach ekranu."
     },
     "server": {
+      "intro": "Ustawienia, z którymi działa Onmaru. Wartości w pierwszej sekcji można zmienić tutaj, a pozostałe ustawia się w pliku konfiguracyjnym serwera.",
       "loadFailed": "Nie udało się wczytać ustawień serwera.",
       "saveFailed": "Nie udało się zapisać ustawienia.",
       "invalid": "Wartość ma nieprawidłowy format.",
@@ -366,6 +398,9 @@
       "editableDesc": "Działa od razu i ma pierwszeństwo przed wartością z pliku konfiguracyjnego.",
       "workbenchDesc": "Adres, pod którym przeglądarka otwiera interfejs webowy OMV. Pozostaw puste, aby ukryć aplikację OMV Workbench.",
       "smartDesc": "Informacje SMART są odczytywane ponownie raz dziennie po tej godzinie (czas serwera).",
+      "terminalDesc": "Pozwala kontom, które mogą logować się przez SSH, otwierać powłokę z poziomu panelu. To, kto może się logować, nadal określają ustawienia SSH w OMV.",
+      "on": "Włączone",
+      "off": "Wyłączone",
       "fromServer": "Używana jest wartość serwera: {{base}}",
       "overridden": "Zmieniono tutaj. Wartość serwera: {{base}}",
       "save": "Zapisz",
@@ -392,7 +427,10 @@
         "cookiePath": "Ścieżka pliku cookie",
         "stateDir": "Katalog stanu",
         "workbenchUrl": "Adres OMV Workbench",
-        "smartRefreshAt": "Godzina sprawdzania SMART"
+        "smartRefreshAt": "Godzina sprawdzania SMART",
+        "terminal": "Terminal webowy",
+        "sshAddr": "Adres serwera SSH",
+        "sshHostKeys": "Klucze hosta SSH"
       }
     },
     "profile": {

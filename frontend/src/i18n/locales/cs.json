@@ -76,7 +76,35 @@
     "smart": "Stav disků",
     "services": "Služby",
     "workbench": "OMV Workbench",
-    "settings": "Nastavení"
+    "settings": "Nastavení",
+    "terminal": "Terminál"
+  },
+  "terminal": {
+    "connecting": "Připojování k serveru SSH jako {{user}}…",
+    "passwordPrompt": "Heslo uživatele {{user}}: ",
+    "retry": "Přístup odepřen, zkuste to znovu.",
+    "reconnect": "Připojit znovu",
+    "closed": {
+      "exit": "Shell skončil (návratový kód {{code}}).",
+      "sessionEnded": "Terminál byl zavřen, protože jste se odhlásili.",
+      "disabled": "Správce vypnul webový terminál.",
+      "connectionLost": "Spojení se serverem SSH bylo ztraceno.",
+      "openFailed": "Terminál se nepodařilo otevřít. Webový terminál mohl být vypnut.",
+      "unavailable": "K serveru SSH se nepodařilo připojit. Zkontrolujte, zda je SSH v OMV zapnuto.",
+      "hostKey": "Klíč hostitele serveru SSH se neshodoval, proto bylo připojení zastaveno.",
+      "authFailed": "Přihlášení přes SSH se nezdařilo.",
+      "authGroups": "Přihlášení přes SSH se nezdařilo. Pro použití SSH musí být váš účet v jedné z těchto skupin: {{groups}}. Správce může váš účet přidat do skupiny v nastavení uživatelů v OMV.",
+      "authStrictModes": "Přihlášení přes SSH se nezdařilo. Do vaší domovské složky mohou zapisovat ostatní uživatelé, proto SSH ignoruje klíče v ní. Odeberte skupině a ostatním oprávnění k zápisu do domovské složky (chmod go-w).",
+      "authNoHome": "Přihlášení přes SSH se nezdařilo. Váš účet nemá domovskou složku, proto nebylo možné použít dočasný klíč, a tento server SSH nepřijímá hesla.",
+      "authKeyRejected": "Přihlášení přes SSH se nezdařilo. Server SSH dočasný klíč nepřijal. V nastavení SSH v OMV (například v dalších možnostech) zkontrolujte, zda nejsou pravidla, která tento účet blokují.",
+      "authKeyFailed": "Přihlášení přes SSH se nezdařilo. Privilegovaný pomocník nemohl přidat dočasný klíč a tento server SSH nepřijímá hesla.",
+      "authNoHelper": "Přihlášení přes SSH se nezdařilo. Tento server SSH přijímá jen klíče a privilegovaný pomocník není pro tuto relaci dostupný. Přihlaste se znovu nebo se obraťte na správce.",
+      "canceled": "Zrušeno.",
+      "tooMany": "Je otevřeno příliš mnoho oken terminálu. Zavřete jedno a zkuste to znovu.",
+      "busy": "Server má příliš mnoho připojení terminálu. Zkuste to později.",
+      "rateLimited": "Příliš mnoho nesprávných pokusů o zadání hesla. Zkuste to znovu za {{seconds}} s.",
+      "failed": "Relaci SSH se nepodařilo spustit."
+    }
   },
   "sysinfo": {
     "disconnected": "Odpojeno — obnovování připojení…",
@@ -300,7 +328,10 @@
       "notes": {
         "omvLogo": "Používá se jen k označení samotného openmediavault. Neznamená to podporu ani spojení.",
         "pretendard": "Použito pro písmo v logu Onmaru, převedené na obrysy.",
-        "go": "Standardní knihovna zkompilovaná do backendu."
+        "go": "Standardní knihovna zkompilovaná do backendu.",
+        "xterm": "Vykresluje obrazovku webového terminálu.",
+        "goX": "Klient SSH webového terminálu, zkompilovaný do backendu.",
+        "websocket": "Připojení WebSocket webového terminálu, zkompilované do backendu."
       }
     },
     "common": {
@@ -359,6 +390,7 @@
       "intro": "Platí pro uživatele, kteří si v nastavení obrazovky nevybrali vlastní motiv ani pozadí."
     },
     "server": {
+      "intro": "Nastavení, se kterým Onmaru běží. Hodnoty v první části lze změnit zde, ostatní se nastavují v konfiguračním souboru serveru.",
       "loadFailed": "Nastavení serveru se nepodařilo načíst.",
       "saveFailed": "Nastavení se nepodařilo uložit.",
       "invalid": "Hodnota nemá platný formát.",
@@ -366,6 +398,9 @@
       "editableDesc": "Platí okamžitě a má přednost před hodnotou z konfiguračního souboru.",
       "workbenchDesc": "Adresa, na které prohlížeč otevírá webové rozhraní OMV. Ponechte prázdné, chcete-li aplikaci OMV Workbench skrýt.",
       "smartDesc": "Informace SMART se znovu načítají jednou denně po tomto čase (čas serveru).",
+      "terminalDesc": "Umožňuje účtům, které se mohou přihlásit přes SSH, otevřít z nástěnky shell. Kdo se může přihlásit, nadále určuje nastavení SSH v OMV.",
+      "on": "Zapnuto",
+      "off": "Vypnuto",
       "fromServer": "Používá se hodnota serveru: {{base}}",
       "overridden": "Změněno zde. Hodnota serveru: {{base}}",
       "save": "Uložit",
@@ -392,7 +427,10 @@
         "cookiePath": "Cesta souboru cookie",
         "stateDir": "Adresář stavu",
         "workbenchUrl": "Adresa OMV Workbench",
-        "smartRefreshAt": "Čas kontroly SMART"
+        "smartRefreshAt": "Čas kontroly SMART",
+        "terminal": "Webový terminál",
+        "sshAddr": "Adresa serveru SSH",
+        "sshHostKeys": "Klíče hostitele SSH"
       }
     },
     "profile": {

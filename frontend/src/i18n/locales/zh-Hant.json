@@ -76,7 +76,35 @@
     "smart": "磁碟健康狀態",
     "services": "服務",
     "workbench": "OMV 工作台",
-    "settings": "設定"
+    "settings": "設定",
+    "terminal": "終端機"
+  },
+  "terminal": {
+    "connecting": "正在以 {{user}} 的身分連線到 SSH 伺服器…",
+    "passwordPrompt": "{{user}} 的密碼: ",
+    "retry": "權限遭拒，請再試一次。",
+    "reconnect": "重新連線",
+    "closed": {
+      "exit": "Shell 已結束（結束代碼 {{code}}）。",
+      "sessionEnded": "已登出，終端機已關閉。",
+      "disabled": "管理員已關閉網頁終端機。",
+      "connectionLost": "與 SSH 伺服器的連線已中斷。",
+      "openFailed": "無法開啟終端機。網頁終端機可能已被關閉。",
+      "unavailable": "無法連線到 SSH 伺服器。請確認 OMV 中已開啟 SSH。",
+      "hostKey": "SSH 伺服器的主機金鑰不相符，因此已中止連線。",
+      "authFailed": "SSH 登入失敗。",
+      "authGroups": "SSH 登入失敗。要使用 SSH，帳戶必須屬於下列群組之一：{{groups}}。管理員可以在 OMV 的使用者設定中將其加入群組。",
+      "authStrictModes": "SSH 登入失敗。其他使用者可以寫入您的家目錄，因此 SSH 會忽略其中的金鑰。請移除家目錄中群組與其他人的寫入權限（chmod go-w）。",
+      "authNoHome": "SSH 登入失敗。帳戶沒有家目錄，因此無法使用暫時金鑰，而且此 SSH 伺服器不接受密碼。",
+      "authKeyRejected": "SSH 登入失敗。SSH 伺服器未接受暫時金鑰。請檢查 OMV 的 SSH 設定（例如額外選項）中是否有封鎖此帳戶的規則。",
+      "authKeyFailed": "SSH 登入失敗。特權輔助程式無法新增暫時金鑰，而且此 SSH 伺服器不接受密碼。",
+      "authNoHelper": "SSH 登入失敗。此 SSH 伺服器只接受金鑰，而特權輔助程式在此工作階段中無法使用。請重新登入，或聯絡管理員。",
+      "canceled": "已取消。",
+      "tooMany": "開啟的終端機視窗過多。請關閉一個後再試一次。",
+      "busy": "伺服器的終端機連線過多。請稍後再試。",
+      "rateLimited": "密碼錯誤次數過多。請在 {{seconds}} 秒後再試一次。",
+      "failed": "無法啟動 SSH 工作階段。"
+    }
   },
   "sysinfo": {
     "disconnected": "連線中斷 — 正在重新連線…",
@@ -282,7 +310,10 @@
       "notes": {
         "omvLogo": "僅用於指稱 openmediavault 本身，並不代表背書或合作關係。",
         "pretendard": "用於 Onmaru 標誌中的文字，並已轉換為外框。",
-        "go": "後端執行檔中包含其標準函式庫。"
+        "go": "後端執行檔中包含其標準函式庫。",
+        "xterm": "繪製網頁終端機的畫面。",
+        "goX": "網頁終端機的 SSH 用戶端，已編譯進後端執行檔。",
+        "websocket": "網頁終端機的 WebSocket 連線，已編譯進後端執行檔。"
       }
     },
     "common": {
@@ -341,6 +372,7 @@
       "intro": "套用於未在畫面設定中選擇主題或桌布的使用者。"
     },
     "server": {
+      "intro": "Onmaru 執行時使用的設定。第一個區段的值可以在這裡變更，其餘的在伺服器的設定檔中設定。",
       "loadFailed": "無法載入伺服器設定。",
       "saveFailed": "無法儲存設定。",
       "invalid": "值的格式不正確。",
@@ -348,6 +380,9 @@
       "editableDesc": "儲存後立即生效，並優先於設定檔中的值。",
       "workbenchDesc": "瀏覽器開啟 OMV 網頁介面所用的位址。留空即可隱藏「OMV 工作台」應用程式。",
       "smartDesc": "每天過了這個時間（伺服器時間）後重新讀取一次 SMART 資訊。",
+      "terminalDesc": "允許可透過 SSH 登入的帳戶在儀表板中開啟 Shell。誰可以登入，仍由 OMV 的 SSH 設定決定。",
+      "on": "開啟",
+      "off": "關閉",
       "fromServer": "目前使用伺服器的值：{{base}}",
       "overridden": "目前使用在這裡變更的值。伺服器的值：{{base}}",
       "save": "儲存",
@@ -374,7 +409,10 @@
         "cookiePath": "Cookie 路徑",
         "stateDir": "狀態目錄",
         "workbenchUrl": "OMV 工作台位址",
-        "smartRefreshAt": "SMART 檢查時間"
+        "smartRefreshAt": "SMART 檢查時間",
+        "terminal": "網頁終端機",
+        "sshAddr": "SSH 伺服器位址",
+        "sshHostKeys": "SSH 主機金鑰"
       }
     },
     "profile": {

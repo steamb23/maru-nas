@@ -76,7 +76,35 @@
     "smart": "磁盘健康",
     "services": "服务",
     "workbench": "OMV 工作台",
-    "settings": "设置"
+    "settings": "设置",
+    "terminal": "终端"
+  },
+  "terminal": {
+    "connecting": "正在以 {{user}} 的身份连接 SSH 服务器…",
+    "passwordPrompt": "{{user}} 的密码: ",
+    "retry": "权限被拒绝，请重试。",
+    "reconnect": "重新连接",
+    "closed": {
+      "exit": "Shell 已结束（退出码 {{code}}）。",
+      "sessionEnded": "已退出登录，终端已关闭。",
+      "disabled": "管理员已关闭网页终端。",
+      "connectionLost": "与 SSH 服务器的连接已断开。",
+      "openFailed": "无法打开终端。网页终端可能已被关闭。",
+      "unavailable": "无法连接到 SSH 服务器。请检查 OMV 中是否已开启 SSH。",
+      "hostKey": "SSH 服务器的主机密钥不匹配，因此已中止连接。",
+      "authFailed": "SSH 登录失败。",
+      "authGroups": "SSH 登录失败。要使用 SSH，账户必须属于以下组之一：{{groups}}。管理员可以在 OMV 的用户设置中将其加入组。",
+      "authStrictModes": "SSH 登录失败。其他用户可以写入您的主文件夹，因此 SSH 会忽略其中的密钥。请移除主文件夹中组和其他用户的写入权限（chmod go-w）。",
+      "authNoHome": "SSH 登录失败。账户没有主文件夹，无法使用临时密钥，而且此 SSH 服务器不接受密码。",
+      "authKeyRejected": "SSH 登录失败。SSH 服务器未接受临时密钥。请检查 OMV 的 SSH 设置（例如额外选项）中是否有阻止此账户的规则。",
+      "authKeyFailed": "SSH 登录失败。特权助手无法添加临时密钥，而且此 SSH 服务器不接受密码。",
+      "authNoHelper": "SSH 登录失败。此 SSH 服务器只接受密钥，而特权助手在此会话中不可用。请重新登录，或联系管理员。",
+      "canceled": "已取消。",
+      "tooMany": "打开的终端窗口过多。请关闭一个后重试。",
+      "busy": "服务器的终端连接过多。请稍后重试。",
+      "rateLimited": "密码错误次数过多。请在 {{seconds}} 秒后重试。",
+      "failed": "无法启动 SSH 会话。"
+    }
   },
   "sysinfo": {
     "disconnected": "连接已断开 — 正在重新连接…",
@@ -282,7 +310,10 @@
       "notes": {
         "omvLogo": "仅用于指代 openmediavault 本身，并不表示认可或合作关系。",
         "pretendard": "用于 Onmaru 标志中的文字，已转换为轮廓。",
-        "go": "后端可执行文件中包含其标准库。"
+        "go": "后端可执行文件中包含其标准库。",
+        "xterm": "绘制网页终端的屏幕。",
+        "goX": "网页终端的 SSH 客户端，已编译进后端可执行文件。",
+        "websocket": "网页终端的 WebSocket 连接，已编译进后端可执行文件。"
       }
     },
     "common": {
@@ -341,6 +372,7 @@
       "intro": "应用于未在显示设置中选择主题或壁纸的用户。"
     },
     "server": {
+      "intro": "Onmaru 运行所用的设置。第一部分的值可以在此更改，其余的在服务器的配置文件中设置。",
       "loadFailed": "无法加载服务器设置。",
       "saveFailed": "无法保存设置。",
       "invalid": "值的格式不正确。",
@@ -348,6 +380,9 @@
       "editableDesc": "保存后立即生效，并优先于配置文件中的值。",
       "workbenchDesc": "浏览器打开 OMV 网页界面所用的地址。留空则隐藏“OMV 工作台”应用。",
       "smartDesc": "每天过了这个时间（服务器时间）后重新读取一次 SMART 信息。",
+      "terminalDesc": "允许可通过 SSH 登录的账户在仪表板中打开 Shell。谁可以登录，仍由 OMV 的 SSH 设置决定。",
+      "on": "开启",
+      "off": "关闭",
       "fromServer": "正在使用服务器的值：{{base}}",
       "overridden": "正在使用在此更改的值。服务器的值：{{base}}",
       "save": "保存",
@@ -374,7 +409,10 @@
         "cookiePath": "Cookie 路径",
         "stateDir": "状态目录",
         "workbenchUrl": "OMV 工作台地址",
-        "smartRefreshAt": "SMART 检查时间"
+        "smartRefreshAt": "SMART 检查时间",
+        "terminal": "网页终端",
+        "sshAddr": "SSH 服务器地址",
+        "sshHostKeys": "SSH 主机密钥"
       }
     },
     "profile": {

@@ -76,7 +76,35 @@
     "smart": "Estado dos discos",
     "services": "Serviços",
     "workbench": "OMV Workbench",
-    "settings": "Definições"
+    "settings": "Definições",
+    "terminal": "Terminal"
+  },
+  "terminal": {
+    "connecting": "A ligar ao servidor SSH como {{user}}…",
+    "passwordPrompt": "Palavra-passe de {{user}}: ",
+    "retry": "Permissão negada, tente novamente.",
+    "reconnect": "Voltar a ligar",
+    "closed": {
+      "exit": "A shell terminou (código de saída {{code}}).",
+      "sessionEnded": "O terminal foi fechado porque a sua sessão foi terminada.",
+      "disabled": "Um administrador desativou o terminal web.",
+      "connectionLost": "A ligação ao servidor SSH foi perdida.",
+      "openFailed": "Não foi possível abrir o terminal. O terminal web pode ter sido desativado.",
+      "unavailable": "Não foi possível ligar ao servidor SSH. Verifique se o SSH está ativado no OMV.",
+      "hostKey": "A chave de anfitrião do servidor SSH não coincidia, pelo que a ligação foi interrompida.",
+      "authFailed": "Falha no início de sessão SSH.",
+      "authGroups": "Falha no início de sessão SSH. Para utilizar o SSH, a sua conta tem de pertencer a um destes grupos: {{groups}}. Um administrador pode adicionar a sua conta a um grupo nas definições de utilizadores do OMV.",
+      "authStrictModes": "Falha no início de sessão SSH. Outros utilizadores podem escrever na sua pasta pessoal, pelo que o SSH ignora as chaves que nela se encontram. Remova a permissão de escrita do grupo e de outros na sua pasta pessoal (chmod go-w).",
+      "authNoHome": "Falha no início de sessão SSH. A sua conta não tem pasta pessoal, pelo que não foi possível utilizar uma chave temporária, e este servidor SSH não aceita palavras-passe.",
+      "authKeyRejected": "Falha no início de sessão SSH. O servidor SSH não aceitou a chave temporária. Verifique nas definições de SSH do OMV (por exemplo, as opções adicionais) se existem regras que bloqueiem esta conta.",
+      "authKeyFailed": "Falha no início de sessão SSH. O assistente privilegiado não conseguiu adicionar uma chave temporária, e este servidor SSH não aceita palavras-passe.",
+      "authNoHelper": "Falha no início de sessão SSH. Este servidor SSH só aceita chaves, e o assistente privilegiado não está disponível para esta sessão. Inicie sessão novamente ou contacte um administrador.",
+      "canceled": "Cancelado.",
+      "tooMany": "Há demasiadas janelas de terminal abertas. Feche uma e tente novamente.",
+      "busy": "O servidor tem demasiadas ligações de terminal. Tente novamente mais tarde.",
+      "rateLimited": "Demasiadas tentativas falhadas de palavra-passe. Tente novamente dentro de {{seconds}} segundos.",
+      "failed": "Não foi possível iniciar a sessão SSH."
+    }
   },
   "sysinfo": {
     "disconnected": "Sem ligação — a restabelecer…",
@@ -294,7 +322,10 @@
       "notes": {
         "omvLogo": "Utilizado apenas para designar o próprio openmediavault. Não implica aprovação nem afiliação.",
         "pretendard": "Utilizada nas letras do logótipo do Onmaru, convertidas em contornos.",
-        "go": "Biblioteca padrão compilada no backend."
+        "go": "Biblioteca padrão compilada no backend.",
+        "xterm": "Desenha o ecrã do terminal web.",
+        "goX": "Cliente SSH do terminal web, compilado no backend.",
+        "websocket": "Ligação WebSocket do terminal web, compilada no backend."
       }
     },
     "common": {
@@ -353,6 +384,7 @@
       "intro": "Aplica-se aos utilizadores que não escolheram o seu próprio tema ou imagem de fundo nas definições de ecrã."
     },
     "server": {
+      "intro": "Definições com que o Onmaru é executado. Os valores da primeira secção podem ser alterados aqui; os restantes são definidos no ficheiro de configuração do servidor.",
       "loadFailed": "Não foi possível carregar as definições do servidor.",
       "saveFailed": "Não foi possível guardar a definição.",
       "invalid": "O valor não tem um formato válido.",
@@ -360,6 +392,9 @@
       "editableDesc": "Têm efeito imediato e prevalecem sobre o valor do ficheiro de configuração.",
       "workbenchDesc": "Endereço que o navegador utiliza para abrir a interface web do OMV. Deixe vazio para ocultar a aplicação OMV Workbench.",
       "smartDesc": "As informações SMART são lidas novamente uma vez por dia, depois desta hora (hora do servidor).",
+      "terminalDesc": "Permite que as contas que podem iniciar sessão por SSH abram uma shell a partir do painel. Quem pode iniciar sessão continua a ser decidido pelas definições de SSH do OMV.",
+      "on": "Ativado",
+      "off": "Desativado",
       "fromServer": "A utilizar o valor do servidor: {{base}}",
       "overridden": "Alterado aqui. Valor do servidor: {{base}}",
       "save": "Guardar",
@@ -386,7 +421,10 @@
         "cookiePath": "Caminho do cookie",
         "stateDir": "Diretório de estado",
         "workbenchUrl": "Endereço do OMV Workbench",
-        "smartRefreshAt": "Hora da verificação SMART"
+        "smartRefreshAt": "Hora da verificação SMART",
+        "terminal": "Terminal web",
+        "sshAddr": "Endereço do servidor SSH",
+        "sshHostKeys": "Chaves de anfitrião SSH"
       }
     },
     "profile": {
