@@ -81,11 +81,33 @@ export const NOTICES: readonly Notice[] = [
     packages: ['@babel/runtime'],
   },
   {
+    name: 'xterm.js',
+    license: 'MIT',
+    copyright: 'The xterm.js authors, SourceLair Private Company, Christopher Jeffrey',
+    url: 'https://github.com/xtermjs/xterm.js',
+    packages: ['@xterm/xterm', '@xterm/addon-fit'],
+    noteKey: 'settings.about.notes.xterm',
+  },
+  {
     name: 'Go',
     license: 'BSD-3-Clause',
     copyright: 'The Go Authors',
     url: 'https://go.dev/',
     noteKey: 'settings.about.notes.go',
+  },
+  {
+    name: 'Go x/crypto',
+    license: 'BSD-3-Clause',
+    copyright: 'The Go Authors',
+    url: 'https://cs.opensource.google/go/x/crypto',
+    noteKey: 'settings.about.notes.goX',
+  },
+  {
+    name: 'websocket',
+    license: 'ISC',
+    copyright: 'Coder',
+    url: 'https://github.com/coder/websocket',
+    noteKey: 'settings.about.notes.websocket',
   },
 ]
 

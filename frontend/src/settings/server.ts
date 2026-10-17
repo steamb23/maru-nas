@@ -31,6 +31,7 @@ export type OverrideKey = keyof ServerOverrides
 export const OVERRIDE_FLAGS: Record<OverrideKey, string> = {
   workbenchUrl: 'workbench-url',
   smartRefreshAt: 'smart-refresh-at',
+  terminal: 'terminal',
 }
 
 // overridesWith는 지금 덮어쓴 값에서 key 하나만 value로 바꾼(null이면 덮어쓰기를 지운) 요청 본문이다.

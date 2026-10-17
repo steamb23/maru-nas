@@ -361,7 +361,10 @@
       "notes": {
         "omvLogo": "Used only to refer to openmediavault itself. This does not imply endorsement.",
         "pretendard": "Used for the lettering in the Onmaru logo, converted to outlines.",
-        "go": "Standard library compiled into the backend."
+        "go": "Standard library compiled into the backend.",
+        "xterm": "Draws the screen of the web terminal.",
+        "goX": "SSH client of the web terminal, compiled into the backend.",
+        "websocket": "WebSocket connection of the web terminal, compiled into the backend."
       }
     },
     "common": {

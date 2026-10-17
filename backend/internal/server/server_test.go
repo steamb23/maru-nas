@@ -22,6 +22,8 @@ import (
 	"onmaru/backend/internal/omv"
 	"onmaru/backend/internal/omv/omvfake"
 	"onmaru/backend/internal/prefs"
+	"onmaru/backend/internal/terminal"
+	"onmaru/backend/internal/terminal/sshfake"
 )
 
 type fakeSource struct {
@@ -63,6 +65,9 @@ type env struct {
 	logs  *bytes.Buffer
 	// helper는 envOptions.helper일 때 띄운 가짜 권한 도우미다.
 	helper *helperfake.Server
+	// sshd, terminal은 envOptions.terminal일 때 띄운 가짜 sshd와 웹 터미널 접속이다.
+	sshd     *sshfake.Server
+	terminal *terminal.Manager
 }
 
 type envOptions struct {
@@ -90,6 +95,11 @@ type envOptions struct {
 	// helper면 가짜 권한 도우미를 띄워 연결한다. helperSocket만 주면 그 경로(도우미 없음)에 연결한다.
 	helper       bool
 	helperSocket string
+	// terminal이면 가짜 sshd(설정 sshd)를 띄워 웹 터미널을 연결하고 -terminal을 켠다.
+	// terminalOff면 연결은 하되 -terminal을 끈 채로 둔다.
+	terminal    bool
+	terminalOff bool
+	sshd        sshfake.Options
 }
 
 func newEnv(t *testing.T, o envOptions) *env {
@@ -145,6 +155,27 @@ func newEnv(t *testing.T, o envOptions) *env {
 		helper = helperclient.New(o.helperSocket)
 	}
 
+	var sshd *sshfake.Server
+	var manager *terminal.Manager
+	if o.terminal {
+		dir := t.TempDir()
+		opts := o.sshd
+		opts.Users = sshfake.DefaultUsers()
+		if fakeHelper != nil {
+			opts.Home = fakeHelper.Home
+		}
+		var err error
+		if sshd, err = sshfake.Start("127.0.0.1:0", opts); err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(sshd.Close)
+		if _, err := sshd.WriteHostKey(dir); err != nil {
+			t.Fatal(err)
+		}
+		manager = terminal.NewManager(&terminal.Dialer{Addr: sshd.Addr, HostKeys: filepath.Join(dir, "*.pub"),
+			SSHDConfig: filepath.Join(dir, "sshd_config")})
+	}
+
 	h := New(Config{
 		System:            o.system,
 		Static:            static,
@@ -161,11 +192,14 @@ func newEnv(t *testing.T, o envOptions) *env {
 		SetSmartRefreshAt: o.setSmart,
 		Runtime:           o.runtime,
 		Helper:            helper,
+		Terminal:          manager,
+		TerminalEnabled:   o.terminal && !o.terminalOff,
 		CheckInterval:     o.interval,
 		FailDelay:         o.failDelay,
 		Now:               clk.Now,
 	})
-	return &env{t: t, h: h, fake: fake, omvTS: ts, clk: clk, store: store, logs: logs, helper: fakeHelper}
+	return &env{t: t, h: h, fake: fake, omvTS: ts, clk: clk, store: store, logs: logs, helper: fakeHelper,
+		sshd: sshd, terminal: manager}
 }
 
 // browser는 쿠키를 보관하는 간이 브라우저다.

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { CapabilitiesResponse } from '../api/types.gen'
 import { appAccess, requiredPlugins, useCapabilitiesStore } from './capabilities'
 
-const caps = (addons: CapabilitiesResponse['addons']): CapabilitiesResponse => ({ addons, plugins: [], helper: false })
+const caps = (addons: CapabilitiesResponse['addons']): CapabilitiesResponse => ({ addons, plugins: [], helper: false, terminal: false })
 
 describe('appAccess', () => {
   it('아직 받지 못했으면 모두 그린다', () => {

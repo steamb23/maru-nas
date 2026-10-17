@@ -17,6 +17,7 @@ import (
 	"onmaru/backend/internal/buildinfo"
 	"onmaru/backend/internal/omv"
 	"onmaru/backend/internal/prefs"
+	"onmaru/backend/internal/terminal"
 )
 
 // SystemSource는 시스템 통계를 제공한다. *sysinfo.Reader가 구현한다.
@@ -87,6 +88,11 @@ type Config struct {
 	// Helper는 권한 도우미 클라이언트다(-helper-socket). nil이면 도우미 기능을 끈다.
 	// 설정하면 Sessions의 삭제 훅(OnRemove, OnRemovePending)을 이 핸들러가 쓴다.
 	Helper Helper
+	// Terminal은 웹 터미널의 SSH 접속이다. nil이면 웹 터미널을 쓸 수 없다(테스트 등).
+	// 설정하면 Sessions의 삭제 훅(OnRemove)을 이 핸들러가 쓴다.
+	Terminal *terminal.Manager
+	// TerminalEnabled는 -terminal이다. 설정의 서버 페이지에서 덮어쓴 값이 있으면 그 값이 우선한다.
+	TerminalEnabled bool
 	// CheckInterval마다 요청 처리 중에 OMV 세션이 살아 있는지 확인한다. 기본 60초.
 	// 예상 만료 시각이 지났으면 주기와 상관없이 확인한다.
 	CheckInterval time.Duration
@@ -105,6 +111,10 @@ type handler struct {
 	about api.AboutResponse
 	// over는 웹에서 덮어쓴 가동 설정이다(site.go).
 	over overrides
+	// terminalLimiter는 웹 터미널의 비밀번호 실패 제한이다. sshd·fail2ban에는 접속지가 루프백으로만
+	// 보여 원래 IP로 막을 수 없으므로 여기서 센다. 로그인 제한과 따로 둔다(입력을 기다리는 동안
+	// 동시 시도 칸을 차지하므로).
+	terminalLimiter *auth.Limiter
 }
 
 // New는 루트 핸들러를 반환한다. /api/ 밖의 요청은 cfg.Static이 처리한다.
@@ -142,11 +152,17 @@ func New(cfg Config) http.Handler {
 	if cfg.Images == nil {
 		cfg.Images = prefs.NewMemoryStore()
 	}
-	h := &handler{Config: cfg, actions: newInflight(), about: buildinfo.Read()}
+	h := &handler{Config: cfg, actions: newInflight(), about: buildinfo.Read(), terminalLimiter: auth.NewLimiter()}
 	h.loadOverrides()
-	if cfg.Helper != nil {
-		// 세션이 어떻게 끝나든(로그아웃, 만료, 밀려남, 2차 인증 포기) 도우미 티켓을 폐기한다.
-		cfg.Sessions.OnRemove = func(s auth.Session) { h.closeHelper(s.HelperTicket) }
+	if cfg.Helper != nil || cfg.Terminal != nil {
+		// 세션이 어떻게 끝나든(로그아웃, 만료, 밀려남, 2차 인증 포기) 도우미 티켓을 폐기하고
+		// 그 세션의 터미널을 닫는다.
+		cfg.Sessions.OnRemove = func(s auth.Session) {
+			h.closeHelper(s.HelperTicket)
+			if cfg.Terminal != nil {
+				cfg.Terminal.CloseSession(s.ID)
+			}
+		}
 		cfg.Sessions.OnRemovePending = func(p auth.Pending) { h.closeHelper(p.HelperTicket) }
 	}
 
@@ -171,6 +187,7 @@ func New(cfg Config) http.Handler {
 	mux.HandleFunc("GET /api/helper/identity", h.requireSession(h.helperIdentity))
 	mux.HandleFunc("POST /api/helper/elevation", h.requireAdmin(h.elevate))
 	mux.HandleFunc("DELETE /api/helper/elevation", h.requireSession(h.dropElevation))
+	mux.HandleFunc("GET /api/terminal", h.requireSession(h.terminal))
 	mux.HandleFunc("GET /api/addons/{id}", h.requireSession(h.addonData))
 	mux.HandleFunc("POST /api/addons/{id}/actions/{action}", h.requireSession(h.addonAction))
 	mux.HandleFunc("POST /api/rpc", h.requireSession(h.rpc))
@@ -211,11 +228,12 @@ func (h *handler) system(w http.ResponseWriter, _ *http.Request, _ auth.Session)
 }
 
 // capabilities는 플러그인 설치 상태와 세션 역할로 애드온마다 쓸 수 있는지 알려 준다.
-// OMV 웹 UI 주소(설정했으면)와 권한 도우미 설정 여부도 함께 알려 준다.
+// OMV 웹 UI 주소(설정했으면), 권한 도우미 설정 여부, 웹 터미널 허용 여부도 함께 알려 준다.
 func (h *handler) capabilities(w http.ResponseWriter, _ *http.Request, s auth.Session) {
 	resp := h.Addons.Capabilities(h.Plugins.Plugins(), s.Admin)
 	resp.WorkbenchURL = h.workbenchURL()
 	resp.Helper = h.Helper != nil
+	resp.Terminal = h.terminalEnabled()
 	writeJSON(w, http.StatusOK, resp)
 }
 

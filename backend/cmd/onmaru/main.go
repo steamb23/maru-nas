@@ -31,6 +31,7 @@ import (
 	"onmaru/backend/internal/omv"
 	"onmaru/backend/internal/prefs"
 	"onmaru/backend/internal/server"
+	"onmaru/backend/internal/terminal"
 	"onmaru/backend/internal/web"
 )
 
@@ -55,6 +56,12 @@ func main() {
 		"SMART 정보를 하루 한 번 다시 가져오는 기준 시각 HH:MM, 서버 로컬 시간 (환경 변수 ONMARU_SMART_REFRESH_AT)")
 	helperSocket := flag.String("helper-socket", os.Getenv("ONMARU_HELPER_SOCKET"),
 		"권한 도우미(onmaru-helper) 소켓의 절대 경로. 비우면 도우미 기능을 끈다 (환경 변수 ONMARU_HELPER_SOCKET)")
+	terminalEnabled := flag.Bool("terminal", envBool("ONMARU_TERMINAL"),
+		"웹 터미널(같은 호스트의 sshd에 SSH로 접속)을 허용한다. 설정 앱에서 덮어쓸 수 있다 (환경 변수 ONMARU_TERMINAL)")
+	sshAddr := flag.String("ssh-addr", cmp.Or(os.Getenv("ONMARU_SSH_ADDR"), terminal.AddrAuto),
+		"웹 터미널이 접속할 sshd 주소. auto는 /etc/ssh/sshd_config의 Port로 127.0.0.1에 접속한다. 루프백 IP:포트만 허용 (환경 변수 ONMARU_SSH_ADDR)")
+	sshHostKeys := flag.String("ssh-host-keys", cmp.Or(os.Getenv("ONMARU_SSH_HOST_KEYS"), terminal.DefaultHostKeys),
+		"웹 터미널이 받을 sshd 호스트 공개 키 파일의 glob 패턴 (환경 변수 ONMARU_SSH_HOST_KEYS)")
 	flag.Parse()
 
 	network, address, err := parseListen(*listen, *allowNonLoopback)
@@ -73,6 +80,9 @@ func main() {
 		log.Fatal(err)
 	}
 	if err := checkHelperSocket(*helperSocket); err != nil {
+		log.Fatal(err)
+	}
+	if err := terminal.CheckAddr(*sshAddr); err != nil {
 		log.Fatal(err)
 	}
 
@@ -119,6 +129,9 @@ func main() {
 		{flag: "workbench-url", env: "ONMARU_WORKBENCH_URL", value: *workbenchURL, emptyIsSet: true},
 		{flag: "smart-refresh-at", env: "ONMARU_SMART_REFRESH_AT", value: *smartAt},
 		{flag: "helper-socket", env: "ONMARU_HELPER_SOCKET", value: *helperSocket},
+		{flag: "terminal", env: "ONMARU_TERMINAL", value: strconv.FormatBool(*terminalEnabled)},
+		{flag: "ssh-addr", env: "ONMARU_SSH_ADDR", value: *sshAddr},
+		{flag: "ssh-host-keys", env: "ONMARU_SSH_HOST_KEYS", value: *sshHostKeys},
 	})
 
 	var helper server.Helper
@@ -152,6 +165,12 @@ func main() {
 			SetSmartRefreshAt: deps.Smart.SetRefreshAt,
 			Runtime:           runtime,
 			Helper:            helper,
+			Terminal: terminal.NewManager(&terminal.Dialer{
+				Addr:     *sshAddr,
+				HostKeys: *sshHostKeys,
+				Logf:     log.Printf,
+			}),
+			TerminalEnabled: *terminalEnabled,
 		}),
 		ReadHeaderTimeout: 10 * time.Second,
 	}

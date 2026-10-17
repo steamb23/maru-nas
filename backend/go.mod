@@ -4,7 +4,10 @@ go 1.27.1
 
 tool github.com/gzuidhof/tygo
 
-require golang.org/x/crypto v0.58.0
+require (
+	github.com/coder/websocket v1.8.15
+	golang.org/x/crypto v0.58.0
+)
 
 require (
 	github.com/fatih/structtag v1.2.0 // indirect

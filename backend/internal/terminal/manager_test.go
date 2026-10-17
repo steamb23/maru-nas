@@ -3,6 +3,7 @@ package terminal
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -36,8 +37,7 @@ func TestManagerSharesClient(t *testing.T) {
 	if err := w2.Resize(Size{Cols: 5000, Rows: 0}); err != nil {
 		t.Fatal(err)
 	}
-	w2.Write([]byte("size\r"))
-	readUntil(t, w2, "1000x1")
+	sizeEventually(t, w2, "1000x1")
 
 	// 셸이 끝나면 종료 코드를 준다. 남은 창이 있으면 연결은 그대로다.
 	w2.Write([]byte("exit 3\r"))
@@ -165,6 +165,20 @@ func TestManagerReconnectsAfterServerDrop(t *testing.T) {
 		t.Fatal(err)
 	}
 	w2.Close()
+}
+
+// sizeEventually는 셸의 size 출력이 want가 될 때까지 다시 묻는다. 가짜 sshd는 window-change 요청과
+// 입력을 다른 고루틴에서 처리하므로 바로 뒤의 입력이 먼저 처리될 수 있다.
+func sizeEventually(t *testing.T, w *Window, want string) {
+	t.Helper()
+	for range 100 {
+		w.Write([]byte("size\r"))
+		if strings.Contains(readUntil(t, w, "$ "), want) {
+			return
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	t.Fatalf("size never became %s", want)
 }
 
 func waitFor(t *testing.T, cond func() bool) {

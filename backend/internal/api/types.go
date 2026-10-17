@@ -205,6 +205,8 @@ type CapabilitiesResponse struct {
 	WorkbenchURL string `json:"workbenchUrl,omitempty"`
 	// Helper는 권한 도우미를 설정했는지다(-helper-socket). 이 세션이 쓸 수 있는지는 GET /api/helper로 안다.
 	Helper bool `json:"helper"`
+	// Terminal은 웹 터미널을 쓸 수 있는지다(-terminal, 설정에서 덮어쓴 값). 실제로 들어갈 수 있는지는 sshd가 정한다.
+	Terminal bool `json:"terminal"`
 }
 
 // AddonCapability는 애드온 하나를 이 사용자가 쓸 수 있는지다.
@@ -524,6 +526,8 @@ type ServerOverrides struct {
 	WorkbenchURL *string `json:"workbenchUrl,omitempty"`
 	// SmartRefreshAt은 -smart-refresh-at(HH:MM)을 덮어쓴다.
 	SmartRefreshAt *string `json:"smartRefreshAt,omitempty"`
+	// Terminal은 -terminal을 덮어쓴다. "true" 또는 "false"다.
+	Terminal *string `json:"terminal,omitempty"`
 }
 
 // AppearanceRequest는 PUT /api/preferences/appearance의 요청 본문이다. 화면 설정 전체를 바꾼다.
@@ -647,6 +651,8 @@ type ServerSettingsRequest struct {
 type ServerSettings struct {
 	WorkbenchURL   OverridableSetting `json:"workbenchUrl"`
 	SmartRefreshAt OverridableSetting `json:"smartRefreshAt"`
+	// Terminal은 웹 터미널 허용 여부("true" 또는 "false")다.
+	Terminal OverridableSetting `json:"terminal"`
 	// Runtime은 시작할 때 정해진 가동 설정 전체다(플래그 순서). 바꾸려면 /etc/default/onmaru를 고치고 다시 시작한다.
 	Runtime []RuntimeSetting `json:"runtime"`
 }
@@ -821,13 +827,15 @@ const (
 	ErrElevationNotAllowed = "elevation_not_allowed"
 	// ErrElevationRequired는 root 권한이 필요한 조작이라 먼저 상승해야 한다는 뜻이다.
 	ErrElevationRequired = "elevation_required"
+	// ErrTerminalDisabled는 관리자가 웹 터미널을 허용하지 않았다는 뜻이다.
+	ErrTerminalDisabled = "terminal_disabled"
 )
 
 // ErrorResponse는 2xx가 아닌 상태 코드와 함께 반환된다.
 type ErrorResponse struct {
 	Error string `json:"error"`
 	// Code는 화면에서 분기할 때 쓰는 오류 종류다. 없을 수 있다.
-	Code string `json:"code,omitempty" tstype:"'invalid_credentials' | 'rate_limited' | 'challenge_failed' | 'challenge_expired' | 'omv_unavailable' | 'unauthorized' | 'bad_request' | 'rpc_forbidden' | 'admin_required' | 'plugin_missing' | 'omv_error' | 'action_busy' | 'action_failed' | 'action_timeout' | 'config_dirty' | 'image_too_large' | 'unsupported_image' | 'profile_readonly' | 'helper_unavailable' | 'helper_reauth' | 'elevation_failed' | 'elevation_not_allowed' | 'elevation_required'"`
+	Code string `json:"code,omitempty" tstype:"'invalid_credentials' | 'rate_limited' | 'challenge_failed' | 'challenge_expired' | 'omv_unavailable' | 'unauthorized' | 'bad_request' | 'rpc_forbidden' | 'admin_required' | 'plugin_missing' | 'omv_error' | 'action_busy' | 'action_failed' | 'action_timeout' | 'config_dirty' | 'image_too_large' | 'unsupported_image' | 'profile_readonly' | 'helper_unavailable' | 'helper_reauth' | 'elevation_failed' | 'elevation_not_allowed' | 'elevation_required' | 'terminal_disabled'"`
 	// RetryAfterSeconds는 rate_limited일 때 다시 시도할 수 있기까지 남은 초다.
 	RetryAfterSeconds int `json:"retryAfterSeconds,omitempty"`
 }
@@ -880,4 +888,48 @@ type HelperIdentityResponse struct {
 // ElevationRequest는 POST /api/helper/elevation의 본문이다. 비밀번호는 도우미가 직접 확인한다.
 type ElevationRequest struct {
 	Password string `json:"password"`
+}
+
+// 웹 터미널(GET /api/terminal, WebSocket). 바이너리 프레임은 터미널 입출력 바이트이고, 텍스트 프레임은
+// 아래 JSON 제어 메시지다. 쿼리 cols·rows는 처음 창 크기다.
+
+// TerminalClientMessage는 브라우저가 보내는 제어 메시지다.
+//   - resize: 창 크기(Cols, Rows)가 바뀌었다
+//   - answer: 마지막 prompt의 답(Answers, 질문 수와 같다)
+//   - cancel: 마지막 prompt를 취소한다(접속을 그만둔다)
+type TerminalClientMessage struct {
+	Type    string   `json:"type" tstype:"'resize' | 'answer' | 'cancel'"`
+	Cols    int      `json:"cols,omitempty"`
+	Rows    int      `json:"rows,omitempty"`
+	Answers []string `json:"answers,omitempty"`
+}
+
+// TerminalServerMessage는 서버가 보내는 제어 메시지다.
+//   - status: 접속 상태(State). closed면 Reason과 ExitCode·힌트가 붙는다
+//   - prompt: sshd가 묻는 질문. 답은 answer로 보낸다
+type TerminalServerMessage struct {
+	Type  string `json:"type" tstype:"'status' | 'prompt'"`
+	State string `json:"state,omitempty" tstype:"'connecting' | 'connected' | 'closed'"`
+	// Reason은 닫힌 이유다. exit(셸이 끝남, ExitCode), 세션·설정 이유(session_ended, disabled,
+	// connection_lost), 접속 실패(ssh_unavailable, ssh_host_key, ssh_auth_failed, ssh_failed, canceled,
+	// too_many_windows, busy, rate_limited) 중 하나다.
+	Reason   string `json:"reason,omitempty" tstype:"'exit' | 'session_ended' | 'disabled' | 'connection_lost' | 'ssh_unavailable' | 'ssh_host_key' | 'ssh_auth_failed' | 'ssh_failed' | 'canceled' | 'too_many_windows' | 'busy' | 'rate_limited'"`
+	ExitCode *int   `json:"exitCode,omitempty"`
+	// KeyCode는 도우미 임시 키를 쓰지 못한 이유(도우미 오류 코드)다. ssh_auth_failed의 힌트다.
+	KeyCode string `json:"keyCode,omitempty"`
+	// NotAllowedGroups는 사용자가 sshd의 AllowGroups 중 어느 그룹에도 없을 때 그 그룹 목록이다.
+	NotAllowedGroups []string `json:"notAllowedGroups,omitempty"`
+	// RetryAfterSeconds는 rate_limited일 때 다시 시도할 수 있을 때까지의 초다.
+	RetryAfterSeconds int `json:"retryAfterSeconds,omitempty"`
+	// Kind는 prompt의 종류다. password면 질문 문구를 프론트가 현지화하고, keyboard-interactive면
+	// sshd(PAM)가 준 Instruction과 Prompts의 문구를 그대로 보여 준다.
+	Kind        string           `json:"kind,omitempty" tstype:"'password' | 'keyboard-interactive'"`
+	Instruction string           `json:"instruction,omitempty"`
+	Prompts     []TerminalPrompt `json:"prompts,omitempty"`
+}
+
+// TerminalPrompt는 질문 하나다. Echo가 false면 입력을 화면에 보이지 않는다(비밀번호).
+type TerminalPrompt struct {
+	Text string `json:"text"`
+	Echo bool   `json:"echo"`
 }

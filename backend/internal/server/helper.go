@@ -22,6 +22,9 @@ type Helper interface {
 	Elevate(ctx context.Context, ticket, password string) (proto.ElevateResult, error)
 	Drop(ctx context.Context, ticket string) error
 	Identity(ctx context.Context, ticket, scope string) (proto.Identity, error)
+	// SSHAuthorize, SSHRevoke는 웹 터미널이 쓰는 짧은 수명의 SSH 키를 사용자의 authorized_keys에 넣고 지운다.
+	SSHAuthorize(ctx context.Context, ticket, publicKey string) error
+	SSHRevoke(ctx context.Context, ticket, publicKey string) error
 }
 
 const (

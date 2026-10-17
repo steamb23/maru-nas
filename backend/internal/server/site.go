@@ -3,12 +3,14 @@ package server
 import (
 	"log"
 	"net/http"
+	"strconv"
 	"sync"
 
 	"onmaru/backend/internal/addons/smart"
 	"onmaru/backend/internal/api"
 	"onmaru/backend/internal/auth"
 	"onmaru/backend/internal/prefs"
+	"onmaru/backend/internal/terminal"
 )
 
 // 전역 설정(관리자): 로그인 화면, 기본 화면, 웹에서 덮어쓰는 가동 설정.
@@ -23,6 +25,7 @@ type overrides struct {
 	mu        sync.Mutex
 	workbench *string
 	smartAt   *string
+	terminal  *string
 }
 
 // requireAdmin은 관리자 세션이어야 next를 부른다. 관리자가 아니면 403 admin_required다.
@@ -56,6 +59,10 @@ func (h *handler) applyOverrides(o api.ServerOverrides) {
 			o.WorkbenchURL = nil
 		}
 	}
+	if o.Terminal != nil && !validBool(*o.Terminal) {
+		log.Printf("site settings: ignoring terminal override %q", *o.Terminal)
+		o.Terminal = nil
+	}
 	smartAt := h.smartBase()
 	if o.SmartRefreshAt != nil {
 		if _, _, err := smart.ParseRefreshAt(*o.SmartRefreshAt); err != nil {
@@ -66,14 +73,21 @@ func (h *handler) applyOverrides(o api.ServerOverrides) {
 		}
 	}
 	h.over.mu.Lock()
-	h.over.workbench, h.over.smartAt = o.WorkbenchURL, o.SmartRefreshAt
+	h.over.workbench, h.over.smartAt, h.over.terminal = o.WorkbenchURL, o.SmartRefreshAt, o.Terminal
 	h.over.mu.Unlock()
+	if h.Terminal != nil && !h.terminalEnabled() {
+		// 웹 터미널을 끄면 열린 터미널을 바로 닫는다.
+		h.Terminal.CloseAll(terminal.ReasonDisabled)
+	}
 	if h.SetSmartRefreshAt != nil {
 		if hour, minute, err := smart.ParseRefreshAt(smartAt); err == nil {
 			h.SetSmartRefreshAt(hour, minute)
 		}
 	}
 }
+
+// validBool은 bool 가동 설정의 덮어쓰기 값("true" 또는 "false")인지다.
+func validBool(v string) bool { return v == "true" || v == "false" }
 
 func (h *handler) smartBase() string {
 	if h.SmartRefreshAt == "" {
@@ -238,11 +252,12 @@ func (h *handler) deleteSiteImage(w http.ResponseWriter, r *http.Request, _ auth
 // serverSettings는 웹에서 덮어쓸 수 있는 가동 설정과 시작할 때 정해진 가동 설정 전체다.
 func (h *handler) serverSettings(w http.ResponseWriter, _ *http.Request, _ auth.Session) {
 	h.over.mu.Lock()
-	wb, sa := h.over.workbench, h.over.smartAt
+	wb, sa, term := h.over.workbench, h.over.smartAt, h.over.terminal
 	h.over.mu.Unlock()
 	writeJSON(w, http.StatusOK, api.ServerSettings{
 		WorkbenchURL:   overridable(h.WorkbenchURL, wb),
 		SmartRefreshAt: overridable(h.smartBase(), sa),
+		Terminal:       overridable(strconv.FormatBool(h.TerminalEnabled), term),
 		Runtime:        append([]api.RuntimeSetting{}, h.Runtime...),
 	})
 }
@@ -278,8 +293,12 @@ func (h *handler) setServerSettings(w http.ResponseWriter, r *http.Request, _ au
 			return
 		}
 	}
+	if next.Terminal != nil && !validBool(*next.Terminal) {
+		writeError(w, http.StatusBadRequest, api.ErrBadRequest, "invalid terminal setting")
+		return
+	}
 	if !h.updateSite(w, func(v *api.SiteSettings) {
-		if next.WorkbenchURL == nil && next.SmartRefreshAt == nil {
+		if next.WorkbenchURL == nil && next.SmartRefreshAt == nil && next.Terminal == nil {
 			v.Server = nil
 		} else {
 			v.Server = &next

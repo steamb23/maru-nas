@@ -46,7 +46,7 @@ func DefaultUsers() []User {
 // Options는 가짜 sshd 설정이다.
 type Options struct {
 	Users []User
-	// Home은 사용자의 홈 디렉터리다(publickey 확인용). nil이면 publickey를 받지 않는다.
+	// Home은 사용자의 홈 디렉터리다(publickey 확인용). nil이면 publickey 인증은 늘 실패한다.
 	Home func(user string) string
 	// 인증 방법을 끈다(실제 OMV의 PasswordAuthentication no 등을 흉내 낸다).
 	NoPublicKey, NoPassword, NoKeyboardInteractive bool
@@ -163,7 +163,7 @@ func (s *Server) config() *ssh.ServerConfig {
 			return nil, nil
 		}
 	}
-	if !s.opts.NoPublicKey && s.opts.Home != nil {
+	if !s.opts.NoPublicKey {
 		cfg.PublicKeyCallback = s.publicKey
 	}
 	cfg.AddHostKey(s.hostKey)
@@ -180,7 +180,7 @@ func (s *Server) user(name string) (User, bool) {
 
 // publicKey는 사용자의 authorized_keys에서 key를 찾는다. from과 expiry-time 옵션만 해석한다.
 func (s *Server) publicKey(c ssh.ConnMetadata, key ssh.PublicKey) (*ssh.Permissions, error) {
-	if _, ok := s.user(c.User()); !ok {
+	if _, ok := s.user(c.User()); !ok || s.opts.Home == nil {
 		return nil, errors.New("unknown user")
 	}
 	b, err := os.ReadFile(filepath.Join(s.opts.Home(c.User()), ".ssh", "authorized_keys"))

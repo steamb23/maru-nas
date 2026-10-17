@@ -305,6 +305,10 @@ export interface CapabilitiesResponse {
    * Helper는 권한 도우미를 설정했는지다(-helper-socket). 이 세션이 쓸 수 있는지는 GET /api/helper로 안다.
    */
   helper: boolean;
+  /**
+   * Terminal은 웹 터미널을 쓸 수 있는지다(-terminal, 설정에서 덮어쓴 값). 실제로 들어갈 수 있는지는 sshd가 정한다.
+   */
+  terminal: boolean;
 }
 /**
  * AddonCapability는 애드온 하나를 이 사용자가 쓸 수 있는지다.
@@ -785,6 +789,10 @@ export interface ServerOverrides {
    * SmartRefreshAt은 -smart-refresh-at(HH:MM)을 덮어쓴다.
    */
   smartRefreshAt?: string;
+  /**
+   * Terminal은 -terminal을 덮어쓴다. "true" 또는 "false"다.
+   */
+  terminal?: string;
 }
 /**
  * AppearanceRequest는 PUT /api/preferences/appearance의 요청 본문이다. 화면 설정 전체를 바꾼다.
@@ -943,6 +951,10 @@ export interface ServerSettingsRequest {
 export interface ServerSettings {
   workbenchUrl: OverridableSetting;
   smartRefreshAt: OverridableSetting;
+  /**
+   * Terminal은 웹 터미널 허용 여부("true" 또는 "false")다.
+   */
+  terminal: OverridableSetting;
   /**
    * Runtime은 시작할 때 정해진 가동 설정 전체다(플래그 순서). 바꾸려면 /etc/default/onmaru를 고치고 다시 시작한다.
    */
@@ -1233,6 +1245,10 @@ export const ErrElevationNotAllowed = "elevation_not_allowed";
  */
 export const ErrElevationRequired = "elevation_required";
 /**
+ * ErrTerminalDisabled는 관리자가 웹 터미널을 허용하지 않았다는 뜻이다.
+ */
+export const ErrTerminalDisabled = "terminal_disabled";
+/**
  * ErrorResponse는 2xx가 아닌 상태 코드와 함께 반환된다.
  */
 export interface ErrorResponse {
@@ -1240,7 +1256,7 @@ export interface ErrorResponse {
   /**
    * Code는 화면에서 분기할 때 쓰는 오류 종류다. 없을 수 있다.
    */
-  code?: 'invalid_credentials' | 'rate_limited' | 'challenge_failed' | 'challenge_expired' | 'omv_unavailable' | 'unauthorized' | 'bad_request' | 'rpc_forbidden' | 'admin_required' | 'plugin_missing' | 'omv_error' | 'action_busy' | 'action_failed' | 'action_timeout' | 'config_dirty' | 'image_too_large' | 'unsupported_image' | 'profile_readonly' | 'helper_unavailable' | 'helper_reauth' | 'elevation_failed' | 'elevation_not_allowed' | 'elevation_required';
+  code?: 'invalid_credentials' | 'rate_limited' | 'challenge_failed' | 'challenge_expired' | 'omv_unavailable' | 'unauthorized' | 'bad_request' | 'rpc_forbidden' | 'admin_required' | 'plugin_missing' | 'omv_error' | 'action_busy' | 'action_failed' | 'action_timeout' | 'config_dirty' | 'image_too_large' | 'unsupported_image' | 'profile_readonly' | 'helper_unavailable' | 'helper_reauth' | 'elevation_failed' | 'elevation_not_allowed' | 'elevation_required' | 'terminal_disabled';
   /**
    * RetryAfterSeconds는 rate_limited일 때 다시 시도할 수 있기까지 남은 초다.
    */
@@ -1314,4 +1330,58 @@ export interface HelperIdentityResponse {
  */
 export interface ElevationRequest {
   password: string;
+}
+/**
+ * TerminalClientMessage는 브라우저가 보내는 제어 메시지다.
+ *   - resize: 창 크기(Cols, Rows)가 바뀌었다
+ *   - answer: 마지막 prompt의 답(Answers, 질문 수와 같다)
+ *   - cancel: 마지막 prompt를 취소한다(접속을 그만둔다)
+ */
+export interface TerminalClientMessage {
+  type: 'resize' | 'answer' | 'cancel';
+  cols?: number /* int */;
+  rows?: number /* int */;
+  answers?: string[];
+}
+/**
+ * TerminalServerMessage는 서버가 보내는 제어 메시지다.
+ *   - status: 접속 상태(State). closed면 Reason과 ExitCode·힌트가 붙는다
+ *   - prompt: sshd가 묻는 질문. 답은 answer로 보낸다
+ */
+export interface TerminalServerMessage {
+  type: 'status' | 'prompt';
+  state?: 'connecting' | 'connected' | 'closed';
+  /**
+   * Reason은 닫힌 이유다. exit(셸이 끝남, ExitCode), 세션·설정 이유(session_ended, disabled,
+   * connection_lost), 접속 실패(ssh_unavailable, ssh_host_key, ssh_auth_failed, ssh_failed, canceled,
+   * too_many_windows, busy, rate_limited) 중 하나다.
+   */
+  reason?: 'exit' | 'session_ended' | 'disabled' | 'connection_lost' | 'ssh_unavailable' | 'ssh_host_key' | 'ssh_auth_failed' | 'ssh_failed' | 'canceled' | 'too_many_windows' | 'busy' | 'rate_limited';
+  exitCode?: number /* int */;
+  /**
+   * KeyCode는 도우미 임시 키를 쓰지 못한 이유(도우미 오류 코드)다. ssh_auth_failed의 힌트다.
+   */
+  keyCode?: string;
+  /**
+   * NotAllowedGroups는 사용자가 sshd의 AllowGroups 중 어느 그룹에도 없을 때 그 그룹 목록이다.
+   */
+  notAllowedGroups?: string[];
+  /**
+   * RetryAfterSeconds는 rate_limited일 때 다시 시도할 수 있을 때까지의 초다.
+   */
+  retryAfterSeconds?: number /* int */;
+  /**
+   * Kind는 prompt의 종류다. password면 질문 문구를 프론트가 현지화하고, keyboard-interactive면
+   * sshd(PAM)가 준 Instruction과 Prompts의 문구를 그대로 보여 준다.
+   */
+  kind?: 'password' | 'keyboard-interactive';
+  instruction?: string;
+  prompts?: TerminalPrompt[];
+}
+/**
+ * TerminalPrompt는 질문 하나다. Echo가 false면 입력을 화면에 보이지 않는다(비밀번호).
+ */
+export interface TerminalPrompt {
+  text: string;
+  echo: boolean;
 }
