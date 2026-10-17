@@ -33,6 +33,16 @@ describe('closeNotice', () => {
     })
   })
 
+  it('보안 확인이 필요하면 다시 연결 대신 확인 단추를 보인다', () => {
+    expect(closeNotice(closed({ reason: 'security_required', required: 'twoFactor' }), false)).toEqual({
+      key: 'terminal.closed.securityRequired',
+      reconnect: false,
+      stepUp: { level: 'twoFactor' },
+    })
+    // 정책이 바뀌어 열린 터미널이 닫힌 경우에는 단계가 없다(확인 대화상자가 정책을 본다).
+    expect(closeNotice(closed({ reason: 'security_required' }), false).stepUp).toEqual({ level: undefined })
+  })
+
   it('실패 제한은 남은 시간을 넘긴다', () => {
     expect(closeNotice(closed({ reason: 'rate_limited', retryAfterSeconds: 30 }), true).params).toEqual({ seconds: 30 })
   })

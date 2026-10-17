@@ -1,0 +1,190 @@
+// 설정의 보안 정책 페이지(관리자): 기능별 보안 강화 단계, 패스키 공개 주소와 OMV 자동 로그아웃 안내,
+// 사용자 인증 수단 초기화. 정책을 바꾸거나 초기화하기 전에 확인을 요구하면(security_required) 확인한 뒤 다시 시도한다.
+import type { ParseKeys } from 'i18next'
+import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import {
+  ApiError,
+  fetchSecurityPolicy,
+  fetchSecurityUsers,
+  resetSecurityUser,
+  saveSecurityPolicy,
+} from '../api/client'
+import type { SecurityPolicy, SecurityPolicyResponse, SecurityUserInfo } from '../api/types.gen'
+import { useAuthStore } from '../auth/store'
+import { LEVEL_KEYS, type Level, type SecurityTarget, securityError } from '../security/messages'
+import { requestStepUp } from '../security/stepUpDialog'
+import { useDialogs } from '../shell/dialogPresets'
+import { SettingsCard, SettingsNotice, SettingsRow, SettingsSection } from './controls'
+
+interface Loaded {
+  status: 'ready'
+  policy: SecurityPolicyResponse
+  users: SecurityUserInfo[]
+}
+
+type LoadState = { status: 'loading' } | { status: 'error' } | Loaded
+
+const TARGETS: readonly { id: SecurityTarget; label: ParseKeys; desc: ParseKeys }[] = [
+  { id: 'terminal', label: 'security.targets.terminal', desc: 'settings.securityPolicy.terminalDesc' },
+  { id: 'elevation', label: 'security.targets.elevation', desc: 'settings.securityPolicy.elevationDesc' },
+]
+
+const LEVELS: readonly Level[] = ['off', 'password', 'twoFactor']
+
+async function load(signal?: AbortSignal): Promise<Loaded> {
+  const [policy, users] = await Promise.all([fetchSecurityPolicy(signal), fetchSecurityUsers(signal)])
+  return { status: 'ready', policy, users }
+}
+
+export function SecurityPolicyPage() {
+  const { t } = useTranslation()
+  const dialogs = useDialogs()
+  const me = useAuthStore((s) => s.user?.username)
+  const [state, setState] = useState<LoadState>({ status: 'loading' })
+  const [busy, setBusy] = useState(false)
+  const [errorKey, setErrorKey] = useState<ParseKeys | null>(null)
+
+  useEffect(() => {
+    const ctl = new AbortController()
+    load(ctl.signal).then(setState, () => {
+      if (!ctl.signal.aborted) setState({ status: 'error' })
+    })
+    return () => ctl.abort()
+  }, [])
+
+  const reload = async () => {
+    try {
+      setState(await load())
+    } catch {
+      setState({ status: 'error' })
+    }
+  }
+
+  // withStepUp은 작업을 하고, 확인을 먼저 거치라는 답(security_required)이면 확인한 뒤 한 번 더 한다.
+  // 취소하면 false다.
+  const withStepUp = async (task: () => Promise<void>): Promise<boolean> => {
+    try {
+      await task()
+      return true
+    } catch (err) {
+      if (!(err instanceof ApiError) || err.code !== 'security_required') throw err
+      if (!(await requestStepUp(dialogs.scope, { level: err.required }))) return false
+      await task()
+      return true
+    }
+  }
+
+  const act = async (task: () => Promise<boolean>) => {
+    if (busy) return
+    setBusy(true)
+    setErrorKey(null)
+    try {
+      await task()
+    } catch (err) {
+      setErrorKey(err instanceof ApiError && err.status === 400 ? 'settings.securityPolicy.invalid' : securityError(err).key)
+    } finally {
+      setBusy(false)
+      await reload()
+    }
+  }
+
+  const setLevel = (current: SecurityPolicy, target: SecurityTarget, level: Level) =>
+    void act(() => withStepUp(() => saveSecurityPolicy({ ...current, [target]: level })))
+
+  const reset = (username: string) =>
+    void act(async () => {
+      const ok = await dialogs.confirm({
+        title: t('settings.securityPolicy.resetTitle'),
+        message: t('settings.securityPolicy.resetMessage', { user: username }),
+        confirmLabel: t('settings.securityPolicy.reset'),
+        danger: true,
+      })
+      return ok && withStepUp(() => resetSecurityUser(username))
+    })
+
+  const data = state.status === 'ready' ? state : null
+  const anyOn = data !== null && TARGETS.some((x) => (data.policy.policy[x.id] ?? 'off') !== 'off')
+
+  return (
+    <>
+      <SettingsNotice>{t('settings.securityPolicy.intro')}</SettingsNotice>
+      {state.status === 'loading' && <SettingsNotice>{t('settings.common.loading')}</SettingsNotice>}
+      {state.status === 'error' && <SettingsNotice tone="error">{t('settings.securityPolicy.loadFailed')}</SettingsNotice>}
+      {errorKey && <SettingsNotice tone="error">{t(errorKey)}</SettingsNotice>}
+
+      {data && (
+        <>
+          <SettingsSection title={t('settings.securityPolicy.levels')} description={t('settings.securityPolicy.levelsDesc')}>
+            {anyOn && data.policy.autoLogoutMinutes === 0 && (
+              <SettingsNotice tone="error">{t('settings.securityPolicy.noAutoLogout')}</SettingsNotice>
+            )}
+            <SettingsCard>
+              {TARGETS.map((x) => (
+                <SettingsRow key={x.id} label={t(x.label)} description={t(x.desc)}>
+                  <select
+                    className="settings-select"
+                    aria-label={t(x.label)}
+                    value={data.policy.policy[x.id] ?? 'off'}
+                    disabled={busy}
+                    onChange={(e) => setLevel(data.policy.policy, x.id, e.target.value as Level)}
+                  >
+                    {LEVELS.map((l) => (
+                      <option key={l} value={l}>
+                        {t(LEVEL_KEYS[l])}
+                      </option>
+                    ))}
+                  </select>
+                </SettingsRow>
+              ))}
+              <SettingsRow
+                label={t('settings.securityPolicy.passkeys')}
+                description={
+                  data.policy.passkeyRpId
+                    ? t('settings.securityPolicy.passkeysOn', { rpId: data.policy.passkeyRpId })
+                    : t('settings.securityPolicy.passkeysOff')
+                }
+              >
+                <span className="settings-badge">
+                  {data.policy.passkeyRpId ? t('settings.securityPolicy.available') : t('settings.securityPolicy.unavailable')}
+                </span>
+              </SettingsRow>
+            </SettingsCard>
+          </SettingsSection>
+
+          <SettingsSection title={t('settings.securityPolicy.users')} description={t('settings.securityPolicy.usersDesc')}>
+            {data.users.length === 0 ? (
+              <p className="settings-hint">{t('settings.securityPolicy.noUsers')}</p>
+            ) : (
+              <SettingsCard>
+                {data.users.map((u) => (
+                  <SettingsRow
+                    key={u.username}
+                    label={<span className="selectable">{u.username}</span>}
+                    description={
+                      u.unreadable
+                        ? t('settings.securityPolicy.unreadable')
+                        : t('settings.securityPolicy.userMethods', {
+                            passkeys: u.passkeys,
+                            totp: u.totp ? t('settings.securityPolicy.yes') : t('settings.securityPolicy.no'),
+                            recovery: u.recoveryCodes,
+                          })
+                    }
+                  >
+                    {u.username === me ? (
+                      <span className="settings-badge">{t('settings.securityPolicy.you')}</span>
+                    ) : (
+                      <button type="button" className="addon-button" disabled={busy} onClick={() => reset(u.username)}>
+                        {t('settings.securityPolicy.reset')}
+                      </button>
+                    )}
+                  </SettingsRow>
+                ))}
+              </SettingsCard>
+            )}
+          </SettingsSection>
+        </>
+      )}
+    </>
+  )
+}

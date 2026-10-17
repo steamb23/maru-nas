@@ -13,6 +13,8 @@ import { useTranslation } from 'react-i18next'
 import { API_BASE } from '../api/client'
 import type { TerminalPrompt } from '../api/types.gen'
 import { useAuthStore } from '../auth/store'
+import { requestStepUp } from '../security/stepUpDialog'
+import { useDialogs } from '../shell/dialogPresets'
 import { type CloseNotice, closeNotice } from './messages'
 import { type PromptLine, feedPrompt, newPromptLine } from './promptLine'
 import { answerMessage, cancelMessage, inputChunks, parseServerMessage, resizeMessage, terminalUrl } from './protocol'
@@ -23,6 +25,7 @@ const FONT_FAMILY = "ui-monospace, 'Cascadia Mono', 'DejaVu Sans Mono', Menlo, C
 export function TerminalWindow() {
   const { t } = useTranslation()
   const user = useAuthStore((s) => s.user?.username ?? '')
+  const dialogs = useDialogs()
   const hostRef = useRef<HTMLDivElement>(null)
   const termRef = useRef<{ term: Terminal; fit: FitAddon } | null>(null)
   // 언어를 바꿔도 이미 연 접속의 문구 함수를 새것으로 쓰게 한다.
@@ -102,6 +105,12 @@ export function TerminalWindow() {
     termRef.current?.term.focus()
   }
 
+  // 보안 강화 모드의 확인을 거친 뒤 다시 연결한다.
+  const stepUp = async (level: NonNullable<CloseNotice['stepUp']>['level']) => {
+    if (await requestStepUp(dialogs.scope, { level, target: 'terminal' })) reconnect()
+    else termRef.current?.term.focus()
+  }
+
   return (
     <div className="terminal-window">
       <div className="terminal-screen" ref={hostRef} />
@@ -111,6 +120,11 @@ export function TerminalWindow() {
           {closed.reconnect && (
             <button type="button" className="addon-button primary" onClick={reconnect}>
               {t('terminal.reconnect')}
+            </button>
+          )}
+          {closed.stepUp && (
+            <button type="button" className="addon-button primary" onClick={() => void stepUp(closed.stepUp?.level)}>
+              {t('terminal.verify')}
             </button>
           )}
         </div>

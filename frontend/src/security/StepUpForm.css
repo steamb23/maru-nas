@@ -1,0 +1,69 @@
+/* 보안 강화 모드의 확인 폼(StepUpForm.tsx)과 같은 모양을 쓰는 보안 대화상자(PasskeyAdd, TOTPSetup).
+   로그인 카드에서는 로그인 화면의 클래스(.login-*)를 쓰고, 여기에는 대화상자 모양과 둘이 함께 쓰는 것만 둔다.
+   단추 줄(.modal-buttons)은 Modal.css의 모양을 그대로 쓴다. */
+
+.step-up-form {
+  display: flex;
+  flex-direction: column;
+}
+
+.step-up-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 12px;
+}
+
+.step-up-input {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--window-border);
+  border-radius: 6px;
+  background: var(--window-bg);
+  font: inherit;
+  color: inherit;
+}
+
+.step-up-input:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  outline-offset: 1px;
+}
+
+.step-up-error {
+  margin: 8px 0 0;
+  color: light-dark(#c5352b, #f28b82);
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+/* 다른 수단으로 바꾸는 글자 단추 */
+.step-up-others {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-top: 8px;
+}
+
+.login-form .step-up-others {
+  justify-content: center;
+  margin-top: 0;
+}
+
+.step-up-link {
+  padding: 2px 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 13px;
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.step-up-link:hover:not(:disabled) {
+  text-decoration: underline;
+}
+
+.step-up-link:disabled {
+  opacity: 0.55;
+  cursor: default;
+}

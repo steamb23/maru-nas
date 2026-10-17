@@ -70,6 +70,26 @@ describe('login', () => {
     expect(store.getState()).toMatchObject({ status: 'loggedIn', user: admin, notice: null })
   })
 
+  it('보안 강화 모드의 2차 인증을 권하면 로그인 화면에 머물고, 마치거나 건너뛰면 데스크톱으로 간다', async () => {
+    const changes: ScreenChange[] = []
+    const stepped: LoginResponse = { status: 'authenticated', session: user, stepUp: { methods: ['totp', 'recovery'] } }
+    const { store } = setup({ login: async () => stepped }, undefined, async (c) => void changes.push(c))
+    await store.getState().login('user', 'pw')
+    expect(store.getState()).toMatchObject({ status: 'stepUp', user, stepUp: { methods: ['totp', 'recovery'] } })
+    expect(changes).toEqual([])
+    await store.getState().finishStepUp('twoFactor')
+    expect(store.getState()).toMatchObject({ status: 'loggedIn', stepUp: null, user: { ...user, assurance: 'twoFactor' } })
+    expect(changes).toEqual(['signIn'])
+
+    const skip = setup({ login: async () => stepped }).store
+    await skip.getState().login('user', 'pw')
+    await skip.getState().finishStepUp()
+    expect(skip.getState()).toMatchObject({ status: 'loggedIn', user })
+    // 데스크톱에서는 아무 일도 하지 않는다.
+    await skip.getState().finishStepUp('twoFactor')
+    expect(skip.getState().user?.assurance).toBe('login')
+  })
+
   it('2차 인증이 필요하면 challenge를 거쳐 로그인한다', async () => {
     const { store, api } = setup({ login: async () => challenge })
     await store.getState().login('totp', 'pw')

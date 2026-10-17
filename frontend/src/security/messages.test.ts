@@ -1,0 +1,68 @@
+import { describe, expect, it } from 'vitest'
+import { ApiError } from '../api/client'
+import { firstFactor, groupSecret, qrPath, satisfies, securityError, usableFactors } from './messages'
+
+describe('securityError', () => {
+  it('틀린 값은 시도한 수단에 맞는 문구다', () => {
+    const err = new ApiError(400, 'x', 'factor_failed')
+    expect(securityError(err, 'password').key).toBe('security.errors.wrongPassword')
+    expect(securityError(err, 'totp').key).toBe('security.errors.wrongCode')
+    expect(securityError(err, 'recovery').key).toBe('security.errors.wrongCode')
+    expect(securityError(err, 'passkey').key).toBe('security.errors.passkeyFailed')
+  })
+
+  it('잠금은 남은 시간을 함께 준다', () => {
+    expect(securityError(new ApiError(429, 'x', 'rate_limited', 30))).toEqual({
+      key: 'security.errors.rateLimited',
+      retryAfter: 30,
+    })
+  })
+
+  it('패스키 창의 결과를 구분한다', () => {
+    expect(securityError(new DOMException('x', 'NotAllowedError')).key).toBe('security.errors.passkeyCanceled')
+    expect(securityError(new DOMException('x', 'InvalidStateError')).key).toBe('security.errors.passkeyExists')
+    expect(securityError(new DOMException('x', 'SecurityError')).key).toBe('security.errors.passkeyDomain')
+  })
+
+  it('모르는 오류는 일반 실패다', () => {
+    expect(securityError(new Error('boom')).key).toBe('security.errors.failed')
+    expect(securityError(new ApiError(503, 'x', 'security_unavailable')).key).toBe('security.errors.unavailable')
+  })
+})
+
+describe('satisfies', () => {
+  it('높은 보증 수준은 낮은 단계도 만족한다', () => {
+    expect(satisfies('login', 'off')).toBe(true)
+    expect(satisfies('login', 'password')).toBe(false)
+    expect(satisfies('twoFactor', 'password')).toBe(true)
+    expect(satisfies('password', 'twoFactor')).toBe(false)
+  })
+})
+
+describe('factors', () => {
+  it('쓸 수 있는 패스키를 먼저 고른다', () => {
+    expect(firstFactor(['passkey', 'totp', 'recovery'], true)).toBe('passkey')
+    expect(firstFactor(['passkey', 'totp', 'recovery'], false)).toBe('totp')
+    expect(firstFactor(['passkey', 'recovery'], false)).toBe('recovery')
+    expect(firstFactor(['passkey'], false)).toBeNull()
+    expect(usableFactors(['passkey', 'totp'], false)).toEqual(['totp'])
+  })
+})
+
+describe('qrPath', () => {
+  it('이어진 검은 칸을 한 사각형으로 그린다', () => {
+    expect(
+      qrPath([
+        [true, true, false],
+        [false, true, true],
+      ]),
+    ).toBe('M0 0h2v1h-2zM1 1h2v1h-2z')
+  })
+})
+
+describe('groupSecret', () => {
+  it('4자씩 띄운다', () => {
+    expect(groupSecret('ABCDEFGHIJ')).toBe('ABCD EFGH IJ')
+    expect(groupSecret('ABCD')).toBe('ABCD')
+  })
+})

@@ -5,7 +5,16 @@
 import type { ParseKeys } from 'i18next'
 import type { IconName } from '../icons/resolver'
 
-export type SettingsPageId = 'profile' | 'screen' | 'general' | 'login-screen' | 'default-screen' | 'server' | 'about'
+export type SettingsPageId =
+  | 'profile'
+  | 'screen'
+  | 'general'
+  | 'security'
+  | 'login-screen'
+  | 'default-screen'
+  | 'server'
+  | 'security-policy'
+  | 'about'
 
 export type SettingsGroupId = 'account' | 'user' | 'admin' | 'info'
 
@@ -43,6 +52,7 @@ export const SETTINGS_PAGES: readonly SettingsPageDef[] = [
     group: 'user',
   },
   { id: 'general', labelKey: 'settings.pages.general', icon: 'preferences-system-symbolic', group: 'user' },
+  { id: 'security', labelKey: 'settings.pages.security', icon: 'channel-secure-symbolic', group: 'user' },
   {
     id: 'login-screen',
     labelKey: 'settings.pages.loginScreen',
@@ -61,6 +71,13 @@ export const SETTINGS_PAGES: readonly SettingsPageDef[] = [
     id: 'server',
     labelKey: 'settings.pages.server',
     icon: 'network-server-symbolic',
+    group: 'admin',
+    requires: 'admin',
+  },
+  {
+    id: 'security-policy',
+    labelKey: 'settings.pages.securityPolicy',
+    icon: 'security-high-symbolic',
     group: 'admin',
     requires: 'admin',
   },

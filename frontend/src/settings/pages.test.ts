@@ -7,7 +7,7 @@ describe('visiblePages', () => {
   })
 
   it('일반 사용자에게는 관리자 전용 페이지를 숨긴다', () => {
-    expect(visiblePages({ admin: false }).map((p) => p.id)).toEqual(['profile', 'screen', 'general', 'about'])
+    expect(visiblePages({ admin: false }).map((p) => p.id)).toEqual(['profile', 'screen', 'general', 'security', 'about'])
   })
 })
 
@@ -20,8 +20,8 @@ describe('groupPages', () => {
   it('이어진 같은 그룹끼리 묶고 머리글 키를 붙인다', () => {
     const groups = groupPages(visiblePages({ admin: true }))
     expect(groups.map((g) => [g.id, g.labelKey, g.pages.length])).toEqual([
-      ['user', 'settings.groups.user', 2],
-      ['admin', 'settings.groups.admin', 3],
+      ['user', 'settings.groups.user', 3],
+      ['admin', 'settings.groups.admin', 4],
       ['info', null, 1],
     ])
   })

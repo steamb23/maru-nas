@@ -8,6 +8,8 @@ import { GeneralPage } from './GeneralPage'
 import { LoginScreenPage } from './LoginScreenPage'
 import { ProfilePage } from './ProfilePage'
 import { ScreenPage } from './ScreenPage'
+import { SecurityPage } from './SecurityPage'
+import { SecurityPolicyPage } from './SecurityPolicyPage'
 import { ServerPage } from './ServerPage'
 import type { SettingsPageId } from './pages'
 
@@ -15,8 +17,10 @@ export const SETTINGS_PAGE_VIEWS: Record<SettingsPageId, ComponentType<WindowVie
   profile: ProfilePage,
   screen: ScreenPage,
   general: GeneralPage,
+  security: SecurityPage,
   'login-screen': LoginScreenPage,
   'default-screen': DefaultScreenPage,
   server: ServerPage,
+  'security-policy': SecurityPolicyPage,
   about: AboutPage,
 }

@@ -26,7 +26,8 @@
       "badRequest": "Enter your username and password.",
       "unauthorized": "You are not signed in. Please sign in again.",
       "httpStatus": "Could not sign in (HTTP {{status}})."
-    }
+    },
+    "skipStepUp": "Skip for now"
   },
   "offline": {
     "title": "Disconnected",
@@ -105,8 +106,10 @@
       "tooMany": "Too many terminal windows are open. Close one and try again.",
       "busy": "The server has too many terminal connections. Try again later.",
       "rateLimited": "Too many failed password attempts. Try again in {{seconds}} seconds.",
-      "failed": "Couldn't start the SSH session."
-    }
+      "failed": "Couldn't start the SSH session.",
+      "securityRequired": "The web terminal needs a security check for this session. Verify your identity to connect."
+    },
+    "verify": "Verify"
   },
   "sysinfo": {
     "disconnected": "Disconnected — reconnecting…",
@@ -383,7 +386,9 @@
       "defaultScreen": "Default screen",
       "server": "Server",
       "about": "About",
-      "profile": "Profile"
+      "profile": "Profile",
+      "security": "Security",
+      "securityPolicy": "Security policy"
     },
     "about": {
       "build": "Version information",
@@ -406,7 +411,8 @@
         "go": "Standard library compiled into the backend.",
         "xterm": "Draws the screen of the web terminal.",
         "goX": "SSH client of the web terminal, compiled into the backend.",
-        "websocket": "WebSocket connection of the web terminal, compiled into the backend."
+        "websocket": "WebSocket connection of the web terminal, compiled into the backend.",
+        "uqr": "Draws the QR code for setting up an authenticator app."
       }
     },
     "common": {
@@ -509,7 +515,8 @@
         "helperSocket": "Privileged helper socket",
         "terminal": "Web terminal",
         "sshAddr": "SSH server address",
-        "sshHostKeys": "SSH host keys"
+        "sshHostKeys": "SSH host keys",
+        "publicOrigin": "Public address for passkeys"
       }
     },
     "helper": {
@@ -587,6 +594,72 @@
       "invalid": "Check the email address and tags.",
       "saveDescAdmin": "Saving applies the change in OMV right away.",
       "saveDescUser": "After saving, an administrator applies the pending change in the OMV web UI."
+    },
+    "security": {
+      "intro": "Sensitive features can ask for a second step. Manage your passkeys, authenticator app and recovery codes here.",
+      "session": "This session",
+      "sessionDesc": "The check lasts until you sign out or the session expires.",
+      "assurance": "Check level",
+      "assuranceLoginDesc": "Signed in with a password only. Signing in does not count as a password check.",
+      "assurancePasswordDesc": "You entered your password again in this session.",
+      "assuranceTwoFactorDesc": "You confirmed with a passkey, an authenticator app or a recovery code.",
+      "verifyNow": "Verify now",
+      "passkeys": "Passkeys",
+      "passkeysDesc": "Confirm with this device’s screen lock or a security key. This is the recommended method.",
+      "passkeysOff": "Passkeys are not available because the administrator has not set the public address (ONMARU_PUBLIC_ORIGIN).",
+      "passkeysUnsupported": "This browser cannot use passkeys at this address. Passkeys need HTTPS with a trusted certificate.",
+      "passkeyCreated": "Added {{created}}",
+      "passkeyUsed": "Added {{created}} · last used {{used}}",
+      "passkeyDefaultName": "Passkey {{n}}",
+      "noPasskeys": "No passkeys yet.",
+      "addPasskey": "Add a passkey",
+      "add": "Add",
+      "delete": "Remove",
+      "deletePasskeyTitle": "Remove passkey",
+      "deletePasskeyMessage": "You will not be able to confirm with this passkey anymore.",
+      "totp": "Authenticator app",
+      "totpDesc": "Enter a 6-digit code from an app such as Google Authenticator or 2FAS.",
+      "totpApp": "Authenticator app",
+      "totpOn": "Set up {{created}}",
+      "totpOff": "Not set up",
+      "totpSetup": "Set up",
+      "totpReplace": "Replace",
+      "deleteTotpTitle": "Remove authenticator app",
+      "deleteTotpMessage": "You will not be able to confirm with codes from this app anymore.",
+      "recovery": "Recovery codes",
+      "recoveryDesc": "One-time codes for when you lose your passkey or phone. They are created with your first method.",
+      "recoveryLeft_one": "{{count}} code left",
+      "recoveryLeft_other": "{{count}} codes left",
+      "recoveryNeedsMethod": "Add a passkey or an authenticator app first.",
+      "regenerate": "Create new codes",
+      "regenerateTitle": "Create new recovery codes",
+      "regenerateMessage": "Your current recovery codes will stop working."
+    },
+    "securityPolicy": {
+      "intro": "Choose which check sensitive features need. The check stays with the session until it ends.",
+      "loadFailed": "Cannot load the security policy.",
+      "invalid": "The security policy was not accepted.",
+      "levels": "Checks by feature",
+      "levelsDesc": "Password again asks for the password once more in the session. Two-step verification needs a passkey, an authenticator app or a recovery code, or OpenMediaVault two-factor sign-in.",
+      "terminalDesc": "Before opening the web terminal.",
+      "elevationDesc": "Before an administrator elevates to root.",
+      "noAutoLogout": "OpenMediaVault auto logout is off, so a checked session stays checked until sign-out. Turn on auto logout in the OMV web UI.",
+      "passkeys": "Passkeys",
+      "passkeysOn": "Available for {{rpId}}.",
+      "passkeysOff": "Set the public dashboard address (ONMARU_PUBLIC_ORIGIN in /etc/default/onmaru, or ./install.sh) to use passkeys. Authenticator apps work without it.",
+      "available": "Available",
+      "unavailable": "Unavailable",
+      "users": "Users’ sign-in methods",
+      "usersDesc": "Reset the methods of a user who lost them. Their sessions end, and they can register new methods after signing in again.",
+      "noUsers": "No user has registered a method yet.",
+      "unreadable": "The record cannot be read. Reset it to start over.",
+      "userMethods": "Passkeys {{passkeys}} · Authenticator app {{totp}} · Recovery codes {{recovery}}",
+      "yes": "yes",
+      "no": "no",
+      "you": "You",
+      "reset": "Reset",
+      "resetTitle": "Reset sign-in methods",
+      "resetMessage": "All passkeys, the authenticator app and the recovery codes of {{user}} will be removed, and their sessions will end."
     }
   },
   "appearance": {
@@ -600,6 +673,83 @@
       "graphite": "Graphite",
       "slate": "Slate",
       "plum": "Plum"
+    }
+  },
+  "security": {
+    "stepUp": {
+      "title": "Security check",
+      "manageTitle": "Confirm your identity",
+      "passwordHint": "Enter your password again to continue.",
+      "passkeyHint": "Confirm with your passkey.",
+      "totpHint": "Enter the code from your authenticator app.",
+      "recoveryHint": "Enter one of your recovery codes. Each code works only once.",
+      "manageHint": "To change your sign-in methods, enter your password and confirm with a method you registered.",
+      "managePasswordHint": "To change your sign-in methods, enter your password again.",
+      "managePasskeyHint": "Your passkey is asked for after you confirm.",
+      "switchPasskey": "Use a passkey",
+      "switchTotp": "Use an authenticator app",
+      "switchRecovery": "Use a recovery code",
+      "noMethods": "This needs a passkey or an authenticator app, and you have not registered one. Add one on the Security page in Settings.",
+      "passkeyUnsupported": "Your only method is a passkey, and this browser cannot use passkeys here. Use another browser or a recovery code from Settings.",
+      "password": "Password",
+      "code": "Code",
+      "recoveryCode": "Recovery code",
+      "confirm": "Confirm",
+      "confirming": "Checking…",
+      "usePasskey": "Use passkey"
+    },
+    "errors": {
+      "wrongPassword": "Incorrect password.",
+      "wrongCode": "Incorrect code.",
+      "wrongEither": "The password or the second step was incorrect.",
+      "passkeyFailed": "The passkey could not be verified.",
+      "passkeyCanceled": "The passkey check was canceled or timed out.",
+      "passkeyExists": "This passkey is already registered.",
+      "passkeyDomain": "Passkeys do not work at this address. Open the dashboard at its configured domain.",
+      "passkeyUnavailable": "Passkeys are not set up on this server.",
+      "rateLimited": "Too many attempts. Try again in {{remaining}}.",
+      "unavailable": "Your security settings cannot be read. Ask an administrator to reset them.",
+      "manageExpired": "The confirmation has expired. Try again.",
+      "omvUnavailable": "Cannot reach OpenMediaVault.",
+      "failed": "Something went wrong. Try again."
+    },
+    "assurance": {
+      "login": "Signed in",
+      "password": "Password confirmed",
+      "twoFactor": "Two-step verified"
+    },
+    "levels": {
+      "off": "Off",
+      "password": "Password again",
+      "twoFactor": "Two-step verification"
+    },
+    "targets": {
+      "terminal": "Web terminal",
+      "elevation": "Root elevation"
+    },
+    "recovery": {
+      "title": "Recovery codes",
+      "intro": "Use one of these codes if you lose your passkey or phone. Each code works only once.",
+      "warning": "You will not see these codes again. Copy them or write them down now.",
+      "copy": "Copy",
+      "copied": "Copied",
+      "done": "I saved them"
+    },
+    "totp": {
+      "title": "Set up an authenticator app",
+      "intro": "Scan the QR code with an authenticator app, or enter the key, then type the 6-digit code it shows.",
+      "qrLabel": "QR code for the authenticator app",
+      "key": "Key",
+      "copyKey": "Copy key",
+      "code": "Code from the app",
+      "finish": "Finish"
+    },
+    "passkeys": {
+      "addTitle": "Add a passkey",
+      "addIntro": "Name this passkey so you can tell it apart later, then follow your browser’s prompt.",
+      "name": "Name",
+      "create": "Create passkey",
+      "creating": "Waiting for the passkey…"
     }
   }
 }

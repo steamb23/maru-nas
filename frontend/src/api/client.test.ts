@@ -109,10 +109,10 @@ describe('401 처리', () => {
 
 describe('login', () => {
   it('JSON 본문과 Content-Type으로 POST한다', async () => {
-    const fn = stubFetch(Response.json({ status: 'authenticated', session: { username: 'admin', admin: true } }))
+    const fn = stubFetch(Response.json({ status: 'authenticated', session: { username: 'admin', admin: true, assurance: 'login' } }))
     await expect(login('admin', 'pw')).resolves.toEqual({
       status: 'authenticated',
-      session: { username: 'admin', admin: true },
+      session: { username: 'admin', admin: true, assurance: 'login' },
     })
     const [url, init] = fn.mock.calls[0]
     expect(url).toMatch(/\/api\/login$/)
@@ -141,13 +141,26 @@ describe('login', () => {
 
 describe('isLoginResponse', () => {
   it('상태에 맞는 필드를 요구한다', () => {
-    expect(isLoginResponse({ status: 'authenticated', session: { username: 'a', admin: false } })).toBe(true)
+    expect(isLoginResponse({ status: 'authenticated', session: { username: 'a', admin: false, assurance: 'login' } })).toBe(true)
     expect(
-      isLoginResponse({ status: 'authenticated', session: { username: 'a', admin: false, expiresInSeconds: 300 } }),
+      isLoginResponse({
+        status: 'authenticated',
+        session: { username: 'a', admin: false, assurance: 'login', expiresInSeconds: 300 },
+      }),
     ).toBe(true)
     expect(
-      isLoginResponse({ status: 'authenticated', session: { username: 'a', admin: false, expiresInSeconds: -1 } }),
+      isLoginResponse({
+        status: 'authenticated',
+        session: { username: 'a', admin: false, assurance: 'login', expiresInSeconds: -1 },
+      }),
     ).toBe(false)
+    // 보증 수준이 없거나 모르는 값이면 받지 않는다.
+    expect(isLoginResponse({ status: 'authenticated', session: { username: 'a', admin: false } })).toBe(false)
+    expect(isLoginResponse({ status: 'authenticated', session: { username: 'a', admin: false, assurance: 'x' } })).toBe(false)
+    // 로그인 직후의 2차 인증 권유는 아는 수단만 받는다.
+    const session = { username: 'a', admin: false, assurance: 'login' }
+    expect(isLoginResponse({ status: 'authenticated', session, stepUp: { methods: ['totp', 'recovery'] } })).toBe(true)
+    expect(isLoginResponse({ status: 'authenticated', session, stepUp: { methods: ['sms'] } })).toBe(false)
     expect(isLoginResponse({ status: 'authenticated' })).toBe(false)
     expect(isLoginResponse({ status: 'challengeRequired', challenge: { kind: 'totp' } })).toBe(true)
     expect(isLoginResponse({ status: 'challengeRequired', challenge: { kind: 1 } })).toBe(false)

@@ -89,6 +89,14 @@ export const NOTICES: readonly Notice[] = [
     noteKey: 'settings.about.notes.xterm',
   },
   {
+    name: 'uqr',
+    license: 'MIT',
+    copyright: 'Project Nayuki, Anthony Fu',
+    url: 'https://github.com/unjs/uqr',
+    packages: ['uqr'],
+    noteKey: 'settings.about.notes.uqr',
+  },
+  {
     name: 'Go',
     license: 'BSD-3-Clause',
     copyright: 'The Go Authors',

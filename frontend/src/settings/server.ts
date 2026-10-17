@@ -15,6 +15,7 @@ const RUNTIME_LABELS: Record<string, ParseKeys> = {
   terminal: 'settings.server.flags.terminal',
   'ssh-addr': 'settings.server.flags.sshAddr',
   'ssh-host-keys': 'settings.server.flags.sshHostKeys',
+  'public-origin': 'settings.server.flags.publicOrigin',
 }
 
 export function runtimeLabelKey(flag: string): ParseKeys | null {

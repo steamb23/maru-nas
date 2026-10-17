@@ -45,6 +45,8 @@ import driveHarddisk from '@colloid/devices/scalable/drive-harddisk.svg?url'
 import folder from '@colloid/places/scalable/folder.svg?url'
 import networkServer from '@colloid/places/symbolic/network-server-symbolic.svg?url'
 import avatarDefault from '@colloid/status/symbolic/avatar-default-symbolic.svg?url'
+import channelSecure from '@colloid/status/symbolic/channel-secure-symbolic.svg?url'
+import securityHigh from '@colloid/status/symbolic/security-high-symbolic.svg?url'
 import windowNew from '@colloid/status/symbolic/window-new-symbolic.svg?url'
 import type { Icon } from '../types'
 
@@ -77,6 +79,8 @@ export const COLLOID_ICONS = {
   'external-link-symbolic': { url: externalLink, kind: 'symbolic' },
   'help-about-symbolic': { url: helpAbout, kind: 'symbolic' },
   'system-lock-screen-symbolic': { url: systemLockScreen, kind: 'symbolic' },
+  'channel-secure-symbolic': { url: channelSecure, kind: 'symbolic' },
+  'security-high-symbolic': { url: securityHigh, kind: 'symbolic' },
   'preferences-desktop-appearance-symbolic': { url: preferencesDesktopAppearance, kind: 'symbolic' },
   'preferences-system-symbolic': { url: preferencesSystemSymbolic, kind: 'symbolic' },
   'system-users-symbolic': { url: systemUsers, kind: 'symbolic' },

@@ -1,0 +1,91 @@
+import { describe, expect, it } from 'vitest'
+import type { PasskeyOptions } from '../api/types.gen'
+import { assertionJSON, b64urlDecode, b64urlEncode, creationOptions, registrationJSON, requestOptions } from './webauthn'
+
+const bytes = (...b: number[]) => new Uint8Array(b).buffer
+
+describe('base64url', () => {
+  it('패딩 없이 URL에 안전한 문자로 쓰고 되돌린다', () => {
+    const data = new Uint8Array([0xfb, 0xff, 0xbf, 0x00, 0x10])
+    const s = b64urlEncode(data)
+    expect(s).toBe('-_-_ABA')
+    expect(Array.from(b64urlDecode(s))).toEqual(Array.from(data))
+    expect(Array.from(b64urlDecode('-_-_ABA='))).toEqual(Array.from(data))
+    expect(b64urlEncode(new Uint8Array())).toBe('')
+  })
+
+  it('형식이 틀리면 예외를 던진다', () => {
+    expect(() => b64urlDecode('a')).toThrow()
+  })
+})
+
+const assertOpts: PasskeyOptions = {
+  challenge: 'AAEC',
+  rpId: 'desk.example.lan',
+  timeoutMs: 120000,
+  credentials: [{ id: 'CQk', transports: ['internal', 'bogus'] }],
+}
+
+describe('requestOptions', () => {
+  it('확인 옵션으로 바꾼다', () => {
+    const o = requestOptions(assertOpts)
+    expect(Array.from(new Uint8Array(o.challenge as ArrayBuffer))).toEqual([0, 1, 2])
+    expect(o.rpId).toBe('desk.example.lan')
+    expect(o.userVerification).toBe('required')
+    expect(o.allowCredentials).toHaveLength(1)
+    expect(o.allowCredentials?.[0].transports).toEqual(['internal'])
+  })
+})
+
+describe('creationOptions', () => {
+  it('등록 옵션으로 바꾼다', () => {
+    const o = creationOptions({
+      ...assertOpts,
+      rpName: 'Onmaru',
+      user: { id: 'BwcH', name: 'alice', displayName: 'alice' },
+      algorithms: [-7, -8, -257],
+    })
+    expect(o.rp).toEqual({ id: 'desk.example.lan', name: 'Onmaru' })
+    expect(Array.from(new Uint8Array(o.user.id as ArrayBuffer))).toEqual([7, 7, 7])
+    expect(o.pubKeyCredParams.map((p) => p.alg)).toEqual([-7, -8, -257])
+    expect(o.attestation).toBe('none')
+    expect(o.authenticatorSelection?.userVerification).toBe('required')
+    expect(o.excludeCredentials).toHaveLength(1)
+  })
+
+  it('등록 옵션이 아니면 예외를 던진다', () => {
+    expect(() => creationOptions(assertOpts)).toThrow()
+  })
+})
+
+describe('결과 JSON', () => {
+  it('확인 결과를 바꾼다', () => {
+    expect(
+      assertionJSON({
+        rawId: bytes(1),
+        response: { clientDataJSON: bytes(2), authenticatorData: bytes(3), signature: bytes(4), userHandle: null },
+      }),
+    ).toEqual({ id: 'AQ', clientDataJSON: 'Ag', authenticatorData: 'Aw', signature: 'BA', userHandle: undefined })
+  })
+
+  it('등록 결과를 바꾸고 공개 키가 없으면 비운다', () => {
+    const reg = registrationJSON({
+      rawId: bytes(1),
+      response: {
+        clientDataJSON: bytes(2),
+        getAuthenticatorData: () => bytes(3),
+        getPublicKey: () => null,
+        getPublicKeyAlgorithm: () => -7,
+        getTransports: () => ['internal'],
+      },
+    })
+    expect(reg).toEqual({
+      id: 'AQ',
+      clientDataJSON: 'Ag',
+      authenticatorData: 'Aw',
+      publicKey: '',
+      publicKeyAlgorithm: -7,
+      transports: ['internal'],
+    })
+  })
+})

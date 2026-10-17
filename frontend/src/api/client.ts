@@ -16,11 +16,26 @@ import type {
   ImageInfo,
   LoginResponse,
   OverridableSetting,
+  PasskeyChallengeRequest,
+  PasskeyDescriptor,
+  PasskeyInfo,
+  PasskeyOptions,
+  PasskeyRegisterRequest,
+  PasskeyRegistration,
+  PasskeyUser,
   Preferences,
   ProfileRequest,
   ProfileResponse,
   ProfileSaveResponse,
   RuntimeSetting,
+  SecurityChangeResponse,
+  SecurityManageRequest,
+  SecurityPolicy,
+  SecurityPolicyRequest,
+  SecurityPolicyResponse,
+  SecurityStatus,
+  SecurityUserInfo,
+  SecurityVerifyRequest,
   ServerOverrides,
   ServerSettings,
   ServerSettingsRequest,
@@ -32,9 +47,13 @@ import type {
   SiteInfo,
   SiteLogin,
   SiteLoginRequest,
+  StepUpInfo,
   SystemInfoPrefs,
   SystemInfoRequest,
   SystemResponse,
+  TOTPConfirmRequest,
+  TOTPInfo,
+  TOTPSetupResponse,
   Wallpaper,
   WidgetPlacement,
   WidgetsRequest,
@@ -70,20 +89,31 @@ const ERROR_CODES: readonly ErrorCode[] = [
   'elevation_failed',
   'elevation_not_allowed',
   'elevation_required',
+  'terminal_disabled',
+  'security_required',
+  'factor_failed',
+  'manage_required',
+  'passkey_unavailable',
+  'security_unavailable',
 ]
+
+export type RequiredLevel = NonNullable<ErrorResponse['required']>
 
 export class ApiError extends Error {
   readonly status: number
   // code, retryAfterSeconds는 백엔드가 ErrorResponse로 보낸 값이다. 프록시 오류 페이지 등에서는 없다.
   readonly code?: ErrorCode
   readonly retryAfterSeconds?: number
+  // required는 security_required일 때 거쳐야 하는 보안 강화 모드의 단계다.
+  readonly required?: RequiredLevel
 
-  constructor(status: number, message: string, code?: ErrorCode, retryAfterSeconds?: number) {
+  constructor(status: number, message: string, code?: ErrorCode, retryAfterSeconds?: number, required?: RequiredLevel) {
     super(message)
     this.name = 'ApiError'
     this.status = status
     this.code = code
     this.retryAfterSeconds = retryAfterSeconds
+    this.required = required
   }
 }
 
@@ -103,16 +133,18 @@ export function setUnauthorizedHandler(fn: () => void): () => void {
 async function toApiError(path: string, res: Response): Promise<ApiError> {
   let code: ErrorCode | undefined
   let retryAfter: number | undefined
+  let required: RequiredLevel | undefined
   try {
     const body: unknown = await res.json()
     if (isObj(body)) {
       if (ERROR_CODES.includes(body.code as ErrorCode)) code = body.code as ErrorCode
       if (isNum(body.retryAfterSeconds) && body.retryAfterSeconds > 0) retryAfter = body.retryAfterSeconds
+      if (isOneOf(body.required, ['password', 'twoFactor'] as const)) required = body.required
     }
   } catch {
     // JSON이 아닌 오류 응답(프록시 502 페이지 등)
   }
-  return new ApiError(res.status, `${path}: HTTP ${res.status}`, code, retryAfter)
+  return new ApiError(res.status, `${path}: HTTP ${res.status}`, code, retryAfter, required)
 }
 
 interface RequestOptions {
@@ -177,6 +209,7 @@ export function isSessionInfo(v: unknown): v is SessionInfo {
     isStr(v.username) &&
     v.username !== '' &&
     typeof v.admin === 'boolean' &&
+    isOneOf(v.assurance, ['login', 'password', 'twoFactor'] as const) &&
     (v.expiresInSeconds === undefined || (isNum(v.expiresInSeconds) && v.expiresInSeconds >= 0))
   )
 }
@@ -188,7 +221,15 @@ function isChallengeInfo(v: unknown): v is ChallengeInfo {
 // isLoginResponse는 상태에 맞는 필드가 들어 있는지 확인한다.
 export function isLoginResponse(v: unknown): v is LoginResponse {
   if (!isObj(v)) return false
-  if (v.status === 'authenticated') return isSessionInfo(v.session)
+  if (v.status === 'authenticated')
+    return (
+      isSessionInfo(v.session) &&
+      isOptional(
+        v.stepUp,
+        (x): x is StepUpInfo =>
+          isObj(x) && isArrayOf(x.methods, (m): m is StepUpInfo['methods'][number] => isOneOf(m, ['passkey', 'totp', 'recovery'] as const)),
+      )
+    )
   if (v.status === 'challengeRequired') return isChallengeInfo(v.challenge)
   return false
 }
@@ -636,4 +677,160 @@ export async function dropElevation(): Promise<HelperStatus> {
   const data = await (await request('DELETE', '/helper/elevation')).json()
   if (!isHelperStatus(data)) throw new Error('/helper/elevation: unexpected response shape')
   return data
+}
+
+// 보안 강화 모드(GET·POST /api/security*, 관리자 정책은 /api/site/security)
+
+const ASSURANCES = ['login', 'password', 'twoFactor'] as const
+const LEVELS = ['off', 'password', 'twoFactor'] as const
+const FACTORS = ['passkey', 'totp', 'recovery'] as const
+
+function isSecurityPolicy(v: unknown): v is SecurityPolicy {
+  return isObj(v) && isOptional(v.terminal, (x) => isOneOf(x, LEVELS)) && isOptional(v.elevation, (x) => isOneOf(x, LEVELS))
+}
+
+function isPasskeyInfo(v: unknown): v is PasskeyInfo {
+  return isObj(v) && isStr(v.id) && isStr(v.name) && isStr(v.created) && isOptional(v.lastUsed, isStr)
+}
+
+export function isSecurityStatus(v: unknown): v is SecurityStatus {
+  return (
+    isObj(v) &&
+    isOneOf(v.assurance, ASSURANCES) &&
+    isNum(v.manageSeconds) &&
+    isBool(v.passkeysAvailable) &&
+    isArrayOf(v.passkeys, isPasskeyInfo) &&
+    isOptional(v.totp, (x): x is TOTPInfo => isObj(x) && isStr(x.created)) &&
+    isNum(v.recoveryCodes) &&
+    isArrayOf(v.methods, (x): x is SecurityStatus['methods'][number] => isOneOf(x, FACTORS)) &&
+    isSecurityPolicy(v.policy)
+  )
+}
+
+function isSecurityChange(v: unknown): v is SecurityChangeResponse {
+  return isObj(v) && isSecurityStatus(v.status) && isOptional(v.recoveryCodes, (x): x is string[] => isArrayOf(x, isStr))
+}
+
+function isPasskeyDescriptor(v: unknown): v is PasskeyDescriptor {
+  return isObj(v) && isStr(v.id) && isOptional(v.transports, (x): x is string[] => isArrayOf(x, isStr))
+}
+
+export function isPasskeyOptions(v: unknown): v is PasskeyOptions {
+  return (
+    isObj(v) &&
+    isStr(v.challenge) &&
+    isStr(v.rpId) &&
+    isNum(v.timeoutMs) &&
+    isArrayOf(v.credentials, isPasskeyDescriptor) &&
+    isOptional(v.rpName, isStr) &&
+    isOptional(v.user, (x): x is PasskeyUser => isObj(x) && isStr(x.id) && isStr(x.name) && isStr(x.displayName)) &&
+    isOptional(v.algorithms, (x): x is number[] => isArrayOf(x, isNum))
+  )
+}
+
+function isSecurityUserInfo(v: unknown): v is SecurityUserInfo {
+  return (
+    isObj(v) &&
+    isStr(v.username) &&
+    isNum(v.passkeys) &&
+    isBool(v.totp) &&
+    isNum(v.recoveryCodes) &&
+    isOptional(v.unreadable, isBool)
+  )
+}
+
+function isSecurityPolicyResponse(v: unknown): v is SecurityPolicyResponse {
+  return (
+    isObj(v) &&
+    isSecurityPolicy(v.policy) &&
+    isOptional(v.autoLogoutMinutes, isNum) &&
+    isOptional(v.passkeyRpId, isStr)
+  )
+}
+
+async function securityStatusFrom(path: string, res: Promise<unknown>): Promise<SecurityStatus> {
+  const data = await res
+  if (!isSecurityStatus(data)) throw new Error(`${path}: unexpected response shape`)
+  return data
+}
+
+async function securityChangeFrom(path: string, res: Promise<unknown>): Promise<SecurityChangeResponse> {
+  const data = await res
+  if (!isSecurityChange(data)) throw new Error(`${path}: unexpected response shape`)
+  return data
+}
+
+// fetchSecurity는 로그인한 사용자 자신의 보안 상태(보증 수준, 등록한 수단, 정책)다.
+export function fetchSecurity(signal?: AbortSignal): Promise<SecurityStatus> {
+  return securityStatusFrom('/security', getJSON('/security', { signal }))
+}
+
+// verifySecurity는 세션 중 확인(비밀번호 재확인 또는 2차 수단)으로 이 세션의 보증 수준을 올린다.
+export function verifySecurity(req: SecurityVerifyRequest): Promise<SecurityStatus> {
+  return securityStatusFrom('/security/verify', postJSON('/security/verify', { body: req }))
+}
+
+// manageSecurity는 비밀번호와(등록한 수단이 있으면) 그 수단을 다시 확인해 관리 창을 연다.
+export function manageSecurity(req: SecurityManageRequest): Promise<SecurityStatus> {
+  return securityStatusFrom('/security/manage', postJSON('/security/manage', { body: req }))
+}
+
+// passkeyChallenge는 패스키 확인·등록에 쓸 옵션(challenge 포함)이다.
+export async function passkeyChallenge(purpose: PasskeyChallengeRequest['purpose']): Promise<PasskeyOptions> {
+  const body: PasskeyChallengeRequest = { purpose }
+  const data = await postJSON('/security/passkeys/challenge', { body })
+  if (!isPasskeyOptions(data)) throw new Error('/security/passkeys/challenge: unexpected response shape')
+  return data
+}
+
+export function registerPasskey(name: string, credential: PasskeyRegistration): Promise<SecurityChangeResponse> {
+  const body: PasskeyRegisterRequest = { name, credential }
+  return securityChangeFrom('/security/passkeys', postJSON('/security/passkeys', { body }))
+}
+
+export async function deletePasskey(id: string): Promise<SecurityChangeResponse> {
+  const path = `/security/passkeys/${encodeURIComponent(id)}`
+  return securityChangeFrom(path, (await request('DELETE', path)).json())
+}
+
+export async function setupTOTP(): Promise<TOTPSetupResponse> {
+  const data = await postJSON('/security/totp/setup')
+  if (!isObj(data) || !isStr(data.secret) || !isStr(data.uri)) throw new Error('/security/totp/setup: unexpected response shape')
+  return { secret: data.secret, uri: data.uri }
+}
+
+export function confirmTOTP(code: string): Promise<SecurityChangeResponse> {
+  const body: TOTPConfirmRequest = { code }
+  return securityChangeFrom('/security/totp', postJSON('/security/totp', { body }))
+}
+
+export async function deleteTOTP(): Promise<SecurityChangeResponse> {
+  return securityChangeFrom('/security/totp', (await request('DELETE', '/security/totp')).json())
+}
+
+export function regenerateRecoveryCodes(): Promise<SecurityChangeResponse> {
+  return securityChangeFrom('/security/recovery-codes', postJSON('/security/recovery-codes'))
+}
+
+// fetchSecurityUsers는 인증 수단 기록이 있는 사용자 목록이다(관리자).
+export async function fetchSecurityUsers(signal?: AbortSignal): Promise<SecurityUserInfo[]> {
+  const data = await getJSON('/security/users', { signal })
+  if (!isArrayOf(data, isSecurityUserInfo)) throw new Error('/security/users: unexpected response shape')
+  return data
+}
+
+// resetSecurityUser는 사용자의 인증 수단을 모두 지우고 그 사용자의 세션을 끝낸다(관리자, 2차 인증을 거친 세션).
+export async function resetSecurityUser(username: string): Promise<void> {
+  await request('DELETE', `/security/users/${encodeURIComponent(username)}`)
+}
+
+export async function fetchSecurityPolicy(signal?: AbortSignal): Promise<SecurityPolicyResponse> {
+  const data = await getJSON('/site/security', { signal })
+  if (!isSecurityPolicyResponse(data)) throw new Error('/site/security: unexpected response shape')
+  return data
+}
+
+export async function saveSecurityPolicy(policy: SecurityPolicy): Promise<void> {
+  const body: SecurityPolicyRequest = { security: policy }
+  await request('PUT', '/site/security', { body })
 }

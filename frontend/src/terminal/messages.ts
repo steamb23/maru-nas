@@ -1,5 +1,6 @@
 // 터미널이 닫힌 이유(status closed)를 안내 문구로 바꾼다. DOM에 의존하지 않아 node 환경에서 테스트한다.
 import type { ParseKeys } from 'i18next'
+import type { RequiredLevel } from '../api/client'
 import type { TerminalServerMessage } from '../api/types.gen'
 
 export interface CloseNotice {
@@ -7,6 +8,8 @@ export interface CloseNotice {
   params?: Record<string, string | number>
   // 다시 연결 단추를 보일지. 세션이 끝났거나 관리자가 껐으면 다시 연결해도 소용없다.
   reconnect: boolean
+  // stepUp이 있으면 보안 강화 모드의 확인을 거친 뒤 다시 연결한다(확인 단추). level이 없으면 정책을 따른다.
+  stepUp?: { level?: RequiredLevel }
 }
 
 // closeNotice는 닫힘 메시지의 안내다. asked는 이 접속에서 비밀번호 등을 물었는지다(물었는데 실패했으면
@@ -21,6 +24,8 @@ export function closeNotice(msg: TerminalServerMessage, asked: boolean): CloseNo
       return { key: 'terminal.closed.disabled', reconnect: false }
     case 'connection_lost':
       return { key: 'terminal.closed.connectionLost', reconnect: true }
+    case 'security_required':
+      return { key: 'terminal.closed.securityRequired', reconnect: false, stepUp: { level: msg.required } }
     case 'ssh_unavailable':
       return { key: 'terminal.closed.unavailable', reconnect: true }
     case 'ssh_host_key':

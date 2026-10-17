@@ -2,8 +2,10 @@
 import type { RefObject } from 'react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { elevate } from '../api/client'
+import { ApiError, elevate } from '../api/client'
 import type { HelperStatus } from '../api/types.gen'
+import { requestStepUp } from '../security/stepUpDialog'
+import type { DialogScope } from './dialogs'
 import { type ElevationError, elevationError, formatClock } from './elevation'
 
 export function ElevationTitle() {
@@ -13,10 +15,12 @@ export function ElevationTitle() {
 
 // 단추가 입력 상태(진행 중, 오류)를 함께 보아야 하므로 단추 줄도 본문 안의 폼에 둔다(Enter로 제출).
 export function ElevationForm({
+  scope,
   inputRef,
   onDone,
   onCancel,
 }: {
+  scope: DialogScope
   inputRef: RefObject<HTMLInputElement | null>
   onDone: (status: HelperStatus) => void
   onCancel: () => void
@@ -38,6 +42,19 @@ export function ElevationForm({
     try {
       onDone(await elevate(password))
     } catch (err) {
+      // 보안 강화 정책이 상승 전에 확인을 요구하면 확인한 뒤 같은 비밀번호로 다시 시도한다.
+      if (err instanceof ApiError && err.code === 'security_required') {
+        if (await requestStepUp(scope, { level: err.required, target: 'elevation' })) {
+          try {
+            onDone(await elevate(password))
+            return
+          } catch (again) {
+            setError(elevationError(again))
+          }
+        }
+        setBusy(false)
+        return
+      }
       setError(elevationError(err))
       setPassword('')
       setBusy(false)

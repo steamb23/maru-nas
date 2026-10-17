@@ -95,10 +95,10 @@ export default defineConfig(({ mode }) => {
       rolldownOptions: {
         output: {
           // 라이브러리(React, i18next 등)를 앱 코드와 다른 청크로 나눈다. 진입 청크 하나가 500KB 경고 기준을
-          // 넘지 않게 하려는 것이며 내려받는 총량은 같다. 터미널 창에서만 쓰는 xterm.js는 빼서 그 창의 지연
-          // 청크에 남긴다(터미널을 열지 않으면 내려받지 않는다).
+          // 넘지 않게 하려는 것이며 내려받는 총량은 같다. 터미널 창에서만 쓰는 xterm.js와 인증 앱 등록 대화상자에서만
+          // 쓰는 QR 라이브러리(uqr)는 빼서 그 보기의 지연 청크에 남긴다(열지 않으면 내려받지 않는다).
           codeSplitting: {
-            groups: [{ name: 'vendor', test: /node_modules[\\/](?!@xterm[\\/])/ }],
+            groups: [{ name: 'vendor', test: /node_modules[\\/](?!@xterm[\\/]|uqr[\\/])/ }],
           },
         },
       },

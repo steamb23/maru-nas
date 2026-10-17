@@ -9,12 +9,13 @@ import { LanguageSelect } from '../shell/LanguageSelect'
 import { enterLogin } from '../shell/screenTransition'
 import { useIdle } from '../shell/useIdle'
 import { formatUnit } from '../addons/common/format'
+import { StepUpForm } from '../security/StepUpForm'
 import { IDLE_DELAY_MS, easterEggEnabled } from './easterEgg/config'
 import { EasterEgg } from './easterEgg/EasterEgg'
 import { type LoginError, loginErrorMessage } from './messages'
 import { useAuthStore } from './store'
 
-const { login, verify, cancelChallenge, restore } = useAuthStore.getState()
+const { login, verify, cancelChallenge, finishStepUp, restore } = useAuthStore.getState()
 
 // OFFLINE_RETRY_MS마다 백엔드 연결을 다시 시도한다.
 const OFFLINE_RETRY_MS = 5000
@@ -44,6 +45,7 @@ export function LoginScreen() {
   const lang = useLanguage()
   const status = useAuthStore((s) => s.status)
   const challenge = useAuthStore((s) => s.challenge)
+  const stepUp = useAuthStore((s) => s.stepUp)
   const notice = useAuthStore((s) => s.notice)
 
   const [username, setUsername] = useState('')
@@ -60,11 +62,12 @@ export function LoginScreen() {
   useLayoutEffect(() => enterLogin(cardRef.current), [])
 
   const inChallenge = status === 'challenge' && challenge !== null
+  const inStepUp = status === 'stepUp' && stepUp !== null
   const redirectOnly = inChallenge && !!challenge.redirectUrl
   // 대기 이스터에그는 일반 로그인 폼에서만 나온다(2차 인증 중, 로그인 요청 중에는 끔).
   // 대기 연출은 관리자가 끄지 않았을 때만 쓴다. 전역 정보를 받기 전이나 받지 못했으면 켜진 것으로 본다.
   const eggAllowed = useSiteStore((s) => s.info?.loginEasterEgg ?? true)
-  const idleSince = useIdle(easterEggEnabled(eggAllowed) && !inChallenge && !busy, IDLE_DELAY_MS)
+  const idleSince = useIdle(easterEggEnabled(eggAllowed) && !inChallenge && !inStepUp && !busy, IDLE_DELAY_MS)
 
   useEffect(() => {
     if (inChallenge) codeRef.current?.focus()
@@ -152,7 +155,18 @@ export function LoginScreen() {
           </p>
         )}
 
-        {inChallenge ? (
+        {inStepUp ? (
+          // 로그인은 마쳤다. 보안 강화 모드의 2차 인증을 권하고, 건너뛰면 일반 세션으로 데스크톱에 들어간다.
+          <StepUpForm
+            variant="login"
+            mode="verify"
+            level="twoFactor"
+            methods={stepUp.methods}
+            onDone={(st) => void finishStepUp(st.assurance)}
+            onCancel={() => void finishStepUp()}
+            cancelLabel={t('login.skipStepUp')}
+          />
+        ) : inChallenge ? (
           <form className="login-form" onSubmit={onVerify}>
             {redirectOnly ? (
               <p className="login-hint">{t('login.twoFactorRedirect')}</p>

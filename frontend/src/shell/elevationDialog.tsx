@@ -12,6 +12,6 @@ export function requestElevation(scope: DialogScope): Promise<HelperStatus | nul
   return openDialog<HelperStatus>(scope, {
     title: <ElevationTitle />,
     initialFocus: inputRef,
-    render: (ctl) => <ElevationForm inputRef={inputRef} onDone={ctl.close} onCancel={ctl.cancel} />,
+    render: (ctl) => <ElevationForm scope={scope} inputRef={inputRef} onDone={ctl.close} onCancel={ctl.cancel} />,
   })
 }
