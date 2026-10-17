@@ -1,4 +1,4 @@
-.PHONY: dev dev-fake types build build-frontend build-backend lint test check
+.PHONY: dev dev-fake dev-pick types build build-frontend build-backend lint test check
 
 # 개발 서버 (백엔드 127.0.0.1:8090 + Vite 0.0.0.0:5173)
 # BRANCH=<브랜치>: 그 브랜치가 체크아웃된 git 워크트리의 코드로 실행한다(설정·상태는 주 체크아웃의 것)
@@ -8,6 +8,10 @@ dev:
 # 가짜 OMV(127.0.0.1:8091, 가짜 계정)에 연결한 개발 서버. 계정은 CLAUDE.md "테스트 전략" 참고
 dev-fake:
 	./scripts/dev.sh --fake $(BRANCH:%=--branch %)
+
+# 워크트리(브랜치)와 OMV 연결(실제·가짜)을 번호로 골라 BRANCH를 준 dev 또는 dev-fake처럼 실행한다
+dev-pick:
+	./scripts/dev-pick.sh
 
 # Go 구조체에서 TS 생성: backend/internal/api → frontend/src/api/types.gen.ts,
 # 내장 애드온 manifest → frontend/src/addons/manifests.gen.ts

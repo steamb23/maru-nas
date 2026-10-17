@@ -81,6 +81,7 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 |---|---|
 | `make dev` | 개발 서버. 백엔드 `127.0.0.1:8090`(`go run`) + Vite `0.0.0.0:5173`. 접속은 `http://<NAS-IP>:5173/`. Ctrl+C로 둘 다 종료. 실제 OMV에 연결하므로 `frontend/.env.local`에 `ONMARU_OMV_URL`(이 NAS의 OMV 주소)을 둔다. git 워크트리에서 실행하면 주 체크아웃의 `frontend/.env.local`(워크트리에 있으면 그 값이 우선)과 `.dev-state`를 쓴다. `make dev BRANCH=<브랜치>`(`make dev-fake`도 같다)는 그 브랜치가 체크아웃된 워크트리의 코드를 같은 방식으로 실행하므로 워크트리에 들어가지 않아도 된다. 실행은 부른 쪽의 `scripts/dev.sh`가 한다 |
 | `make dev-fake` | `make dev`와 같지만 가짜 OMV(`127.0.0.1:8091`)와 가짜 권한 도우미(상태 디렉터리의 `helper.sock`, 파일 연산은 `helper-root/` 아래에서만)를 함께 띄워 연결한다. `FAKEOMV_TIMEOUT=1m make dev-fake`처럼 세션 timeout을 분 단위로 바꿀 수 있고, `FAKEOMV_VERSION=8.3`처럼 옛 OMV 버전의 응답을 흉내 낼 수 있다(`omvfake.Version`). 포트는 `ONMARU_LISTEN`(백엔드), `FAKEOMV_LISTEN`(가짜 OMV), `DEV_PORT`(Vite)로 바꾼다 |
+| `make dev-pick` | 브랜치가 체크아웃된 워크트리 목록과 OMV 연결(실제·가짜)을 번호로 골라 `make dev BRANCH=<브랜치>` 또는 `make dev-fake BRANCH=<브랜치>`처럼 실행한다(`scripts/dev-pick.sh`). 입력을 기다리므로 Claude는 쓰지 않고 `make dev-fake`에 환경 변수를 준다 |
 | `make build` | 프론트 빌드 → `backend/internal/web/static/dist/` → `bin/onmaru` 단일 실행 파일, 권한 도우미 `bin/onmaru-helper`(`CGO_ENABLED=0`) |
 | `make lint` | `gofmt -l`, `go vet`, oxlint, `tsc -b` |
 | `make test` | `go test -count=1 ./...`(모듈 밖 생성물 검사가 캐시로 통과하지 않게), `vitest run` |
@@ -124,7 +125,7 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
   - 작업 브랜치 이름은 `<종류>/<짧은-설명>`(영어 소문자, 하이픈)으로 짓는다. 종류는 `feat`(새 기능·앱), `fix`(버그 수정), `docs`(문서), `i18n`(번역), `chore`(빌드·CI·정리), `refactor`(동작 변화 없는 구조 변경)
   - 주 체크아웃에서 `git worktree add -b <브랜치> .claude/worktrees/<이름> main`으로 만들고 `EnterWorktree`의 `path`로 들어간다. `EnterWorktree`의 `name`은 로컬 `main`보다 뒤처질 수 있는 `origin/main`에서 갈라지므로 쓰지 않는다
   - 워크트리 안에서 `git submodule update --init --depth 1`과 `npm --prefix frontend ci`를 먼저 실행한다
-  - 사용자는 주 체크아웃에서 `make dev BRANCH=<브랜치>`로 그 워크트리의 개발 서버를 띄울 수 있다
+  - 사용자는 주 체크아웃에서 `make dev BRANCH=<브랜치>`나 `make dev-pick`(번호 선택)으로 그 워크트리의 개발 서버를 띄울 수 있다
   - `main` 병합(rebase 후 fast-forward)은 `ExitWorktree`(keep)로 주 체크아웃에 돌아간 뒤 `git merge --ff-only <브랜치>`로 한다. 워크트리 안에서는 주 체크아웃을 대상으로 한 git 명령이 거부된다. 병합한 뒤에는 워크트리 디렉터리를 `trash-put`으로 지우고 `git worktree prune`을 실행한다
 - 작은 단위로 작업하고, 작업 단위 하나가 끝날 때마다 승인을 기다리지 않고 브랜치에 커밋한다
 - 브랜치의 작업이 모두 끝나면 변경 요약을 제시하고, `main` 병합은 사용자가 승인한 뒤에만 한다
