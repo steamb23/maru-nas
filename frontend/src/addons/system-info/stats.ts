@@ -101,6 +101,10 @@ export interface StatsPoint {
   // 메모리 사용률(0~100)과 사용량(바이트)
   memory: number
   memoryUsed: number
+  // 1·5·15분 부하 평균(응답 값 그대로). 응답에 없으면 null이다.
+  load1: number | null
+  load5: number | null
+  load15: number | null
   // 초당 바이트
   rx: number | null
   tx: number | null
@@ -175,6 +179,9 @@ export function appendSample(prev: StatsHistory | null, cur: SystemStatsResponse
     coresKernel,
     memory: percentOf(cur.memory.usedBytes, cur.memory.totalBytes),
     memoryUsed: cur.memory.usedBytes,
+    load1: cur.load?.one ?? null,
+    load5: cur.load?.five ?? null,
+    load15: cur.load?.fifteen ?? null,
     rx: rate(p.network?.rxBytes, cur.network?.rxBytes, dt),
     tx: rate(p.network?.txBytes, cur.network?.txBytes, dt),
     read: rate(p.disk?.readBytes, cur.disk?.readBytes, dt),

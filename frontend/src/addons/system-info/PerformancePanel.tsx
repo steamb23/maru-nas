@@ -3,23 +3,31 @@ import { type CSSProperties, type KeyboardEvent, type ReactNode, useId, useRef }
 import { useTranslation } from 'react-i18next'
 import { useLanguage } from '../../i18n'
 import { useContextMenuTrigger } from '../../shell/useContextMenuTrigger'
-import { formatBytes, formatPercent, formatRate, formatUptime } from '../common/format'
+import { formatBytes, formatLoad, formatPercent, formatRate, formatUnit, formatUptime } from '../common/format'
 import { type ChartSeries, type SeriesSlot, UsageChart } from './UsageChart'
-import { niceMax } from './chart'
+import { loadAxisMax, niceMax } from './chart'
 import { cpuGraphMenuItems } from './menus'
 import { type StatsPoint, latest } from './stats'
 import { useSysinfoPrefsStore } from './sysinfoPrefsStore'
 import type { SystemStatsSample } from './useSystemStats'
 
-export type Resource = 'cpu' | 'memory' | 'disk' | 'network'
-const RESOURCES: readonly Resource[] = ['cpu', 'memory', 'disk', 'network']
+export type Resource = 'cpu' | 'memory' | 'disk' | 'network' | 'load'
+const RESOURCES: readonly Resource[] = ['cpu', 'memory', 'disk', 'network', 'load']
 
 const NAME_KEYS: Record<Resource, ParseKeys> = {
   cpu: 'sysinfo.cpu',
   memory: 'sysinfo.memory',
   disk: 'sysinfo.disk',
   network: 'sysinfo.network',
+  load: 'sysinfo.load',
 }
+
+// 부하 평균 계열: 1·5·15분과 StatsPoint의 키, 계열 자리
+const LOAD_SERIES = [
+  { minutes: 1, key: 'load1', slot: 1 },
+  { minutes: 5, key: 'load5', slot: 2 },
+  { minutes: 15, key: 'load15', slot: 3 },
+] as const satisfies readonly { minutes: number; key: keyof StatsPoint; slot: SeriesSlot }[]
 
 interface Props {
   sample: SystemStatsSample | null
@@ -133,6 +141,20 @@ export function PerformancePanel({ sample, stale, resource, onResource }: Props)
         ]
       : [{ id, label, slot: 1, values }]
 
+  const load = res?.load
+  const loadNow = (key: (typeof LOAD_SERIES)[number]['key']) =>
+    load ? formatLoad({ load1: load.one, load5: load.five, load15: load.fifteen }[key], lang) : none
+  const loadSeries: ChartSeries[] = LOAD_SERIES.map((s) => ({
+    id: s.key,
+    label: formatUnit(s.minutes, 'minute', lang),
+    slot: s.slot,
+    values: pick(points, (p) => p[s.key]),
+  }))
+  const loadMax = loadAxisMax(
+    Math.max(0, ...loadSeries.flatMap((s) => s.values.map((v) => v ?? 0))),
+    res?.cpu.cores.length ?? 0,
+  )
+
   const mem = res?.memory
   const views: Record<Resource, View> = {
     cpu: {
@@ -194,6 +216,20 @@ export function PerformancePanel({ sample, stale, resource, onResource }: Props)
       point?.rx,
       point?.tx,
     ),
+    // 부하 평균은 누적 값이 아니므로 첫 응답부터 지금 값을 보인다.
+    load: {
+      series: loadSeries,
+      max: loadMax,
+      maxLabel: loadMax.toLocaleString(lang),
+      format: (x: number) => formatLoad(x, lang),
+      summary: load ? LOAD_SERIES.map((s) => loadNow(s.key)).join(' / ') : none,
+      summaryLabel: load ? LOAD_SERIES.map((s, i) => `${loadSeries[i].label} ${loadNow(s.key)}`).join(', ') : none,
+      stats: [
+        ...LOAD_SERIES.map((s, i) => ({ label: loadSeries[i].label, value: loadNow(s.key), slot: s.slot })),
+        { label: t('sysinfo.perf.running'), value: count(load?.running) },
+        { label: t('sysinfo.perf.cores'), value: count(res?.cpu.cores.length) },
+      ],
+    },
   }
 
   const onListKey = (e: KeyboardEvent<HTMLDivElement>) => {

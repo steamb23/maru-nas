@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { type ChartFrame, areaPath, linePath, nearestIndex, niceMax, pointX, stepIndex } from './chart'
+import { type ChartFrame, areaPath, linePath, loadAxisMax, nearestIndex, niceMax, pointX, stepIndex } from './chart'
 
 const KiB = 1024
 const MiB = 1024 * 1024
@@ -19,6 +19,17 @@ describe('niceMax', () => {
 })
 
 const frame: ChartFrame = { now: 60_000, span: 60_000, max: 100, width: 600, height: 100 }
+
+describe('loadAxisMax', () => {
+  it('평소에는 코어 수, 넘치면 올림한 정수다', () => {
+    expect(loadAxisMax(0.3, 4)).toBe(4)
+    expect(loadAxisMax(4, 4)).toBe(4)
+    expect(loadAxisMax(4.2, 4)).toBe(5)
+    expect(loadAxisMax(13.01, 8)).toBe(14)
+    // 코어 수를 모르면(0) 1부터
+    expect(loadAxisMax(0, 0)).toBe(1)
+  })
+})
 
 describe('linePath', () => {
   it('시각을 x로, 값을 위에서 아래로 그린다', () => {

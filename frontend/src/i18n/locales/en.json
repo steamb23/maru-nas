@@ -115,6 +115,7 @@
     "uptime": "Uptime",
     "network": "Network",
     "disk": "Disk",
+    "load": "Load average",
     "receive": "Receive",
     "send": "Send",
     "read": "Read",
@@ -132,6 +133,7 @@
       "cores": "Cores",
       "processCount": "Processes",
       "threads": "Threads",
+      "running": "Running",
       "inUse": "In use",
       "available": "Available",
       "total": "Total"

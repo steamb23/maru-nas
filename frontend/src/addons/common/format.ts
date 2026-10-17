@@ -74,6 +74,11 @@ export function formatPercent(percent: number, locale: string, fractionDigits = 
   }).format(percent / 100)
 }
 
+// formatLoad는 부하 평균을 소수점 둘째 자리까지 표시한다. 예: 0.52
+export function formatLoad(load: number, locale: string): string {
+  return numberFormat(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Math.max(0, load))
+}
+
 // percentOf는 part/total을 0~100으로 반환한다. total이 0이면 0.
 export function percentOf(part: number, total: number): number {
   return total > 0 ? Math.min(100, Math.max(0, (part / total) * 100)) : 0

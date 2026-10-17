@@ -126,6 +126,9 @@ describe('appendSample', () => {
       cpuKernel: 10, // 커널 40 / 400
       memory: 50,
       memoryUsed: 500,
+      load1: 0.5,
+      load5: 0.25,
+      load15: 0.1,
       rx: 1000,
       tx: 0,
       read: 0,
@@ -166,6 +169,8 @@ describe('appendSample', () => {
     const first = appendSample(null, sample())
     const p = latest(appendSample(first, sample({ sampledAtMs: 2000, network: { rxBytes: 10, txBytes: 600 }, disk: undefined })))
     expect(p).toMatchObject({ rx: null, tx: 50, read: null, write: null })
+    const noLoad = latest(appendSample(first, sample({ sampledAtMs: 2000, load: undefined })))
+    expect(noLoad).toMatchObject({ load1: null, load5: null, load15: null })
   })
 
   it('간격이 너무 길거나 백엔드가 다시 시작하면 기록을 새로 시작한다', () => {

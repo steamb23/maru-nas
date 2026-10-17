@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { formatBytes, formatLinkSpeed, formatPercent, formatRate, formatUnit, formatUptime, percentOf } from './format'
+import {
+  formatBytes,
+  formatLinkSpeed,
+  formatLoad,
+  formatPercent,
+  formatRate,
+  formatUnit,
+  formatUptime,
+  percentOf,
+} from './format'
 
 describe('formatBytes', () => {
   it.each([
@@ -63,6 +72,15 @@ describe('formatPercent / percentOf', () => {
     expect(percentOf(25, 100)).toBe(25)
     expect(percentOf(5, 0)).toBe(0)
     expect(percentOf(200, 100)).toBe(100)
+  })
+})
+
+describe('formatLoad', () => {
+  it('소수점 둘째 자리까지 locale에 맞춰 보인다', () => {
+    expect(formatLoad(0.5, 'en')).toBe('0.50')
+    expect(formatLoad(12.345, 'en')).toBe('12.35')
+    expect(formatLoad(1.5, 'de')).toBe('1,50')
+    expect(formatLoad(-1, 'en')).toBe('0.00')
   })
 })
 

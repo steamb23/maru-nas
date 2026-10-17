@@ -11,6 +11,12 @@ export function niceMax(value: number): number {
   return unit * 1024
 }
 
+// loadAxisMax는 부하 평균 그래프의 y축 최댓값이다. 평소에는 코어 수(모든 코어가 바쁜 부하)이고,
+// 부하가 그보다 크면 그 값을 올림한 정수다.
+export function loadAxisMax(peak: number, cores: number): number {
+  return Math.max(1, cores, Math.ceil(peak))
+}
+
 export interface ChartFrame {
   // 그래프 오른쪽 끝(지금) 시각과 보여 줄 시간(밀리초)
   now: number

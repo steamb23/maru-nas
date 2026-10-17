@@ -115,6 +115,7 @@
     "uptime": "가동 시간",
     "network": "네트워크",
     "disk": "디스크",
+    "load": "부하 평균",
     "receive": "수신",
     "send": "송신",
     "read": "읽기",
@@ -132,6 +133,7 @@
       "cores": "코어",
       "processCount": "프로세스",
       "threads": "스레드",
+      "running": "실행 중",
       "inUse": "사용 중",
       "available": "사용 가능",
       "total": "전체"
