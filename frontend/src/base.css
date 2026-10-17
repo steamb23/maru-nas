@@ -5,6 +5,10 @@
 
   /* windows/geometry.ts의 TITLEBAR_HEIGHT와 맞춘다. */
   --titlebar-height: 36px;
+  /* 창 내용 열의 최대 폭. 설정 창과 목록형 애드온 창(.addon-window)이 넓은 창에서 이 폭의 가운데 열로 줄인다.
+     창을 꽉 채우는 앱형 창(시스템 정보)은 쓰지 않는다. 사이드바 틀은 창 너비를 다 써야 하므로
+     .window-body가 아니라 내용 컨테이너의 좌우 padding으로 건다. */
+  --window-content-width: 720px;
   /* 떠 있는 작업표시줄과 최대화·타일 창이 화면 가장자리·서로와 두는 간격.
      최대화·타일 창 배치는 windows/geometry.ts의 FLOAT_GAP으로 계산하므로 함께 바꾼다. */
   --float-gap: 8px;

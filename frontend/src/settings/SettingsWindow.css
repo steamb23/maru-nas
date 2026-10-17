@@ -1,8 +1,7 @@
 /* 설정 앱 창. 사이드바 틀(두 열, 좁은 창의 덮는 사이드바, 머리, 항목 모양)은 shell/SidebarLayout.css이고,
    여기에는 설정에만 있는 것(사용자 카드, 그룹, 페이지 영역)을 둔다. 좁은 기준은 pages.ts의 SETTINGS_NARROW_WIDTH다.
-   페이지 제목과 내용은 최대 폭(--settings-page-width) 열로 가운데 정렬한다. */
+   페이지 제목과 내용은 창 내용 최대 폭(base.css의 --window-content-width) 열로 가운데 정렬한다. */
 .settings {
-  --settings-page-width: 720px;
   /* 한글 문장이 단어 중간에서 줄바꿈되지 않게 띄어쓰기에서만 바꾸고, 한 단어가 줄보다 길 때만 자른다. */
   word-break: keep-all;
   overflow-wrap: anywhere;
@@ -101,7 +100,7 @@
    좁은 배치의 padding(.sidebar-layout.narrow, .settings.narrow 규칙)은 명시도가 높아 그대로 이긴다. */
 .settings .sidebar-header,
 .settings-page {
-  padding-inline: max(24px, calc((100% - var(--settings-page-width)) / 2));
+  padding-inline: max(24px, calc((100% - var(--window-content-width)) / 2));
 }
 
 .settings.narrow .settings-page {

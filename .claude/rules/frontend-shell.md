@@ -24,6 +24,11 @@ paths:
 - 창 내용은 `memo`한 `WindowBody`로 그린다. 창 틀이 다시 그려져도(포커스, 크기 조절, 타일 가이드) 내용은 다시 그리지 않는다
 - 창·위젯 보기는 처음 그릴 때 내려받으므로(`addons/registry.ts`·`shellViews.ts`의 `lazyView`) `ViewBoundary`(Suspense + 오류 경계)로 감싼다. 받는 동안은 내용이 비고, 받지 못하거나 렌더 오류가 나면 그 창·위젯만 안내로 바뀐다(창은 페이지 새로 고침 단추, 위젯은 짧은 안내만. 위젯 틀이 포인터를 잡아 안의 단추가 눌리지 않는다). `lazy`는 실패를 기억하므로 다시 시도 대신 새로 고침이다. 창 크기는 저장소, 위젯 크기는 칸에서 나오므로 내용이 비어도 애니메이션·배치에는 영향이 없다
 
+## 창 내용 폭
+
+- 설정 창을 기준으로, 창 내용은 넓은 창에서 최대 폭(`base.css`의 `--window-content-width`, 720px) 열로 가운데 정렬한다. 내용 컨테이너의 좌우 padding을 `max(여백, calc((100% - var(--window-content-width)) / 2))`로 계산한다(설정은 `.settings .sidebar-header`·`.settings-page`, 목록형 애드온 창은 `.addon-window`). `.window-body`에는 걸지 않는다(사이드바 틀은 창 너비를 다 써야 한다)
+- 예외는 창을 꽉 채우는 앱형 창이다. 위아래 고정 영역(도구 막대·상태 표시줄)이나 사이드바가 있고, 목록·표·그래프가 남은 높이를 채워 자기 안에서 스크롤하며, 넓을수록 한 줄에 더 많이 보이는 창이다. 시스템 정보 창이 그렇고(`.addon-window`를 쓰지 않는다), 로드맵의 파일 탐색기도 이 기준을 따른다. 이런 창의 안내 문구는 가운데 정렬 안내(`AddonUnavailable` 등)로 두고, 대화상자는 모달이라 영향이 없다
+
 ## 위젯 레이어
 
 - 설계와 결정 사항은 `.claude/docs/addons.md`의 "위젯 시스템"에 있다
@@ -134,7 +139,7 @@ paths:
 - 프로필 페이지(`profile`)는 사이드바 목록에 넣지 않고(`nav: 'card'`) 사이드바 맨 위 사용자 카드 버튼으로 연다. 볼 수 없는 페이지를 요청하면 기본 페이지(화면)로 간다
 - 프로필 사진 자르기 편집기(`AvatarEditor.tsx`, 계산은 `profile/avatarCrop.ts`)는 창 범위 대화상자다. 끌기는 `usePointerDrag`, 휠은 passive가 아닌 네이티브 리스너로 받고, 저장은 512px WebP(안 되면 PNG)다. OMV 사용자 편집 화면은 워크벤치 앱과 같은 이름 붙은 탭으로 연다(`launchApp.ts`의 `openWorkbenchRoute`, 라우트는 `windows/links.ts`)
 - 사이드바 틀은 `shell/SidebarLayout`이다(시스템 정보 창도 쓴다. 아래 "사이드바 틀"). 설정의 좁은 기준은 `SETTINGS_NARROW_WIDTH`(640px)이고, 사용자 카드·그룹·페이지 영역(`.settings-body`)은 설정 것이다
-- 페이지 제목과 내용은 창 틀(`SettingsWindow.css`)이 최대 폭(`--settings-page-width`, 720px) 열로 가운데 정렬한다. 제목 머리(`.settings .sidebar-header`)와 `.settings-page`의 좌우 padding을 같은 퍼센트 식으로 계산해 스크롤바가 생겨도 왼쪽 끝이 맞는다. 페이지마다 폭을 따로 정하지 않는다
+- 페이지 제목과 내용은 창 틀(`SettingsWindow.css`)이 창 내용 최대 폭(`--window-content-width`, 720px, 위 "창 내용 폭") 열로 가운데 정렬한다. 제목 머리(`.settings .sidebar-header`)와 `.settings-page`의 좌우 padding을 같은 퍼센트 식으로 계산해 스크롤바가 생겨도 왼쪽 끝이 맞는다. 페이지마다 폭을 따로 정하지 않는다
 - 페이지가 함께 쓰는 틀과 컨트롤은 `controls.tsx`(절, 묶음 카드, 행, 스위치, 안내), 테마·배경 고르기는 `pickers.tsx`(숨긴 기본 라디오 버튼이라 키보드·화면 읽기는 브라우저 기본 동작)다
 - 사용자 값은 바로 적용·저장한다(저장 큐). 전역 설정은 고른 값을 먼저 보여 주고 저장한 뒤 서버 값을 다시 받으며, 실패하면 되돌린다(`siteSettings.ts`)
 - 페이지 보기는 창의 `active`를 받는다(`pageViews.ts`). 페이지 위에 겹쳐 그리는 레이어는 `.settings-page`(위치 지정 없음) 안에서 absolute로 그려 기준 상자 `.settings-body`(제목 머리 아래 페이지 영역)에 붙인다. 스크롤 컨테이너에 잘리거나 함께 스크롤되지 않는다
