@@ -10,13 +10,25 @@ function sample(over: Partial<SystemStatsResponse> = {}): SystemStatsResponse {
     cpu: {
       totalTicks: 1000,
       idleTicks: 800,
+      kernelTicks: 50,
       cores: [
-        { id: 0, totalTicks: 500, idleTicks: 400 },
-        { id: 1, totalTicks: 500, idleTicks: 400 },
+        { id: 0, totalTicks: 500, idleTicks: 400, kernelTicks: 25 },
+        { id: 1, totalTicks: 500, idleTicks: 400, kernelTicks: 25 },
       ],
     },
     memory: { totalBytes: 1000, usedBytes: 250, availableBytes: 750 },
+    memoryDetail: {
+      appsBytes: 200,
+      sharedBytes: 50,
+      compressedBytes: 0,
+      buffersBytes: 50,
+      cacheBytes: 400,
+      freeBytes: 300,
+      swapTotalBytes: 0,
+      swapUsedBytes: 0,
+    },
     uptimeSeconds: 10,
+    load: { one: 0.5, five: 0.25, fifteen: 0.1, running: 1 },
     network: { rxBytes: 1000, txBytes: 500 },
     disk: { readBytes: 4096, writeBytes: 0 },
     ...over,
@@ -26,8 +38,8 @@ function sample(over: Partial<SystemStatsResponse> = {}): SystemStatsResponse {
 describe('isSystemStatsResponse', () => {
   it('백엔드 응답 모양을 받는다', () => {
     expect(isSystemStatsResponse(sample())).toBe(true)
-    // 네트워크·디스크·프로세스는 없을 수 있다.
-    expect(isSystemStatsResponse(sample({ network: undefined, disk: undefined }))).toBe(true)
+    // 네트워크·디스크·부하·프로세스는 없을 수 있다.
+    expect(isSystemStatsResponse(sample({ network: undefined, disk: undefined, load: undefined }))).toBe(true)
     expect(
       isSystemStatsResponse(
         sample({
@@ -50,8 +62,15 @@ describe('isSystemStatsResponse', () => {
 
   it.each([
     ['null', null],
-    ['cores 없음', { ...sample(), cpu: { totalTicks: 1, idleTicks: 1 } }],
-    ['코어 id 없음', { ...sample(), cpu: { totalTicks: 1, idleTicks: 1, cores: [{ totalTicks: 1, idleTicks: 1 }] } }],
+    ['cores 없음', { ...sample(), cpu: { totalTicks: 1, idleTicks: 1, kernelTicks: 0 } }],
+    [
+      '코어 id 없음',
+      { ...sample(), cpu: { totalTicks: 1, idleTicks: 1, kernelTicks: 0, cores: [{ totalTicks: 1, idleTicks: 1 }] } },
+    ],
+    ['커널 시간 없음', { ...sample(), cpu: { totalTicks: 1, idleTicks: 1, cores: [] } }],
+    ['메모리 구성 없음', { ...sample(), memoryDetail: undefined }],
+    ['메모리 구성 값이 문자열', { ...sample(), memoryDetail: { ...sample().memoryDetail, cacheBytes: '1' } }],
+    ['부하 값 없음', { ...sample(), load: { one: 1, five: 1, running: 1 } }],
     ['sources 없음', { ...sample(), sources: undefined }],
     ['프로세스 이름이 숫자', { ...sample(), processes: [{ pid: 1, name: 1 }] }],
     ['네트워크 값이 문자열', { ...sample(), network: { rxBytes: '1', txBytes: 0 } }],
@@ -81,9 +100,10 @@ describe('appendSample', () => {
         cpu: {
           totalTicks: 1400,
           idleTicks: 1100, // 사용 100 / 400 = 25%
+          kernelTicks: 90,
           cores: [
-            { id: 0, totalTicks: 700, idleTicks: 500 }, // 50%
-            { id: 1, totalTicks: 700, idleTicks: 600 }, // 0%
+            { id: 0, totalTicks: 700, idleTicks: 500, kernelTicks: 65 }, // 50%
+            { id: 1, totalTicks: 700, idleTicks: 600, kernelTicks: 25 }, // 0%
           ],
         },
         memory: { totalBytes: 1000, usedBytes: 500, availableBytes: 500 },
@@ -108,9 +128,10 @@ describe('appendSample', () => {
       cpu: {
         totalTicks: 1400,
         idleTicks: 1100,
+        kernelTicks: 50,
         cores: [
-          { id: 1, totalTicks: 700, idleTicks: 500 },
-          { id: 2, totalTicks: 100, idleTicks: 100 },
+          { id: 1, totalTicks: 700, idleTicks: 500, kernelTicks: 25 },
+          { id: 2, totalTicks: 100, idleTicks: 100, kernelTicks: 0 },
         ],
       },
     })

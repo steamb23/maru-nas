@@ -7,6 +7,8 @@ import (
 	"testing"
 	"testing/fstest"
 	"time"
+
+	"onmaru/backend/internal/api"
 )
 
 func TestParseCPUTimes(t *testing.T) {
@@ -19,10 +21,11 @@ func TestParseCPUTimes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// 앞 8개 필드의 합, idle + iowait.
+	// 앞 8개 필드의 합, idle + iowait, system + irq + softirq.
 	want := CPUTimes{
-		Idle:  46828483 + 16683,
-		Total: 10132153 + 290696 + 3084719 + 46828483 + 16683 + 0 + 25195 + 0,
+		Idle:   46828483 + 16683,
+		Kernel: 3084719 + 0 + 25195,
+		Total:  10132153 + 290696 + 3084719 + 46828483 + 16683 + 0 + 25195 + 0,
 	}
 	if got != want {
 		t.Errorf("got %+v, want %+v", got, want)
@@ -76,6 +79,83 @@ func TestParseMemInfo(t *testing.T) {
 	}
 	if got.Used() != (16303428-8151714)*1024 {
 		t.Errorf("Used() = %d", got.Used())
+	}
+}
+
+func TestParseCPUTimesShortLine(t *testing.T) {
+	// irq·softirq가 없는 옛 형식이면 커널 시간은 system뿐이다.
+	got, err := ParseCPUTimes(strings.NewReader("cpu 10 2 30 400\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != (CPUTimes{Idle: 400, Kernel: 30, Total: 442}) {
+		t.Errorf("got %+v", got)
+	}
+}
+
+func TestParseMemInfoDetailFields(t *testing.T) {
+	f, err := os.Open("testdata/meminfo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	got, err := ParseMemInfo(f)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := MemInfo{
+		Total: 16303428 * 1024, Available: 8151714 * 1024, Free: 1234567 * 1024,
+		Buffers: 123456 * 1024, Cached: 5678901 * 1024, Shmem: 234567 * 1024,
+		SReclaimable: 345678 * 1024, Zswap: 45678 * 1024,
+		SwapTotal: 2097148 * 1024, SwapFree: 1048574 * 1024,
+	}
+	if got != want {
+		t.Errorf("got %+v, want %+v", got, want)
+	}
+}
+
+func TestMemInfoDetail(t *testing.T) {
+	cases := []struct {
+		name string
+		m    MemInfo
+		zram uint64
+		want api.MemoryDetail
+	}{
+		{
+			name: "typical",
+			m: MemInfo{Total: 1000, Free: 100, Buffers: 20, Cached: 400, Shmem: 50, SReclaimable: 30, Zswap: 10,
+				SwapTotal: 500, SwapFree: 400},
+			zram: 5,
+			want: api.MemoryDetail{FreeBytes: 100, BuffersBytes: 20, SharedBytes: 50, CacheBytes: 380,
+				CompressedBytes: 15, AppsBytes: 435, SwapTotalBytes: 500, SwapUsedBytes: 100},
+		},
+		{
+			name: "only required fields",
+			m:    MemInfo{Total: 1000, Available: 600},
+			want: api.MemoryDetail{AppsBytes: 1000},
+		},
+		{
+			// Shmem이 Cached + SReclaimable보다 크면 캐시는 0이다.
+			name: "shmem above cached",
+			m:    MemInfo{Total: 1000, Free: 100, Cached: 40, Shmem: 60},
+			want: api.MemoryDetail{FreeBytes: 100, SharedBytes: 60, AppsBytes: 840},
+		},
+		{
+			// 값이 Total보다 많아도 합은 Total이고 앞 항목부터 채운다.
+			name: "overflow",
+			m:    MemInfo{Total: 100, Free: 70, Buffers: 20, Cached: 50, SwapTotal: 10, SwapFree: 20},
+			want: api.MemoryDetail{FreeBytes: 70, BuffersBytes: 20, CacheBytes: 10, SwapTotalBytes: 10},
+		},
+	}
+	for _, c := range cases {
+		got := c.m.Detail(c.zram)
+		if got != c.want {
+			t.Errorf("%s: got %+v, want %+v", c.name, got, c.want)
+		}
+		sum := got.AppsBytes + got.SharedBytes + got.CompressedBytes + got.BuffersBytes + got.CacheBytes + got.FreeBytes
+		if sum != c.m.Total {
+			t.Errorf("%s: sum %d, want total %d", c.name, sum, c.m.Total)
+		}
 	}
 }
 

@@ -36,10 +36,14 @@ type SystemStatsResponse struct {
 	AddonSources `tstype:",extends"`
 	// SampledAtMs는 값을 읽은 시각이다. 백엔드 프로세스 시작 기준의 단조 시각(밀리초)이며,
 	// 같은 백엔드의 두 응답 차이를 구하는 데만 쓴다(벽시계 시각이 아니다).
-	SampledAtMs   int64       `json:"sampledAtMs"`
-	CPU           CPUCounters `json:"cpu"`
-	Memory        MemoryInfo  `json:"memory"`
-	UptimeSeconds float64     `json:"uptimeSeconds"`
+	SampledAtMs int64       `json:"sampledAtMs"`
+	CPU         CPUCounters `json:"cpu"`
+	Memory      MemoryInfo  `json:"memory"`
+	// MemoryDetail은 메모리 구성과 스왑이다(성능 페이지의 메모리 구성 막대).
+	MemoryDetail  MemoryDetail `json:"memoryDetail"`
+	UptimeSeconds float64      `json:"uptimeSeconds"`
+	// Load는 부하 평균이다. 읽지 못하면 없다.
+	Load *LoadAverage `json:"load,omitempty"`
 	// Network는 물리 인터페이스의 누적 바이트 합계다. 읽지 못하면 없다.
 	Network *NetTotals `json:"network,omitempty"`
 	// Disk는 물리 디스크의 누적 바이트 합계다. 읽지 못하면 없다.
@@ -64,6 +68,8 @@ type CPUCounters struct {
 	TotalTicks uint64 `json:"totalTicks"`
 	// IdleTicks는 idle + iowait다.
 	IdleTicks uint64 `json:"idleTicks"`
+	// KernelTicks는 커널 시간(system + irq + softirq)이다. steal은 넣지 않는다.
+	KernelTicks uint64 `json:"kernelTicks"`
 	// Cores는 켜져 있는 코어별 값이다(cpuN 순서). 꺼진 코어는 빠지므로 ID로 맞춘다.
 	Cores []CoreTicks `json:"cores"`
 }
@@ -71,9 +77,39 @@ type CPUCounters struct {
 // CoreTicks는 코어 하나의 누적 CPU 시간이다.
 type CoreTicks struct {
 	// ID는 cpuN의 N이다.
-	ID         int    `json:"id"`
-	TotalTicks uint64 `json:"totalTicks"`
-	IdleTicks  uint64 `json:"idleTicks"`
+	ID          int    `json:"id"`
+	TotalTicks  uint64 `json:"totalTicks"`
+	IdleTicks   uint64 `json:"idleTicks"`
+	KernelTicks uint64 `json:"kernelTicks"`
+}
+
+// MemoryDetail은 RAM 구성(htop 방식)과 스왑이다. 단위는 바이트다.
+// Apps + Shared + Compressed + Buffers + Cache + Free = MemoryInfo.TotalBytes.
+type MemoryDetail struct {
+	// AppsBytes는 나머지 항목을 뺀 메모리다. 프로세스와 회수할 수 없는 커널 메모리다.
+	AppsBytes uint64 `json:"appsBytes"`
+	// SharedBytes는 공유 메모리(Shmem, tmpfs 포함)다.
+	SharedBytes uint64 `json:"sharedBytes"`
+	// CompressedBytes는 zswap 풀과 zram 장치가 쓰는 메모리다.
+	CompressedBytes uint64 `json:"compressedBytes"`
+	// BuffersBytes는 블록 장치 버퍼(Buffers)다.
+	BuffersBytes uint64 `json:"buffersBytes"`
+	// CacheBytes는 페이지 캐시와 회수할 수 있는 slab(Cached + SReclaimable - Shmem)이다.
+	CacheBytes uint64 `json:"cacheBytes"`
+	// FreeBytes는 쓰지 않는 메모리(MemFree)다.
+	FreeBytes      uint64 `json:"freeBytes"`
+	SwapTotalBytes uint64 `json:"swapTotalBytes"`
+	SwapUsedBytes  uint64 `json:"swapUsedBytes"`
+}
+
+// LoadAverage는 /proc/loadavg의 부하 평균이다.
+type LoadAverage struct {
+	// One, Five, Fifteen은 1·5·15분 부하 평균이다.
+	One     float64 `json:"one"`
+	Five    float64 `json:"five"`
+	Fifteen float64 `json:"fifteen"`
+	// Running은 지금 실행할 수 있는 스케줄링 단위(스레드) 수다.
+	Running int `json:"running"`
 }
 
 // NetTotals는 물리 네트워크 인터페이스의 누적 바이트 합계다.
@@ -576,6 +612,8 @@ type SystemInfoPrefs struct {
 	CPUScale string `json:"cpuScale"`
 	// CPUGraph는 CPUGraph* 중 하나다. 프론트는 모르는 값이면 overall을 쓴다.
 	CPUGraph string `json:"cpuGraph"`
+	// CPUKernel은 CPU 그래프에 커널 시간을 겹쳐 보일지다. 없으면 보인다.
+	CPUKernel *bool `json:"cpuKernel,omitempty"`
 }
 
 // SystemInfoRequest는 PUT /api/preferences/system-info의 요청 본문이다.

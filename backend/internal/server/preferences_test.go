@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -333,13 +334,24 @@ func TestSystemInfoPrefsRoundTrip(t *testing.T) {
 	}
 	drawer := api.DrawerRequest{Drawer: &api.DrawerPrefs{Sort: api.DrawerSortName}}
 	wantStatus(t, b.do(http.MethodPut, "/api/preferences/drawer", drawer), http.StatusNoContent)
+	hide, show := false, true
+	// kernel은 CPUKernel을 비교하려고 포인터를 값으로 바꾼다(nil은 "없음").
+	kernel := func(p *bool) string {
+		if p == nil {
+			return "unset"
+		}
+		return strconv.FormatBool(*p)
+	}
 	for _, want := range []api.SystemInfoPrefs{
-		{CPUScale: api.CPUScaleCore, CPUGraph: api.CPUGraphCores},
+		{CPUScale: api.CPUScaleCore, CPUGraph: api.CPUGraphCores, CPUKernel: &hide},
+		{CPUScale: api.CPUScaleCore, CPUGraph: api.CPUGraphCores, CPUKernel: &show},
+		// 옛 탭은 cpuKernel을 보내지 않는다.
 		{CPUScale: api.CPUScaleMachine, CPUGraph: api.CPUGraphOverall},
 	} {
 		wantStatus(t, b.do(http.MethodPut, "/api/preferences/system-info", api.SystemInfoRequest{SystemInfo: &want}), http.StatusNoContent)
 		got := decode[api.Preferences](t, b.do(http.MethodGet, "/api/preferences", nil))
-		if got.SystemInfo == nil || *got.SystemInfo != want {
+		if got.SystemInfo == nil || got.SystemInfo.CPUScale != want.CPUScale || got.SystemInfo.CPUGraph != want.CPUGraph ||
+			kernel(got.SystemInfo.CPUKernel) != kernel(want.CPUKernel) {
 			t.Fatalf("system info = %+v, want %+v", got.SystemInfo, want)
 		}
 		// 다른 설정은 그대로다.

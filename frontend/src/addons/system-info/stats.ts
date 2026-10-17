@@ -8,6 +8,8 @@ import type {
   CPUCounters,
   CoreTicks,
   DiskTotals,
+  LoadAverage,
+  MemoryDetail,
   NetTotals,
   Process,
   SystemStatsResponse,
@@ -21,10 +23,26 @@ export const HISTORY_MS = 60_000
 export const MAX_SAMPLE_GAP_MS = 30_000
 
 const isCore = (v: unknown): v is CoreTicks =>
-  isObj(v) && isNum(v.id) && isNum(v.totalTicks) && isNum(v.idleTicks)
+  isObj(v) && isNum(v.id) && isNum(v.totalTicks) && isNum(v.idleTicks) && isNum(v.kernelTicks)
 
 const isCPUCounters = (v: unknown): v is CPUCounters =>
-  isObj(v) && isNum(v.totalTicks) && isNum(v.idleTicks) && isArrayOf(v.cores, isCore)
+  isObj(v) && isNum(v.totalTicks) && isNum(v.idleTicks) && isNum(v.kernelTicks) && isArrayOf(v.cores, isCore)
+
+const MEMORY_DETAIL_KEYS = [
+  'appsBytes',
+  'sharedBytes',
+  'compressedBytes',
+  'buffersBytes',
+  'cacheBytes',
+  'freeBytes',
+  'swapTotalBytes',
+  'swapUsedBytes',
+] as const satisfies readonly (keyof MemoryDetail)[]
+
+const isMemoryDetail = (v: unknown): v is MemoryDetail => isObj(v) && MEMORY_DETAIL_KEYS.every((k) => isNum(v[k]))
+
+const isLoadAverage = (v: unknown): v is LoadAverage =>
+  isObj(v) && isNum(v.one) && isNum(v.five) && isNum(v.fifteen) && isNum(v.running)
 
 const isNetTotals = (v: unknown): v is NetTotals => isObj(v) && isNum(v.rxBytes) && isNum(v.txBytes)
 
@@ -60,7 +78,9 @@ export function isSystemStatsResponse(v: unknown): v is SystemStatsResponse {
     isNum(v.memory.totalBytes) &&
     isNum(v.memory.usedBytes) &&
     isNum(v.memory.availableBytes) &&
+    isMemoryDetail(v.memoryDetail) &&
     isNum(v.uptimeSeconds) &&
+    isOptional(v.load, isLoadAverage) &&
     isOptional(v.network, isNetTotals) &&
     isOptional(v.disk, isDiskTotals) &&
     isOptional(v.tasks, isTaskCounts) &&

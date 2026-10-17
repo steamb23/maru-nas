@@ -9,15 +9,19 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"strconv"
 	"strings"
 	"unicode/utf8"
+
+	"onmaru/backend/internal/api"
 )
 
 // CPUTimes는 /proc/stat의 합산 "cpu" 줄이며 단위는 clock tick이다.
 type CPUTimes struct {
-	Idle  uint64 // idle + iowait
-	Total uint64 // guest/guest_nice를 뺀 모든 필드의 합
+	Idle   uint64 // idle + iowait
+	Kernel uint64 // system + irq + softirq
+	Total  uint64 // guest/guest_nice를 뺀 모든 필드의 합
 }
 
 // ParseCPUTimes는 /proc/stat에서 합산 "cpu" 줄을 파싱한다.
@@ -43,6 +47,7 @@ func parseCPUFields(vals []string) (CPUTimes, error) {
 	}
 	// 필드 순서: user nice system idle iowait irq softirq steal guest guest_nice.
 	// guest와 guest_nice는 이미 user, nice에 포함되어 있으므로 제외한다.
+	// 커널 시간은 system, irq, softirq다. steal은 하이퍼바이저가 가져간 시간이라 넣지 않는다.
 	if len(vals) > 8 {
 		vals = vals[:8]
 	}
@@ -53,8 +58,11 @@ func parseCPUFields(vals []string) (CPUTimes, error) {
 			return CPUTimes{}, fmt.Errorf("cpu field %d: %w", i, err)
 		}
 		t.Total += n
-		if i == 3 || i == 4 { // idle, iowait
+		switch i {
+		case 3, 4: // idle, iowait
 			t.Idle += n
+		case 2, 5, 6: // system, irq, softirq
+			t.Kernel += n
 		}
 	}
 	return t, nil
@@ -126,9 +134,18 @@ func CPUUsagePercent(prev, cur CPUTimes) float64 {
 }
 
 // MemInfo는 /proc/meminfo에서 사용하는 값이며 단위는 바이트다.
+// Total과 Available 말고는 커널에 따라 줄이 없을 수 있고(Zswap 등), 없으면 0이다.
 type MemInfo struct {
-	Total     uint64
-	Available uint64
+	Total        uint64
+	Available    uint64
+	Free         uint64
+	Buffers      uint64
+	Cached       uint64 // Shmem을 포함한다
+	Shmem        uint64
+	SReclaimable uint64
+	Zswap        uint64 // zswap 풀이 실제로 쓰는 크기(압축 뒤). Zswapped는 압축 전 크기라 쓰지 않는다
+	SwapTotal    uint64
+	SwapFree     uint64
 }
 
 // Used는 Total - Available을 반환한다.
@@ -139,7 +156,34 @@ func (m MemInfo) Used() uint64 {
 	return m.Total - m.Available
 }
 
-// ParseMemInfo는 /proc/meminfo에서 MemTotal과 MemAvailable을 파싱한다.
+// Detail은 RAM 구성(htop 방식)과 스왑이다. zramBytes는 zram 장치가 쓰는 메모리 합계다.
+// Cached에 Shmem이 포함되므로 캐시는 Cached + SReclaimable - Shmem이다. 항목의 합이 늘 Total이 되게
+// 여유, 버퍼, 공유, 캐시, 압축 순으로 남은 양 안에서만 떼고 나머지를 앱으로 둔다.
+func (m MemInfo) Detail(zramBytes uint64) api.MemoryDetail {
+	rest := m.Total
+	take := func(n uint64) uint64 {
+		n = min(n, rest)
+		rest -= n
+		return n
+	}
+	var cache uint64
+	if c := m.Cached + m.SReclaimable; c > m.Shmem {
+		cache = c - m.Shmem
+	}
+	d := api.MemoryDetail{SwapTotalBytes: m.SwapTotal}
+	d.FreeBytes = take(m.Free)
+	d.BuffersBytes = take(m.Buffers)
+	d.SharedBytes = take(m.Shmem)
+	d.CacheBytes = take(cache)
+	d.CompressedBytes = take(m.Zswap + zramBytes)
+	d.AppsBytes = rest
+	if m.SwapFree < m.SwapTotal {
+		d.SwapUsedBytes = m.SwapTotal - m.SwapFree
+	}
+	return d
+}
+
+// ParseMemInfo는 /proc/meminfo를 파싱한다. MemTotal과 MemAvailable은 반드시 있어야 한다.
 func ParseMemInfo(r io.Reader) (MemInfo, error) {
 	var m MemInfo
 	var haveTotal, haveAvail bool
@@ -155,6 +199,22 @@ func ParseMemInfo(r io.Reader) (MemInfo, error) {
 			dst, haveTotal = &m.Total, true
 		case "MemAvailable":
 			dst, haveAvail = &m.Available, true
+		case "MemFree":
+			dst = &m.Free
+		case "Buffers":
+			dst = &m.Buffers
+		case "Cached":
+			dst = &m.Cached
+		case "Shmem":
+			dst = &m.Shmem
+		case "SReclaimable":
+			dst = &m.SReclaimable
+		case "Zswap":
+			dst = &m.Zswap
+		case "SwapTotal":
+			dst = &m.SwapTotal
+		case "SwapFree":
+			dst = &m.SwapFree
 		default:
 			continue
 		}
@@ -193,21 +253,57 @@ func ParseUptime(r io.Reader) (float64, error) {
 	return strconv.ParseFloat(fields[0], 64)
 }
 
-// ParseLoadavgThreads는 /proc/loadavg의 넷째 값("실행 중/전체")에서 전체 스케줄링 단위(스레드) 수를 읽는다.
-func ParseLoadavgThreads(r io.Reader) (int, error) {
+// LoadAvg는 /proc/loadavg의 값이다.
+type LoadAvg struct {
+	// One, Five, Fifteen은 1·5·15분 부하 평균이다.
+	One, Five, Fifteen float64
+	// Running은 지금 실행할 수 있는 스케줄링 단위 수, Threads는 전체 스케줄링 단위(스레드) 수다(넷째 값 "실행 중/전체").
+	Running int
+	Threads int
+}
+
+// ParseLoadavg는 /proc/loadavg를 파싱한다.
+func ParseLoadavg(r io.Reader) (LoadAvg, error) {
 	b, err := io.ReadAll(io.LimitReader(r, 256))
+	if err != nil {
+		return LoadAvg{}, err
+	}
+	fields := strings.Fields(string(b))
+	if len(fields) < 4 {
+		return LoadAvg{}, fmt.Errorf("loadavg has %d fields, want >= 4", len(fields))
+	}
+	var l LoadAvg
+	for i, dst := range []*float64{&l.One, &l.Five, &l.Fifteen} {
+		v, err := strconv.ParseFloat(fields[i], 64)
+		if err != nil || v < 0 || math.IsInf(v, 0) || math.IsNaN(v) {
+			return LoadAvg{}, fmt.Errorf("loadavg field %d: %q", i, fields[i])
+		}
+		*dst = v
+	}
+	running, total, ok := strings.Cut(fields[3], "/")
+	if !ok {
+		return LoadAvg{}, fmt.Errorf("loadavg tasks %q", fields[3])
+	}
+	if l.Running, err = strconv.Atoi(running); err != nil {
+		return LoadAvg{}, fmt.Errorf("loadavg running: %w", err)
+	}
+	if l.Threads, err = strconv.Atoi(total); err != nil {
+		return LoadAvg{}, fmt.Errorf("loadavg threads: %w", err)
+	}
+	return l, nil
+}
+
+// ParseZramMemUsed는 /sys/block/zramN/mm_stat의 셋째 값(mem_used_total, 압축한 데이터와 관리 정보가 쓰는 메모리, 바이트)을 읽는다.
+func ParseZramMemUsed(r io.Reader) (uint64, error) {
+	b, err := io.ReadAll(io.LimitReader(r, 512))
 	if err != nil {
 		return 0, err
 	}
 	fields := strings.Fields(string(b))
-	if len(fields) < 4 {
-		return 0, fmt.Errorf("loadavg has %d fields, want >= 4", len(fields))
+	if len(fields) < 3 {
+		return 0, fmt.Errorf("mm_stat has %d fields, want >= 3", len(fields))
 	}
-	_, total, ok := strings.Cut(fields[3], "/")
-	if !ok {
-		return 0, fmt.Errorf("loadavg tasks %q", fields[3])
-	}
-	return strconv.Atoi(total)
+	return strconv.ParseUint(fields[2], 10, 64)
 }
 
 // pfKthread는 /proc/<pid>/stat flags의 커널 스레드 표시(PF_KTHREAD)다.

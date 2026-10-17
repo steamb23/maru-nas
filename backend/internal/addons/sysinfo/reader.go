@@ -46,7 +46,7 @@ func NewReader(net NetSource) *Reader {
 }
 
 // NewReaderFS는 proc와 block(/sys/block 형태)을 읽는 Reader를 반환한다.
-// proc에는 "stat", "meminfo", "uptime", "diskstats" 파일이 있어야 한다. net이 nil이면 네트워크 합계가 없다.
+// proc에는 "stat", "meminfo", "uptime", "diskstats", "loadavg" 파일이 있어야 한다. net이 nil이면 네트워크 합계가 없다.
 func NewReaderFS(proc, block fs.FS, net NetSource) *Reader {
 	return &Reader{proc: proc, block: block, net: net, sleep: time.Sleep, now: time.Now, start: time.Now()}
 }
@@ -100,7 +100,7 @@ func (r *Reader) cpuUsage() (float64, error) {
 }
 
 // Stats는 시스템 정보 창이 쓰는 누적 카운터를 반환한다. 사용률·속도는 프론트가 두 응답의 차이로 계산한다.
-// 네트워크·디스크 합계는 읽지 못하면 빼고 나머지로 응답한다.
+// 네트워크·디스크 합계, 부하 평균, 프로세스·스레드 수는 읽지 못하면 빼고 나머지로 응답한다.
 func (r *Reader) Stats() (api.SystemStatsResponse, error) {
 	cpu, err := readFile(r.proc, "stat", ParseCPUStat)
 	if err != nil {
@@ -118,19 +118,21 @@ func (r *Reader) Stats() (api.SystemStatsResponse, error) {
 		AddonSources: api.AddonSources{Sources: []string{r.Name()}},
 		SampledAtMs:  r.now().Sub(r.start).Milliseconds(),
 		CPU: api.CPUCounters{
-			TotalTicks: cpu.All.Total,
-			IdleTicks:  cpu.All.Idle,
-			Cores:      make([]api.CoreTicks, 0, len(cpu.Cores)),
+			TotalTicks:  cpu.All.Total,
+			IdleTicks:   cpu.All.Idle,
+			KernelTicks: cpu.All.Kernel,
+			Cores:       make([]api.CoreTicks, 0, len(cpu.Cores)),
 		},
 		Memory: api.MemoryInfo{
 			TotalBytes:     mem.Total,
 			UsedBytes:      mem.Used(),
 			AvailableBytes: mem.Available,
 		},
+		MemoryDetail:  mem.Detail(r.zramMemUsed()),
 		UptimeSeconds: up,
 	}
 	for _, c := range cpu.Cores {
-		res.CPU.Cores = append(res.CPU.Cores, api.CoreTicks{ID: c.ID, TotalTicks: c.Total, IdleTicks: c.Idle})
+		res.CPU.Cores = append(res.CPU.Cores, api.CoreTicks{ID: c.ID, TotalTicks: c.Total, IdleTicks: c.Idle, KernelTicks: c.Kernel})
 	}
 	if t, err := r.netTotals(); err == nil {
 		res.Network = &t
@@ -138,21 +140,20 @@ func (r *Reader) Stats() (api.SystemStatsResponse, error) {
 	if t, err := r.diskTotals(); err == nil {
 		res.Disk = &t
 	}
-	if t, err := r.taskCounts(); err == nil {
-		res.Tasks = &t
+	if load, err := readFile(r.proc, "loadavg", ParseLoadavg); err == nil {
+		res.Load = &api.LoadAverage{One: load.One, Five: load.Five, Fifteen: load.Fifteen, Running: load.Running}
+		if n, err := r.processCount(); err == nil {
+			res.Tasks = &api.TaskCounts{Processes: n, Threads: load.Threads}
+		}
 	}
 	return res, nil
 }
 
-// taskCounts는 프로세스 수(/proc의 PID 디렉터리)와 스레드 수(/proc/loadavg)다. 프로세스 목록을 읽지 않고 센다.
-func (r *Reader) taskCounts() (api.TaskCounts, error) {
-	threads, err := readFile(r.proc, "loadavg", ParseLoadavgThreads)
-	if err != nil {
-		return api.TaskCounts{}, err
-	}
+// processCount는 /proc의 PID 디렉터리 수다. 프로세스 목록을 읽지 않고 센다.
+func (r *Reader) processCount() (int, error) {
 	entries, err := fs.ReadDir(r.proc, ".")
 	if err != nil {
-		return api.TaskCounts{}, err
+		return 0, err
 	}
 	n := 0
 	for _, e := range entries {
@@ -160,7 +161,25 @@ func (r *Reader) taskCounts() (api.TaskCounts, error) {
 			n++
 		}
 	}
-	return api.TaskCounts{Processes: n, Threads: threads}, nil
+	return n, nil
+}
+
+// zramMemUsed는 zram 장치(/sys/block/zramN)가 쓰는 메모리 합계다. 읽지 못한 장치는 건너뛴다.
+func (r *Reader) zramMemUsed() uint64 {
+	entries, err := fs.ReadDir(r.block, ".")
+	if err != nil {
+		return 0
+	}
+	var total uint64
+	for _, e := range entries {
+		if !strings.HasPrefix(e.Name(), "zram") {
+			continue
+		}
+		if n, err := readFile(r.block, e.Name()+"/mm_stat", ParseZramMemUsed); err == nil {
+			total += n
+		}
+	}
+	return total
 }
 
 // netTotals는 물리 인터페이스의 누적 바이트 합계다. 브리지·본딩 같은 가상 인터페이스는

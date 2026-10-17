@@ -29,8 +29,8 @@ func TestParseCPUStat(t *testing.T) {
 		t.Errorf("all = %+v, want %+v", got.All, all)
 	}
 	want := []CoreTimes{
-		{ID: 0, CPUTimes: CPUTimes{Idle: 13343292 + 6130, Total: 1393280 + 32966 + 572056 + 13343292 + 6130 + 0 + 17875 + 0}},
-		{ID: 1, CPUTimes: CPUTimes{Idle: 13404148 + 3683, Total: 1335808 + 31652 + 427683 + 13404148 + 3683 + 0 + 1849 + 0}},
+		{ID: 0, CPUTimes: CPUTimes{Idle: 13343292 + 6130, Kernel: 572056 + 0 + 17875, Total: 1393280 + 32966 + 572056 + 13343292 + 6130 + 0 + 17875 + 0}},
+		{ID: 1, CPUTimes: CPUTimes{Idle: 13404148 + 3683, Kernel: 427683 + 0 + 1849, Total: 1335808 + 31652 + 427683 + 13404148 + 3683 + 0 + 1849 + 0}},
 	}
 	if len(got.Cores) != len(want) || got.Cores[0] != want[0] || got.Cores[1] != want[1] {
 		t.Errorf("cores = %+v, want %+v", got.Cores, want)
@@ -98,8 +98,8 @@ func statsFS() (proc, block fstest.MapFS) {
 		panic(err)
 	}
 	proc = fstest.MapFS{
-		"stat":      {Data: []byte("cpu  100 0 100 800 0 0 0 0 0 0\ncpu0 50 0 50 400 0\ncpu1 50 0 50 400 0\n")},
-		"meminfo":   {Data: []byte("MemTotal: 1000 kB\nMemAvailable: 250 kB\n")},
+		"stat":      {Data: []byte("cpu  100 0 80 800 0 10 10 0 0 0\ncpu0 50 0 40 400 0 5 5\ncpu1 50 0 50 400 0\n")},
+		"meminfo":   {Data: []byte("MemTotal: 1000 kB\nMemAvailable: 250 kB\nMemFree: 100 kB\nCached: 300 kB\nZswap: 10 kB\n")},
 		"uptime":    {Data: []byte("42.5 10.0\n")},
 		"diskstats": {Data: diskstats},
 	}
@@ -116,6 +116,9 @@ func statsFS() (proc, block fstest.MapFS) {
 		"loop0/size": {Data: []byte("0\n")},
 		"md0/size":   {Data: []byte("0\n")},
 		"zram0/size": {Data: []byte("0\n")},
+		// zram이 쓰는 메모리는 mm_stat의 셋째 값이다. 읽지 못하는 장치(zram1)는 건너뛴다.
+		"zram0/mm_stat": {Data: []byte("409600 102400 20480 0 20480 0 0 0 0\n")},
+		"zram1/mm_stat": {Data: []byte("bad\n")},
 	}
 	return proc, block
 }
@@ -140,9 +143,15 @@ func TestReaderStats(t *testing.T) {
 	if len(got.Sources) != 1 || got.Sources[0] != "proc" || got.SampledAtMs != 1500 {
 		t.Errorf("sources %v, sampledAtMs %d", got.Sources, got.SampledAtMs)
 	}
-	if got.CPU.TotalTicks != 1000 || got.CPU.IdleTicks != 800 || len(got.CPU.Cores) != 2 ||
-		got.CPU.Cores[1] != (api.CoreTicks{ID: 1, TotalTicks: 500, IdleTicks: 400}) {
+	if got.CPU.TotalTicks != 1000 || got.CPU.IdleTicks != 800 || got.CPU.KernelTicks != 100 || len(got.CPU.Cores) != 2 ||
+		got.CPU.Cores[0] != (api.CoreTicks{ID: 0, TotalTicks: 500, IdleTicks: 400, KernelTicks: 50}) ||
+		got.CPU.Cores[1] != (api.CoreTicks{ID: 1, TotalTicks: 500, IdleTicks: 400, KernelTicks: 50}) {
 		t.Errorf("cpu = %+v", got.CPU)
+	}
+	// 압축 = Zswap 10 KiB + zram0 20480바이트
+	wantDetail := api.MemoryDetail{FreeBytes: 100 * 1024, CacheBytes: 300 * 1024, CompressedBytes: 30 * 1024, AppsBytes: 570 * 1024}
+	if got.MemoryDetail != wantDetail {
+		t.Errorf("memory detail = %+v, want %+v", got.MemoryDetail, wantDetail)
 	}
 	if got.Memory.TotalBytes != 1000*1024 || got.Memory.UsedBytes != 750*1024 || got.UptimeSeconds != 42.5 {
 		t.Errorf("memory %+v, uptime %v", got.Memory, got.UptimeSeconds)
@@ -161,12 +170,30 @@ func TestReaderStats(t *testing.T) {
 	}
 }
 
-func TestParseLoadavgThreads(t *testing.T) {
-	if n, err := ParseLoadavgThreads(strings.NewReader("0.52 0.58 0.59 2/1234 98765\n")); err != nil || n != 1234 {
+func TestParseLoadavg(t *testing.T) {
+	got, err := ParseLoadavg(strings.NewReader("0.52 0.58 0.59 2/1234 98765\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != (LoadAvg{One: 0.52, Five: 0.58, Fifteen: 0.59, Running: 2, Threads: 1234}) {
+		t.Errorf("got %+v", got)
+	}
+	for _, in := range []string{
+		"", "0.1 0.2 0.3\n", "0.1 0.2 0.3 12 4\n", "0.1 0.2 0.3 1/x 4\n", "0.1 0.2 0.3 x/4 4\n",
+		"0.1 x 0.3 1/4 4\n", "-1 0.2 0.3 1/4 4\n", "NaN 0.2 0.3 1/4 4\n", "0.1 Inf 0.3 1/4 4\n",
+	} {
+		if _, err := ParseLoadavg(strings.NewReader(in)); err == nil {
+			t.Errorf("%q: expected error", in)
+		}
+	}
+}
+
+func TestParseZramMemUsed(t *testing.T) {
+	if n, err := ParseZramMemUsed(strings.NewReader("409600 102400 20480 0 20480 0 0 0 0\n")); err != nil || n != 20480 {
 		t.Errorf("got %d, %v", n, err)
 	}
-	for _, in := range []string{"", "0.1 0.2 0.3\n", "0.1 0.2 0.3 12 4\n", "0.1 0.2 0.3 1/x 4\n"} {
-		if _, err := ParseLoadavgThreads(strings.NewReader(in)); err == nil {
+	for _, in := range []string{"", "1 2\n", "1 2 x\n"} {
+		if _, err := ParseZramMemUsed(strings.NewReader(in)); err == nil {
 			t.Errorf("%q: expected error", in)
 		}
 	}
@@ -174,8 +201,8 @@ func TestParseLoadavgThreads(t *testing.T) {
 
 func TestReaderStatsTasks(t *testing.T) {
 	proc, block := statsFS()
-	if got, _ := NewReaderFS(proc, block, nil).Stats(); got.Tasks != nil {
-		t.Errorf("tasks without loadavg = %+v", got.Tasks)
+	if got, _ := NewReaderFS(proc, block, nil).Stats(); got.Tasks != nil || got.Load != nil {
+		t.Errorf("without loadavg: tasks %+v, load %+v", got.Tasks, got.Load)
 	}
 	proc["loadavg"] = &fstest.MapFile{Data: []byte("0.10 0.20 0.30 1/57 4321\n")}
 	proc["1/stat"] = &fstest.MapFile{Data: []byte("x")}
@@ -187,6 +214,9 @@ func TestReaderStatsTasks(t *testing.T) {
 	}
 	if got.Tasks == nil || *got.Tasks != (api.TaskCounts{Processes: 2, Threads: 57}) {
 		t.Errorf("tasks = %+v", got.Tasks)
+	}
+	if got.Load == nil || *got.Load != (api.LoadAverage{One: 0.1, Five: 0.2, Fifteen: 0.3, Running: 1}) {
+		t.Errorf("load = %+v", got.Load)
 	}
 }
 

@@ -53,7 +53,15 @@ export interface SystemStatsResponse extends AddonSources {
   sampledAtMs: number /* int64 */;
   cpu: CPUCounters;
   memory: MemoryInfo;
+  /**
+   * MemoryDetail은 메모리 구성과 스왑이다(성능 페이지의 메모리 구성 막대).
+   */
+  memoryDetail: MemoryDetail;
   uptimeSeconds: number /* float64 */;
+  /**
+   * Load는 부하 평균이다. 읽지 못하면 없다.
+   */
+  load?: LoadAverage;
   /**
    * Network는 물리 인터페이스의 누적 바이트 합계다. 읽지 못하면 없다.
    */
@@ -97,6 +105,10 @@ export interface CPUCounters {
    */
   idleTicks: number /* uint64 */;
   /**
+   * KernelTicks는 커널 시간(system + irq + softirq)이다. steal은 넣지 않는다.
+   */
+  kernelTicks: number /* uint64 */;
+  /**
    * Cores는 켜져 있는 코어별 값이다(cpuN 순서). 꺼진 코어는 빠지므로 ID로 맞춘다.
    */
   cores: CoreTicks[];
@@ -111,6 +123,54 @@ export interface CoreTicks {
   id: number /* int */;
   totalTicks: number /* uint64 */;
   idleTicks: number /* uint64 */;
+  kernelTicks: number /* uint64 */;
+}
+/**
+ * MemoryDetail은 RAM 구성(htop 방식)과 스왑이다. 단위는 바이트다.
+ * Apps + Shared + Compressed + Buffers + Cache + Free = MemoryInfo.TotalBytes.
+ */
+export interface MemoryDetail {
+  /**
+   * AppsBytes는 나머지 항목을 뺀 메모리다. 프로세스와 회수할 수 없는 커널 메모리다.
+   */
+  appsBytes: number /* uint64 */;
+  /**
+   * SharedBytes는 공유 메모리(Shmem, tmpfs 포함)다.
+   */
+  sharedBytes: number /* uint64 */;
+  /**
+   * CompressedBytes는 zswap 풀과 zram 장치가 쓰는 메모리다.
+   */
+  compressedBytes: number /* uint64 */;
+  /**
+   * BuffersBytes는 블록 장치 버퍼(Buffers)다.
+   */
+  buffersBytes: number /* uint64 */;
+  /**
+   * CacheBytes는 페이지 캐시와 회수할 수 있는 slab(Cached + SReclaimable - Shmem)이다.
+   */
+  cacheBytes: number /* uint64 */;
+  /**
+   * FreeBytes는 쓰지 않는 메모리(MemFree)다.
+   */
+  freeBytes: number /* uint64 */;
+  swapTotalBytes: number /* uint64 */;
+  swapUsedBytes: number /* uint64 */;
+}
+/**
+ * LoadAverage는 /proc/loadavg의 부하 평균이다.
+ */
+export interface LoadAverage {
+  /**
+   * One, Five, Fifteen은 1·5·15분 부하 평균이다.
+   */
+  one: number /* float64 */;
+  five: number /* float64 */;
+  fifteen: number /* float64 */;
+  /**
+   * Running은 지금 실행할 수 있는 스케줄링 단위(스레드) 수다.
+   */
+  running: number /* int */;
 }
 /**
  * NetTotals는 물리 네트워크 인터페이스의 누적 바이트 합계다.
@@ -851,6 +911,10 @@ export interface SystemInfoPrefs {
    * CPUGraph는 CPUGraph* 중 하나다. 프론트는 모르는 값이면 overall을 쓴다.
    */
   cpuGraph: string;
+  /**
+   * CPUKernel은 CPU 그래프에 커널 시간을 겹쳐 보일지다. 없으면 보인다.
+   */
+  cpuKernel?: boolean;
 }
 /**
  * SystemInfoRequest는 PUT /api/preferences/system-info의 요청 본문이다.

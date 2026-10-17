@@ -3,5 +3,15 @@ MemFree:         1234567 kB
 MemAvailable:    8151714 kB
 Buffers:          123456 kB
 Cached:          5678901 kB
+SwapCached:         1234 kB
+Active:          4567890 kB
 SwapTotal:       2097148 kB
-SwapFree:        2097148 kB
+SwapFree:        1048574 kB
+Zswap:             45678 kB
+Zswapped:         156789 kB
+Shmem:            234567 kB
+KReclaimable:     345678 kB
+SReclaimable:     345678 kB
+SUnreclaim:        98765 kB
+HugePages_Total:       0
+Hugepagesize:       2048 kB

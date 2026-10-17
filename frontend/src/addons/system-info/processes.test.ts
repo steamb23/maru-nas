@@ -29,8 +29,18 @@ function stats(sampledAtMs: number, totalTicks: number, processes?: Process[]): 
   return {
     sources: ['proc'],
     sampledAtMs,
-    cpu: { totalTicks, idleTicks: 0, cores: [] },
+    cpu: { totalTicks, idleTicks: 0, kernelTicks: 0, cores: [] },
     memory: { totalBytes: 1, usedBytes: 0, availableBytes: 1 },
+    memoryDetail: {
+      appsBytes: 0,
+      sharedBytes: 0,
+      compressedBytes: 0,
+      buffersBytes: 0,
+      cacheBytes: 0,
+      freeBytes: 1,
+      swapTotalBytes: 0,
+      swapUsedBytes: 0,
+    },
     uptimeSeconds: 1,
     processes,
   }
