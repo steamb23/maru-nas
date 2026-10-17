@@ -181,18 +181,13 @@ func (t *termConn) run(parent context.Context) {
 
 // open은 세션의 SSH 클라이언트에 셸 창을 연다. 비밀번호를 물어야 하면 실패 제한을 거친다.
 func (t *termConn) open(ctx context.Context) (*terminal.Window, error) {
-	var done func(auth.Outcome)
+	// asked는 이 접속에서 물었는지다. Ask는 접속(Dial) 고루틴, 곧 Open을 부른 이 고루틴 안에서만 불린다.
+	asked := false
 	a := terminal.Auth{Ask: func(ctx context.Context, c terminal.Challenge) ([]string, error) {
-		if done == nil {
-			d, retry := t.h.terminalLimiter.Begin(t.ip, t.s.Username, "")
-			if d == nil {
-				t.mu.Lock()
-				t.limited = retry
-				t.mu.Unlock()
-				return nil, errTerminalRateLimited
-			}
-			done = d
+		if !t.allowAsk() {
+			return nil, errTerminalRateLimited
 		}
+		asked = true
 		return t.ask(ctx, c)
 	}}
 	if t.h.Helper != nil && t.s.HelperTicket != "" && !t.s.HelperLost {
@@ -202,19 +197,41 @@ func (t *termConn) open(ctx context.Context) (*terminal.Window, error) {
 	size := t.size
 	t.mu.Unlock()
 	w, err := t.h.Terminal.Open(ctx, t.s.ID, t.s.Username, a, size)
-	if done != nil {
-		// Ask는 접속(Dial) 고루틴 안에서만 불리고 Open이 돌아오면 끝났으므로 done을 그대로 읽어도 된다.
-		var de *terminal.Error
-		switch {
-		case err == nil:
-			done(auth.Success)
-		case errors.As(err, &de) && de.Code == terminal.CodeAuthFailed && de.Asked:
-			done(auth.Failure)
-		default:
-			done(auth.Neutral)
-		}
+	if asked {
+		t.recordAsk(err)
 	}
 	return w, err
+}
+
+// allowAsk는 비밀번호를 물어도 되는지(실패 제한에 걸리지 않았는지) 본다. 답을 기다리는 동안 동시 시도
+// 칸(auth.MaxInflight)을 차지하지 않게 확인만 하고 바로 놓는다. 결과는 접속이 끝난 뒤 recordAsk가 센다.
+func (t *termConn) allowAsk() bool {
+	done, retry := t.h.terminalLimiter.Begin(t.ip, t.s.Username, "")
+	if done == nil {
+		t.mu.Lock()
+		t.limited = retry
+		t.mu.Unlock()
+		return false
+	}
+	done(auth.Neutral)
+	return true
+}
+
+// recordAsk는 물어서 끝난 접속의 결과를 실패 제한에 센다. 물어서 인증이 실패한 접속 하나가 실패 하나다.
+func (t *termConn) recordAsk(err error) {
+	done, _ := t.h.terminalLimiter.Begin(t.ip, t.s.Username, "")
+	if done == nil {
+		return
+	}
+	var de *terminal.Error
+	switch {
+	case err == nil:
+		done(auth.Success)
+	case errors.As(err, &de) && de.Code == terminal.CodeAuthFailed && de.Asked:
+		done(auth.Failure)
+	default:
+		done(auth.Neutral)
+	}
 }
 
 // ask는 질문을 브라우저에 보내고 답을 기다린다.

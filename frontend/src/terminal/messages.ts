@@ -45,12 +45,14 @@ function authFailedNotice(msg: TerminalServerMessage, asked: boolean): Omit<Clos
     return { key: 'terminal.closed.authGroups', params: { groups: msg.notAllowedGroups.join(', ') } }
   }
   if (asked) return { key: 'terminal.closed.authFailed' }
-  // 묻지도 못했다: 공개 키만 받는 sshd인데 임시 키를 쓰지 못했다.
+  // 묻지도 못했다: 비밀번호를 받지 않는 sshd에서 임시 키로 들어가지 못했다.
   switch (msg.keyCode) {
     case 'ssh_strict_modes':
       return { key: 'terminal.closed.authStrictModes' }
     case 'no_home':
       return { key: 'terminal.closed.authNoHome' }
+    case 'key_rejected':
+      return { key: 'terminal.closed.authKeyRejected' }
     case undefined:
       return { key: 'terminal.closed.authNoHelper' }
     default:

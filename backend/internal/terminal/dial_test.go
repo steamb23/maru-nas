@@ -231,6 +231,29 @@ func TestDialAuthFailedHints(t *testing.T) {
 	}
 }
 
+func TestDialHelperKeyRejectedBySSHD(t *testing.T) {
+	e := newTestEnv(t, sshfake.Options{})
+	// sshd가 도우미가 쓴 authorized_keys를 보지 않는다(AllowUsers·Match 등으로 키를 받지 않는 경우를 흉내 낸다).
+	empty := t.TempDir()
+	s, err := sshfake.Start("127.0.0.1:0", sshfake.Options{Users: sshfake.DefaultUsers(),
+		Home: func(string) string { return empty }, NoPassword: true, NoKeyboardInteractive: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	dir := t.TempDir()
+	s.WriteHostKey(filepath.Join(dir, "ssh_host_ed25519_key.pub"))
+	e.dialer.Addr, e.dialer.HostKeys = s.Addr, filepath.Join(dir, "*.pub")
+	_, err = e.dialer.Dial(context.Background(), "user", Auth{Keys: e.keys("user")})
+	if de := dialErr(t, err); de.Code != CodeAuthFailed || de.KeyCode != KeyRejected {
+		t.Fatalf("error = %+v", de)
+	}
+	// 넣었던 키 줄은 지운다.
+	if keys := e.authorizedKeys("user"); strings.Contains(keys, "onmaru-ephemeral") {
+		t.Fatalf("temporary key left: %q", keys)
+	}
+}
+
 func TestDialHostKeyMismatch(t *testing.T) {
 	e := newTestEnv(t, sshfake.Options{})
 	other, err := sshfake.Start("127.0.0.1:0", sshfake.Options{})

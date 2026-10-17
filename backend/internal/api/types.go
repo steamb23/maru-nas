@@ -915,7 +915,8 @@ type TerminalServerMessage struct {
 	// too_many_windows, busy, rate_limited) 중 하나다.
 	Reason   string `json:"reason,omitempty" tstype:"'exit' | 'session_ended' | 'disabled' | 'connection_lost' | 'ssh_unavailable' | 'ssh_host_key' | 'ssh_auth_failed' | 'ssh_failed' | 'canceled' | 'too_many_windows' | 'busy' | 'rate_limited'"`
 	ExitCode *int   `json:"exitCode,omitempty"`
-	// KeyCode는 도우미 임시 키를 쓰지 못한 이유(도우미 오류 코드)다. ssh_auth_failed의 힌트다.
+	// KeyCode는 도우미 임시 키를 쓰지 못한 이유(도우미 오류 코드, 또는 sshd가 키를 받지 않았으면
+	// key_rejected)다. ssh_auth_failed의 힌트다.
 	KeyCode string `json:"keyCode,omitempty"`
 	// NotAllowedGroups는 사용자가 sshd의 AllowGroups 중 어느 그룹에도 없을 때 그 그룹 목록이다.
 	NotAllowedGroups []string `json:"notAllowedGroups,omitempty"`

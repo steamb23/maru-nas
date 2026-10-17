@@ -25,6 +25,7 @@ describe('closeNotice', () => {
     expect(auth({ keyCode: 'ssh_strict_modes' }, true)).toBe('terminal.closed.authFailed')
     expect(auth({ keyCode: 'ssh_strict_modes' }, false)).toBe('terminal.closed.authStrictModes')
     expect(auth({ keyCode: 'no_home' }, false)).toBe('terminal.closed.authNoHome')
+    expect(auth({ keyCode: 'key_rejected' }, false)).toBe('terminal.closed.authKeyRejected')
     expect(auth({ keyCode: 'helper_unavailable' }, false)).toBe('terminal.closed.authKeyFailed')
     expect(auth({}, false)).toBe('terminal.closed.authNoHelper')
     expect(closeNotice(closed({ reason: 'ssh_auth_failed', notAllowedGroups: ['_ssh'] }), false).params).toEqual({

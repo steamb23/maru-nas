@@ -48,6 +48,9 @@ const (
 	CodeCanceled = "canceled"
 	// CodeFailed는 그 밖의 SSH 오류다.
 	CodeFailed = "ssh_failed"
+	// KeyRejected는 Error.KeyCode의 값으로, 도우미가 임시 키를 넣었는데 sshd가 받지 않았다는 뜻이다
+	// (AllowUsers·DenyGroups·Match 블록 등). AllowGroups에 속하지 않을 때는 NotAllowedGroups가 붙는다.
+	KeyRejected = "key_rejected"
 )
 
 // Error는 접속 실패다. 세부(주소, 원래 오류)는 Err에 두고 브라우저에는 코드와 힌트만 준다.
@@ -292,6 +295,9 @@ func (d *Dialer) classify(name string, conf SSHDConfig, st *authState, err error
 	case strings.Contains(err.Error(), "unable to authenticate"):
 		e.Code = CodeAuthFailed
 		e.NotAllowedGroups = d.notAllowed(name, conf.AllowGroups)
+		if st.authorized && e.KeyCode == "" {
+			e.KeyCode = KeyRejected
+		}
 	}
 	return e
 }

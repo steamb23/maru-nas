@@ -96,6 +96,7 @@
       "authGroups": "SSH sign-in failed. To use SSH, your account must be in one of these groups: {{groups}}. An administrator can add it in OMV's user settings.",
       "authStrictModes": "SSH sign-in failed. Other users can write to your home folder, so SSH ignores the keys in it. Remove write permission for group and others from your home folder (chmod go-w).",
       "authNoHome": "SSH sign-in failed. Your account has no home folder, so a temporary key couldn't be used, and this SSH server doesn't accept passwords.",
+      "authKeyRejected": "SSH sign-in failed. The SSH server didn't accept the temporary key. Check OMV's SSH settings (for example the extra options) for rules that block this account.",
       "authKeyFailed": "SSH sign-in failed. The privileged helper couldn't add a temporary key, and this SSH server doesn't accept passwords.",
       "authNoHelper": "SSH sign-in failed. This SSH server accepts only keys, and the privileged helper isn't available for this session. Sign in again, or ask an administrator.",
       "canceled": "Canceled.",

@@ -1359,7 +1359,8 @@ export interface TerminalServerMessage {
   reason?: 'exit' | 'session_ended' | 'disabled' | 'connection_lost' | 'ssh_unavailable' | 'ssh_host_key' | 'ssh_auth_failed' | 'ssh_failed' | 'canceled' | 'too_many_windows' | 'busy' | 'rate_limited';
   exitCode?: number /* int */;
   /**
-   * KeyCode는 도우미 임시 키를 쓰지 못한 이유(도우미 오류 코드)다. ssh_auth_failed의 힌트다.
+   * KeyCode는 도우미 임시 키를 쓰지 못한 이유(도우미 오류 코드, 또는 sshd가 키를 받지 않았으면
+   * key_rejected)다. ssh_auth_failed의 힌트다.
    */
   keyCode?: string;
   /**
