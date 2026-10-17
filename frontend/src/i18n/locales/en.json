@@ -82,6 +82,7 @@
   "terminal": {
     "connecting": "Connecting to the SSH server as {{user}}…",
     "passwordPrompt": "Password for {{user}}: ",
+    "retry": "Permission denied, please try again.",
     "reconnect": "Reconnect",
     "closed": {
       "exit": "The shell ended (exit code {{code}}).",

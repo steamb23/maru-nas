@@ -163,6 +163,8 @@ function connect(term: Terminal, user: string, t: Translate, onClosed: (n: Close
     const msg = parseServerMessage(ev.data)
     if (!msg || state === 'closed') return
     if (msg.type === 'prompt') {
+      // 앞 질문과 같은 질문이 다시 오면 답이 틀린 것이다(인증 코드처럼 이어지는 질문은 문구가 다르다).
+      if (asked && samePrompts(prompts, msg.prompts ?? [])) term.write(`${dim(t('terminal.retry'))}\r\n`)
       asked = true
       state = 'prompt'
       kind = msg.kind ?? 'password'
@@ -222,6 +224,10 @@ function connect(term: Terminal, user: string, t: Translate, onClosed: (n: Close
     ws.onopen = ws.onmessage = ws.onclose = null
     ws.close()
   }
+}
+
+function samePrompts(a: TerminalPrompt[], b: TerminalPrompt[]): boolean {
+  return a.length === b.length && a.every((p, i) => p.text === b[i].text && p.echo === b[i].echo)
 }
 
 // copyText는 글자를 클립보드에 넣는다. 평문 HTTP처럼 Clipboard API가 없으면 execCommand로 한다.

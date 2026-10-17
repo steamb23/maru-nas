@@ -18,7 +18,13 @@
   color: var(--terminal-fg);
 }
 
-/* FitAddon은 .xterm 요소의 padding을 빼고 칸 수를 계산하므로 여백은 여기에 둔다. */
+/* FitAddon은 .xterm 요소의 padding을 빼고 칸 수를 계산하므로 여백은 여기에 둔다. xterm.css의 기본
+   배경(검정)이 여백과 남는 줄 높이에 보이지 않게 터미널 배경으로 칠한다. */
+.terminal-screen .xterm,
+.terminal-screen .xterm .xterm-viewport {
+  background-color: var(--terminal-bg);
+}
+
 .terminal-screen .xterm {
   height: 100%;
   padding: 6px 4px 4px 10px;
