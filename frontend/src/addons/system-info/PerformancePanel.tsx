@@ -231,7 +231,18 @@ export function PerformancePanel({ sample, stale, resource, onResource }: Props)
       max: loadMax,
       maxLabel: loadMax.toLocaleString(lang),
       format: (x: number) => formatLoad(x, lang),
-      summary: load ? LOAD_SERIES.map((s) => loadNow(s.key)).join(' / ') : none,
+      // 좁은 페이지(자원 목록이 한 줄)에서는 1분 값만 보인다(.sysinfo-resource-extra).
+      summary: load ? (
+        <span>
+          {loadNow('load1')}
+          <span className="sysinfo-resource-extra">
+            {' / '}
+            {loadNow('load5')} / {loadNow('load15')}
+          </span>
+        </span>
+      ) : (
+        none
+      ),
       summaryLabel: load ? LOAD_SERIES.map((s, i) => `${loadSeries[i].label} ${loadNow(s.key)}`).join(', ') : none,
       stats: [
         ...LOAD_SERIES.map((s, i) => ({ label: loadSeries[i].label, value: loadNow(s.key), slot: s.slot })),

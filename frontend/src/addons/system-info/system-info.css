@@ -124,8 +124,11 @@
 }
 
 .sysinfo-resource-name {
+  overflow: hidden;
   font-weight: 600;
   line-height: 20px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .sysinfo-resource-value {
@@ -215,7 +218,8 @@
   white-space: nowrap;
 }
 
-/* 좁은 페이지에서는 자원 목록을 그래프 위 한 줄로 바꾸고 작은 그래프를 뺀다. */
+/* 좁은 페이지에서는 자원 목록을 그래프 위 한 줄로 바꾸고 작은 그래프를 뺀다. 항목은 내용 너비보다 줄지 않고
+   (값이 잘리지 않게) 남는 너비를 나눠 가지며, 한 줄에 모두 들어가지 않으면 가로로 스크롤한다. */
 @container sysinfo-body (max-width: 560px) {
   .sysinfo-perf {
     grid-template-rows: auto minmax(0, 1fr);
@@ -225,12 +229,18 @@
 
   .sysinfo-resources {
     flex-direction: row;
-    overflow: hidden;
+    overflow: auto hidden;
+    scrollbar-width: thin;
   }
 
   .sysinfo-resource {
-    flex: 1 1 0;
-    padding: 6px 8px;
+    flex: 1 0 auto;
+    padding: 6px;
+  }
+
+  /* 속도는 자릿수가 바뀌어도 항목 너비가 흔들리지 않게 흔한 길이(234.5 KiB/s)만큼 자리를 잡아 둔다. */
+  .sysinfo-resource-rate {
+    min-width: 80px;
   }
 
   .sysinfo-resource .sysinfo-chart,
