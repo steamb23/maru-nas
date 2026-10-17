@@ -23,6 +23,9 @@
 | 네트워크 | `/proc/net/dev` (누적 바이트·패킷). 속도는 프론트가 두 응답의 차이로 계산한다(백엔드는 단조 시각 `sampledAtMs`를 함께 준다). 링크 상태·속도는 `/sys/class/net/<if>/operstate`, `speed` | `Network.enumerateDevicesList` (admin): 주소, 링크, 속도, 누적 카운터 | - |
 | 프로세스 | `/proc/<pid>/stat`·`status`·`cmdline` (hidepid가 없으면 모든 PID가 보인다. `io`는 같은 사용자나 root만 읽어 쓰지 않는다) | `System.getTopInfo` (admin): `top -b -n 1` 출력(`format: json`이면 `jc`로 바꿈) | - |
 | 디스크 I/O | `/proc/diskstats` (누적 섹터, 항상 512바이트 단위). 물리 디스크는 `/sys/block/<이름>/device` 링크로 고른다 | 없음 | diskstats 플러그인은 `Rrd.getGraph` PNG만 준다 |
+| CPU 커널 시간 | `/proc/stat`의 system + irq + softirq (누적 tick) | 없음 | - |
+| 메모리 구성·스왑 | `/proc/meminfo`(Buffers, Cached, Shmem, SReclaimable, Zswap, Swap*), zram은 `/sys/block/zram*/mm_stat` | `System.getInformation` (관리자 부분): 전체·여유·사용·사용 가능만 | - |
+| 부하 평균 | `/proc/loadavg` (1·5·15분, 실행 중/전체 스레드) | `System.getInformation` (관리자 부분): `loadAverage` | - |
 | 컨테이너 | 하지 않음 (소켓 접근은 root와 같은 권한) | 없음 | `Compose.getContainers` (모두), 상세는 admin 전용 메서드 (아래 "컨테이너 런타임") |
 
 ### 주의할 응답 형태
