@@ -60,10 +60,14 @@
   font-size: 15px;
 }
 
-/* 내용이 길면 본문만 스크롤하고 머리말·단추 줄은 남긴다. */
+/* 내용이 길면 본문만 스크롤하고 머리말·단추 줄은 남긴다.
+   overflow는 본문 가장자리에 붙은 입력칸·단추의 포커스 테두리(바깥으로 3px, 2px 굵기 + 1px 간격)도 자르므로,
+   그만큼 안쪽 여백을 두고 같은 크기의 음수 바깥 여백으로 내용 자리를 되돌린다. */
 .modal-body {
   flex: 1 1 auto;
   min-height: 0;
+  margin: -3px;
+  padding: 3px;
   overflow: auto;
   font-size: 13px;
 }
