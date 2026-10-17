@@ -477,12 +477,24 @@
   font: inherit;
 }
 
+/* 포커스 테두리는 설정 창 입력칸(.settings-input)과 같다. */
+.sysinfo-search:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  outline-offset: 1px;
+}
+
 .sysinfo-check {
   display: flex;
   align-items: center;
   gap: 6px;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+}
+
+.sysinfo-check input {
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
 }
 
 .sysinfo-count {
