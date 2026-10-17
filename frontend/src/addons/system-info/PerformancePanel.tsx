@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { useLanguage } from '../../i18n'
 import { useContextMenuTrigger } from '../../shell/useContextMenuTrigger'
 import { formatBytes, formatPercent, formatRate, formatUptime } from '../common/format'
-import { type ChartSeries, UsageChart } from './UsageChart'
+import { type ChartSeries, type SeriesSlot, UsageChart } from './UsageChart'
 import { niceMax } from './chart'
 import { cpuGraphMenuItems } from './menus'
 import { type StatsPoint, latest } from './stats'
@@ -32,8 +32,9 @@ interface Props {
 interface Stat {
   label: string
   value: string
-  // 두 계열 그래프의 계열 키(범례 역할)
-  slot?: 1 | 2
+  // 여러 계열 그래프의 계열 키(범례 역할). part는 다른 계열의 일부(커널 시간)다.
+  slot?: SeriesSlot
+  part?: boolean
 }
 
 // View는 자원 하나의 그래프·요약·세부 값이다.
@@ -61,10 +62,17 @@ export function PerformancePanel({ sample, stale, resource, onResource }: Props)
   const id = useId()
   const tabRefs = useRef(new Map<Resource, HTMLButtonElement>())
   const cpuGraph = useSysinfoPrefsStore((s) => s.cpuGraph)
+  const cpuKernel = useSysinfoPrefsStore((s) => s.cpuKernel)
   const cpuMenu = useContextMenuTrigger({
     items: () => {
       const s = useSysinfoPrefsStore.getState()
-      return cpuGraphMenuItems(s.cpuGraph, (g) => s.set({ cpuGraph: g }), s.status !== 'ready')
+      return cpuGraphMenuItems(
+        s.cpuGraph,
+        s.cpuKernel,
+        (g) => s.set({ cpuGraph: g }),
+        (k) => s.set({ cpuKernel: k }),
+        s.status !== 'ready',
+      )
     },
   })
 
@@ -116,6 +124,15 @@ export function PerformancePanel({ sample, stale, resource, onResource }: Props)
     }
   }
 
+  // cpuSeries는 CPU 그래프의 계열이다. 커널 시간을 보이면 사용률 아래에 같은 색의 진한 면으로 겹친다.
+  const cpuSeries = (id: string, label: string, values: (number | null)[], kernel: (number | null)[]): ChartSeries[] =>
+    cpuKernel
+      ? [
+          { id, label, slot: 1, values },
+          { id: `${id}-kernel`, label: t('sysinfo.perf.kernel'), slot: 1, kind: 'part', values: kernel },
+        ]
+      : [{ id, label, slot: 1, values }]
+
   const mem = res?.memory
   const views: Record<Resource, View> = {
     cpu: {
@@ -124,10 +141,17 @@ export function PerformancePanel({ sample, stale, resource, onResource }: Props)
         pick(points, (p) => p.cpu),
         point?.cpu,
       ),
+      series: cpuSeries(
+        'cpu',
+        t(cpuKernel ? 'sysinfo.perf.utilization' : 'sysinfo.cpu'),
+        pick(points, (p) => p.cpu),
+        pick(points, (p) => p.cpuKernel),
+      ),
       summary: pct(point?.cpu),
       summaryLabel: pct(point?.cpu),
       stats: [
-        { label: t('sysinfo.perf.utilization'), value: pct(point?.cpu) },
+        { label: t('sysinfo.perf.utilization'), value: pct(point?.cpu), slot: cpuKernel ? 1 : undefined },
+        { label: t('sysinfo.perf.kernel'), value: pct(point?.cpuKernel), slot: cpuKernel ? 1 : undefined, part: true },
         { label: t('sysinfo.perf.cores'), value: count(res?.cpu.cores.length) },
         { label: t('sysinfo.perf.processCount'), value: count(res?.tasks?.processes) },
         { label: t('sysinfo.perf.threads'), value: count(res?.tasks?.threads) },
@@ -257,7 +281,12 @@ export function PerformancePanel({ sample, stale, resource, onResource }: Props)
             >
               {cores.map((c) => {
                 const coreName = t('sysinfo.core', { id: c.id })
-                const values = pick(points, (p) => p.cores.get(c.id) ?? null)
+                const series = cpuSeries(
+                  `core-${c.id}`,
+                  coreName,
+                  pick(points, (p) => p.cores.get(c.id) ?? null),
+                  pick(points, (p) => p.coresKernel.get(c.id) ?? null),
+                )
                 return (
                   <div key={c.id} className="sysinfo-core">
                     <div className="sysinfo-core-head">
@@ -266,7 +295,7 @@ export function PerformancePanel({ sample, stale, resource, onResource }: Props)
                     </div>
                     <UsageChart
                       times={times}
-                      series={[{ id: `core-${c.id}`, label: coreName, slot: 1, values }]}
+                      series={series}
                       now={now}
                       max={100}
                       format={(x) => formatPercent(x, lang)}
@@ -296,7 +325,7 @@ export function PerformancePanel({ sample, stale, resource, onResource }: Props)
           {view.stats.map((s) => (
             <div key={s.label} className="sysinfo-stat">
               <dt>
-                {s.slot && <span className={`sysinfo-key s${s.slot}`} aria-hidden="true" />}
+                {s.slot && <span className={`sysinfo-key s${s.slot}${s.part ? ' part' : ''}`} aria-hidden="true" />}
                 {s.label}
               </dt>
               <dd>{s.value}</dd>

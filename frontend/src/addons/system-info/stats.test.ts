@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { SystemStatsResponse } from '../../api/types.gen'
-import { HISTORY_MS, appendSample, busyPercent, isSystemStatsResponse, latest } from './stats'
+import { HISTORY_MS, appendSample, busyPercent, isSystemStatsResponse, kernelPercent, latest } from './stats'
 
 // sample은 합성 응답이다. 필요한 값만 덮어쓴다.
 function sample(over: Partial<SystemStatsResponse> = {}): SystemStatsResponse {
@@ -87,6 +87,14 @@ describe('busyPercent', () => {
   })
 })
 
+describe('kernelPercent', () => {
+  it('두 누적 값 사이의 커널 시간 비율이다', () => {
+    expect(kernelPercent({ totalTicks: 100, kernelTicks: 10 }, { totalTicks: 200, kernelTicks: 30 })).toBe(20)
+    expect(kernelPercent({ totalTicks: 100, kernelTicks: 10 }, { totalTicks: 100, kernelTicks: 10 })).toBeNull()
+    expect(kernelPercent({ totalTicks: 100, kernelTicks: 10 }, { totalTicks: 200, kernelTicks: 5 })).toBeNull()
+  })
+})
+
 describe('appendSample', () => {
   it('첫 응답은 점 없이 시작하고, 두 번째부터 차이로 값을 구한다', () => {
     const first = appendSample(null, sample())
@@ -112,10 +120,26 @@ describe('appendSample', () => {
       }),
     )
     const p = latest(h)
-    expect(p).toMatchObject({ t: 2000, cpu: 25, memory: 50, memoryUsed: 500, rx: 1000, tx: 0, read: 0, write: 4096 })
+    expect(p).toMatchObject({
+      t: 2000,
+      cpu: 25,
+      cpuKernel: 10, // 커널 40 / 400
+      memory: 50,
+      memoryUsed: 500,
+      rx: 1000,
+      tx: 0,
+      read: 0,
+      write: 4096,
+    })
     expect(p?.cores).toEqual(
       new Map([
         [0, 50],
+        [1, 0],
+      ]),
+    )
+    expect(p?.coresKernel).toEqual(
+      new Map([
+        [0, 20],
         [1, 0],
       ]),
     )

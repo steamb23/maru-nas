@@ -5,12 +5,16 @@ import { formatUnit } from '../common/format'
 import { type ChartFrame, areaPath, linePath, nearestIndex, pointX, stepIndex } from './chart'
 import { HISTORY_MS } from './stats'
 
+// 계열 색 자리(system-info.css의 --sysinfo-series-N). 색은 계열을 따라가고 순위를 따르지 않는다.
+export type SeriesSlot = 1 | 2 | 3
+
 export interface ChartSeries {
   id: string
   // 범례·툴팁의 이름. 계열이 하나면 카드 제목이 이름이므로 툴팁에 쓰지 않는다.
   label: string
-  // 계열 색 자리(system-info.css의 --sysinfo-series-1, -2). 색은 계열을 따라가고 순위를 따르지 않는다.
-  slot: 1 | 2
+  slot: SeriesSlot
+  // part는 다른 계열의 일부(CPU 사용률 중 커널 시간)다. 같은 색의 진한 면과 가는 선으로 그린다.
+  kind?: 'line' | 'part'
   // times와 같은 순서의 값. 구할 수 없는 점은 null이다(선을 끊는다).
   values: readonly (number | null)[]
 }
@@ -42,7 +46,7 @@ interface Props {
 // 키보드는 고른 점의 시각을 기억한다(오래되어 빠지면 사라진다).
 type Hover = { by: 'pointer'; x: number } | { by: 'key'; t: number } | null
 
-// UsageChart는 최근 60초 사용량 선 그래프다. 계열이 하나면 선 아래를 옅게 채운다.
+// UsageChart는 최근 60초 사용량 선 그래프다. 선 계열이 하나면 선 아래를 옅게 채운다(part 계열은 따로 센다).
 export function UsageChart(props: Props) {
   const { times, series, now, max, format, maxLabel, decorative, fill, label, stale } = props
   const compact = props.compact || decorative
@@ -93,6 +97,9 @@ export function UsageChart(props: Props) {
 
   const ago = index >= 0 ? Math.round((now - times[index]) / 1000) : 0
   const single = series.length === 1
+  const lines = series.filter((s) => s.kind !== 'part')
+  const parts = series.filter((s) => s.kind === 'part')
+  const keyClass = (s: ChartSeries) => `s${s.slot}${s.kind === 'part' ? ' part' : ''}`
   const rootClass = ['sysinfo-chart', compact && 'compact', decorative && 'decorative', fill && 'fill', stale && 'stale']
     .filter(Boolean)
     .join(' ')
@@ -125,9 +132,14 @@ export function UsageChart(props: Props) {
               y1={frame.height - 0.5}
               y2={frame.height - 0.5}
             />
-            {single && <path className="sysinfo-area s1" d={areaPath(samples(series[0]), frame)} />}
-            {series.map((s) => (
-              <path key={s.id} className={`sysinfo-line s${s.slot}`} d={linePath(samples(s), frame)} />
+            {lines.length === 1 && (
+              <path className={`sysinfo-area s${lines[0].slot}`} d={areaPath(samples(lines[0]), frame)} />
+            )}
+            {parts.map((s) => (
+              <path key={s.id} className={`sysinfo-area ${keyClass(s)}`} d={areaPath(samples(s), frame)} />
+            ))}
+            {[...parts, ...lines].map((s) => (
+              <path key={s.id} className={`sysinfo-line ${keyClass(s)}`} d={linePath(samples(s), frame)} />
             ))}
             {index >= 0 && (
               <>
@@ -136,7 +148,7 @@ export function UsageChart(props: Props) {
                   const v = s.values[index]
                   if (v === null || v === undefined) return null
                   const y = frame.height - (Math.min(Math.max(v, 0), frame.max) / frame.max) * frame.height
-                  return <circle key={s.id} className={`sysinfo-dot s${s.slot}`} cx={hoverX} cy={y} r={4} />
+                  return <circle key={s.id} className={`sysinfo-dot ${keyClass(s)}`} cx={hoverX} cy={y} r={4} />
                 })}
               </>
             )}
@@ -157,7 +169,7 @@ export function UsageChart(props: Props) {
               const v = s.values[index]
               return (
                 <div key={s.id} className="sysinfo-tooltip-row">
-                  <span className={`sysinfo-key s${s.slot}`} aria-hidden="true" />
+                  <span className={`sysinfo-key ${keyClass(s)}`} aria-hidden="true" />
                   <strong>{v === null || v === undefined ? '—' : format(v)}</strong>
                   {!single && <span className="sysinfo-tooltip-label">{s.label}</span>}
                 </div>

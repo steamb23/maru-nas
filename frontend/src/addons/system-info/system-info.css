@@ -1,12 +1,17 @@
 /* 시스템 정보 창: 사이드바 틀(shell/SidebarLayout.css) 안의 성능 페이지와 프로세스 표.
    관리자가 아니면 사이드바 없이 성능 페이지만 그린다(.single). */
 
-/* 그래프 계열 색. dataviz 기준 팔레트 1·2번을 창 배경(--window-bg)에 맞춰 light·dark 모두 검사했다
-   (validate_palette.js). 표시와 글자에는 쓰지 않고 선·면·키에만 쓴다.
+/* 그래프 계열 색. dataviz 기준 팔레트 1~5번을 그 순서대로 창 배경(--window-bg)에 맞춰 light·dark 모두
+   검사했다(validate_palette.js, 인접 쌍). 표시와 글자에는 쓰지 않고 선·면·키·막대에만 쓴다.
+   밝은 배경에서 3~5번은 대비가 3:1보다 낮으므로 계열 키가 붙은 세부 값 목록을 늘 보이는 라벨로 둔다.
+   요소는 계열 자리 클래스(.s1~.s5)로 --sysinfo-color를 받는다.
    --sysinfo-gutter는 페이지 내용의 좌우 여백으로, 사이드바 틀의 제목 머리(.sidebar-header)와 맞춘다. */
 .sysinfo {
   --sysinfo-series-1: light-dark(#2a78d6, #3987e5);
   --sysinfo-series-2: light-dark(#eb6834, #d95926);
+  --sysinfo-series-3: light-dark(#1baf7a, #199e70);
+  --sysinfo-series-4: light-dark(#eda100, #c98500);
+  --sysinfo-series-5: light-dark(#e87ba4, #d55181);
   --sysinfo-grid: light-dark(rgb(0 0 0 / 0.08), rgb(255 255 255 / 0.08));
   --sysinfo-gutter: 24px;
   --sidebar-width: 200px;
@@ -233,17 +238,41 @@
   }
 }
 
-/* 범례·툴팁의 계열 키(선 모양) */
+/* 계열 자리. 선·면·점·키·막대 조각이 이 색을 쓴다. */
+.sysinfo .s1 {
+  --sysinfo-color: var(--sysinfo-series-1);
+}
+
+.sysinfo .s2 {
+  --sysinfo-color: var(--sysinfo-series-2);
+}
+
+.sysinfo .s3 {
+  --sysinfo-color: var(--sysinfo-series-3);
+}
+
+.sysinfo .s4 {
+  --sysinfo-color: var(--sysinfo-series-4);
+}
+
+.sysinfo .s5 {
+  --sysinfo-color: var(--sysinfo-series-5);
+}
+
+/* 범례·툴팁의 계열 키(선 모양). part(다른 계열의 일부)는 그래프의 진한 면처럼 칠한 네모다. */
 .sysinfo-key {
   flex: none;
   width: 12px;
   height: 2px;
   border-radius: 1px;
-  background: var(--sysinfo-series-1);
+  background: var(--sysinfo-color, var(--sysinfo-series-1));
 }
 
-.sysinfo-key.s2 {
-  background: var(--sysinfo-series-2);
+.sysinfo-key.part {
+  height: 8px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--sysinfo-color, var(--sysinfo-series-1)) 45%, transparent);
+  box-shadow: inset 0 0 0 1px var(--sysinfo-color, var(--sysinfo-series-1));
 }
 
 /* 그래프 */
@@ -302,19 +331,24 @@
 
 .sysinfo-line {
   fill: none;
-  stroke: var(--sysinfo-series-1);
+  stroke: var(--sysinfo-color, var(--sysinfo-series-1));
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-width: 2;
 }
 
-.sysinfo-line.s2 {
-  stroke: var(--sysinfo-series-2);
+.sysinfo-line.part {
+  stroke-width: 1;
 }
 
 .sysinfo-area {
-  fill: var(--sysinfo-series-1);
+  fill: var(--sysinfo-color, var(--sysinfo-series-1));
   fill-opacity: 0.1;
+}
+
+/* 커널 시간처럼 다른 계열의 일부는 같은 색을 진하게 겹친다(작업 관리자 방식). */
+.sysinfo-area.part {
+  fill-opacity: 0.3;
 }
 
 .sysinfo-crosshair {
@@ -324,13 +358,9 @@
 
 /* 점은 창 배경색 테두리로 선과 겹쳐도 보이게 한다. */
 .sysinfo-dot {
-  fill: var(--sysinfo-series-1);
+  fill: var(--sysinfo-color, var(--sysinfo-series-1));
   stroke: var(--window-bg);
   stroke-width: 2;
-}
-
-.sysinfo-dot.s2 {
-  fill: var(--sysinfo-series-2);
 }
 
 .sysinfo-chart-max {

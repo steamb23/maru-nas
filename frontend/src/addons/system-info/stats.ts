@@ -92,10 +92,12 @@ export function isSystemStatsResponse(v: unknown): v is SystemStatsResponse {
 export interface StatsPoint {
   // 백엔드 단조 시각(밀리초)
   t: number
-  // 전체 CPU 사용률(0~100)
+  // 전체 CPU 사용률과 그중 커널 시간(0~100)
   cpu: number | null
-  // 코어 id → 사용률(0~100)
+  cpuKernel: number | null
+  // 코어 id → 사용률, 커널 시간(0~100)
   cores: ReadonlyMap<number, number>
+  coresKernel: ReadonlyMap<number, number>
   // 메모리 사용률(0~100)과 사용량(바이트)
   memory: number
   memoryUsed: number
@@ -124,6 +126,17 @@ export function busyPercent(
   return Math.min(100, Math.max(0, ((total - idle) / total) * 100))
 }
 
+// kernelPercent는 두 누적 값 사이의 커널 시간 비율(0~100)이다. 차이가 없거나 줄었으면 null이다.
+export function kernelPercent(
+  prev: { totalTicks: number; kernelTicks: number },
+  cur: { totalTicks: number; kernelTicks: number },
+): number | null {
+  const total = cur.totalTicks - prev.totalTicks
+  const kernel = cur.kernelTicks - prev.kernelTicks
+  if (total <= 0 || kernel < 0) return null
+  return Math.min(100, Math.max(0, (kernel / total) * 100))
+}
+
 // rate는 누적 바이트 두 값의 초당 차이다. 값이 없거나 카운터가 줄었으면(재설정) null이다.
 function rate(prev: number | undefined, cur: number | undefined, dtMs: number): number | null {
   if (prev === undefined || cur === undefined || cur < prev) return null
@@ -145,15 +158,21 @@ export function appendSample(prev: StatsHistory | null, cur: SystemStatsResponse
 
   const before = new Map(p.cpu.cores.map((c) => [c.id, c]))
   const cores = new Map<number, number>()
+  const coresKernel = new Map<number, number>()
   for (const c of cur.cpu.cores) {
     const b = before.get(c.id)
-    const v = b ? busyPercent(b, c) : null
+    if (!b) continue
+    const v = busyPercent(b, c)
     if (v !== null) cores.set(c.id, v)
+    const k = kernelPercent(b, c)
+    if (k !== null) coresKernel.set(c.id, k)
   }
   const point: StatsPoint = {
     t: cur.sampledAtMs,
     cpu: busyPercent(p.cpu, cur.cpu),
+    cpuKernel: kernelPercent(p.cpu, cur.cpu),
     cores,
+    coresKernel,
     memory: percentOf(cur.memory.usedBytes, cur.memory.totalBytes),
     memoryUsed: cur.memory.usedBytes,
     rx: rate(p.network?.rxBytes, cur.network?.rxBytes, dt),

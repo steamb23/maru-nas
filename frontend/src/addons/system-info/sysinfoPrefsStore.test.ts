@@ -20,14 +20,22 @@ describe('sysinfoPrefsStore', () => {
   it('저장한 설정을 가져온다', async () => {
     const { store } = setup()
     await store.getState().load()
-    expect(store.getState()).toMatchObject({ status: 'ready', cpuScale: 'core', cpuGraph: 'cores' })
+    expect(store.getState()).toMatchObject({ status: 'ready', cpuScale: 'core', cpuGraph: 'cores', cpuKernel: true })
+  })
+
+  it('커널 시간 표시는 저장한 적 없으면 켜져 있고, 끈 값을 가져온다', async () => {
+    const { store } = setup({
+      fetchPreferences: async () => ({ systemInfo: { cpuScale: 'machine', cpuGraph: 'overall', cpuKernel: false } }),
+    })
+    await store.getState().load()
+    expect(store.getState().cpuKernel).toBe(false)
   })
 
   it('저장한 적 없거나 모르는 값이면 기본값', async () => {
     for (const prefs of [{}, { systemInfo: { cpuScale: 'irix', cpuGraph: 'heatmap' } }] satisfies Preferences[]) {
       const { store } = setup({ fetchPreferences: async () => prefs })
       await store.getState().load()
-      expect(store.getState()).toMatchObject({ cpuScale: 'machine', cpuGraph: 'overall' })
+      expect(store.getState()).toMatchObject({ cpuScale: 'machine', cpuGraph: 'overall', cpuKernel: true })
     }
   })
 
@@ -37,7 +45,14 @@ describe('sysinfoPrefsStore', () => {
     store.getState().set({ cpuGraph: 'cores' })
     expect(store.getState().cpuGraph).toBe('cores')
     await flushPromises()
-    expect(api.saveSystemInfoPrefs).toHaveBeenCalledExactlyOnceWith({ cpuScale: 'machine', cpuGraph: 'cores' })
+    expect(api.saveSystemInfoPrefs).toHaveBeenCalledExactlyOnceWith({
+      cpuScale: 'machine',
+      cpuGraph: 'cores',
+      cpuKernel: true,
+    })
+    store.getState().set({ cpuKernel: false })
+    await flushPromises()
+    expect(api.saveSystemInfoPrefs).toHaveBeenLastCalledWith({ cpuScale: 'machine', cpuGraph: 'cores', cpuKernel: false })
   })
 
   it('같은 값이면 저장하지 않는다', async () => {
@@ -84,14 +99,24 @@ describe('sysinfoPrefsStore', () => {
 describe('menus', () => {
   it('CPU 그래프 메뉴는 지금 모양에 체크하고 고르면 알린다', () => {
     const select = vi.fn()
-    const items = cpuGraphMenuItems('cores', select)
+    const items = cpuGraphMenuItems('cores', true, select, vi.fn())
     expect(items.map((i) => i.kind === 'action' && [i.id, i.checked])).toEqual([
       ['overall', false],
       ['cores', true],
+      false,
+      ['kernel', true],
     ])
     const first = items[0]
     if (first.kind === 'action') first.onSelect()
     expect(select).toHaveBeenCalledWith('overall')
+  })
+
+  it('커널 시간 항목은 지금 값을 뒤집어 알린다', () => {
+    const setKernel = vi.fn()
+    const kernel = cpuGraphMenuItems('overall', false, vi.fn(), setKernel).find((i) => i.id === 'kernel')
+    expect(kernel?.kind === 'action' && kernel.checked).toBe(false)
+    if (kernel?.kind === 'action') kernel.onSelect()
+    expect(setKernel).toHaveBeenCalledWith(true)
   })
 
   it('프로세스 메뉴는 CPU 기준 하위 메뉴다', () => {
@@ -109,7 +134,8 @@ describe('menus', () => {
   })
 
   it('설정을 불러오지 못했으면 항목을 비활성으로 둔다', () => {
-    expect(cpuGraphMenuItems('overall', vi.fn(), true).every((i) => i.kind === 'action' && i.disabled)).toBe(true)
+    const items = cpuGraphMenuItems('overall', true, vi.fn(), vi.fn(), true)
+    expect(items.filter((i) => i.kind === 'action').every((i) => i.disabled)).toBe(true)
     const [sub] = processMenuItems('machine', vi.fn(), true)
     expect(sub.kind === 'submenu' && sub.disabled).toBe(true)
   })

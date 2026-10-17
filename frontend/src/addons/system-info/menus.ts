@@ -14,11 +14,26 @@ function choice<T>(
   return { kind: 'action', id, labelKey, checked: cur === value, disabled, onSelect: () => select(value) }
 }
 
-// cpuGraphMenuItems는 개요 CPU 카드의 메뉴다(그래프 모양).
-export function cpuGraphMenuItems(cur: CpuGraph, select: (g: CpuGraph) => void, disabled = false): ContextMenuItem[] {
+// cpuGraphMenuItems는 성능 페이지 CPU 그래프의 메뉴다(그래프 모양, 커널 시간 표시).
+export function cpuGraphMenuItems(
+  cur: CpuGraph,
+  kernel: boolean,
+  select: (g: CpuGraph) => void,
+  setKernel: (on: boolean) => void,
+  disabled = false,
+): ContextMenuItem[] {
   return [
     choice<CpuGraph>('overall', 'sysinfo.menu.overall', 'overall', cur, select, disabled),
     choice<CpuGraph>('cores', 'sysinfo.menu.perCore', 'cores', cur, select, disabled),
+    { kind: 'separator', id: 'sep-kernel' },
+    {
+      kind: 'action',
+      id: 'kernel',
+      labelKey: 'sysinfo.menu.showKernel',
+      checked: kernel,
+      disabled,
+      onSelect: () => setKernel(!kernel),
+    },
   ]
 }
 

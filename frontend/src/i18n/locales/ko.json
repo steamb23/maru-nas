@@ -128,6 +128,7 @@
     "perf": {
       "resources": "자원",
       "utilization": "사용률",
+      "kernel": "커널",
       "cores": "코어",
       "processCount": "프로세스",
       "threads": "스레드",
@@ -143,6 +144,7 @@
     "menu": {
       "overall": "전체 사용률",
       "perCore": "코어별",
+      "showKernel": "커널 시간 표시",
       "cpuScale": "CPU 사용률 기준",
       "scaleMachine": "전체 대비 (최대 100%)",
       "scaleCore": "코어당 100% (top 방식)"
