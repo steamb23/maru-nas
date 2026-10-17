@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { MemoryDetail } from '../../api/types.gen'
-import { memorySegments } from './memory'
+import { memorySegments, stepSegment } from './memory'
 
 function detail(over: Partial<MemoryDetail> = {}): MemoryDetail {
   return {
@@ -43,5 +43,25 @@ describe('memorySegments', () => {
 
   it('전체가 0이면 조각이 없다', () => {
     expect(memorySegments(detail(), 0)).toEqual([])
+  })
+})
+
+describe('stepSegment', () => {
+  const segs = memorySegments(detail(), 1000) // apps, shared, buffers, cache, free
+
+  it('처음에는 오른쪽이면 첫 조각, 왼쪽이면 마지막 조각이다', () => {
+    expect(stepSegment(segs, null, 1)).toBe('apps')
+    expect(stepSegment(segs, null, -1)).toBe('free')
+  })
+
+  it('0이라 빠진 조각은 건너뛰고 양 끝에서 멈춘다', () => {
+    expect(stepSegment(segs, 'shared', 1)).toBe('buffers')
+    expect(stepSegment(segs, 'apps', -1)).toBe('apps')
+    expect(stepSegment(segs, 'free', 1)).toBe('free')
+  })
+
+  it('고른 조각이 사라졌으면 처음처럼, 조각이 없으면 null이다', () => {
+    expect(stepSegment(segs, 'compressed', 1)).toBe('apps')
+    expect(stepSegment([], null, 1)).toBeNull()
   })
 })

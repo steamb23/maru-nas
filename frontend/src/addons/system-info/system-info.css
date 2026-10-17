@@ -3,7 +3,8 @@
 
 /* 그래프 계열 색. dataviz 기준 팔레트 1~5번을 그 순서대로 창 배경(--window-bg)에 맞춰 light·dark 모두
    검사했다(validate_palette.js, 인접 쌍). 표시와 글자에는 쓰지 않고 선·면·키·막대에만 쓴다.
-   밝은 배경에서 3~5번은 대비가 3:1보다 낮으므로 계열 키가 붙은 세부 값 목록을 늘 보이는 라벨로 둔다.
+   밝은 배경에서 3~5번은 대비가 3:1보다 낮다. 부하 평균의 3번 선은 계열 키가 붙은 세부 값이 라벨이고,
+   메모리 구성 막대(3~5번)는 조각 툴팁(포인터, 키보드)과 막대의 접근성 이름이 이름을 알린다.
    요소는 계열 자리 클래스(.s1~.s5)로 --sysinfo-color를 받는다.
    --sysinfo-gutter는 페이지 내용의 좌우 여백으로, 사이드바 틀의 제목 머리(.sidebar-header)와 맞춘다. */
 .sysinfo {
@@ -279,7 +280,7 @@
   background: var(--sysinfo-color, var(--sysinfo-series-1));
 }
 
-/* 막대 조각(메모리 구성)의 키는 네모다. 여유는 막대의 바탕처럼 칠한다. */
+/* 막대 조각(메모리 구성 툴팁)의 키는 네모다. 여유는 막대의 바탕처럼 칠한다. */
 .sysinfo-key.swatch {
   width: 10px;
   height: 10px;
@@ -317,7 +318,8 @@
 }
 
 .sysinfo-chart-plot:focus-visible,
-.sysinfo-cores:focus-visible {
+.sysinfo-cores:focus-visible,
+.sysinfo-memmap-bar:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
@@ -443,7 +445,7 @@
   color: var(--text-muted);
 }
 
-/* 메모리 구성: 지금 값의 가로 막대와 항목별 크기 */
+/* 메모리 구성: 지금 값의 가로 막대. 조각의 이름·크기는 툴팁으로 보인다. */
 
 .sysinfo-memmap {
   display: flex;

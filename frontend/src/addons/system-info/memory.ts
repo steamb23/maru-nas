@@ -39,3 +39,16 @@ export function memorySegments(detail: MemoryDetail, total: number): MemorySegme
   }
   return out
 }
+
+// stepSegment는 키보드로 고른 조각을 옮긴 결과다. 고른 조각이 없거나 사라졌으면 오른쪽은 첫 조각, 왼쪽은 마지막 조각이고,
+// 양 끝에서는 멈춘다. 조각이 없으면 null이다.
+export function stepSegment(
+  segments: readonly MemorySegment[],
+  cur: MemoryPart | null,
+  delta: -1 | 1,
+): MemoryPart | null {
+  if (segments.length === 0) return null
+  const i = segments.findIndex((s) => s.part === cur)
+  if (i < 0) return segments[delta > 0 ? 0 : segments.length - 1].part
+  return segments[Math.min(segments.length - 1, Math.max(0, i + delta))].part
+}
