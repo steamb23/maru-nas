@@ -1,0 +1,16 @@
+--lang
+en
+--user
+onmaru
+--listen
+192.0.2.10:8090
+--allow-non-loopback
+--omv-url
+http://[::1]:8001
+--smart-refresh-at
+12:00
+--workbench-url
+../
+--public-origin
+
+--no-helper

@@ -1,0 +1,17 @@
+--lang
+en
+--user
+onmaru
+--listen
+127.0.0.1:8090
+--omv-url
+http://127.0.0.1
+--smart-refresh-at
+00:00
+--workbench-url
+
+--public-origin
+
+--helper
+--elevate-group
+sudo

@@ -1,0 +1,38 @@
+# Written by onmaru install.sh
+[Unit]
+Description=Onmaru dashboard for openmediavault
+After=network.target
+
+[Service]
+Type=simple
+User=onmaru
+Group=onmaru
+EnvironmentFile=/etc/default/onmaru
+ExecStart=/usr/local/bin/onmaru
+Restart=on-failure
+RestartSec=5
+
+# Per-user preferences (STATE_DIRECTORY is passed to onmaru)
+StateDirectory=onmaru
+# Unix socket directory. Preserve keeps the same directory across restarts so a
+# container bind mount of /run/onmaru keeps working.
+RuntimeDirectory=onmaru
+RuntimeDirectoryPreserve=yes
+
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+# PrivateDevices=yes would hide /dev/disk/by-label (filesystem labels); deny device access instead.
+DevicePolicy=closed
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictSUIDSGID=yes
+RestrictRealtime=yes
+LockPersonality=yes
+SystemCallArchitectures=native
+
+[Install]
+WantedBy=multi-user.target

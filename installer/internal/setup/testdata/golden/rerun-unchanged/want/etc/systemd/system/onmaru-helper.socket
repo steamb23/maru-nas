@@ -1,0 +1,15 @@
+# Written by onmaru install.sh
+[Unit]
+Description=Onmaru privileged helper socket
+
+[Socket]
+ListenStream=/run/onmaru-helper/helper.sock
+# Only the onmaru service user can connect (the helper also checks the peer uid).
+SocketUser=onmaru
+SocketGroup=root
+SocketMode=0600
+DirectoryMode=0755
+RemoveOnStop=yes
+
+[Install]
+WantedBy=sockets.target

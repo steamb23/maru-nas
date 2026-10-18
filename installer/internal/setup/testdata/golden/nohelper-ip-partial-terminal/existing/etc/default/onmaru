@@ -1,0 +1,5 @@
+# onmaru settings. Written by install.sh; re-run it to change them.
+ONMARU_LISTEN=unix:/run/onmaru/onmaru.sock
+ONMARU_OMV_URL=http://127.0.0.1
+ONMARU_TERMINAL=
+#ONMARU_SSH_ADDR=127.0.0.1:22

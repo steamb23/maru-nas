@@ -1,0 +1,17 @@
+--lang
+en
+--user
+svc_onmaru
+--listen
+[::1]:9000
+--omv-url
+http://127.0.0.2
+--smart-refresh-at
+06:05
+--workbench-url
+./omv/
+--public-origin
+https://Desk.Example.LAN:443/
+--helper
+--elevate-group
+wheel

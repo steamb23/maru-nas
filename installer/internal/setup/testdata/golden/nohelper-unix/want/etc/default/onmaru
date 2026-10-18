@@ -1,0 +1,16 @@
+# onmaru settings. Written by install.sh; re-run it to change them.
+# See README.md for every option.
+ONMARU_LISTEN=unix:/run/onmaru/onmaru.sock
+ONMARU_ALLOW_NON_LOOPBACK=false
+ONMARU_OMV_URL=http://127.0.0.1:8081
+ONMARU_SMART_REFRESH_AT=03:30
+ONMARU_WORKBENCH_URL=https://nas.example.lan/
+# Public HTTPS address browsers use for the dashboard, for passkeys (security hardening mode); empty turns passkeys off.
+ONMARU_PUBLIC_ORIGIN=https://desk.example.lan
+# Privileged helper socket; empty means the helper is not installed.
+ONMARU_HELPER_SOCKET=
+# Web terminal (SSH to this host's sshd). Off by default; admins can also turn it on in the settings app.
+# install.sh keeps these lines as they are.
+#ONMARU_TERMINAL=false
+#ONMARU_SSH_ADDR=auto
+#ONMARU_SSH_HOST_KEYS=/etc/ssh/ssh_host_*_key.pub

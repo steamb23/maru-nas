@@ -1,0 +1,29 @@
+설치기 골든 픽스처
+
+Go 설치기로 바꾸기 직전의 bash install.sh(커밋 28999d9)가 만든 설정 파일이다. Go 설치기가 같은 설정으로
+만드는 /etc/default/onmaru, /etc/default/onmaru-helper, onmaru.service, onmaru-helper.socket,
+onmaru-helper.service는 이 파일들과 바이트 단위로 같아야 한다(golden_test.go). 유일한 의도한 차이는
+레지스트리가 관리하지 않는 기존 ONMARU_* 줄을 파일 끝에 보존하는 것이며, 그런 줄이 있는 케이스는 여기에 두지 않는다.
+
+만든 방법: install.sh를 임시 디렉터리에 복사해 마지막 `main "$@"`를 지우고, env_get·terminal_settings가 읽는
+환경 파일과 write_file·remove_helper가 쓰는 경로만 가짜 루트 아래로 바꾼 뒤, install·systemctl·useradd·id·getent·
+ss·sleep을 셸 함수로 가로채 `main --service-install <args>`를 실행했다(root·sudo·실제 systemctl 없음).
+
+케이스 디렉터리마다
+  args       install.sh에 준 인자(한 줄에 하나, 빈 줄은 빈 값 인자)
+  group      서비스 사용자의 기본 그룹(`id -gn`이 돌려준 값)
+  existing/  설치 전에 있던 파일(가짜 루트 기준). 없으면 새 설치
+  want/      설치 뒤의 파일(백업 .bak-* 제외). 여기에 없는 설정 파일은 없어야 한다
+  commands   실행한 명령 순서(systemctl, install). 저장소 경로는 /repo로 바꿨다
+
+케이스
+  helper-loopback               도우미 설치, 루프백 TCP 127.0.0.1:8090, 워크벤치·공개 주소 빈 값, 기존 파일 없음
+  nohelper-unix                 도우미 없음, Unix 소켓, OMV 포트 8081, 워크벤치·공개 주소 값 있음
+  helper-anyaddr-terminal       도우미 설치, 모든 주소 0.0.0.0:8090 + 루프백 외 허용(network-online과 도우미 Wants/After가 함께),
+                                사용자 dash·그룹 nogroup, 기존 환경 파일의 터미널 줄 보존(같은 키가 두 번이면 마지막 값,
+                                큰따옴표 한 쌍은 벗긴다)
+  nohelper-ip-partial-terminal  도우미 없음(기존 도우미 파일 제거), 특정 IP + 루프백 외 허용, 기존 환경 파일에
+                                ONMARU_TERMINAL=(빈 값)만 있고 나머지 터미널 키는 주석이라 기본값 주석으로 씀
+  helper-loopback6              도우미 설치(그룹 wheel), [::1]:9000, 공개 주소는 입력 그대로 기록(대소문자·:443/ 유지)
+  helper-unix-nogroup           도우미 설치, Unix 소켓, 그룹 nogroup(다음 단계 안내의 그룹), https OMV 주소
+  rerun-unchanged               helper-loopback 결과 위에 같은 설정으로 다시 설치. 모든 파일이 "unchanged"이고 백업이 없다

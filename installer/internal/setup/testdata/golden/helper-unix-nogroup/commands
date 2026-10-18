@@ -1,0 +1,10 @@
+install -o root -g root -m 0755 /repo/bin/onmaru /usr/local/bin/onmaru
+install -o root -g root -m 0755 /repo/bin/onmaru-helper /usr/local/bin/onmaru-helper
+systemctl daemon-reload
+systemctl enable --now onmaru-helper.socket
+systemctl is-active --quiet onmaru-helper.service
+systemctl enable onmaru.service
+systemctl is-active --quiet onmaru.service
+systemctl start onmaru.service
+systemctl is-active --quiet onmaru.service
+systemctl is-active --quiet onmaru-helper.socket

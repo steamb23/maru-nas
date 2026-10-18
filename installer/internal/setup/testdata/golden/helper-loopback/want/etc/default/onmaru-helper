@@ -1,0 +1,5 @@
+# onmaru-helper settings. Written by install.sh; re-run it to change them.
+# Only this user may connect to the helper socket.
+ONMARU_HELPER_CLIENT_USER=onmaru
+# Members of openmediavault-admin who are also in this group may elevate to root.
+ONMARU_HELPER_ELEVATE_GROUP=sudo

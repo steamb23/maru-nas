@@ -1,0 +1,15 @@
+--lang
+en
+--user
+onmaru
+--listen
+unix:/run/onmaru/onmaru.sock
+--omv-url
+http://127.0.0.1:8081
+--smart-refresh-at
+03:30
+--workbench-url
+https://nas.example.lan/
+--public-origin
+https://desk.example.lan
+--no-helper
