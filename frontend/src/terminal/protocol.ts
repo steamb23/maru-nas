@@ -15,6 +15,7 @@ const REASONS: readonly CloseReason[] = [
   'session_ended',
   'disabled',
   'connection_lost',
+  'security_required',
   'ssh_unavailable',
   'ssh_host_key',
   'ssh_auth_failed',
@@ -44,6 +45,7 @@ export function parseServerMessage(text: string): TerminalServerMessage | null {
     if (isStr(v.keyCode) && v.keyCode !== '') msg.keyCode = v.keyCode
     if (isArrayOf(v.notAllowedGroups, isStr) && v.notAllowedGroups.length > 0) msg.notAllowedGroups = v.notAllowedGroups
     if (isNum(v.retryAfterSeconds)) msg.retryAfterSeconds = v.retryAfterSeconds
+    if (isOneOf(v.required, ['password', 'twoFactor'] as const)) msg.required = v.required
     return msg
   }
   if (

@@ -157,15 +157,20 @@ export function LoginScreen() {
 
         {inStepUp ? (
           // 로그인은 마쳤다. 보안 강화 모드의 2차 인증을 권하고, 건너뛰면 일반 세션으로 데스크톱에 들어간다.
-          <StepUpForm
-            variant="login"
-            mode="verify"
-            level="twoFactor"
-            methods={stepUp.methods}
-            onDone={(st) => void finishStepUp(st.assurance)}
-            onCancel={() => void finishStepUp()}
-            cancelLabel={t('login.skipStepUp')}
-          />
+          <>
+            <p className="login-notice" role="status">
+              {t('login.stepUpPrompt')}
+            </p>
+            <StepUpForm
+              variant="login"
+              mode="verify"
+              level="twoFactor"
+              methods={stepUp.methods}
+              onDone={(st) => void finishStepUp(st.assurance)}
+              onCancel={() => void finishStepUp()}
+              cancelLabel={t('login.skipStepUp')}
+            />
+          </>
         ) : inChallenge ? (
           <form className="login-form" onSubmit={onVerify}>
             {redirectOnly ? (

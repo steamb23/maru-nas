@@ -25,6 +25,20 @@ describe('parseServerMessage', () => {
     ).toEqual({ type: 'status', state: 'closed', reason: 'ssh_auth_failed', keyCode: 'no_home', notAllowedGroups: ['_ssh'] })
   })
 
+  it('보안 확인이 필요하다는 닫힘은 단계와 함께 읽는다', () => {
+    expect(parseServerMessage('{"type":"status","state":"closed","reason":"security_required","required":"twoFactor"}')).toEqual({
+      type: 'status',
+      state: 'closed',
+      reason: 'security_required',
+      required: 'twoFactor',
+    })
+    expect(parseServerMessage('{"type":"status","state":"closed","reason":"security_required","required":"x"}')).toEqual({
+      type: 'status',
+      state: 'closed',
+      reason: 'security_required',
+    })
+  })
+
   it('모르는 닫힘 이유는 ssh_failed로 본다', () => {
     expect(parseServerMessage('{"type":"status","state":"closed","reason":"new_reason"}')?.reason).toBe('ssh_failed')
   })

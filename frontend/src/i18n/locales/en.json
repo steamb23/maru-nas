@@ -27,7 +27,8 @@
       "unauthorized": "You are not signed in. Please sign in again.",
       "httpStatus": "Could not sign in (HTTP {{status}})."
     },
-    "skipStepUp": "Skip for now"
+    "skipStepUp": "Skip for now",
+    "stepUpPrompt": "Some features need a second step. Confirm now, or skip and confirm when you open them."
   },
   "offline": {
     "title": "Disconnected",
