@@ -1,6 +1,7 @@
 package setup
 
 import (
+	"onmaru/backend/config"
 	"onmaru/installer/internal/prompt"
 )
 
@@ -29,7 +30,7 @@ func stepStop(c *Context) error {
 	return nil
 }
 
-// stepRemoveFiles는 유닛, 실행 파일, 설정을 지운다. 지우기 전에 유닛의 서비스 사용자를 읽어 둔다.
+// stepRemoveFiles는 유닛, 실행 파일, 설정, 설치 기록 디렉터리를 지운다. 지우기 전에 유닛의 서비스 사용자를 읽어 둔다.
 func stepRemoveFiles(c *Context) error {
 	if data, err := c.Sys.ReadFile(unitFile); err == nil {
 		c.uninstallUser = unitUser(data)
@@ -38,6 +39,9 @@ func stepRemoveFiles(c *Context) error {
 		if err := c.Sys.Remove(f); err != nil {
 			return err
 		}
+	}
+	if err := c.Sys.RemoveAll(config.UpgradeStateDir); err != nil {
+		return err
 	}
 	return c.Sys.Run("systemctl", "daemon-reload")
 }

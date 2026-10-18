@@ -19,6 +19,7 @@ import (
 	"os/exec"
 	"os/user"
 	"path/filepath"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"syscall"
@@ -59,6 +60,7 @@ func Main(args []string) int {
 	if opts.DryRun {
 		sys = NewDryRunSystem(sys, os.Stdout, lang)
 	}
+	self, _ := debug.ReadBuildInfo()
 	c := &Context{
 		Lang:        lang,
 		Sys:         sys,
@@ -73,6 +75,7 @@ func Main(args []string) int {
 		Exec:        syscall.Exec,
 		Environ:     os.Environ(),
 		LookPath:    exec.LookPath,
+		SelfBuild:   self,
 		Reg:         settings,
 		Opts:        opts,
 		Values:      values,

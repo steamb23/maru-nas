@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"path/filepath"
+	"runtime/debug"
 	"strconv"
 
 	"onmaru/installer/internal/prompt"
@@ -33,6 +34,8 @@ type Context struct {
 	Environ []string
 	// LookPath는 sudo의 절대 경로를 찾는다(exec.LookPath).
 	LookPath func(name string) (string, error)
+	// SelfBuild는 이 설치기 실행 파일의 빌드 정보다(debug.ReadBuildInfo). 없으면 nil이다.
+	SelfBuild *debug.BuildInfo
 
 	Reg       Registry
 	Opts      Options

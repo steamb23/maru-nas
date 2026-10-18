@@ -20,6 +20,8 @@ var installSteps = []Step{
 	// onmaru가 시작할 때 도우미에 연결하므로 도우미 소켓을 먼저 연다.
 	{Name: "helper-socket", Phase: PhaseRoot, When: helperWanted, Run: stepHelperSocket},
 	{Name: "start", Phase: PhaseRoot, Run: stepStart},
+	// 서비스를 시작한 뒤에 기록한다(시작하지 못한 설치를 기록하지 않게).
+	{Name: "record", Phase: PhaseRoot, Run: stepRecord},
 	{Name: "health", Phase: PhaseRoot, Run: stepHealth},
 	{Name: "helper-check", Phase: PhaseRoot, When: helperWanted, Run: stepHelperCheck},
 	{Name: "next-steps", Phase: PhaseRoot, Run: stepNextSteps},

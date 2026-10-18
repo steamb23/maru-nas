@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"runtime/debug"
 	"strings"
 	"testing"
 	"time"
@@ -30,8 +31,10 @@ type fakeSystem struct {
 	// noCommands는 PATH에 없는 명령이다.
 	noCommands map[string]bool
 	portsInUse map[string]bool
-	health     error
-	sleeps     int
+	// buildInfo는 경로별 Go 빌드 정보다. 없는 경로는 Go 실행 파일이 아닌 것으로 본다(가짜 저장소의 실행 파일은 셸 스크립트다).
+	buildInfo map[string]*debug.BuildInfo
+	health    error
+	sleeps    int
 }
 
 func newFake(t *testing.T) *fakeSystem {
@@ -45,7 +48,25 @@ func newFake(t *testing.T) *fakeSystem {
 		unitFiles:     map[string]bool{},
 		noCommands:    map[string]bool{},
 		portsInUse:    map[string]bool{},
+		buildInfo:     map[string]*debug.BuildInfo{},
 	}
+}
+
+func (f *fakeSystem) ReadBuildInfo(path string) (*debug.BuildInfo, error) {
+	if bi, ok := f.buildInfo[path]; ok {
+		return bi, nil
+	}
+	return nil, errors.New("not a Go executable")
+}
+
+// vcsBuild는 git 커밋 정보가 들어 있는 합성 빌드 정보다.
+func vcsBuild(revision string, modified bool) *debug.BuildInfo {
+	return &debug.BuildInfo{Settings: []debug.BuildSetting{
+		{Key: "vcs", Value: "git"},
+		{Key: "vcs.revision", Value: revision},
+		{Key: "vcs.time", Value: "2026-10-01T02:03:04Z"},
+		{Key: "vcs.modified", Value: map[bool]string{true: "true", false: "false"}[modified]},
+	}}
 }
 
 func (f *fakeSystem) record(name string, args ...string) {

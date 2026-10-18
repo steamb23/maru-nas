@@ -72,6 +72,7 @@ OMV 설치 이미지가 만든 일반 사용자는 sudo 그룹에 들어 있으�
 - 설정 파일 `/etc/default/onmaru`와 systemd 유닛 `/etc/systemd/system/onmaru.service`를 작성한 뒤 서비스를 시작합니다.
 - 사용자 설정(위젯 배치, 바탕화면 바로가기, 화면 설정 등), 관리자의 전역 설정, 올린 배경 이미지는 `/var/lib/onmaru`(`StateDirectory=`)에 저장됩니다.
 - 권한 도우미(기본값 설치)는 `/usr/local/bin/onmaru-helper`, `/etc/default/onmaru-helper`, `/etc/systemd/system/onmaru-helper.socket`·`.service`를 작성하고 소켓을 켭니다. 설치하지 않기로 하면 이전에 설치한 도우미를 지웁니다(아래 "권한 도우미" 참고).
+- 설치한 버전과 커밋을 `/var/lib/onmaru-upgrade/installed.json`에 기록합니다. 커밋은 설치한 `bin/onmaru`에서 읽으며, `--no-build`로 설치기와 다른 커밋에서 빌드한 `bin/onmaru`를 설치하는 경우처럼 버전을 확인할 수 없으면 버전을 비워 두고 경고합니다.
 
 이미 설치된 상태에서 다시 실행하면 설치된 설정으로 업그레이드합니다(아래 "업그레이드" 참고). 설정을 바꾸려면 `./install.sh --reinstall`을 실행합니다. 지금 설정을 기본값으로 보여 주며 모든 설정을 다시 묻습니다. 설정이 바뀌면 기존 `/etc/default/onmaru`는 `/etc/default/onmaru.bak-<시각>`으로 백업됩니다. 설치기가 묻지 않는 줄은 그대로 남습니다. 웹 터미널 줄(`ONMARU_TERMINAL` 등)은 기존 값을 옮기고, 손으로 넣은 다른 `ONMARU_*` 줄(예: `ONMARU_COOKIE_PATH`)은 파일 끝의 "Kept from the previous file" 주석 아래로 옮깁니다. 안내 문구는 로캘에 따라 영어 또는 한국어로 표시되며, `--lang en|ko`로 직접 고를 수도 있습니다.
 
@@ -130,7 +131,7 @@ git pull
 
 개발 서버(`make dev`)의 백엔드도 기본으로 `127.0.0.1:8090`을 사용합니다. 같은 머신에서 개발한다면 서비스는 Unix 소켓이나 다른 포트로 설치해 주세요. 설치 스크립트는 포트가 이미 사용 중이면 경고합니다.
 
-제거하려면 `./install.sh --uninstall`을 실행합니다. 권한 도우미를 설치했다면 함께 지웁니다. `/var/lib/onmaru`와 서비스 사용자는 확인을 받은 뒤에만 삭제합니다. 제거하면 `/run/onmaru`도 지워지므로, 컨테이너 프록시에 이 디렉터리를 마운트해 두었다면 다시 설치한 뒤 프록시 컨테이너를 다시 만들어야 합니다.
+제거하려면 `./install.sh --uninstall`을 실행합니다. 권한 도우미를 설치했다면 함께 지우고, 설치 기록(`/var/lib/onmaru-upgrade`)도 지웁니다. `/var/lib/onmaru`와 서비스 사용자는 확인을 받은 뒤에만 삭제합니다. 제거하면 `/run/onmaru`도 지워지므로, 컨테이너 프록시에 이 디렉터리를 마운트해 두었다면 다시 설치한 뒤 프록시 컨테이너를 다시 만들어야 합니다.
 
 리버스 프록시는 설치 스크립트가 설정하지 않습니다. 아래 "리버스 프록시" 항목을 참고해 주세요.
 

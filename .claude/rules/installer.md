@@ -19,6 +19,7 @@ paths:
   - `mode.go`: 설치 방식(새 설치, 다시 설치, 업그레이드)을 정하고 알리며, 업그레이드 요약 뒤의 선택(업그레이드·설정 바꾸기·취소)과 진행 확인을 한다(아래 "설치 방식")
   - `setting.go`: 설정 타입과 레지스트리 동작(옵션 파싱, 사용법, 2단계 인자, 업그레이드 로드, 질문, 검증, 요약, 환경 파일 생성). `settings.go`: 설정 목록. 순서가 질문·요약·환경 파일 줄·사용법의 순서다. `setting_<이름>.go`: 설정 정의
   - `step.go`·`steps.go`·`step_<이름>.go`: 설치·제거 단계. User 단계는 빌드, Root 단계는 설치다
+  - `step_record.go`: 설치 기록(`config.InstallRecordFile`, `/var/lib/onmaru-upgrade/installed.json`, 디렉터리 0755·파일 0644). 서비스를 시작한 뒤 매번 쓰고 제거할 때 디렉터리째 지운다. 커밋은 설치하는 `bin/onmaru`의 빌드 정보(`System.ReadBuildInfo`)에서 읽고, 버전(`config.Version`)은 설치기 자신의 커밋(`Context.SelfBuild`)과 같을 때만 적는다. 확인하지 못한 값은 비우고 경고만 한다(설치는 실패하지 않는다)
   - `system.go`: System 인터페이스와 실제 구현. `system_dryrun.go`: 파일 쓰기·root 명령을 보여 주기만 하고 읽기·확인·빌드는 실제로 한다. 테스트의 `fake_test.go`: 가짜 루트(임시 디렉터리)와 명령 기록
   - `envfile.go`: 환경 파일 읽기(source 안 함. 마지막 `KEY=` 줄, 값을 감싼 큰따옴표 한 쌍은 벗김)와 쓰기(내용이 같으면 "unchanged", 바뀌면 환경 파일만 `.bak-<시각>` 백업, 유닛은 백업 없이 덮어씀)
   - `templates/*.tmpl`: 유닛 3종(embed, `text/template`). 하드닝 줄을 바꾸는 일은 이 파일을 고치는 것이다
@@ -60,6 +61,7 @@ paths:
 
 - 생성하는 파일(유닛 3종, `/etc/default/onmaru`, `/etc/default/onmaru-helper`)은 골든과 바이트 단위로 같고 명령 순서(`commands`)도 같아야 한다(`TestGoldenServiceInstall`). 생성 파일의 주석은 영어로 쓰고 진입점을 `install.sh`라고 부른다
 - 의도한 차이는 레지스트리가 관리하지 않는 기존 `ONMARU_*` 줄을 파일 끝 "Kept from the previous file" 주석 아래에 보존하는 것뿐이다. 그런 줄이 없으면 주석도 쓰지 않는다
+- 설치 기록은 설치 시각이 들어가므로 골든 대상이 아니다(`record_test.go`가 본다). 파일 쓰기는 명령 기록에 남지 않으므로 골든의 `commands`도 그대로다
 - bash `install.sh`가 만든 설치(같은 경로·환경 변수 키·유닛의 `User=`)를 업그레이드(옵션 없음 또는 `--upgrade`)로 읽는다. 설정이 모두 있는 설치의 업그레이드는 설정 질문이 없고(옵션 없는 터미널 실행은 요약 뒤 선택 하나), 설정을 모두 준 `--service-install`(README의 자동화 예시, 테스트 VM의 설치 시험)은 설치 여부와 상관없이 질문 없이 끝나야 한다
 - 비TTY에서 설정 질문이 필요하면(빠진 설정, 검사를 통과하지 못한 기존 값) 멈추지 않고 그 옵션 목록을 알린 뒤 2로 끝낸다. 확인 질문(진행할까요, 그래도 계속할까요)도 비TTY에서는 묻지 않고 오류로 끝낸다. 업그레이드(옵션 없는 비TTY 실행, `--upgrade`), 설정을 모두 준 `--service-install`, `--dry-run`은 진행 확인을 하지 않는다
 - 종료 코드: 잘못된 옵션(함께 쓸 수 없는 방식 옵션 포함)·비TTY의 빠진 설정 2, 오류(`--upgrade`인데 설치되어 있지 않음 포함) 1, "진행할까요?"·제거 확인에서 아니요와 업그레이드 "취소" 0, "그래도 계속할까요?"·기존 실행 파일로 설치할지 확인에서 아니요 1, 중단(Ctrl+C) 130

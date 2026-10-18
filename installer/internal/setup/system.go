@@ -2,6 +2,7 @@ package setup
 
 import (
 	"context"
+	"debug/buildinfo"
 	"errors"
 	"fmt"
 	"io"
@@ -12,6 +13,7 @@ import (
 	"os/exec"
 	"os/user"
 	"path/filepath"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"syscall"
@@ -33,6 +35,8 @@ type System interface {
 	ReadFile(path string) ([]byte, error)
 	Stat(path string) (fs.FileInfo, error)
 	ReadDir(path string) ([]fs.DirEntry, error)
+	// ReadBuildInfo는 Go 실행 파일에 들어 있는 빌드 정보(커밋 등)를 읽는다. dry-run에서도 실제로 읽는다.
+	ReadBuildInfo(path string) (*debug.BuildInfo, error)
 	// WriteFile은 path를 root:root 소유로 원자적으로(같은 디렉터리의 임시 파일 → 이름 바꾸기) 쓴다.
 	WriteFile(path string, data []byte, perm fs.FileMode) error
 	// CopyFile은 cp -p처럼 권한·소유자·시각을 유지해 복사한다(설정 파일 백업).
@@ -96,6 +100,9 @@ func (f fsOps) ReadFile(p string) ([]byte, error)       { return os.ReadFile(f.p
 func (f fsOps) Stat(p string) (fs.FileInfo, error)      { return os.Stat(f.path(p)) }
 func (f fsOps) ReadDir(p string) ([]fs.DirEntry, error) { return os.ReadDir(f.path(p)) }
 func (f fsOps) RemoveAll(p string) error                { return os.RemoveAll(f.path(p)) }
+func (f fsOps) ReadBuildInfo(p string) (*debug.BuildInfo, error) {
+	return buildinfo.ReadFile(f.path(p))
+}
 func (f fsOps) WriteFile(p string, data []byte, perm fs.FileMode) error {
 	return f.writeAtomic(f.path(p), perm, 0, 0, func(w io.Writer) error {
 		_, err := w.Write(data)
@@ -151,11 +158,17 @@ func (f fsOps) InstallFile(src, dst string, perm fs.FileMode) error {
 	})
 }
 
-// writeAtomic은 같은 디렉터리의 임시 파일에 쓰고 권한·소유자를 맞춘 뒤 이름을 바꾼다.
+// writeAtomic은 같은 디렉터리의 임시 파일에 쓰고 권한·소유자를 맞춘 뒤 이름을 바꾼다. 디렉터리가 없으면 만들고,
+// umask와 상관없이 0755로 둔다(설치 기록은 일반 사용자도 읽는다).
 func (f fsOps) writeAtomic(path string, perm fs.FileMode, uid, gid int, write func(io.Writer) error) error {
 	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return err
+	if _, err := os.Stat(dir); errors.Is(err, fs.ErrNotExist) {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			return err
+		}
+		if err := os.Chmod(dir, 0o755); err != nil {
+			return err
+		}
 	}
 	tmp, err := os.CreateTemp(dir, "."+filepath.Base(path)+".tmp-*")
 	if err != nil {

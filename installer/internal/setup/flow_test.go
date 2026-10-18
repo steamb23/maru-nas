@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"onmaru/backend/config"
 	"onmaru/installer/internal/prompt"
 )
 
@@ -306,6 +307,7 @@ func TestFlowUninstall(t *testing.T) {
 	f.put(t, stateDir+"/site.json", "{}", 0o600)
 	f.put(t, runtimeDir+"/onmaru.sock", "", 0o660)
 	f.put(t, "/etc/default/onmaru-upgrade", "keep\n", 0o644)
+	f.put(t, config.InstallRecordFile, "{}\n", 0o644)
 	f.unitFiles["onmaru.service"] = true
 	script := &prompt.Script{Answers: map[string]string{"uninstall": "y", "uninstall-state-dir": "y", "uninstall-user": "y"}}
 	c, out, _ := newTestContext(t, f, script, "--uninstall")
@@ -317,6 +319,9 @@ func TestFlowUninstall(t *testing.T) {
 		if _, ok := f.read(t, p); ok {
 			t.Errorf("%s not removed", p)
 		}
+	}
+	if _, err := os.Stat(f.path(config.UpgradeStateDir)); !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("%s not removed (%v)", config.UpgradeStateDir, err)
 	}
 	// 설치기가 만들지 않은 파일은 건드리지 않는다.
 	if _, ok := f.read(t, "/etc/default/onmaru-upgrade"); !ok {
