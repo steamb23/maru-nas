@@ -55,4 +55,4 @@ paths:
 ## 아직 확인하지 않은 것
 
 - huh 화면(질문, 선택, 입력 중 검사, 요약, Ctrl+C)은 사용자가 실제 터미널에서 확인한다. 자동 확인은 가상 터미널에서 첫 질문이 뜨고 Ctrl+C로 130이 되는 것까지다
-- 실제 설치(테스트 VM): 설정을 모두 준 `--service-install`, bash 설치에서의 `--upgrade`(질문 0개), `--no-helper` 전환, `--uninstall`
+- 이 NAS의 실제 설치에서 sudo를 거치는 업그레이드. 순정 OMV 8.3.1 테스트 VM에서는 2026-10-18에 확인했다: bash `install.sh`(HEAD)로 다시 쓴 파일 위에서 `--upgrade`(질문 0개, 파일 5종 "unchanged", 백업 없음), `--no-helper`(도우미 실행 파일·유닛·환경 파일 삭제, 소켓 꺼짐, `ONMARU_HELPER_SOCKET=`)와 `--helper` 복원(bash 결과와 같음), sudo 그룹 일반 사용자의 `--upgrade`(sudo 2단계 재실행, bash 결과와 같음), root가 남의 저장소에서 빌드하려 할 때 `--upgrade` 중단(1), `--uninstall`(상태 디렉터리·사용자 남김), 비TTY에서 빠진 옵션(2), 설정을 모두 준 `--service-install`(골든 `helper-loopback`과 같음). 모두 상태 확인 성공
