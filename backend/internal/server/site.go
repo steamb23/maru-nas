@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"sync"
 
-	"onmaru/backend/internal/addons/smart"
+	"onmaru/backend/config"
 	"onmaru/backend/internal/api"
 	"onmaru/backend/internal/auth"
 	"onmaru/backend/internal/prefs"
@@ -15,9 +15,6 @@ import (
 
 // 전역 설정(관리자): 로그인 화면, 기본 화면, 웹에서 덮어쓰는 가동 설정.
 // 로그인 화면이 로그인 전에 쓰는 정보(GET /api/site, 로그인 배경 이미지)만 인증 없이 준다.
-
-// defaultSmartRefreshAt은 -smart-refresh-at의 기본값이다.
-const defaultSmartRefreshAt = "00:00"
 
 // overrides는 웹에서 덮어쓴 가동 설정의 지금 값이다. 이 프로세스만 site.json을 쓰므로 메모리에 두고
 // 저장할 때 함께 바꾼다. nil이면 덮어쓰지 않은 것이다.
@@ -54,7 +51,7 @@ func (h *handler) loadOverrides() {
 // applyOverrides는 덮어쓰기 값을 반영한다. 형식이 틀린 값(손으로 고친 파일 등)은 로그만 남기고 무시한다.
 func (h *handler) applyOverrides(o api.ServerOverrides) {
 	if o.WorkbenchURL != nil {
-		if err := CheckWorkbenchURL(*o.WorkbenchURL); err != nil {
+		if err := config.CheckWorkbenchURL(*o.WorkbenchURL); err != nil {
 			log.Printf("site settings: ignoring workbench url override: %v", err)
 			o.WorkbenchURL = nil
 		}
@@ -65,7 +62,7 @@ func (h *handler) applyOverrides(o api.ServerOverrides) {
 	}
 	smartAt := h.smartBase()
 	if o.SmartRefreshAt != nil {
-		if _, _, err := smart.ParseRefreshAt(*o.SmartRefreshAt); err != nil {
+		if _, _, err := config.ParseRefreshAt(*o.SmartRefreshAt); err != nil {
 			log.Printf("site settings: ignoring smart refresh time override: %v", err)
 			o.SmartRefreshAt = nil
 		} else {
@@ -80,7 +77,7 @@ func (h *handler) applyOverrides(o api.ServerOverrides) {
 		h.Terminal.CloseAll(terminal.ReasonDisabled)
 	}
 	if h.SetSmartRefreshAt != nil {
-		if hour, minute, err := smart.ParseRefreshAt(smartAt); err == nil {
+		if hour, minute, err := config.ParseRefreshAt(smartAt); err == nil {
 			h.SetSmartRefreshAt(hour, minute)
 		}
 	}
@@ -91,7 +88,7 @@ func validBool(v string) bool { return v == "true" || v == "false" }
 
 func (h *handler) smartBase() string {
 	if h.SmartRefreshAt == "" {
-		return defaultSmartRefreshAt
+		return config.DefaultSmartRefreshAt
 	}
 	return h.SmartRefreshAt
 }
@@ -282,13 +279,13 @@ func (h *handler) setServerSettings(w http.ResponseWriter, r *http.Request, _ au
 	}
 	next := *req.Server
 	if next.WorkbenchURL != nil {
-		if err := CheckWorkbenchURL(*next.WorkbenchURL); err != nil {
+		if err := config.CheckWorkbenchURL(*next.WorkbenchURL); err != nil {
 			writeError(w, http.StatusBadRequest, api.ErrBadRequest, "invalid workbench url")
 			return
 		}
 	}
 	if next.SmartRefreshAt != nil {
-		if _, _, err := smart.ParseRefreshAt(*next.SmartRefreshAt); err != nil {
+		if _, _, err := config.ParseRefreshAt(*next.SmartRefreshAt); err != nil {
 			writeError(w, http.StatusBadRequest, api.ErrBadRequest, "invalid smart refresh time")
 			return
 		}

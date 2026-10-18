@@ -12,19 +12,17 @@ import (
 	"maps"
 	"net"
 	"net/http"
-	"net/url"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
 	"syscall"
 	"time"
 
+	"onmaru/backend/config"
 	"onmaru/backend/internal/addons"
 	"onmaru/backend/internal/addons/builtin"
-	"onmaru/backend/internal/addons/smart"
 	"onmaru/backend/internal/api"
 	"onmaru/backend/internal/buildinfo"
 	"onmaru/backend/internal/helper/client"
@@ -40,30 +38,30 @@ import (
 const userAgent = "onmaru/" + buildinfo.Version
 
 func main() {
-	listen := flag.String("listen", cmp.Or(os.Getenv("ONMARU_LISTEN"), "127.0.0.1:8090"),
+	listen := flag.String("listen", cmp.Or(os.Getenv(config.EnvListen), config.DefaultListen),
 		"수신 주소. host:port(기본은 루프백만 허용) 또는 unix:/절대/경로.sock (환경 변수 ONMARU_LISTEN)")
-	allowNonLoopback := flag.Bool("allow-non-loopback", envBool("ONMARU_ALLOW_NON_LOOPBACK"),
+	allowNonLoopback := flag.Bool("allow-non-loopback", envBool(config.EnvAllowNonLoopback),
 		"루프백이 아닌 TCP 주소(0.0.0.0 등)에서도 수신한다. 위험: 리버스 프록시를 거치지 않은 접속을 받는다 (환경 변수 ONMARU_ALLOW_NON_LOOPBACK)")
-	omvURL := flag.String("omv-url", cmp.Or(os.Getenv("ONMARU_OMV_URL"), "http://127.0.0.1"),
+	omvURL := flag.String("omv-url", cmp.Or(os.Getenv(config.EnvOMVURL), config.DefaultOMVURL),
 		"OMV 웹 UI 주소 (루프백만 허용, 환경 변수 ONMARU_OMV_URL)")
-	cookiePath := flag.String("cookie-path", cmp.Or(os.Getenv("ONMARU_COOKIE_PATH"), "/"),
+	cookiePath := flag.String("cookie-path", cmp.Or(os.Getenv(config.EnvCookiePath), config.DefaultCookiePath),
 		"브라우저가 보는 대시보드 경로 (세션 쿠키 Path, 환경 변수 ONMARU_COOKIE_PATH)")
 	// systemd의 StateDirectory=를 쓰면 STATE_DIRECTORY가 설정된다.
-	stateDir := flag.String("state-dir", cmp.Or(os.Getenv("ONMARU_STATE_DIR"), os.Getenv("STATE_DIRECTORY")),
+	stateDir := flag.String("state-dir", cmp.Or(os.Getenv(config.EnvStateDir), os.Getenv(config.EnvSystemdStateDir)),
 		"사용자 설정(위젯 배치 등)을 저장할 디렉터리. 비우면 메모리에만 둔다 (환경 변수 ONMARU_STATE_DIR, STATE_DIRECTORY)")
-	workbenchURL := flag.String("workbench-url", os.Getenv("ONMARU_WORKBENCH_URL"),
+	workbenchURL := flag.String("workbench-url", os.Getenv(config.EnvWorkbenchURL),
 		"브라우저에서 OMV 웹 UI(workbench)를 열 주소. http(s) URL 또는 대시보드 기준 경로(/, ../). 비우면 OMV 워크벤치 앱을 숨긴다 (환경 변수 ONMARU_WORKBENCH_URL)")
-	smartAt := flag.String("smart-refresh-at", cmp.Or(os.Getenv("ONMARU_SMART_REFRESH_AT"), "00:00"),
+	smartAt := flag.String("smart-refresh-at", cmp.Or(os.Getenv(config.EnvSmartRefreshAt), config.DefaultSmartRefreshAt),
 		"SMART 정보를 하루 한 번 다시 가져오는 기준 시각 HH:MM, 서버 로컬 시간 (환경 변수 ONMARU_SMART_REFRESH_AT)")
-	helperSocket := flag.String("helper-socket", os.Getenv("ONMARU_HELPER_SOCKET"),
+	helperSocket := flag.String("helper-socket", os.Getenv(config.EnvHelperSocket),
 		"권한 도우미(onmaru-helper) 소켓의 절대 경로. 비우면 도우미 기능을 끈다 (환경 변수 ONMARU_HELPER_SOCKET)")
-	terminalEnabled := flag.Bool("terminal", envBool("ONMARU_TERMINAL"),
+	terminalEnabled := flag.Bool("terminal", envBool(config.EnvTerminal),
 		"웹 터미널(같은 호스트의 sshd에 SSH로 접속)을 허용한다. 설정 앱에서 덮어쓸 수 있다 (환경 변수 ONMARU_TERMINAL)")
-	sshAddr := flag.String("ssh-addr", cmp.Or(os.Getenv("ONMARU_SSH_ADDR"), terminal.AddrAuto),
+	sshAddr := flag.String("ssh-addr", cmp.Or(os.Getenv(config.EnvSSHAddr), config.DefaultSSHAddr),
 		"웹 터미널이 접속할 sshd 주소. auto는 /etc/ssh/sshd_config의 Port로 127.0.0.1에 접속한다. 루프백 IP:포트만 허용 (환경 변수 ONMARU_SSH_ADDR)")
-	sshHostKeys := flag.String("ssh-host-keys", cmp.Or(os.Getenv("ONMARU_SSH_HOST_KEYS"), terminal.DefaultHostKeys),
+	sshHostKeys := flag.String("ssh-host-keys", cmp.Or(os.Getenv(config.EnvSSHHostKeys), config.DefaultSSHHostKeys),
 		"웹 터미널이 받을 sshd 호스트 공개 키 파일의 glob 패턴 (환경 변수 ONMARU_SSH_HOST_KEYS)")
-	publicOrigin := flag.String("public-origin", os.Getenv("ONMARU_PUBLIC_ORIGIN"),
+	publicOrigin := flag.String("public-origin", os.Getenv(config.EnvPublicOrigin),
 		"브라우저가 대시보드에 접속하는 공개 HTTPS 주소(https://호스트[:포트], 도메인 이름). 보안 강화 모드의 패스키에 쓴다. 비우면 패스키를 끈다 (환경 변수 ONMARU_PUBLIC_ORIGIN)")
 	flag.Parse()
 
@@ -71,18 +69,18 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	if _, _, err := parseListen(*listen, false); err != nil {
+	if config.CheckListen(*listen, false) != nil {
 		log.Printf("WARNING: listening on non-loopback address %s. Requests can bypass the reverse proxy: "+
 			"traffic is plain HTTP and X-Forwarded-For/X-Forwarded-Proto can be forged by any client "+
 			"(login rate limit, OMV auth log, cookie Secure flag)", address)
 	}
-	if err := checkOMVURL(*omvURL); err != nil {
+	if err := config.CheckOMVURL(*omvURL); err != nil {
 		log.Fatal(err)
 	}
-	if err := server.CheckWorkbenchURL(*workbenchURL); err != nil {
+	if err := config.CheckWorkbenchURL(*workbenchURL); err != nil {
 		log.Fatal(err)
 	}
-	if err := checkHelperSocket(*helperSocket); err != nil {
+	if err := config.CheckHelperSocket(*helperSocket); err != nil {
 		log.Fatal(err)
 	}
 	if err := terminal.CheckAddr(*sshAddr); err != nil {
@@ -120,7 +118,7 @@ func main() {
 	}
 
 	deps := builtin.HostDeps()
-	hour, minute, err := smart.ParseRefreshAt(*smartAt)
+	hour, minute, err := config.ParseRefreshAt(*smartAt)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -135,20 +133,20 @@ func main() {
 	}
 
 	runtime := runtimeSettings(explicitFlags(), os.LookupEnv, []runtimeEntry{
-		{flag: "listen", env: "ONMARU_LISTEN", value: *listen},
-		{flag: "allow-non-loopback", env: "ONMARU_ALLOW_NON_LOOPBACK", value: strconv.FormatBool(*allowNonLoopback)},
-		{flag: "omv-url", env: "ONMARU_OMV_URL", value: *omvURL},
-		{flag: "cookie-path", env: "ONMARU_COOKIE_PATH", value: *cookiePath},
-		{flag: "state-dir", env: "ONMARU_STATE_DIR", value: *stateDir, systemdEnv: "STATE_DIRECTORY"},
+		{flag: "listen", env: config.EnvListen, value: *listen},
+		{flag: "allow-non-loopback", env: config.EnvAllowNonLoopback, value: strconv.FormatBool(*allowNonLoopback)},
+		{flag: "omv-url", env: config.EnvOMVURL, value: *omvURL},
+		{flag: "cookie-path", env: config.EnvCookiePath, value: *cookiePath},
+		{flag: "state-dir", env: config.EnvStateDir, value: *stateDir, systemdEnv: config.EnvSystemdStateDir},
 		// 빈 값은 "끔"이라는 뜻으로 일부러 넣는 값이다(install.sh).
-		{flag: "workbench-url", env: "ONMARU_WORKBENCH_URL", value: *workbenchURL, emptyIsSet: true},
-		{flag: "smart-refresh-at", env: "ONMARU_SMART_REFRESH_AT", value: *smartAt},
-		{flag: "helper-socket", env: "ONMARU_HELPER_SOCKET", value: *helperSocket},
-		{flag: "terminal", env: "ONMARU_TERMINAL", value: strconv.FormatBool(*terminalEnabled)},
-		{flag: "ssh-addr", env: "ONMARU_SSH_ADDR", value: *sshAddr},
-		{flag: "ssh-host-keys", env: "ONMARU_SSH_HOST_KEYS", value: *sshHostKeys},
+		{flag: "workbench-url", env: config.EnvWorkbenchURL, value: *workbenchURL, emptyIsSet: true},
+		{flag: "smart-refresh-at", env: config.EnvSmartRefreshAt, value: *smartAt},
+		{flag: "helper-socket", env: config.EnvHelperSocket, value: *helperSocket},
+		{flag: "terminal", env: config.EnvTerminal, value: strconv.FormatBool(*terminalEnabled)},
+		{flag: "ssh-addr", env: config.EnvSSHAddr, value: *sshAddr},
+		{flag: "ssh-host-keys", env: config.EnvSSHHostKeys, value: *sshHostKeys},
 		// 빈 값은 "패스키 끔"이라는 뜻으로 일부러 넣는 값이다(install.sh).
-		{flag: "public-origin", env: "ONMARU_PUBLIC_ORIGIN", value: *publicOrigin, emptyIsSet: true},
+		{flag: "public-origin", env: config.EnvPublicOrigin, value: *publicOrigin, emptyIsSet: true},
 	})
 
 	var helper server.Helper
@@ -214,28 +212,13 @@ func main() {
 	}
 }
 
-// unixPrefix는 -listen 값에서 Unix 소켓 경로를 나타내는 접두사다.
-const unixPrefix = "unix:"
-
-// parseListen은 -listen 값을 net.Listen 인자로 바꾼다.
-// 백엔드는 로컬 리버스 프록시를 통해서만 접근하는 것이 기본이므로, allowNonLoopback이 아니면
-// 루프백 IP가 아닌 TCP 주소를 거부한다. Unix 소켓은 파일 권한으로 접근을 제한한다.
+// parseListen은 -listen 값을 확인하고 net.Listen 인자로 바꾼다. 검사 규칙은 config.CheckListen이다.
 func parseListen(addr string, allowNonLoopback bool) (network, address string, err error) {
-	if path, ok := strings.CutPrefix(addr, unixPrefix); ok {
-		if !filepath.IsAbs(path) {
-			return "", "", errors.New("unix socket path must be absolute (e.g. unix:/run/onmaru/onmaru.sock), got " + addr)
-		}
-		return "unix", path, nil
-	}
-	host, _, err := net.SplitHostPort(addr)
-	if err != nil {
+	if err := config.CheckListen(addr, allowNonLoopback); err != nil {
 		return "", "", err
 	}
-	if !allowNonLoopback {
-		if ip := net.ParseIP(host); ip == nil || !ip.IsLoopback() {
-			return "", "", errors.New("listen address must be a loopback IP (e.g. 127.0.0.1:8090) or unix:/path, got " +
-				addr + " (use -allow-non-loopback to listen on other addresses)")
-		}
+	if path, ok := strings.CutPrefix(addr, config.UnixPrefix); ok {
+		return "unix", path, nil
 	}
 	return "tcp", addr, nil
 }
@@ -284,30 +267,6 @@ func envBool(key string) bool {
 		log.Fatalf("%s: invalid boolean %q", key, v)
 	}
 	return b
-}
-
-// checkOMVURL은 OMV 주소가 루프백 호스트의 http(s) URL인지 확인한다.
-// OMV 세션 ID가 네트워크로 나가지 않게 한다.
-func checkOMVURL(raw string) error {
-	u, err := url.Parse(raw)
-	if err != nil {
-		return err
-	}
-	if u.Scheme != "http" && u.Scheme != "https" {
-		return errors.New("omv url must be http(s), got " + raw)
-	}
-	if ip := net.ParseIP(u.Hostname()); u.Hostname() != "localhost" && (ip == nil || !ip.IsLoopback()) {
-		return errors.New("omv url must point to a loopback address (e.g. http://127.0.0.1), got " + raw)
-	}
-	return nil
-}
-
-// checkHelperSocket은 도우미 소켓 경로가 비었거나 절대 경로인지 확인한다.
-func checkHelperSocket(path string) error {
-	if path != "" && (!filepath.IsAbs(path) || filepath.Clean(path) != path) {
-		return errors.New("helper socket must be an absolute path (e.g. /run/onmaru-helper/helper.sock), got " + path)
-	}
-	return nil
 }
 
 // runtimeEntry는 설정의 서버 페이지에 보여 줄 가동 설정 하나다.

@@ -23,6 +23,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"onmaru/backend/config"
 	"onmaru/backend/internal/helper/proto"
 	"onmaru/backend/internal/helper/worker"
 )
@@ -31,7 +32,7 @@ const (
 	// DefaultAdminGroup은 OMV 웹 관리자 그룹(OMV_WEBGUI_ADMINGROUP_NAME)이다.
 	DefaultAdminGroup = "openmediavault-admin"
 	// DefaultElevateGroup은 상승에 함께 필요한 그룹의 기본값이다.
-	DefaultElevateGroup = "sudo"
+	DefaultElevateGroup = config.DefaultElevateGroup
 
 	// maxConns는 동시에 처리하는 연결 수다.
 	maxConns = 64

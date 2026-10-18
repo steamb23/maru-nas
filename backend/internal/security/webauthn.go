@@ -14,12 +14,9 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"net"
-	"net/url"
-	"strconv"
-	"strings"
+
+	"onmaru/backend/config"
 )
 
 // WebAuthn(패스키)을 CBOR 파서 없이 처리한다.
@@ -103,34 +100,14 @@ type RP struct {
 	Origin string
 }
 
-// ParseOrigin은 공개 주소(-public-origin)를 검사해 RP를 만든다. https://호스트[:포트]만 받는다. 경로·query·
-// fragment·사용자 정보가 있으면 거부하고, IP 주소는 RP ID가 될 수 없으므로 거부한다.
+// ParseOrigin은 공개 주소(-public-origin)를 검사해 RP를 만든다. 검사 규칙은 config.ParsePublicOrigin이다
+// (https://호스트[:포트]만 받고 IP 주소는 RP ID가 될 수 없으므로 거부한다).
 func ParseOrigin(raw string) (RP, error) {
-	u, err := url.Parse(raw)
+	id, origin, err := config.ParsePublicOrigin(raw)
 	if err != nil {
 		return RP{}, err
 	}
-	switch {
-	case u.Scheme != "https":
-		return RP{}, errors.New("public origin must start with https://, got " + raw)
-	case u.Opaque != "" || u.User != nil || u.RawQuery != "" || u.ForceQuery || u.Fragment != "" || (u.Path != "" && u.Path != "/"):
-		return RP{}, errors.New("public origin must be https://host[:port] without path, query or fragment, got " + raw)
-	}
-	host := strings.ToLower(u.Hostname())
-	if host == "" || strings.HasSuffix(host, ".") {
-		return RP{}, errors.New("public origin needs a host name, got " + raw)
-	}
-	if net.ParseIP(host) != nil {
-		return RP{}, errors.New("public origin must use a domain name, not an IP address (passkeys cannot use IP addresses), got " + raw)
-	}
-	origin := "https://" + host
-	if p := u.Port(); p != "" && p != "443" {
-		if n, err := strconv.Atoi(p); err != nil || n < 1 || n > 65535 {
-			return RP{}, errors.New("public origin has an invalid port, got " + raw)
-		}
-		origin += ":" + p
-	}
-	return RP{ID: host, Origin: origin}, nil
+	return RP{ID: id, Origin: origin}, nil
 }
 
 // NewChallenge는 새 challenge를 만든다.

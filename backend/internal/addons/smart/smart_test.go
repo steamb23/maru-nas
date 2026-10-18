@@ -262,14 +262,3 @@ func TestCacheWaiterHonoursContext(t *testing.T) {
 	}
 	close(rpc.block)
 }
-
-func TestParseRefreshAt(t *testing.T) {
-	if h, m, err := ParseRefreshAt("06:30"); err != nil || h != 6 || m != 30 {
-		t.Errorf("%d:%d %v", h, m, err)
-	}
-	for _, bad := range []string{"24:00", "12:60", "noon", ""} {
-		if _, _, err := ParseRefreshAt(bad); err == nil {
-			t.Errorf("%q accepted", bad)
-		}
-	}
-}

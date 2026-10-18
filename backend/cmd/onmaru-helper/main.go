@@ -21,6 +21,7 @@ import (
 	"syscall"
 	"time"
 
+	"onmaru/backend/config"
 	"onmaru/backend/internal/helper/daemon"
 	"onmaru/backend/internal/helper/worker"
 )
@@ -32,9 +33,9 @@ func main() {
 		os.Exit(worker.Main())
 	}
 	log.SetFlags(0)
-	clientUser := flag.String("client-user", cmp.Or(os.Getenv("ONMARU_HELPER_CLIENT_USER"), "onmaru"),
+	clientUser := flag.String("client-user", cmp.Or(os.Getenv(config.EnvHelperClientUser), config.DefaultHelperClientUser),
 		"연결을 받을 사용자(onmaru 서비스 사용자, 환경 변수 ONMARU_HELPER_CLIENT_USER)")
-	elevateGroup := flag.String("elevate-group", cmp.Or(os.Getenv("ONMARU_HELPER_ELEVATE_GROUP"), daemon.DefaultElevateGroup),
+	elevateGroup := flag.String("elevate-group", cmp.Or(os.Getenv(config.EnvHelperElevateGroup), config.DefaultElevateGroup),
 		"root 권한 상승에 openmediavault-admin과 함께 필요한 그룹(환경 변수 ONMARU_HELPER_ELEVATE_GROUP)")
 	listen := flag.String("listen", "", "소켓 활성화 없이 띄울 때의 수신 주소(unix:/절대/경로)")
 	idleExit := flag.Duration("idle-exit", 10*time.Minute, "소켓 활성화일 때 티켓과 연결이 없이 이만큼 지나면 종료, 0이면 종료하지 않음")

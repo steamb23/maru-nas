@@ -3,7 +3,6 @@ package smart
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"sync"
 	"time"
 
@@ -60,15 +59,6 @@ func (c *Cache) SetRefreshAt(hour, minute int) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.RefreshHour, c.RefreshMinute = hour, minute
-}
-
-// ParseRefreshAt은 "HH:MM" 형식의 기준 시각을 읽는다.
-func ParseRefreshAt(s string) (hour, minute int, err error) {
-	t, err := time.Parse("15:04", s)
-	if err != nil {
-		return 0, 0, fmt.Errorf("smart refresh time must be HH:MM, got %q", s)
-	}
-	return t.Hour(), t.Minute(), nil
 }
 
 // lastBoundary는 now 이전(같은 시각 포함)의 가장 최근 기준 시각이다.

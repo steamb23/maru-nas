@@ -12,6 +12,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"onmaru/backend/config"
 )
 
 // Account는 로컬 계정 하나다.
@@ -140,11 +142,8 @@ var userNameRE = regexp.MustCompile(`^[A-Za-z0-9_][A-Za-z0-9_.-]{0,63}$`)
 // ValidUserName은 사용자 이름 꼴이 맞는지다.
 func ValidUserName(name string) bool { return userNameRE.MatchString(name) }
 
-// GroupNameRE는 그룹 이름 꼴이다(설정 검사용).
-var groupNameRE = regexp.MustCompile(`^[A-Za-z0-9_][A-Za-z0-9_.-]{0,63}$`)
-
-// ValidGroupName은 그룹 이름 꼴이 맞는지다.
-func ValidGroupName(name string) bool { return groupNameRE.MatchString(name) }
+// ValidGroupName은 그룹 이름 꼴이 맞는지다(설정 검사용, 설치기와 같은 규칙인 config.ValidGroupName).
+func ValidGroupName(name string) bool { return config.ValidGroupName(name) }
 
 // ErrAuth는 비밀번호가 틀렸거나 계정이 만료·잠금 상태라는 오류다.
 var ErrAuth = errors.New("authentication failed")

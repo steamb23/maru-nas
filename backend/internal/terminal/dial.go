@@ -20,14 +20,15 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
+	"onmaru/backend/config"
 	"onmaru/backend/internal/helper/proto"
 )
 
 const (
 	// DefaultHostKeys는 sshd 호스트 공개 키 파일의 glob 패턴이다(0644라 누구나 읽는다).
-	DefaultHostKeys = "/etc/ssh/ssh_host_*_key.pub"
+	DefaultHostKeys = config.DefaultSSHHostKeys
 	// AddrAuto는 sshd_config의 Port로 루프백에 붙는다는 뜻이다.
-	AddrAuto = "auto"
+	AddrAuto = config.DefaultSSHAddr
 	// handshakeTimeout은 인증(비밀번호 입력 포함)까지 걸릴 수 있는 시간이다. sshd의 LoginGraceTime(OMV 120초)보다 길게 둔다.
 	handshakeTimeout = 3 * time.Minute
 	// keyTimeout은 도우미에 임시 키를 넣거나 지우는 요청의 시간 제한이다.
