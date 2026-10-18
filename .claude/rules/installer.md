@@ -13,7 +13,7 @@ paths:
 
 - `install.sh`는 부트스트랩이다. 실행한 계정으로 `installer/`를 `bin/onmaru-install`로 빌드해 exec한다(go가 없거나 root가 남의 저장소에서 실행하면 이미 있는 실행 파일을 쓴다). 옵션과 동작은 모두 설치기가 정한다. 진입점 이름 `./install.sh`는 README, 화면 문구(모든 언어), 생성 파일의 주석이 참조하므로 바꾸지 않는다
 - `installer/`는 별도 Go 모듈(`onmaru/installer`)이다. `go.work` 없이 `replace onmaru/backend => ../backend`로 로컬 백엔드를 쓰고, go 지시어는 `backend/go.mod`와 같게 둔다. TUI 의존성 huh v2는 이 모듈에만 있다(`backend/go.mod`·`go.sum`에는 charm 모듈이 없어야 한다)
-- 백엔드에서 쓰는 것은 공개 패키지 `backend/config`(환경 변수 키, 기본값, 검증 함수)뿐이다. `backend/internal`은 Go 규칙상 import할 수 없고, `TestBackendDependencies`가 다른 백엔드 패키지를 링크하지 않는지 본다. `backend/config`는 표준 라이브러리만 쓴다(`TestStandardLibraryOnly`)
+- 백엔드에서 쓰는 것은 공개 패키지 `backend/config`(환경 변수 키, 기본값, 검증 함수, 버전)뿐이다. `backend/internal`은 Go 규칙상 import할 수 없고, `TestBackendDependencies`가 다른 백엔드 패키지를 링크하지 않는지 본다. `backend/config`는 표준 라이브러리만 쓴다(`TestStandardLibraryOnly`)
 - `internal/setup`
   - `run.go`: 흐름(1단계 설치, `--service-install` 2단계, `--uninstall`, `--dry-run`)과 sudo 재실행(`sudo bin/onmaru-install --service-install --lang X <레지스트리가 만든 인자> [--upgrade | --reinstall] [--plain]`). root면 같은 프로세스에서 이어 간다. 2단계는 받은 값을 다시 검사한다
   - `mode.go`: 설치 방식(새 설치, 다시 설치, 업그레이드)을 정하고 알리며, 업그레이드 요약 뒤의 선택(업그레이드·설정 바꾸기·취소)과 진행 확인을 한다(아래 "설치 방식")

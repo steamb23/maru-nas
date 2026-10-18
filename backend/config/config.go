@@ -1,5 +1,5 @@
 // Package config는 백엔드(onmaru, onmaru-helper)와 설치기(installer)가 함께 쓰는 설정 규칙이다.
-// 환경 변수 키, 기본값, 설정 값 검사 함수를 둔다.
+// 환경 변수 키, 기본값, 설정 값 검사 함수와 온마루 버전(Version)을 둔다.
 //
 // 설치기는 별도 Go 모듈이라 backend/internal을 import할 수 없으므로 이 공개 패키지만 쓴다.
 // 설치기에 백엔드 의존성이 딸려 가지 않게 표준 라이브러리만 쓰고 backend/internal을 import하지 않는다

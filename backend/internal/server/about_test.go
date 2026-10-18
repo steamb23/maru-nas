@@ -4,9 +4,9 @@ import (
 	"net/http"
 	"testing"
 
+	"onmaru/backend/config"
 	"onmaru/backend/internal/addons"
 	"onmaru/backend/internal/api"
-	"onmaru/backend/internal/buildinfo"
 )
 
 func TestAbout(t *testing.T) {
@@ -19,7 +19,7 @@ func TestAbout(t *testing.T) {
 	rec := b.do(http.MethodGet, "/api/about", nil)
 	wantStatus(t, rec, http.StatusOK)
 	got := decode[api.AboutResponse](t, rec)
-	if got.Version != buildinfo.Version || got.GoVersion == "" {
+	if got.Version != config.Version || got.GoVersion == "" {
 		t.Fatalf("about %+v", got)
 	}
 }
@@ -35,7 +35,7 @@ func TestAboutOMVVersion(t *testing.T) {
 	admin := e.browser()
 	wantStatus(t, admin.login("admin", "admin"), http.StatusOK)
 	got := decode[api.AboutResponse](t, admin.do(http.MethodGet, "/api/about", nil))
-	if got.OMVVersion != "8.0.0-1" || got.OMVVersionName != "Synthetic" || got.Version != buildinfo.Version {
+	if got.OMVVersion != "8.0.0-1" || got.OMVVersionName != "Synthetic" || got.Version != config.Version {
 		t.Errorf("admin about %+v", got)
 	}
 
