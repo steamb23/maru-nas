@@ -206,11 +206,60 @@ func TestWebAuthnAssertionRejects(t *testing.T) {
 			t.Errorf("%s: err=%v", name, err)
 		}
 	}
+	// UV만 빠진 값은 서명이 맞을 때만 ErrUserNotVerified다(등록 확인에서 따로 알린다).
+	as := a.assert(t, testRP, ch)
+	as.AuthenticatorData = authDataBytes(testRP.ID, flagUP|flagBE|flagBS, 9, nil)
+	as.Signature = a.sign(t, as.AuthenticatorData, as.ClientDataJSON)
+	if _, err := testRP.VerifyAssertion(pk, as, ch); !errors.Is(err, ErrUserNotVerified) {
+		t.Errorf("signed, no uv: err=%v", err)
+	}
+	as.Signature = other.sign(t, as.AuthenticatorData, as.ClientDataJSON)
+	if _, err := testRP.VerifyAssertion(pk, as, ch); !errors.Is(err, ErrVerify) || errors.Is(err, ErrUserNotVerified) {
+		t.Errorf("bad signature, no uv: err=%v", err)
+	}
 	// 저장한 알고리즘과 키가 맞지 않으면 받지 않는다.
 	bad := pk
 	bad.Alg = AlgRS256
 	if _, err := testRP.VerifyAssertion(bad, a.assert(t, testRP, ch), ch); err == nil {
 		t.Error("mismatched stored algorithm accepted")
+	}
+}
+
+func TestWebAuthnFlags(t *testing.T) {
+	a := newFakeAuthenticator(t, AlgES256)
+	ch := NewChallenge()
+	reg := a.register(t, testRP, ch)
+	if pk, err := testRP.VerifyRegistration(reg, ch); err != nil || pk.BackupEligible {
+		t.Fatalf("device-bound: %+v %v", pk, err)
+	}
+	reg.AuthenticatorData = authDataBytes(testRP.ID, flagUP|flagUV|flagBE|flagBS|flagAT, 0, a.credID)
+	if pk, err := testRP.VerifyRegistration(reg, ch); err != nil || !pk.BackupEligible {
+		t.Fatalf("synced: %+v %v", pk, err)
+	}
+	reg.AuthenticatorData = authDataBytes(testRP.ID, flagUP|flagAT, 0, a.credID)
+	if _, err := testRP.VerifyRegistration(reg, ch); !errors.Is(err, ErrUserNotVerified) {
+		t.Errorf("registration without uv: %v", err)
+	}
+
+	if f, ok := AuthFlags(authDataBytes(testRP.ID, flagUP|flagBE|flagBS, 0, nil)); !ok || f.String() != "UP=1 UV=0 BE=1 BS=1" {
+		t.Errorf("flags = %v %v", f, ok)
+	}
+	if _, ok := AuthFlags([]byte{1, 2}); ok {
+		t.Error("short auth data has flags")
+	}
+
+	ad := authDataBytes(testRP.ID, flagUP|flagUV|flagAT, 0, a.credID)
+	if g := AAGUID(ad); g != "" {
+		t.Errorf("zero aaguid = %q", g)
+	}
+	for i := range 16 {
+		ad[authDataMinLen+i] = byte(i + 1)
+	}
+	if g := AAGUID(ad); g != "01020304-0506-0708-090a-0b0c0d0e0f10" {
+		t.Errorf("aaguid = %q", g)
+	}
+	if g := AAGUID(authDataBytes(testRP.ID, flagUP|flagUV, 0, nil)); g != "" {
+		t.Errorf("assertion aaguid = %q", g)
 	}
 }
 

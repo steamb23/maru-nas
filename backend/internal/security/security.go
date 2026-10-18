@@ -36,9 +36,12 @@ type Passkey struct {
 	Alg       int    `json:"alg"`
 	SignCount uint32 `json:"signCount"`
 	// Transports는 브라우저가 알려 준 연결 방식(usb, internal 등)이다. 확인할 때 브라우저에 힌트로 준다.
-	Transports []string  `json:"transports,omitempty"`
-	Created    time.Time `json:"created"`
-	LastUsed   time.Time `json:"lastUsed,omitzero"`
+	Transports []string `json:"transports,omitempty"`
+	// BackupEligible은 등록할 때 인증기가 알린 백업 가능(BE) 플래그다. 동기화 저장소(iCloud 키체인, 비밀번호
+	// 관리자)의 패스키라는 뜻이며 막지 않고 화면에 표시만 한다.
+	BackupEligible bool      `json:"backupEligible,omitempty"`
+	Created        time.Time `json:"created"`
+	LastUsed       time.Time `json:"lastUsed,omitzero"`
 }
 
 // TOTP는 등록한 인증 앱(RFC 6238) 하나다.

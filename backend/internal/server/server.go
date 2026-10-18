@@ -126,9 +126,11 @@ type handler struct {
 	securityLimiter *auth.Limiter
 	// policy는 지금 보안 강화 정책이다(security.go).
 	policy policyState
-	// challenges는 진행 중인 패스키 확인·등록, totpSetup은 설정 중인 TOTP 비밀이다. 대시보드 세션에 묶인다.
-	challenges *security.Ephemeral[ceremony]
-	totpSetup  *security.Ephemeral[string]
+	// challenges는 진행 중인 패스키 확인·등록, pendingPasskeys는 등록 값은 맞았지만 아직 시험 확인을 하지 않은
+	// 패스키, totpSetup은 설정 중인 TOTP 비밀이다. 대시보드 세션에 묶인다.
+	challenges      *security.Ephemeral[ceremony]
+	pendingPasskeys *security.Ephemeral[pendingPasskey]
+	totpSetup       *security.Ephemeral[string]
 }
 
 // New는 루트 핸들러를 반환한다. /api/ 밖의 요청은 cfg.Static이 처리한다.
@@ -176,12 +178,13 @@ func New(cfg Config) http.Handler {
 		terminalLimiter: auth.NewLimiter(),
 		securityLimiter: auth.NewLimiter(),
 		challenges:      security.NewEphemeral[ceremony](challengeTTL),
+		pendingPasskeys: security.NewEphemeral[pendingPasskey](challengeTTL),
 		totpSetup:       security.NewEphemeral[string](totpSetupTTL),
 	}
 	for _, l := range []*auth.Limiter{h.terminalLimiter, h.securityLimiter} {
 		l.Now = cfg.Now
 	}
-	h.challenges.Now, h.totpSetup.Now = cfg.Now, cfg.Now
+	h.challenges.Now, h.pendingPasskeys.Now, h.totpSetup.Now = cfg.Now, cfg.Now, cfg.Now
 	h.loadOverrides()
 	h.loadPolicy()
 	if cfg.Helper != nil || cfg.Terminal != nil {
@@ -223,6 +226,7 @@ func New(cfg Config) http.Handler {
 	mux.HandleFunc("POST /api/security/manage", h.requireSession(h.manageSecurity))
 	mux.HandleFunc("POST /api/security/passkeys/challenge", h.requireSession(h.passkeyChallenge))
 	mux.HandleFunc("POST /api/security/passkeys", h.requireSession(h.registerPasskey))
+	mux.HandleFunc("POST /api/security/passkeys/confirm", h.requireSession(h.confirmPasskey))
 	mux.HandleFunc("DELETE /api/security/passkeys/{id}", h.requireSession(h.deletePasskey))
 	mux.HandleFunc("POST /api/security/totp/setup", h.requireSession(h.setupTOTP))
 	mux.HandleFunc("POST /api/security/totp", h.requireSession(h.confirmTOTP))

@@ -192,7 +192,7 @@ func (h *handler) securityStatus(s auth.Session) (api.SecurityStatus, error) {
 		st.ManageSeconds = retrySeconds(left)
 	}
 	for _, p := range rec.Passkeys {
-		info := api.PasskeyInfo{ID: p.ID, Name: p.Name, Created: p.Created.UTC().Format(time.RFC3339)}
+		info := api.PasskeyInfo{ID: p.ID, Name: p.Name, Created: p.Created.UTC().Format(time.RFC3339), BackupEligible: p.BackupEligible}
 		if !p.LastUsed.IsZero() {
 			info.LastUsed = p.LastUsed.UTC().Format(time.RFC3339)
 		}

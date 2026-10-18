@@ -17,6 +17,11 @@ import (
 )
 
 // 패스키(WebAuthn): challenge, 등록, 확인. 확인·등록 값의 검사는 internal/security가 한다.
+//
+// 등록은 두 단계다. 등록 값(registerPasskey)이 맞으면 저장하지 않고 세션의 대기에 둔 뒤, 그 패스키로 시험 확인
+// (confirmPasskey)을 한 번 해서 통과해야 저장한다. 등록할 때만 UV를 켜고 확인할 때는 켜 주지 않는 저장소(최신
+// Windows의 동기화 저장소, 잠금이 풀려 있으면 확인을 건너뛰는 비밀번호 관리자 등)가 있어 등록 응답의 플래그만으로는
+// 걸러 낼 수 없기 때문이다.
 
 const (
 	// challengeTTL은 패스키 challenge의 수명이다.
@@ -42,6 +47,30 @@ type ceremony struct {
 }
 
 func challengeKey(sessionID, purpose string) string { return purpose + ":" + sessionID }
+
+// pendingPasskey는 등록 값은 맞았지만 아직 시험 확인을 하지 않은 패스키다(pendingPasskeys, 대시보드 세션 ID).
+type pendingPasskey struct {
+	pk     security.Passkey
+	handle []byte
+	// challenge는 시험 확인에 쓸 challenge다. 확인 challenge(assert)와 따로 둔다.
+	challenge []byte
+}
+
+// withFlags는 패스키 확인 실패에 인증기 플래그(UP/UV/BE/BS)를 덧붙인다(진단 로그용, 비밀 값 없음).
+func withFlags(err error, authData []byte) error {
+	if f, ok := security.AuthFlags(authData); ok && err != nil {
+		return fmt.Errorf("%w (flags %s)", err, f)
+	}
+	return err
+}
+
+// aaguidLog는 로그에 남길 인증기 종류다. 증명 none에서는 브라우저가 지울 수 있어 로그에만 쓴다.
+func aaguidLog(authData []byte) string {
+	if g := security.AAGUID(authData); g != "" {
+		return g
+	}
+	return "none"
+}
 
 // decodeB64는 브라우저가 보낸 base64url 값을 푼다. 패딩이 있어도 받는다.
 func decodeB64(s string) ([]byte, error) {
@@ -164,7 +193,7 @@ func (h *handler) verifyPasskey(s auth.Session, pa *api.PasskeyAssertion, now ti
 		}
 		count, err := h.RP.VerifyAssertion(*pk, a, c.challenge)
 		if err != nil {
-			return err
+			return withFlags(err, a.AuthenticatorData)
 		}
 		// 서명 횟수가 늘지 않았으면 복제된 인증기일 수 있다. 횟수를 세지 않는 인증기(동기화 패스키는 늘 0)도 있어
 		// 거절하지 않고 기록만 남긴다.
@@ -182,7 +211,25 @@ var (
 	errHandleChanged    = errors.New("security: user handle changed during registration")
 )
 
-// registerPasskey는 새 패스키를 등록한다(관리 창 필요). 첫 수단이면 복구 코드를 만들어 한 번만 보여 준다.
+// checkNewPasskey는 rec에 pk를 더할 수 있는지 본다(중복, 개수 상한, 그사이 바뀐 사용자 핸들).
+func checkNewPasskey(rec security.Record, pk security.Passkey, handle []byte) error {
+	switch {
+	case rec.Passkey(pk.ID) != nil:
+		return errDuplicatePasskey
+	case len(rec.Passkeys) >= maxPasskeys:
+		return errTooManyPasskeys
+	case rec.Handle != nil && !bytes.Equal(rec.Handle, handle):
+		return errHandleChanged
+	}
+	return nil
+}
+
+func isNewPasskeyConflict(err error) bool {
+	return errors.Is(err, errDuplicatePasskey) || errors.Is(err, errTooManyPasskeys) || errors.Is(err, errHandleChanged)
+}
+
+// registerPasskey는 새 패스키의 등록 값을 확인한다(관리 창 필요). 저장하지 않고 이 세션의 대기에 둔 뒤, 그 패스키
+// 하나만 허용하는 시험 확인 옵션을 준다. 저장은 confirmPasskey가 한다.
 func (h *handler) registerPasskey(w http.ResponseWriter, r *http.Request, s auth.Session) {
 	var req api.PasskeyRegisterRequest
 	if !decodeJSONLimit(w, r, &req, maxSecurityBodyBytes) {
@@ -222,43 +269,126 @@ func (h *handler) registerPasskey(w http.ResponseWriter, r *http.Request, s auth
 			return
 		}
 	}
+	ip := clientIP(r)
 	pk, err := h.RP.VerifyRegistration(reg, c.challenge)
 	if err != nil {
-		log.Printf("security: passkey registration failed: user=%q ip=%s: %v", s.Username, clientIP(r), err)
+		log.Printf("security: passkey registration failed: user=%q ip=%s aaguid=%s: %v", s.Username, ip, aaguidLog(reg.AuthenticatorData),
+			withFlags(err, reg.AuthenticatorData))
 		writeError(w, http.StatusBadRequest, api.ErrFactorFailed, "passkey registration failed")
 		return
 	}
-	now := h.Now()
-	pk.Name, pk.Created = name, now
+	pk.Name, pk.Created = name, h.Now()
 	for _, t := range cr.Transports {
 		if slices.Contains(knownTransports, t) && !slices.Contains(pk.Transports, t) {
 			pk.Transports = append(pk.Transports, t)
 		}
 	}
+	// 시험 확인을 요청하기 전에 미리 걸러 낸다. 저장할 때 다시 본다.
+	rec, err := h.Security.GetSecurity(s.Username)
+	if err != nil {
+		writeSecurityUnavailable(w, s, err)
+		return
+	}
+	if err := checkNewPasskey(rec, pk, c.handle); err != nil {
+		writeError(w, http.StatusConflict, api.ErrBadRequest, "cannot register this passkey")
+		return
+	}
+	p := pendingPasskey{pk: pk, handle: c.handle, challenge: security.NewChallenge()}
+	h.pendingPasskeys.Put(s.ID, p)
+	f, _ := security.AuthFlags(reg.AuthenticatorData)
+	log.Printf("security: passkey created, awaiting test verification: user=%q ip=%s name=%q aaguid=%s (flags %s)", s.Username, ip, name,
+		aaguidLog(reg.AuthenticatorData), f)
+	writeJSON(w, http.StatusOK, api.PasskeyOptions{
+		Challenge:   security.B64.EncodeToString(p.challenge),
+		RPID:        h.RP.ID,
+		TimeoutMs:   int(passkeyTimeout / time.Millisecond),
+		Credentials: []api.PasskeyDescriptor{{ID: pk.ID, Transports: pk.Transports}},
+	})
+}
+
+// checkPending은 대기 중인 패스키 p로 한 시험 확인인지 검사하고 서명 횟수를 돌려준다.
+func (h *handler) checkPending(p pendingPasskey, a security.Assertion) (uint32, error) {
+	if security.B64.EncodeToString(a.CredentialID) != p.pk.ID {
+		return 0, fmt.Errorf("%w: not the new credential", security.ErrVerify)
+	}
+	if len(a.UserHandle) > 0 && !bytes.Equal(a.UserHandle, p.handle) {
+		return 0, fmt.Errorf("%w: user handle mismatch", security.ErrVerify)
+	}
+	count, err := h.RP.VerifyAssertion(p.pk, a, p.challenge)
+	return count, withFlags(err, a.AuthenticatorData)
+}
+
+// confirmPasskey는 대기 중인 새 패스키로 한 시험 확인을 검사하고, 통과하면 저장한다(관리 창 필요). 첫 수단이면
+// 복구 코드를 만들어 한 번만 보여 준다. 서명은 맞는데 UV만 없으면 passkey_uv_unsupported로 거절하고 실패로 세지
+// 않는다(값을 맞히려는 시도가 아니라 저장소의 동작이다). 대기는 한 번만 쓴다.
+func (h *handler) confirmPasskey(w http.ResponseWriter, r *http.Request, s auth.Session) {
+	var req api.PasskeyConfirmRequest
+	if !decodeJSONLimit(w, r, &req, maxSecurityBodyBytes) {
+		return
+	}
+	if h.RP == nil {
+		writeError(w, http.StatusConflict, api.ErrPasskeyUnavailable, "passkeys are not configured")
+		return
+	}
+	if !h.manageOpen(s) {
+		writeError(w, http.StatusForbidden, api.ErrManageRequired, "confirm your identity first")
+		return
+	}
+	a, err := decodeAssertion(req.Passkey)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, api.ErrBadRequest, "invalid passkey")
+		return
+	}
+	ip := clientIP(r)
+	done, wait := h.securityLimiter.Begin(ip, s.Username, "")
+	if done == nil {
+		log.Printf("security: passkey test verification rate limited: user=%q ip=%s", s.Username, ip)
+		writeRateLimited(w, wait)
+		return
+	}
+	p, ok := h.pendingPasskeys.Take(s.ID)
+	if !ok {
+		done(auth.Neutral)
+		writeError(w, http.StatusBadRequest, api.ErrFactorFailed, "registration expired, try again")
+		return
+	}
+	count, err := h.checkPending(p, a)
+	switch {
+	case errors.Is(err, security.ErrUserNotVerified):
+		done(auth.Neutral)
+		log.Printf("security: passkey not registered, provider does not report user verification: user=%q ip=%s name=%q: %v",
+			s.Username, ip, p.pk.Name, err)
+		writeError(w, http.StatusBadRequest, api.ErrPasskeyUVUnsupported, "this passkey provider does not report user verification")
+		return
+	case err != nil:
+		done(auth.Failure)
+		log.Printf("security: passkey test verification failed: user=%q ip=%s name=%q: %v", s.Username, ip, p.pk.Name, err)
+		sleep(r.Context(), h.FailDelay)
+		writeError(w, http.StatusBadRequest, api.ErrFactorFailed, "passkey verification failed")
+		return
+	}
+	done(auth.Success)
+	pk := p.pk
+	pk.SignCount = count
 	var codes []string
 	err = h.Security.UpdateSecurity(s.Username, func(rec *security.Record) error {
-		switch {
-		case rec.Passkey(pk.ID) != nil:
-			return errDuplicatePasskey
-		case len(rec.Passkeys) >= maxPasskeys:
-			return errTooManyPasskeys
-		case rec.Handle != nil && !bytes.Equal(rec.Handle, c.handle):
-			return errHandleChanged
+		if err := checkNewPasskey(*rec, pk, p.handle); err != nil {
+			return err
 		}
 		codes = addFirstMethod(rec)
-		rec.Handle = c.handle
+		rec.Handle = p.handle
 		rec.Passkeys = append(rec.Passkeys, pk)
 		return nil
 	})
 	switch {
-	case errors.Is(err, errDuplicatePasskey), errors.Is(err, errTooManyPasskeys), errors.Is(err, errHandleChanged):
+	case isNewPasskeyConflict(err):
 		writeError(w, http.StatusConflict, api.ErrBadRequest, "cannot register this passkey")
 		return
 	case err != nil:
 		writeSecurityUnavailable(w, s, err)
 		return
 	}
-	log.Printf("security: passkey registered: user=%q ip=%s name=%q", s.Username, clientIP(r), name)
+	log.Printf("security: passkey registered: user=%q ip=%s name=%q synced=%t", s.Username, ip, pk.Name, pk.BackupEligible)
 	// 방금 이 패스키를 가지고 있음을 증명했다.
 	h.writeSecurityChange(w, h.raise(s, auth.AssuranceTwoFactor), codes)
 }

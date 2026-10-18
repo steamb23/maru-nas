@@ -27,6 +27,8 @@ import (
 //     getAuthenticatorData()를 쓰므로 attestationObject를 풀지 않는다. 증명이 없으므로 등록 자체는 비밀번호와
 //     기존 수단 확인(관리 창)으로 막는다.
 //   - 확인: clientDataJSON(type, challenge, origin), 인증기 데이터(rpIdHash, 사용자 확인), 서명을 확인한다.
+//     사용자 확인(UV)은 서명까지 맞은 뒤에 본다. UV만 빠진 값(ErrUserNotVerified)은 저장소가 UV를 알려 주지 않는
+//     경우라 등록 확인에서 따로 알린다.
 
 // COSE 알고리즘 번호
 const (
@@ -42,8 +44,47 @@ var SupportedAlgs = []int{AlgES256, AlgEdDSA, AlgRS256}
 const (
 	flagUP = 0x01 // 사용자 있음
 	flagUV = 0x04 // 사용자 확인(PIN, 생체)
+	flagBE = 0x08 // 백업 가능(동기화 저장소의 패스키)
+	flagBS = 0x10 // 백업됨
 	flagAT = 0x40 // 자격 증명 데이터 있음(등록)
 )
+
+// ErrUserNotVerified는 서명은 맞지만 인증기가 사용자 확인(UV)을 알리지 않았다는 뜻이다. ErrVerify를 감싼다.
+var ErrUserNotVerified = fmt.Errorf("%w: user not verified", ErrVerify)
+
+// Flags는 인증기 데이터의 플래그 바이트다. 진단 로그에 쓴다(비밀 값이 아니다).
+type Flags byte
+
+func (f Flags) String() string {
+	bit := func(m byte) int {
+		if byte(f)&m != 0 {
+			return 1
+		}
+		return 0
+	}
+	return fmt.Sprintf("UP=%d UV=%d BE=%d BS=%d", bit(flagUP), bit(flagUV), bit(flagBE), bit(flagBS))
+}
+
+// AuthFlags는 인증기 데이터의 플래그다. 너무 짧으면 false다.
+func AuthFlags(authData []byte) (Flags, bool) {
+	if len(authData) < authDataMinLen {
+		return 0, false
+	}
+	return Flags(authData[32]), true
+}
+
+// AAGUID는 등록한 인증기의 종류(AAGUID)를 UUID 문자열로 준다. 증명 none에서는 브라우저가 0으로 지울 수 있어
+// 믿을 수 없으므로 로그에만 쓴다. 없거나 0이면 빈 문자열이다.
+func AAGUID(authData []byte) string {
+	if len(authData) < authDataMinLen+16 || authData[32]&flagAT == 0 {
+		return ""
+	}
+	g := authData[authDataMinLen : authDataMinLen+16]
+	if bytes.Equal(g, make([]byte, 16)) {
+		return ""
+	}
+	return fmt.Sprintf("%x-%x-%x-%x-%x", g[0:4], g[4:6], g[6:8], g[8:10], g[10:16])
+}
 
 const (
 	// ChallengeBytes는 challenge 길이다.
@@ -143,6 +184,9 @@ func (rp RP) VerifyRegistration(reg Registration, challenge []byte) (Passkey, er
 	if err != nil {
 		return Passkey{}, err
 	}
+	if ad.flags&flagUV == 0 {
+		return Passkey{}, ErrUserNotVerified
+	}
 	if ad.flags&flagAT == 0 {
 		return Passkey{}, verifyErr("no attested credential data")
 	}
@@ -169,15 +213,17 @@ func (rp RP) VerifyRegistration(reg Registration, challenge []byte) (Passkey, er
 		return Passkey{}, err
 	}
 	return Passkey{
-		ID:        B64.EncodeToString(reg.CredentialID),
-		PublicKey: bytes.Clone(reg.PublicKey),
-		Alg:       reg.Algorithm,
-		SignCount: ad.signCount,
+		ID:             B64.EncodeToString(reg.CredentialID),
+		PublicKey:      bytes.Clone(reg.PublicKey),
+		Alg:            reg.Algorithm,
+		SignCount:      ad.signCount,
+		BackupEligible: ad.flags&flagBE != 0,
 	}, nil
 }
 
 // VerifyAssertion은 pk로 만든 서명인지 확인하고 인증기의 서명 횟수를 돌려준다. 자격 증명 ID가 pk와 같은지,
-// userHandle이 맞는지는 부르는 쪽이 확인한다.
+// userHandle이 맞는지는 부르는 쪽이 확인한다. 서명까지 맞고 UV만 없으면 ErrUserNotVerified다(플래그는 서명한
+// 인증기 데이터 안에 있어 바꿀 수 없다).
 func (rp RP) VerifyAssertion(pk Passkey, a Assertion, challenge []byte) (uint32, error) {
 	if err := rp.checkClientData(a.ClientDataJSON, "webauthn.get", challenge); err != nil {
 		return 0, err
@@ -197,6 +243,9 @@ func (rp RP) VerifyAssertion(pk Passkey, a Assertion, challenge []byte) (uint32,
 	msg := append(bytes.Clone(a.AuthenticatorData), cd[:]...)
 	if !verifySignature(pub, pk.Alg, msg, a.Signature) {
 		return 0, verifyErr("bad signature")
+	}
+	if ad.flags&flagUV == 0 {
+		return 0, ErrUserNotVerified
 	}
 	return ad.signCount, nil
 }
@@ -237,7 +286,7 @@ type authData struct {
 	signCount uint32
 }
 
-// checkAuthData는 인증기 데이터의 rpIdHash와 사용자 확인(UP, UV)을 확인한다. UV는 필수다.
+// checkAuthData는 인증기 데이터의 rpIdHash와 사용자 있음(UP)을 확인한다. UV(필수)는 부르는 쪽이 본다.
 func (rp RP) checkAuthData(b []byte) (authData, error) {
 	if len(b) < authDataMinLen {
 		return authData{}, verifyErr("short authenticator data")
@@ -249,9 +298,6 @@ func (rp RP) checkAuthData(b []byte) (authData, error) {
 	ad := authData{flags: b[32], signCount: binary.BigEndian.Uint32(b[33:37])}
 	if ad.flags&flagUP == 0 {
 		return authData{}, verifyErr("user not present")
-	}
-	if ad.flags&flagUV == 0 {
-		return authData{}, verifyErr("user not verified")
 	}
 	return ad, nil
 }

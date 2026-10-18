@@ -888,6 +888,9 @@ const (
 	ErrManageRequired = "manage_required"
 	// ErrPasskeyUnavailable은 공개 주소(-public-origin)를 설정하지 않아 패스키를 쓸 수 없다는 뜻이다.
 	ErrPasskeyUnavailable = "passkey_unavailable"
+	// ErrPasskeyUVUnsupported는 새 패스키의 시험 확인에서 인증기가 사용자 확인(UV)을 알리지 않아 등록하지 않았다는
+	// 뜻이다(확인 응답에 UV를 켜 주지 않는 동기화 저장소 등). 다른 저장소(이 기기, 보안 키)로 다시 등록해야 한다.
+	ErrPasskeyUVUnsupported = "passkey_uv_unsupported"
 	// ErrSecurityUnavailable은 수단 기록을 읽을 수 없다는 뜻이다(손상된 파일 등). 관리자가 초기화해야 한다.
 	ErrSecurityUnavailable = "security_unavailable"
 )
@@ -896,7 +899,7 @@ const (
 type ErrorResponse struct {
 	Error string `json:"error"`
 	// Code는 화면에서 분기할 때 쓰는 오류 종류다. 없을 수 있다.
-	Code string `json:"code,omitempty" tstype:"'invalid_credentials' | 'rate_limited' | 'challenge_failed' | 'challenge_expired' | 'omv_unavailable' | 'unauthorized' | 'bad_request' | 'rpc_forbidden' | 'admin_required' | 'plugin_missing' | 'omv_error' | 'action_busy' | 'action_failed' | 'action_timeout' | 'config_dirty' | 'image_too_large' | 'unsupported_image' | 'profile_readonly' | 'helper_unavailable' | 'helper_reauth' | 'elevation_failed' | 'elevation_not_allowed' | 'elevation_required' | 'terminal_disabled' | 'security_required' | 'factor_failed' | 'manage_required' | 'passkey_unavailable' | 'security_unavailable'"`
+	Code string `json:"code,omitempty" tstype:"'invalid_credentials' | 'rate_limited' | 'challenge_failed' | 'challenge_expired' | 'omv_unavailable' | 'unauthorized' | 'bad_request' | 'rpc_forbidden' | 'admin_required' | 'plugin_missing' | 'omv_error' | 'action_busy' | 'action_failed' | 'action_timeout' | 'config_dirty' | 'image_too_large' | 'unsupported_image' | 'profile_readonly' | 'helper_unavailable' | 'helper_reauth' | 'elevation_failed' | 'elevation_not_allowed' | 'elevation_required' | 'terminal_disabled' | 'security_required' | 'factor_failed' | 'manage_required' | 'passkey_unavailable' | 'passkey_uv_unsupported' | 'security_unavailable'"`
 	// RetryAfterSeconds는 rate_limited일 때 다시 시도할 수 있기까지 남은 초다.
 	RetryAfterSeconds int `json:"retryAfterSeconds,omitempty"`
 	// Required는 security_required일 때 거쳐야 하는 단계다.
@@ -1056,6 +1059,8 @@ type PasskeyInfo struct {
 	// Created, LastUsed는 RFC 3339 시각이다. 쓴 적이 없으면 LastUsed가 없다.
 	Created  string `json:"created"`
 	LastUsed string `json:"lastUsed,omitempty"`
+	// BackupEligible은 동기화 저장소(iCloud 키체인, 비밀번호 관리자)의 패스키라는 뜻이다(등록할 때의 BE 플래그).
+	BackupEligible bool `json:"backupEligible,omitempty"`
 }
 
 // TOTPInfo는 등록한 인증 앱(TOTP)이다.
@@ -1158,10 +1163,18 @@ type PasskeyRegistration struct {
 	Transports         []string `json:"transports,omitempty"`
 }
 
-// PasskeyRegisterRequest는 POST /api/security/passkeys의 본문이다(관리 창 필요).
+// PasskeyRegisterRequest는 POST /api/security/passkeys의 본문이다(관리 창 필요). 등록 값이 맞으면 바로 저장하지
+// 않고, 응답(PasskeyOptions)으로 그 패스키 하나만 허용하는 확인 challenge를 준다. 그 확인을
+// POST /api/security/passkeys/confirm으로 보내 통과해야 저장한다.
 type PasskeyRegisterRequest struct {
 	Name       string               `json:"name"`
 	Credential *PasskeyRegistration `json:"credential"`
+}
+
+// PasskeyConfirmRequest는 POST /api/security/passkeys/confirm의 본문이다(관리 창 필요). 등록 직후 새 패스키로 한
+// 확인이며, 통과하면 패스키를 저장하고 SecurityChangeResponse를 준다.
+type PasskeyConfirmRequest struct {
+	Passkey *PasskeyAssertion `json:"passkey"`
 }
 
 // TOTPSetupResponse는 POST /api/security/totp/setup의 응답이다. 비밀 키는 확인(POST /api/security/totp)할 때까지

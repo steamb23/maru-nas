@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"testing"
+	"time"
 
 	"onmaru/backend/internal/api"
 	"onmaru/backend/internal/security"
@@ -24,6 +25,10 @@ type fakePasskey struct {
 	id     []byte
 	handle []byte
 	count  uint32
+	// noUV는 등록 응답에는 UV를 켜지만 확인 응답에는 켜지 않는 저장소를 흉내 낸다.
+	noUV bool
+	// synced는 동기화 저장소(BE, BS 플래그)를 흉내 낸다.
+	synced bool
 }
 
 func newFakePasskey(t *testing.T) *fakePasskey {
@@ -43,7 +48,13 @@ func (p *fakePasskey) clientData(typ, challenge string) []byte {
 
 func (p *fakePasskey) authData(attested bool) []byte {
 	h := sha256.Sum256([]byte(testRP.ID))
-	flags := byte(0x05)
+	flags := byte(0x01)
+	if attested || !p.noUV {
+		flags |= 0x04
+	}
+	if p.synced {
+		flags |= 0x18
+	}
 	if attested {
 		flags |= 0x40
 	}
@@ -101,6 +112,22 @@ func (b *browser) passkeyOptions(purpose string) api.PasskeyOptions {
 	return decode[api.PasskeyOptions](b.e.t, rec)
 }
 
+// createPasskey는 새 패스키의 등록 값을 보내고 시험 확인 옵션을 받는다(관리 창 필요).
+func (b *browser) createPasskey(pk *fakePasskey, name string) api.PasskeyOptions {
+	b.e.t.Helper()
+	rec := b.do(http.MethodPost, "/api/security/passkeys", api.PasskeyRegisterRequest{Name: name, Credential: pk.create(b.passkeyOptions(api.PasskeyRegister))})
+	wantStatus(b.e.t, rec, http.StatusOK)
+	return decode[api.PasskeyOptions](b.e.t, rec)
+}
+
+// enrollPasskey는 등록과 시험 확인을 거쳐 패스키를 저장한다(관리 창 필요).
+func (b *browser) enrollPasskey(pk *fakePasskey, name string) api.SecurityChangeResponse {
+	b.e.t.Helper()
+	rec := b.do(http.MethodPost, "/api/security/passkeys/confirm", api.PasskeyConfirmRequest{Passkey: pk.get(b.createPasskey(pk, name))})
+	wantStatus(b.e.t, rec, http.StatusOK)
+	return decode[api.SecurityChangeResponse](b.e.t, rec)
+}
+
 func TestPasskeyUnavailableWithoutOrigin(t *testing.T) {
 	e := newEnv(t, envOptions{})
 	b := e.browser()
@@ -132,15 +159,30 @@ func TestPasskeyRegisterAndVerify(t *testing.T) {
 	}
 	wantCode(t, b.do(http.MethodPost, "/api/security/passkeys", api.PasskeyRegisterRequest{Name: " ", Credential: pk.create(opts)}),
 		http.StatusBadRequest, api.ErrBadRequest)
-	rec := b.do(http.MethodPost, "/api/security/passkeys", api.PasskeyRegisterRequest{Name: " laptop ", Credential: pk.create(opts)})
+	cred := pk.create(opts)
+	rec := b.do(http.MethodPost, "/api/security/passkeys", api.PasskeyRegisterRequest{Name: " laptop ", Credential: cred})
 	wantStatus(t, rec, http.StatusOK)
-	ch := decode[api.SecurityChangeResponse](t, rec)
-	if len(ch.RecoveryCodes) != security.RecoveryCodeCount || len(ch.Status.Passkeys) != 1 || ch.Status.Passkeys[0].Name != "laptop" ||
-		ch.Status.Assurance != api.AssuranceTwoFactor || ch.Status.Methods[0] != api.FactorPasskey {
-		t.Fatalf("register = %+v", ch)
+	// 등록 값만으로는 저장하지 않고, 새 자격 증명 하나로 시험 확인할 옵션을 준다.
+	confirm := decode[api.PasskeyOptions](t, rec)
+	if confirm.RPID != testRP.ID || confirm.User != nil || len(confirm.Credentials) != 1 || confirm.Credentials[0].ID != cred.ID ||
+		confirm.Challenge == opts.Challenge {
+		t.Fatalf("confirm options = %+v", confirm)
+	}
+	if st := b.securityStatus(); len(st.Passkeys) != 0 || st.Assurance == api.AssuranceTwoFactor {
+		t.Fatalf("saved before test verification: %+v", st)
 	}
 	// challenge는 한 번만 쓴다.
 	wantCode(t, b.do(http.MethodPost, "/api/security/passkeys", api.PasskeyRegisterRequest{Name: "again", Credential: pk.create(opts)}),
+		http.StatusBadRequest, api.ErrFactorFailed)
+	rec = b.do(http.MethodPost, "/api/security/passkeys/confirm", api.PasskeyConfirmRequest{Passkey: pk.get(confirm)})
+	wantStatus(t, rec, http.StatusOK)
+	ch := decode[api.SecurityChangeResponse](t, rec)
+	if len(ch.RecoveryCodes) != security.RecoveryCodeCount || len(ch.Status.Passkeys) != 1 || ch.Status.Passkeys[0].Name != "laptop" ||
+		ch.Status.Passkeys[0].BackupEligible || ch.Status.Assurance != api.AssuranceTwoFactor || ch.Status.Methods[0] != api.FactorPasskey {
+		t.Fatalf("register = %+v", ch)
+	}
+	// 시험 확인도 한 번만 쓴다.
+	wantCode(t, b.do(http.MethodPost, "/api/security/passkeys/confirm", api.PasskeyConfirmRequest{Passkey: pk.get(confirm)}),
 		http.StatusBadRequest, api.ErrFactorFailed)
 	// 같은 자격 증명은 다시 등록하지 않는다. 이미 등록한 것은 excludeCredentials로 알린다.
 	opts = b.passkeyOptions(api.PasskeyRegister)
@@ -196,9 +238,7 @@ func TestPasskeyLoginStepUp(t *testing.T) {
 	wantStatus(t, b.login("user", "user"), http.StatusOK)
 	wantStatus(t, b.do(http.MethodPost, "/api/security/manage", api.SecurityManageRequest{Password: "user"}), http.StatusOK)
 	pk := newFakePasskey(t)
-	wantStatus(t, b.do(http.MethodPost, "/api/security/passkeys", api.PasskeyRegisterRequest{
-		Name: "key", Credential: pk.create(b.passkeyOptions(api.PasskeyRegister)),
-	}), http.StatusOK)
+	b.enrollPasskey(pk, "key")
 	e.setPolicy(api.SecurityPolicy{Terminal: api.SecurityTwoFactor})
 
 	o := e.browser()
@@ -211,5 +251,85 @@ func TestPasskeyLoginStepUp(t *testing.T) {
 	}), http.StatusOK)
 	if s := decode[api.SessionInfo](t, o.do(http.MethodGet, "/api/session", nil)); s.Assurance != api.AssuranceTwoFactor {
 		t.Fatalf("session = %+v", s)
+	}
+}
+
+// 등록할 때만 UV를 켜는 저장소의 패스키는 시험 확인에서 걸러 내고 저장하지 않는다. 값을 맞히려는 시도가 아니므로
+// 실패 제한에 세지 않는다.
+func TestPasskeyConfirmRejectsMissingUV(t *testing.T) {
+	e := newEnv(t, envOptions{rp: testRP})
+	b := e.browser()
+	wantStatus(t, b.login("user", "user"), http.StatusOK)
+	wantStatus(t, b.do(http.MethodPost, "/api/security/manage", api.SecurityManageRequest{Password: "user"}), http.StatusOK)
+
+	// 실패 제한(5번)보다 많이 거절돼도 잠기지 않는다.
+	for range 6 {
+		pk := newFakePasskey(t)
+		pk.noUV, pk.synced = true, true
+		wantCode(t, b.do(http.MethodPost, "/api/security/passkeys/confirm", api.PasskeyConfirmRequest{Passkey: pk.get(b.createPasskey(pk, "synced"))}),
+			http.StatusBadRequest, api.ErrPasskeyUVUnsupported)
+	}
+	if st := b.securityStatus(); len(st.Passkeys) != 0 || st.RecoveryCodes != 0 || st.Assurance == api.AssuranceTwoFactor {
+		t.Fatalf("after rejected passkeys = %+v", st)
+	}
+	// 서명이 틀리면 UV와 상관없이 틀린 값이다.
+	pk := newFakePasskey(t)
+	pk.noUV = true
+	assertion := pk.get(b.createPasskey(pk, "forged"))
+	assertion.Signature = security.B64.EncodeToString([]byte("not a signature"))
+	wantCode(t, b.do(http.MethodPost, "/api/security/passkeys/confirm", api.PasskeyConfirmRequest{Passkey: assertion}),
+		http.StatusBadRequest, api.ErrFactorFailed)
+
+	// UV를 알리는 저장소는 등록된다. 동기화 저장소면 표시한다.
+	good := newFakePasskey(t)
+	good.synced = true
+	ch := b.enrollPasskey(good, "phone")
+	if len(ch.Status.Passkeys) != 1 || !ch.Status.Passkeys[0].BackupEligible || len(ch.RecoveryCodes) != security.RecoveryCodeCount {
+		t.Fatalf("register = %+v", ch)
+	}
+}
+
+func TestPasskeyConfirmPending(t *testing.T) {
+	e := newEnv(t, envOptions{rp: testRP, omvTimeout: time.Hour})
+	b := e.browser()
+	wantStatus(t, b.login("user", "user"), http.StatusOK)
+	// 시험 확인도 관리 창이 필요하다.
+	wantCode(t, b.do(http.MethodPost, "/api/security/passkeys/confirm", api.PasskeyConfirmRequest{Passkey: &api.PasskeyAssertion{}}),
+		http.StatusForbidden, api.ErrManageRequired)
+	wantStatus(t, b.do(http.MethodPost, "/api/security/manage", api.SecurityManageRequest{Password: "user"}), http.StatusOK)
+
+	// 시험 확인하지 않은 채 대기가 끝나면 저장하지 않는다.
+	pk := newFakePasskey(t)
+	confirm := b.createPasskey(pk, "late")
+	e.clk.Add(challengeTTL + time.Second)
+	wantStatus(t, b.do(http.MethodPost, "/api/security/manage", api.SecurityManageRequest{Password: "user"}), http.StatusOK)
+	wantCode(t, b.do(http.MethodPost, "/api/security/passkeys/confirm", api.PasskeyConfirmRequest{Passkey: pk.get(confirm)}),
+		http.StatusBadRequest, api.ErrFactorFailed)
+	if st := b.securityStatus(); len(st.Passkeys) != 0 {
+		t.Fatalf("expired registration saved: %+v", st)
+	}
+
+	// 대기는 그 세션의 것이다. 같은 사용자의 다른 세션도 쓸 수 없다.
+	pk = newFakePasskey(t)
+	confirm = b.createPasskey(pk, "mine")
+	assertion := pk.get(confirm)
+	o := e.browser()
+	wantStatus(t, o.login("user", "user"), http.StatusOK)
+	wantStatus(t, o.do(http.MethodPost, "/api/security/manage", api.SecurityManageRequest{Password: "user"}), http.StatusOK)
+	wantCode(t, o.do(http.MethodPost, "/api/security/passkeys/confirm", api.PasskeyConfirmRequest{Passkey: assertion}),
+		http.StatusBadRequest, api.ErrFactorFailed)
+	if st := o.securityStatus(); len(st.Passkeys) != 0 || st.Assurance == api.AssuranceTwoFactor {
+		t.Fatalf("other session used the pending passkey: %+v", st)
+	}
+	// 다른 자격 증명으로 한 확인은 받지 않고, 대기도 끝난다.
+	other := newFakePasskey(t)
+	wantCode(t, b.do(http.MethodPost, "/api/security/passkeys/confirm", api.PasskeyConfirmRequest{Passkey: other.get(confirm)}),
+		http.StatusBadRequest, api.ErrFactorFailed)
+	wantCode(t, b.do(http.MethodPost, "/api/security/passkeys/confirm", api.PasskeyConfirmRequest{Passkey: assertion}),
+		http.StatusBadRequest, api.ErrFactorFailed)
+
+	// 처음부터 다시 하면 등록된다.
+	if ch := b.enrollPasskey(pk, "mine"); len(ch.Status.Passkeys) != 1 || ch.Status.Passkeys[0].Name != "mine" {
+		t.Fatalf("register = %+v", ch)
 	}
 }
