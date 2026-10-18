@@ -33,7 +33,12 @@ paths:
 - **복구 코드**: 10개, base32 10자(50비트), SHA-256 해시로만 저장, 한 번 쓰면 지운다. 첫 수단을 등록할 때 만들어 응답에만 평문을 담는다. 수단이 모두 없어지면 복구 코드도 지운다(`security.Normalize`)
 - **패스키(WebAuthn)**: CBOR 파서 없이 표준 라이브러리만 쓴다
   - 등록은 증명 `none`이고 브라우저의 `getPublicKey()`(SPKI DER), `getPublicKeyAlgorithm()`, `getAuthenticatorData()`를 쓴다. 공개 키가 없으면(브라우저가 알고리즘을 모름) 거부한다. 인증기 데이터의 자격 증명 ID가 `rawId`와 같아야 한다. 증명이 없으므로 등록은 관리 창(비밀번호 + 기존 수단)으로 막는다
-  - 확인은 clientDataJSON(type·challenge·origin, crossOrigin 거부), 인증기 데이터(rpIdHash, UP, **UV 필수**), 서명(authData‖sha256(clientDataJSON))을 본다. ES256·EdDSA·RS256(2048비트 이상)
+  - 확인은 clientDataJSON(type·challenge·origin, crossOrigin 거부), 인증기 데이터(rpIdHash, UP, **UV 필수**), 서명(authData‖sha256(clientDataJSON))을 본다. ES256·EdDSA·RS256(2048비트 이상). UV는 서명까지 맞은 뒤에 보고, UV만 없으면 `security.ErrUserNotVerified`(`ErrVerify`를 감싼다)다. 플래그는 서명한 인증기 데이터 안에 있어 바꿀 수 없다
+  - **등록은 두 단계다.** `POST /api/security/passkeys`는 등록 값을 확인하되 저장하지 않고 세션의 대기(`pendingPasskeys`, 5분, 세션 ID)에 둔 뒤, 그 자격 증명 하나만 허용하는 시험 확인 옵션을 준다. `POST /api/security/passkeys/confirm`이 대기의 패스키로 확인(UV 필수)해 통과해야 저장한다(중복·개수·핸들 검사, 첫 수단의 복구 코드, `twoFactor` 올리기도 이때). 두 요청 모두 관리 창이 필요하고 대기는 한 번만 쓴다. 등록할 때만 UV를 켜고 확인할 때는 켜 주지 않는 저장소(잠금이 풀리면 확인을 건너뛰는 비밀번호 관리자, Windows에서 기기 저장을 끄고 Microsoft Password Manager에만 둔 패스키)를 등록 응답의 플래그로는 걸러 낼 수 없기 때문이다
+    - 시험 확인에서 UV만 없으면 400 `passkey_uv_unsupported`이고 `securityLimiter`에 세지 않는다(`Neutral`, 값을 맞히는 시도가 아니다). 그 밖의 실패는 지금처럼 `Failure`·`factor_failed`. 세션 중 확인(`checkFactor`)의 UV 실패는 그대로 `factor_failed`·`Failure`다
+    - 프론트(`PasskeyAdd.tsx`)는 `create()` 뒤 바로 `get()`을 부른다. `get()`이 취소되면 대기가 남으므로 "다시 확인"으로 확인만 다시 한다. 백엔드가 거절해 저장하지 않은 것이 확실할 때(400·403·429, `passkeyNotSaved`)와 시험 확인을 보내기 전에 닫았을 때 `PublicKeyCredential.signalUnknownCredential`로 저장소에서 지우게 한다(`forgetPasskey`, 없으면 직접 지우라고 안내). 409(이미 등록됐을 수 있음)·연결 실패는 저장 여부를 모르므로 지우게 하지 않는다
+  - 진단: 패스키 확인·등록 실패 로그에 인증기 플래그(`UP=… UV=… BE=… BS=…`, `security.AuthFlags`)를, 등록 로그에 AAGUID(`security.AAGUID`)를 남긴다. AAGUID는 증명 none에서 브라우저가 0으로 지울 수 있어 믿지 않고 로그에만 쓴다(차단 목록으로 쓰지 않는다)
+  - 등록할 때의 BE 플래그를 `Passkey.BackupEligible`에 두고 보안 페이지 목록에 "동기화됨"으로 표시한다. 막지 않는다(대부분의 패스키가 동기화 저장소다)
   - challenge는 대시보드 세션과 목적(`assert`, `register`)에 묶인 1회용이다(`challenges`, 5분). 사용자 핸들(`Record.Handle`)은 무작위이고 응답의 userHandle이 있으면 같아야 한다. 서명 횟수가 늘지 않으면 기록만 남긴다(동기화 패스키는 늘 0)
   - RP는 `-public-origin`(`ONMARU_PUBLIC_ORIGIN`, `security.ParseOrigin`: `https://호스트[:포트]`, IP 거부)에서 정한다. 비우면 패스키를 숨긴다. 웹에서 덮어쓰지 않는다
 - **관리 창**(`ManageUntil`, 5분): 수단 등록·삭제·복구 코드 다시 만들기 전에 비밀번호와(등록한 수단이 있으면) 그 수단을 함께 확인한다. 없으면 403 `manage_required`. 세션을 빼앗은 쪽이 자기 수단을 등록하지 못하게 한다
@@ -59,3 +64,4 @@ paths:
 
 - Go: TOTP는 RFC 6238 SHA-1 벡터, WebAuthn은 테스트 안에서 합성한 인증기(P-256·ed25519·RSA 키로 authData·clientDataJSON·서명을 만든다). 서버 테스트(`security_test.go`, `passkey_test.go`)는 `envOptions{security, rp}`와 omvfake로 정책 가드, 로그인 단계, 터미널·상승 적용, 관리 창, 초기화, 손상된 기록을 시험한다
 - 브라우저: TOTP·화면은 `make dev-fake`, 패스키는 HTTPS 도메인으로 연결한 테스트 VM에서 Playwright 가상 인증기(CDP `WebAuthn.addVirtualAuthenticator`, UV 켬)로 확인한다. 실제 기기 패스키는 사용자가 확인한다
+  - 가상 인증기는 `WebAuthn.setUserVerified(false)`로 UV를 끄면 UV=0 응답을 만들지 않고 `get()`이 NotAllowedError로 끝난다(시험 확인의 "다시 확인" 경로). "등록은 UV=1, 확인은 UV=0"인 경우는 Go 테스트(`fakePasskey.noUV`)가 맡고, 화면의 `passkey_uv_unsupported` 안내는 confirm 응답을 `page.route`로 바꿔 확인한다
