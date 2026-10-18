@@ -131,7 +131,8 @@ func usage(reg Registry, lang, name string) string {
   --no-build         빌드를 건너뛰고 기존 bin/onmaru를 설치합니다
   --uninstall        서비스, 실행 파일, 설정을 제거합니다
   --service-install  빌드 없이 설치 단계만 실행합니다(root 전용). 설정 옵션을 모두 주면 묻지 않습니다
-  --dry-run          질문·검증·요약 뒤 쓸 파일의 차이와 실행할 명령만 보여 줍니다(sudo 없이, 시스템을 바꾸지 않음)
+  --dry-run          설치 단계를 실행하지 않고 쓸 파일의 차이와 실행할 명령만 보여 줍니다(sudo 없음.
+                     --no-build가 없으면 빌드는 합니다)
   --plain            TUI 대신 줄 단위로 묻습니다
   --lang en|ko       안내 문구 언어(기본값은 로캘에 따름)
   -h, --help         이 도움말을 보여 줍니다
@@ -149,7 +150,8 @@ func usage(reg Registry, lang, name string) string {
   --no-build         skip the build and install the existing bin/onmaru
   --uninstall        remove the service, binary and settings
   --service-install  run only the install step, without building (root only). No questions if all settings are given
-  --dry-run          after the questions, checks and summary, only show the file changes and commands (no sudo, no changes)
+  --dry-run          show the install step's file changes and commands instead of running them (no sudo;
+                     the build still runs unless --no-build is given)
   --plain            ask line by line instead of the TUI
   --lang en|ko       language of the messages (default: from the locale)
   -h, --help         show this help
