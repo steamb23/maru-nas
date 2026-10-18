@@ -67,13 +67,16 @@ const (
 	ActionSSHAuthorize = "ssh.authorize"
 	// ActionSSHRevoke는 그 키 줄(과 만료된 onmaru 키 줄)을 지운다.
 	ActionSSHRevoke = "ssh.revoke"
+	// ActionUpgradeApply는 대시보드에서 업그레이드의 적용 요청(대상 커밋, 설정 값)을 업그레이드 서비스의 요청
+	// 디렉터리에 쓴다(root 범위). 명령은 받지 않는다.
+	ActionUpgradeApply = "upgrade.apply"
 )
 
 // Actions는 범위마다 실행할 수 있는 연산이다. root 연산은 여기에 타입 있는 함수로만 더한다.
 var Actions = map[string][]string{
 	ScopeUser: {ActionID, ActionList, ActionStat, ActionRead, ActionWrite, ActionMkdir, ActionRename, ActionRemove,
 		ActionSSHAuthorize, ActionSSHRevoke},
-	ScopeRoot: {ActionID},
+	ScopeRoot: {ActionID, ActionUpgradeApply},
 }
 
 // Allowed는 scope에서 action을 실행할 수 있는지다.
@@ -140,7 +143,9 @@ const (
 	// CodeSSHStrictModes는 홈이나 ~/.ssh가 다른 사용자에게 쓰기를 허용해 sshd(StrictModes)가
 	// authorized_keys를 무시한다는 뜻이다.
 	CodeSSHStrictModes = "ssh_strict_modes"
-	CodeInternal       = "internal"
+	// CodeUpgradeDisabled는 대시보드에서 업그레이드가 꺼져 있다는 뜻이다(요청 디렉터리가 없다).
+	CodeUpgradeDisabled = "upgrade_disabled"
+	CodeInternal        = "internal"
 )
 
 // Error는 도우미가 돌려준 오류 코드다.

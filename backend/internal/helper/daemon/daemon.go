@@ -17,8 +17,10 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"maps"
 	"net"
 	"slices"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -501,6 +503,9 @@ func (s *Server) audit(user string, req proto.Request, code string) {
 			To        string `json:"to"`
 			Recursive bool   `json:"recursive"`
 			Overwrite bool   `json:"overwrite"`
+			// upgrade.apply: 대상 커밋과 설정 이름(값은 남기지 않는다)
+			Target   string            `json:"target"`
+			Settings map[string]string `json:"settings"`
 		}
 		if json.Unmarshal(req.Params, &p) == nil {
 			switch {
@@ -508,6 +513,9 @@ func (s *Server) audit(user string, req proto.Request, code string) {
 				detail = fmt.Sprintf(" from=%q to=%q", p.From, p.To)
 			case p.Path != "":
 				detail = fmt.Sprintf(" path=%q", p.Path)
+			case p.Target != "":
+				names := slices.Sorted(maps.Keys(p.Settings))
+				detail = fmt.Sprintf(" target=%q settings=%q", p.Target, strings.Join(names, ","))
 			}
 			if p.Recursive {
 				detail += " recursive"

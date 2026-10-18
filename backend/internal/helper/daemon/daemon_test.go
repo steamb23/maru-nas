@@ -19,6 +19,7 @@ import (
 	"testing"
 	"time"
 
+	"onmaru/backend/config"
 	"onmaru/backend/internal/helper/proto"
 	"onmaru/backend/internal/helper/worker"
 )
@@ -444,6 +445,36 @@ func TestElevation(t *testing.T) {
 	b.Groups = []int{gidUsers, gidAdmin, gidSudo}
 	e.accounts.set(b)
 	e.expect(proto.CodeElevationRequired, runID(bob.Ticket, proto.ScopeRoot))
+}
+
+// root 연산은 모두 상승한 티켓만 쓸 수 있다. upgrade.apply의 감사 로그에는 대상 커밋과 설정 이름만 남는다(값은 없다).
+func TestRunUpgradeApply(t *testing.T) {
+	e := newEnv(t, nil)
+	dir := t.TempDir()
+	e.spawner.cfg.UpgradeDir = dir
+	e.spawner.cfg.Now = e.clock.now
+	bob := e.open("bob", false)
+	target := strings.Repeat("ab", 20)
+	params, _ := json.Marshal(proto.UpgradeApplyParams{Target: target, Settings: map[string]string{"workbench-url": "https://nas.example.lan/", "helper": "yes"}})
+	req := proto.Request{Op: proto.OpRun, Ticket: bob.Ticket, Scope: proto.ScopeRoot, Action: proto.ActionUpgradeApply, Params: params}
+	for _, action := range proto.Actions[proto.ScopeRoot] {
+		r := req
+		r.Action = action
+		e.expect(proto.CodeElevationRequired, r)
+	}
+	user := req
+	user.Scope = proto.ScopeUser
+	e.expect(proto.CodeBadRequest, user)
+	e.expect("", proto.Request{Op: proto.OpElevate, Ticket: bob.Ticket, Password: "bob-pw"})
+	e.expect("", req)
+	data, err := os.ReadFile(filepath.Join(dir, config.UpgradeApplyRequestName))
+	if err != nil || !strings.Contains(string(data), `"user":"bob"`) || !strings.Contains(string(data), target) {
+		t.Fatalf("request %s %v", data, err)
+	}
+	e.logs.wait(t, `run: user="bob" scope=root action=upgrade.apply target="`+target+`" settings="helper,workbench-url" result=ok`)
+	if strings.Contains(e.logs.text(), "nas.example.lan") {
+		t.Fatalf("setting value logged:\n%s", e.logs.text())
+	}
 }
 
 func TestElevationNotAllowed(t *testing.T) {

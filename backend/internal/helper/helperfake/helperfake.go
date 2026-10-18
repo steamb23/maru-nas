@@ -94,10 +94,16 @@ func Start(socket, root string, users []User, opts Options) (*Server, error) {
 		acc.users[u.Name] = a
 		acc.passwords[u.Name] = u.Password
 	}
+	// upgrade.apply는 /run 대신 Root 아래의 요청 디렉터리에 쓴다(UpgradeDir).
+	upgradeDir := filepath.Join(root, "run", "onmaru-upgrade")
+	if err := os.MkdirAll(upgradeDir, 0o700); err != nil {
+		return nil, err
+	}
 	mountinfo := fmt.Sprintf("1 0 8:1 / / rw - ext4 /dev/fake rw\n2 1 8:17 / %s rw - ext4 /dev/fake1 rw\n", escape(disk))
 	sp := &spawner{acc: acc, cfg: worker.Config{
-		SrvDir:    srvDir,
-		MountInfo: func() (io.ReadCloser, error) { return io.NopCloser(strings.NewReader(mountinfo)), nil },
+		SrvDir:     srvDir,
+		MountInfo:  func() (io.ReadCloser, error) { return io.NopCloser(strings.NewReader(mountinfo)), nil },
+		UpgradeDir: upgradeDir,
 	}}
 	srv, err := daemon.New(daemon.Config{
 		ClientUID:  os.Getuid(),
@@ -133,6 +139,9 @@ func (s *Server) Close() {
 
 // Home은 가짜 사용자의 홈 디렉터리다.
 func (s *Server) Home(user string) string { return filepath.Join(s.Root, "home", user) }
+
+// UpgradeDir은 upgrade.apply가 적용 요청을 쓰는 가짜 요청 디렉터리다.
+func (s *Server) UpgradeDir() string { return filepath.Join(s.Root, "run", "onmaru-upgrade") }
 
 // Disk는 가짜 데이터 디스크(/srv 아래 마운트) 경로다.
 func (s *Server) Disk() string { return filepath.Join(s.Root, "srv", "disk1") }

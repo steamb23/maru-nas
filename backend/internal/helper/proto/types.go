@@ -104,6 +104,15 @@ type RemoveParams struct {
 	Recursive bool   `json:"recursive,omitempty"`
 }
 
+// UpgradeApplyParams는 upgrade.apply의 인자다. 꼴은 config.ValidUpgradeTarget·ValidUpgradeSetting으로 검사하고,
+// 진행할 수 있는지(마지막 확인, 저장소 상태, 설정 값)는 업그레이드 서비스가 다시 확인한다.
+type UpgradeApplyParams struct {
+	// Target은 확인 단계에서 정한 대상 커밋(40자리 16진수)이다.
+	Target string `json:"target"`
+	// Settings는 업그레이드 계획이 물은 설정의 이름과 값이다.
+	Settings map[string]string `json:"settings,omitempty"`
+}
+
 // SSHKeyParams는 ssh.authorize·ssh.revoke의 인자다.
 type SSHKeyParams struct {
 	// PublicKey는 authorized_keys 형식의 ed25519 공개 키("ssh-ed25519 <base64>")다. 주석은 받지 않는다.
