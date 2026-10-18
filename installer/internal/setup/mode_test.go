@@ -12,7 +12,7 @@ import (
 )
 
 // allSettingIDs는 기본값으로 답할 때 묻는 설정 질문 ID다(수신 방식은 루프백).
-var allSettingIDs = []string{"user", "listen-mode", "listen", "omv-url", "smart-refresh-at", "workbench-url", "public-origin", "helper", "elevate-group"}
+var allSettingIDs = []string{"user", "listen-mode", "listen", "omv-url", "smart-refresh-at", "workbench-url", "public-origin", "helper", "elevate-group", "web-upgrade"}
 
 // defaultAnswers는 모든 설정 질문에 기본값으로 답하는 Script 답이다. extra가 덮어쓴다.
 func defaultAnswers(extra map[string]string) map[string]string {
@@ -141,7 +141,7 @@ func TestDefaultUpgradeChangeSettings(t *testing.T) {
 	if err := Run(c); err != nil {
 		t.Fatalf("Run: %v\n%s", err, out)
 	}
-	want := []string{"upgrade-action", "user", "listen-mode", "omv-url", "smart-refresh-at", "workbench-url", "public-origin", "helper", "elevate-group", "proceed"}
+	want := []string{"upgrade-action", "user", "listen-mode", "omv-url", "smart-refresh-at", "workbench-url", "public-origin", "helper", "elevate-group", "web-upgrade", "proceed"}
 	if !slices.Equal(script.Asked, want) {
 		t.Errorf("asked %v\nwant  %v", script.Asked, want)
 	}

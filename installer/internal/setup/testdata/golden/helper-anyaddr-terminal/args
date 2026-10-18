@@ -16,3 +16,4 @@ https://desk.example.lan:8443
 --helper
 --elevate-group
 openmediavault-admin
+--no-web-upgrade

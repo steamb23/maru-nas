@@ -31,12 +31,16 @@ const (
 	OnmaruEnv EnvFileID = iota
 	// HelperEnv는 /etc/default/onmaru-helper다. 도우미를 설치할 때만 쓴다.
 	HelperEnv
+	// UpgradeEnv는 /etc/default/onmaru-upgrade다(config.UpgradeEnvFile). 대시보드에서 업그레이드를 켤 때만 쓴다.
+	UpgradeEnv
 )
 
 // envHeaders는 환경 파일 맨 앞의 주석이다.
 var envHeaders = map[EnvFileID]string{
 	OnmaruEnv: "# onmaru settings. Written by install.sh; re-run it to change them.\n# See README.md for every option.\n",
 	HelperEnv: "# onmaru-helper settings. Written by install.sh; re-run it to change them.\n",
+	UpgradeEnv: "# Upgrading from the dashboard (onmaru-upgrade.service). Written by install.sh; re-run it to change them.\n" +
+		"# The service runs git and the build as the repository owner, then the new installer as root.\n",
 }
 
 // keptComment는 레지스트리가 관리하지 않는 기존 ONMARU_* 줄을 보존할 때 그 앞에 쓰는 주석이다.
@@ -96,7 +100,7 @@ type Setting struct {
 	Env []EnvLine
 	// When은 이 설정이 의미 있는 조건이다(예: 상승 그룹은 도우미를 설치할 때만). nil이면 항상이다.
 	When func(v Values) bool
-	// Default는 질문의 기본값이다(기존 설치 → 감지값 → 고정값).
+	// Default는 질문의 기본값이다(기존 설치 → 감지값 → 고정값). 묻지 않는 설정이면 정하지 않았을 때 채울 값이다(fill).
 	Default func(c *Context) string
 	// Load는 --upgrade에서 기존 설치의 값을 읽는다. false면 이 설정만 묻는다.
 	Load func(c *Context) (string, bool)
@@ -181,6 +185,16 @@ func (r Registry) missing(c *Context) []*Setting {
 		}
 	}
 	return out
+}
+
+// fill은 묻지 않는 설정 중 아직 정하지 않은 것을 기본값으로 채운다(빌드 PATH처럼 설치기가 정하는 값).
+func (r Registry) fill(c *Context) {
+	for _, s := range r {
+		if s.asked() || s.Default == nil || c.Values.Has(s.Name) || !s.active(c.Values) {
+			continue
+		}
+		c.Values.Set(s.Name, s.Default(c))
+	}
 }
 
 // complete는 물을 설정이 남지 않았는지다.

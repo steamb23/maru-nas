@@ -160,10 +160,10 @@ func TestUpgradePlanInvalidAndConfirm(t *testing.T) {
 	setEnvLine(t, f, config.EnvSmartRefreshAt, ptr("25:00"))
 	setEnvLine(t, f, config.EnvHelperSocket, nil)
 	p, _, _ := runPlan(t, f)
-	if !p.Web || len(p.Questions) != 3 {
+	if !p.Web || len(p.Questions) != 4 {
 		t.Fatalf("plan %+v", p)
 	}
-	smart, helper, group := p.Questions[0], p.Questions[1], p.Questions[2]
+	smart, helper, group, web := p.Questions[0], p.Questions[1], p.Questions[2], p.Questions[3]
 	if smart.Name != nameSmartRefreshAt || smart.Reason != config.UpgradeQuestionInvalid || smart.Default != config.DefaultSmartRefreshAt ||
 		smart.Error == nil || !strings.Contains(smart.Error.En, "invalid time: 25:00") || !strings.Contains(smart.Error.Ko, "시각이 올바르지 않습니다") {
 		t.Errorf("smart %+v (error %+v)", smart, smart.Error)
@@ -173,6 +173,10 @@ func TestUpgradePlanInvalidAndConfirm(t *testing.T) {
 	}
 	if group.Name != nameElevateGroup || group.Kind != config.UpgradeQuestionInput || group.Default != "sudo" {
 		t.Errorf("group %+v", group)
+	}
+	// 대시보드에서 업그레이드도 도우미에 딸린 예·아니요다. 기존 설치에 설정 파일이 없으므로 기본값은 아니요다.
+	if web.Name != nameWebUpgrade || web.Kind != config.UpgradeQuestionConfirm || web.Default != "no" {
+		t.Errorf("web upgrade %+v", web)
 	}
 	p, _, _ = runPlan(t, f, "--no-helper", "--smart-refresh-at", "03:00")
 	if !p.Web || len(p.Questions) != 0 {

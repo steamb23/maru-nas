@@ -90,6 +90,19 @@ func TestSettingValidation(t *testing.T) {
 		{settingElevateGroup, "openmediavault-admin", nil, true},
 		{settingElevateGroup, "-sudo", nil, false},
 		{settingElevateGroup, "", nil, false},
+
+		{settingWebUpgrade, "no", nil, true},
+		{settingWebUpgrade, "", nil, false},
+
+		{settingBuildPath, "/usr/local/go/bin:/home/alice/.nvm/versions/node/v22.12.0/bin:/usr/bin:/bin", nil, true},
+		{settingBuildPath, "/usr/bin", nil, true},
+		{settingBuildPath, "", nil, false},
+		{settingBuildPath, "/usr/bin::/bin", nil, false},
+		{settingBuildPath, "/usr/bin:.", nil, false},
+		{settingBuildPath, "bin:/usr/bin", nil, false},
+		{settingBuildPath, "/usr/bin/", nil, false},
+		{settingBuildPath, "/usr/../bin", nil, false},
+		{settingBuildPath, "/usr/bin\n/bin", nil, false},
 	}
 	for _, tc := range cases {
 		c := &Context{Lang: "en", Values: Values{}}
@@ -113,7 +126,8 @@ func TestSettingValidationKorean(t *testing.T) {
 func TestRegistryRoundtrip(t *testing.T) {
 	for _, v := range []Values{
 		{nameUser: "onmaru", nameListen: "0.0.0.0:8090", nameAllowNonLoopback: "true", nameOMVURL: "http://127.0.0.1:8001",
-			nameSmartRefreshAt: "03:30", nameWorkbenchURL: "", namePublicOrigin: "", nameHelper: "yes", nameElevateGroup: "wheel"},
+			nameSmartRefreshAt: "03:30", nameWorkbenchURL: "", namePublicOrigin: "", nameHelper: "yes", nameElevateGroup: "wheel",
+			nameWebUpgrade: "yes", nameBuildPath: "/usr/local/go/bin:/usr/bin:/bin"},
 		{nameUser: "dash", nameListen: "unix:/run/onmaru/onmaru.sock", nameOMVURL: "http://127.0.0.1",
 			nameSmartRefreshAt: "00:00", nameWorkbenchURL: "https://nas.example.lan/a b", namePublicOrigin: "https://desk.example.lan",
 			nameHelper: "no"},
@@ -131,7 +145,7 @@ func TestRegistryRoundtrip(t *testing.T) {
 	seen := map[string]bool{}
 	for _, v := range []Values{
 		{nameUser: "u", nameListen: "l", nameAllowNonLoopback: "true", nameOMVURL: "o", nameSmartRefreshAt: "s",
-			nameWorkbenchURL: "", namePublicOrigin: "", nameHelper: "yes", nameElevateGroup: "g"},
+			nameWorkbenchURL: "", namePublicOrigin: "", nameHelper: "yes", nameElevateGroup: "g", nameWebUpgrade: "yes", nameBuildPath: "/bin"},
 	} {
 		for _, a := range settings.stage2Args(v) {
 			seen[strings.TrimPrefix(a, "--")] = true
@@ -227,7 +241,7 @@ func TestLoadInstalled(t *testing.T) {
 	c := &Context{Lang: "en", Sys: f, Installed: inst, Values: Values{nameUser: "given"}}
 	settings.load(c)
 	want := Values{nameUser: "given", nameListen: "0.0.0.0:8090", nameAllowNonLoopback: "true", nameOMVURL: "http://127.0.0.1:8001",
-		nameWorkbenchURL: "", nameHelper: "yes", nameElevateGroup: "wheel"}
+		nameWorkbenchURL: "", nameHelper: "yes", nameElevateGroup: "wheel", nameWebUpgrade: "no"}
 	if !maps.Equal(c.Values, want) {
 		t.Errorf("loaded %v", c.Values)
 	}
@@ -260,6 +274,8 @@ func TestPromptDefaults(t *testing.T) {
 	for s, want := range map[*Setting]string{
 		settingUser: "onmaru", settingOMVURL: "http://127.0.0.1:8001", settingSmartRefreshAt: "00:00",
 		settingWorkbenchURL: "", settingPublicOrigin: "https://desk.example.lan", settingHelper: "no", settingElevateGroup: "sudo",
+		// 기존 설치에 /etc/default/onmaru-upgrade가 없으므로 꺼 둔 것이다.
+		settingWebUpgrade: "no",
 	} {
 		if got := s.defaultValue(c); got != want {
 			t.Errorf("%s default %q, want %q", s.Name, got, want)

@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"onmaru/backend/config"
 	"onmaru/installer/internal/prompt"
 )
 
@@ -28,8 +29,10 @@ type fakeSystem struct {
 	active map[string]bool
 	// unitFiles는 systemctl list-unit-files가 성공하는 유닛이다.
 	unitFiles map[string]bool
-	// noCommands는 PATH에 없는 명령이다.
+	// noCommands는 PATH에 없는 명령이다. 나머지는 /usr/bin에 있다.
 	noCommands map[string]bool
+	// owners는 경로별 소유자다. 없는 경로는 실제 파일 소유자다.
+	owners     map[string]Account
 	portsInUse map[string]bool
 	// outputs는 Output이 돌려줄 명령별 표준 출력이다(키는 명령 기록 꼴). 없는 명령은 실패한다(PATH에 없음).
 	outputs map[string]string
@@ -49,9 +52,11 @@ func newFake(t *testing.T) *fakeSystem {
 		active:        map[string]bool{},
 		unitFiles:     map[string]bool{},
 		noCommands:    map[string]bool{},
-		portsInUse:    map[string]bool{},
-		buildInfo:     map[string]*debug.BuildInfo{},
-		outputs:       map[string]string{},
+		// 가짜 저장소는 일반 사용자 alice의 것이다(대시보드에서 업그레이드의 빌드 계정).
+		owners:     map[string]Account{"/repo": {Name: "alice", UID: 1000, Home: "/home/alice"}},
+		portsInUse: map[string]bool{},
+		buildInfo:  map[string]*debug.BuildInfo{},
+		outputs:    map[string]string{},
 	}
 }
 
@@ -129,7 +134,20 @@ func (f *fakeSystem) InstallFile(src, dst string, perm fs.FileMode) error {
 }
 
 func (f *fakeSystem) LookPath(name string) bool { return !f.noCommands[name] }
-func (f *fakeSystem) CurrentUser() string       { return "tester" }
+func (f *fakeSystem) Which(name string) (string, bool) {
+	if f.noCommands[name] {
+		return "", false
+	}
+	return "/usr/bin/" + name, true
+}
+
+func (f *fakeSystem) FileOwner(path string) (Account, error) {
+	if a, ok := f.owners[path]; ok {
+		return a, nil
+	}
+	return f.fsOps.FileOwner(path)
+}
+func (f *fakeSystem) CurrentUser() string { return "tester" }
 
 func (f *fakeSystem) LookupUser(name string) (Account, bool, error) {
 	a, ok := f.users[name]
@@ -200,6 +218,7 @@ func (f *fakeSystem) putRepo(t *testing.T) {
 	t.Helper()
 	f.put(t, "/repo/bin/onmaru", "#!/bin/sh\n", 0o755)
 	f.put(t, "/repo/bin/onmaru-helper", "#!/bin/sh\n", 0o755)
+	f.put(t, "/repo/bin/onmaru-install", "#!/bin/sh\n", 0o755)
 	f.put(t, "/repo/"+distIndexRel, "<!doctype html>\n", 0o644)
 	f.put(t, "/repo/install.sh", "#!/bin/sh\n", 0o755)
 }
@@ -250,7 +269,8 @@ func newTestContext(t *testing.T, sys System, p prompt.Prompter, args ...string)
 }
 
 // configFiles는 설치기가 쓰는 설정 파일이다(골든 비교 대상).
-var configFiles = []string{envFile, helperEnvFile, unitFile, helperSocketUnit, helperServiceUnit}
+var configFiles = []string{envFile, helperEnvFile, unitFile, helperSocketUnit, helperServiceUnit,
+	config.UpgradeEnvFile, upgradeServiceUnit, upgradePathUnit}
 
 // compareTree는 가짜 루트의 설정 파일이 want 디렉터리(가짜 루트 기준 트리)와 같은지 본다.
 func compareTree(t *testing.T, f *fakeSystem, want string) {

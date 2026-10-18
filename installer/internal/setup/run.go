@@ -18,10 +18,8 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"os/user"
 	"path/filepath"
 	"runtime/debug"
-	"strconv"
 	"strings"
 	"syscall"
 
@@ -194,19 +192,11 @@ func runInstall(c *Context) error {
 
 // repoOwner는 저장소 디렉터리 소유자의 uid와 이름이다. 알 수 없으면 uid -1이다.
 func repoOwner(c *Context) (int, string) {
-	fi, err := c.Sys.Stat(c.RepoDir)
+	a, err := c.Sys.FileOwner(c.RepoDir)
 	if err != nil {
 		return -1, "?"
 	}
-	st, ok := fi.Sys().(*syscall.Stat_t)
-	if !ok {
-		return -1, "?"
-	}
-	name := strconv.Itoa(int(st.Uid))
-	if u, err := user.LookupId(name); err == nil {
-		name = u.Username
-	}
-	return int(st.Uid), name
+	return a.UID, a.Name
 }
 
 // installService는 2단계다(root). 설정이 모두 정해져 있으면 묻지 않고 설치한다. root가 옵션 없이
@@ -231,11 +221,13 @@ func settingsPhase(c *Context, always bool) error {
 		c.invalid = c.Reg.dropInvalid(c, c.Reg.load(c))
 	}
 	if !always && c.Reg.complete(c) {
+		c.Reg.fill(c)
 		return c.Reg.validate(c)
 	}
 	if err := askSettings(c); err != nil {
 		return err
 	}
+	c.Reg.fill(c)
 	if err := c.Reg.validate(c); err != nil {
 		return err
 	}

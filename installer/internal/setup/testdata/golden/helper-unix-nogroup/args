@@ -15,3 +15,4 @@ https://nas.example.lan:8001/omv/
 --helper
 --elevate-group
 sudo
+--no-web-upgrade

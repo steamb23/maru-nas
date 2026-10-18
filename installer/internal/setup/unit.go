@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"embed"
 	"text/template"
+
+	"onmaru/backend/config"
 )
 
 // templates는 systemd 유닛 템플릿이다. 유닛의 하드닝 줄을 바꾸는 일은 이 템플릿 파일을 고치는 것이다
@@ -19,9 +21,13 @@ type unitData struct {
 	User, Group      string
 	AllowNonLoopback bool
 	Helper           bool
+	WebUpgrade       bool
 
 	Service, EnvFile, BinDst, RuntimeDir                  string
 	HelperName, HelperSocket, HelperEnvFile, HelperBinDst string
+
+	UpgradeName, UpgradeInstallerDst, UpgradeEnvFile, UpgradeCheckRequest, UpgradeApplyRequest string
+	UpgradeRequestDirName                                                                      string
 }
 
 func (c *Context) unitData() unitData {
@@ -30,6 +36,7 @@ func (c *Context) unitData() unitData {
 		Group:            c.group,
 		AllowNonLoopback: c.Values.Bool(nameAllowNonLoopback),
 		Helper:           helperWanted(c),
+		WebUpgrade:       webUpgradeWanted(c),
 		Service:          serviceName,
 		EnvFile:          envFile,
 		BinDst:           binDst,
@@ -38,6 +45,13 @@ func (c *Context) unitData() unitData {
 		HelperSocket:     helperSocket,
 		HelperEnvFile:    helperEnvFile,
 		HelperBinDst:     helperBinDst,
+
+		UpgradeName:           upgradeName,
+		UpgradeInstallerDst:   upgradeInstallerDst,
+		UpgradeEnvFile:        config.UpgradeEnvFile,
+		UpgradeCheckRequest:   upgradeCheckRequest,
+		UpgradeApplyRequest:   upgradeApplyRequest,
+		UpgradeRequestDirName: upgradeRequestDirName,
 	}
 }
 

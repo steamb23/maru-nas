@@ -14,9 +14,11 @@ var installSteps = []Step{
 	{Name: "proxy-unchanged", Phase: PhaseRoot, Run: stepProxyUnchanged},
 	{Name: "onmaru-binary", Phase: PhaseRoot, Run: stepInstallBinary},
 	{Name: "helper", Phase: PhaseRoot, Run: stepHelper},
+	{Name: "web-upgrade", Phase: PhaseRoot, Run: stepWebUpgrade},
 	{Name: "env", Phase: PhaseRoot, Run: stepEnv},
 	{Name: "unit", Phase: PhaseRoot, Run: stepUnit},
 	{Name: "daemon-reload", Phase: PhaseRoot, Run: stepDaemonReload},
+	{Name: "web-upgrade-path", Phase: PhaseRoot, When: webUpgradeWanted, Run: stepWebUpgradePath},
 	// onmaru가 시작할 때 도우미에 연결하므로 도우미 소켓을 먼저 연다.
 	{Name: "helper-socket", Phase: PhaseRoot, When: helperWanted, Run: stepHelperSocket},
 	{Name: "start", Phase: PhaseRoot, Run: stepStart},
@@ -31,6 +33,7 @@ var installSteps = []Step{
 var uninstallSteps = []Step{
 	{Name: "confirm", Phase: PhaseRoot, Run: stepUninstallConfirm},
 	{Name: "stop", Phase: PhaseRoot, Run: stepStop},
+	{Name: "web-upgrade", Phase: PhaseRoot, Run: removeWebUpgrade},
 	{Name: "helper", Phase: PhaseRoot, Run: removeHelper},
 	{Name: "files", Phase: PhaseRoot, Run: stepRemoveFiles},
 	{Name: "runtime-dir", Phase: PhaseRoot, Run: stepRemoveRuntimeDir},

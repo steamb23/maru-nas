@@ -1,0 +1,13 @@
+# Written by onmaru install.sh
+[Unit]
+Description=Onmaru dashboard upgrade requests
+
+[Path]
+# A check request that onmaru leaves in its state directory, or an upgrade request
+# from the privileged helper (root operation upgrade.apply).
+PathExists=/var/lib/onmaru/upgrade-check.json
+PathExists=/run/onmaru-upgrade/apply.json
+Unit=onmaru-upgrade.service
+
+[Install]
+WantedBy=paths.target

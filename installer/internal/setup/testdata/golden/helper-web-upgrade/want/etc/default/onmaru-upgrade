@@ -1,0 +1,8 @@
+# Upgrading from the dashboard (onmaru-upgrade.service). Written by install.sh; re-run it to change them.
+# The service runs git and the build as the repository owner, then the new installer as root.
+# Repository to build from (the checkout install.sh ran from).
+ONMARU_UPGRADE_REPO=/repo
+# Account that runs git and the build: the repository owner, never root.
+ONMARU_UPGRADE_USER=alice
+# PATH for git, Go, Node.js and make when building as that account.
+ONMARU_UPGRADE_PATH=/usr/bin:/usr/local/bin:/bin

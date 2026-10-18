@@ -34,13 +34,13 @@ func TestFlowFreshInstall(t *testing.T) {
 	f.putRepo(t)
 	script := &prompt.Script{Answers: map[string]string{
 		"user": "", "listen-mode": "", "listen": "", "omv-url": "", "smart-refresh-at": "",
-		"workbench-url": "", "public-origin": "", "helper": "", "elevate-group": "", "proceed": "",
+		"workbench-url": "", "public-origin": "", "helper": "", "elevate-group": "", "web-upgrade": "", "proceed": "",
 	}}
 	c, out, calls := newTestContext(t, f, script, "--no-build")
 	if err := Run(c); !errors.Is(err, errExecIntercepted) {
 		t.Fatalf("Run: %v\n%s", err, out)
 	}
-	want := []string{"user", "listen-mode", "listen", "omv-url", "smart-refresh-at", "workbench-url", "public-origin", "helper", "elevate-group", "proceed"}
+	want := []string{"user", "listen-mode", "listen", "omv-url", "smart-refresh-at", "workbench-url", "public-origin", "helper", "elevate-group", "web-upgrade", "proceed"}
 	if !slices.Equal(script.Asked, want) {
 		t.Errorf("asked %v, want %v", script.Asked, want)
 	}
@@ -63,7 +63,7 @@ func TestFlowFreshInstall(t *testing.T) {
 	if err := Run(c2); err != nil {
 		t.Fatalf("stage 2: %v\n%s", err, out2)
 	}
-	compareTree(t, f, filepath.Join(goldenDir("helper-loopback"), "want"))
+	compareTree(t, f, filepath.Join(goldenDir("helper-web-upgrade"), "want"))
 }
 
 // --upgrade는 기존 설치에 없는 설정(여기서는 공개 주소)만 묻고, 요약 확인 없이 진행한다.
@@ -254,7 +254,7 @@ func TestFlowNonInteractiveProceed(t *testing.T) {
 
 func allSettingArgs(extra ...string) []string {
 	return append(extra, "--user", "onmaru", "--listen", "unix:/run/onmaru/onmaru.sock", "--omv-url", "http://127.0.0.1",
-		"--smart-refresh-at", "00:00", "--workbench-url", "", "--public-origin", "", "--helper", "--elevate-group", "sudo")
+		"--smart-refresh-at", "00:00", "--workbench-url", "", "--public-origin", "", "--helper", "--elevate-group", "sudo", "--no-web-upgrade")
 }
 
 // --dry-run은 일반 사용자로 sudo 없이 끝까지 가며, 파일을 쓰지 않고 쓸 파일의 차이와 명령만 보여 준다.
@@ -306,8 +306,14 @@ func TestFlowUninstall(t *testing.T) {
 	f := installedFake(t)
 	f.put(t, stateDir+"/site.json", "{}", 0o600)
 	f.put(t, runtimeDir+"/onmaru.sock", "", 0o660)
-	f.put(t, "/etc/default/onmaru-upgrade", "keep\n", 0o644)
+	f.put(t, "/etc/default/onmaru-other", "keep\n", 0o644)
 	f.put(t, config.InstallRecordFile, "{}\n", 0o644)
+	f.put(t, config.UpgradeEnvFile, "ONMARU_UPGRADE_REPO=/repo\n", 0o644)
+	f.put(t, upgradeServiceUnit, "x", 0o644)
+	f.put(t, upgradePathUnit, "x", 0o644)
+	f.put(t, upgradeInstallerDst, "x", 0o755)
+	f.put(t, upgradeCheckRequest, "{}", 0o644)
+	f.put(t, upgradeApplyRequest, "{}", 0o600)
 	f.unitFiles["onmaru.service"] = true
 	script := &prompt.Script{Answers: map[string]string{"uninstall": "y", "uninstall-state-dir": "y", "uninstall-user": "y"}}
 	c, out, _ := newTestContext(t, f, script, "--uninstall")
@@ -315,21 +321,26 @@ func TestFlowUninstall(t *testing.T) {
 	if err := Run(c); err != nil {
 		t.Fatalf("Run: %v\n%s", err, out)
 	}
-	for _, p := range append(configFiles, binDst, helperBinDst, stateDir+"/site.json", runtimeDir+"/onmaru.sock") {
+	for _, p := range append(configFiles, binDst, helperBinDst, stateDir+"/site.json", runtimeDir+"/onmaru.sock",
+		upgradeInstallerDst, upgradeCheckRequest, upgradeApplyRequest) {
 		if _, ok := f.read(t, p); ok {
 			t.Errorf("%s not removed", p)
 		}
 	}
-	if _, err := os.Stat(f.path(config.UpgradeStateDir)); !errors.Is(err, os.ErrNotExist) {
-		t.Errorf("%s not removed (%v)", config.UpgradeStateDir, err)
+	for _, dir := range []string{config.UpgradeStateDir, config.UpgradeRequestDir, upgradeInstallerDir} {
+		if _, err := os.Stat(f.path(dir)); !errors.Is(err, os.ErrNotExist) {
+			t.Errorf("%s not removed (%v)", dir, err)
+		}
 	}
 	// 설치기가 만들지 않은 파일은 건드리지 않는다.
-	if _, ok := f.read(t, "/etc/default/onmaru-upgrade"); !ok {
+	if _, ok := f.read(t, "/etc/default/onmaru-other"); !ok {
 		t.Error("unrelated file removed")
 	}
 	want := []string{
 		"systemctl list-unit-files onmaru.service",
 		"systemctl disable --now onmaru.service",
+		"systemctl disable --now onmaru-upgrade.path",
+		"systemctl daemon-reload",
 		"systemctl disable --now onmaru-helper.socket onmaru-helper.service",
 		"systemctl daemon-reload",
 		"systemctl daemon-reload",

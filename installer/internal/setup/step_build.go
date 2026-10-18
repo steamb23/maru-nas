@@ -68,6 +68,11 @@ func requireBinary(c *Context) error {
 			return err
 		}
 	}
+	if webUpgradeWanted(c) {
+		if err := check(c.installerBinSrc()); err != nil {
+			return err
+		}
+	}
 	if dist := filepath.Join(c.RepoDir, distIndexRel); !c.distWarned && !exists(c.Sys, dist) {
 		c.distWarned = true
 		c.Warn(L("frontend build not found ("+dist+"). The binary will serve a 'frontend not built' page.",

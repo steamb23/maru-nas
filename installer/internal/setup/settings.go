@@ -12,6 +12,8 @@ var settings = Registry{
 	settingPublicOrigin,
 	settingHelper,
 	settingElevateGroup,
+	settingWebUpgrade,
+	settingBuildPath,
 	settingTerminal,
 }
 
@@ -27,5 +29,7 @@ const (
 	namePublicOrigin     = "public-origin"
 	nameHelper           = "helper"
 	nameElevateGroup     = "elevate-group"
+	nameWebUpgrade       = "web-upgrade"
+	nameBuildPath        = "build-path"
 	nameTerminal         = "terminal"
 )

@@ -16,6 +16,12 @@ NoNewPrivileges=yes
 ProtectSystem=strict
 # User-scope file operations write on data disks and in home directories.
 ReadWritePaths=-/srv -/home
+{{- if .WebUpgrade}}
+# The root operation upgrade.apply writes dashboard upgrade requests here ({{.UpgradeName}}.path watches it).
+RuntimeDirectory={{.UpgradeRequestDirName}}
+RuntimeDirectoryMode=0700
+RuntimeDirectoryPreserve=yes
+{{- end}}
 PrivateTmp=yes
 PrivateDevices=yes
 PrivateNetwork=yes

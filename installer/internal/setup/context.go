@@ -8,6 +8,7 @@ import (
 	"runtime/debug"
 	"strconv"
 
+	"onmaru/backend/config"
 	"onmaru/installer/internal/prompt"
 )
 
@@ -55,6 +56,8 @@ type Context struct {
 	group          string
 	proxyUnchanged bool
 	uninstallUser  string
+	// upgradePathChanged는 대시보드 업그레이드의 경로 유닛을 새로 쓰거나 바꿨는지다(다시 시작할지).
+	upgradePathChanged bool
 }
 
 // L은 현재 언어의 문구다.
@@ -114,6 +117,9 @@ func (c *Context) withoutInstalled() *Context {
 // binSrc 등은 저장소 안의 빌드 결과 경로다.
 func (c *Context) binSrc() string       { return filepath.Join(c.RepoDir, binSrcRel) }
 func (c *Context) helperBinSrc() string { return filepath.Join(c.RepoDir, helperBinSrcRel) }
+func (c *Context) installerBinSrc() string {
+	return filepath.Join(c.RepoDir, installerBinSrcRel)
+}
 
 // entry는 사용자에게 안내하는 설치 명령(저장소의 install.sh)이다.
 func (c *Context) entry() string { return filepath.Join(c.RepoDir, "install.sh") }
@@ -181,6 +187,8 @@ type Installed struct {
 	HelperEnv *EnvFile
 	// HelperServiceExists는 도우미 서비스 유닛이 있는지다.
 	HelperServiceExists bool
+	// UpgradeEnv는 /etc/default/onmaru-upgrade다(대시보드에서 업그레이드). nil이면 없다(꺼져 있다).
+	UpgradeEnv *EnvFile
 }
 
 // readInstalled는 기존 설치를 읽는다.
@@ -195,6 +203,9 @@ func readInstalled(sys System) (*Installed, error) {
 		return nil, err
 	}
 	if inst.HelperEnv, err = readEnvFile(sys, helperEnvFile); err != nil {
+		return nil, err
+	}
+	if inst.UpgradeEnv, err = readEnvFile(sys, config.UpgradeEnvFile); err != nil {
 		return nil, err
 	}
 	if fi, err := sys.Stat(helperServiceUnit); err == nil && fi.Mode().IsRegular() {

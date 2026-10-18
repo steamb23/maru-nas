@@ -1,13 +1,28 @@
 package config
 
 // 대시보드에서 업그레이드(ROADMAP.md)에 쓰는 파일 경로와 형식(설치 기록, 업그레이드 계획). 설치기가 쓰고 백엔드가 읽는다.
+// 확인·적용 요청과 상태 파일은 upgrade_request.go에 있다.
 
 const (
-	// UpgradeStateDir는 설치 기록을 두는 디렉터리다(root 소유 0755, 파일은 0644).
-	// 저장소 소유자(일반 사용자)로 실행하는 설치기의 --upgrade-plan이 읽으므로 다른 사용자도 읽을 수 있어야 한다.
+	// UpgradeStateDir는 설치 기록과 업그레이드 상태 파일을 두는 디렉터리다(root 소유 0755, 파일은 0644).
+	// 저장소 소유자(일반 사용자)로 실행하는 설치기의 --upgrade-plan과 onmaru가 읽으므로 다른 사용자도 읽을 수 있어야 한다.
 	UpgradeStateDir = "/var/lib/onmaru-upgrade"
 	// InstallRecordFile은 설치기가 설치할 때마다(수동 설치 포함) 쓰는 설치 기록이다.
 	InstallRecordFile = UpgradeStateDir + "/installed.json"
+	// UpgradeStatusFile은 업그레이드 서비스(onmaru-upgrade.service)가 확인·적용의 진행과 결과를 쓰는 상태 파일이다.
+	// onmaru는 읽기만 하고, onmaru가 다시 시작되어도 남는다.
+	UpgradeStatusFile = UpgradeStateDir + "/status.json"
+	// UpgradeEnvFile은 대시보드에서 업그레이드의 root 쪽 설정 파일이다(저장소 경로, 빌드 계정, 빌드 PATH. root 소유 0644).
+	// 설치기가 --web-upgrade일 때만 쓰므로 이 파일이 있으면 대시보드에서 업그레이드가 켜져 있다.
+	UpgradeEnvFile = "/etc/default/onmaru-upgrade"
+	// UpgradeCheckRequestName은 onmaru가 자기 상태 디렉터리에 남기는 확인 요청 파일의 이름이다. 설치한 onmaru의 상태
+	// 디렉터리는 /var/lib/onmaru(StateDirectory=)이고 업그레이드 서비스의 경로 유닛이 그 안의 이 이름을 지켜본다.
+	UpgradeCheckRequestName = "upgrade-check.json"
+	// UpgradeRequestDir는 도우미의 root 연산 upgrade.apply가 적용 요청을 쓰는 디렉터리다(root 0700). 도우미 유닛의
+	// RuntimeDirectory=라 도우미만 쓸 수 있다.
+	UpgradeRequestDir = "/run/onmaru-upgrade"
+	// UpgradeApplyRequestName은 UpgradeRequestDir 안의 적용 요청 파일 이름이다.
+	UpgradeApplyRequestName = "apply.json"
 )
 
 // InstallRecordFormat은 InstallRecord의 형식 번호다. 필드를 빼거나 뜻을 바꾸면 올린다.

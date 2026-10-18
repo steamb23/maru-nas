@@ -63,6 +63,8 @@ type System interface {
 	RunUser(dir, name string, args ...string) error
 	// LookPath는 PATH에 명령이 있는지다.
 	LookPath(name string) bool
+	// Which는 PATH에서 찾은 명령의 절대 경로다. 없으면 false다(빌드 PATH를 정할 때 쓴다).
+	Which(name string) (string, bool)
 
 	// CurrentUser는 실행한 계정 이름이다.
 	CurrentUser() string
@@ -72,6 +74,8 @@ type System interface {
 	PrimaryGroup(name string) (string, error)
 	// GroupExists는 그룹이 있는지다.
 	GroupExists(name string) (bool, error)
+	// FileOwner는 파일 소유자다(UID, 계정 이름과 홈). 이름을 찾을 수 없으면 이름은 uid 숫자다.
+	FileOwner(path string) (Account, error)
 
 	// PortInUse는 TCP 수신 주소를 다른 프로세스가 쓰고 있는지다. 알 수 없으면 false다.
 	PortInUse(addr string) bool
@@ -110,6 +114,22 @@ func (f fsOps) WriteFile(p string, data []byte, perm fs.FileMode) error {
 		_, err := w.Write(data)
 		return err
 	})
+}
+
+func (f fsOps) FileOwner(p string) (Account, error) {
+	fi, err := os.Stat(f.path(p))
+	if err != nil {
+		return Account{}, err
+	}
+	st, ok := fi.Sys().(*syscall.Stat_t)
+	if !ok {
+		return Account{}, errors.New("cannot read the owner of " + p)
+	}
+	a := Account{UID: int(st.Uid), Name: strconv.Itoa(int(st.Uid))}
+	if u, err := user.LookupId(a.Name); err == nil {
+		a.Name, a.Home = u.Username, u.HomeDir
+	}
+	return a, nil
 }
 
 func (f fsOps) Remove(p string) error {
@@ -257,6 +277,17 @@ func (s *realSystem) RunUser(dir, name string, args ...string) error {
 func (s *realSystem) LookPath(name string) bool {
 	_, err := exec.LookPath(name)
 	return err == nil
+}
+
+func (s *realSystem) Which(name string) (string, bool) {
+	p, err := exec.LookPath(name)
+	if err != nil {
+		return "", false
+	}
+	if p, err = filepath.Abs(p); err != nil {
+		return "", false
+	}
+	return p, true
 }
 
 func (s *realSystem) CurrentUser() string {
