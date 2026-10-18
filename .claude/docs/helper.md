@@ -10,6 +10,7 @@
   2. 자기가 비밀번호를 직접 확인하고 발급한 티켓인지
   3. 자기가 `/etc/passwd`·`/etc/group`·`/etc/login.defs`에서 직접 읽은 계정·그룹
 - 남는 위험(README에도 적는다): onmaru가 뚫리면 그때 로그인한 사용자의 티켓을 쓸 수 있고, 그 뒤 입력되는 비밀번호를 가로챌 수 있다. root 연산은 상승한 티켓으로 5분 동안, 정해진 목록의 연산만 가능하다
+- 대시보드에서 업그레이드(`upgrade.apply`, 아래 "대시보드에서 업그레이드")를 켜면 상승한 티켓으로 할 수 있는 일이 `id`에서 "설치된 저장소로 업그레이드"로 넓어진다. 업그레이드는 저장소에서 빌드한 코드를 root로 실행하므로 저장소 소유자 계정은 업그레이드로 root 코드를 실행할 수 있다(sudo로 `./install.sh`를 실행할 때와 같다). OMV 관리자는 원래 root와 같은 일을 할 수 있으므로 관리자에게 새로운 권한은 아니며, 끌 수 있는 선택 설정(`--no-web-upgrade`)이다
 - 웹 터미널의 임시 SSH 키(`ssh.authorize`)는 새 권한이 아니다. 티켓을 가진 쪽은 원래 `fs.write`로 사용자 홈의 `~/.ssh/authorized_keys`를 쓸 수 있다. 그래도 키 줄은 worker가 직접 만들고(옵션을 onmaru가 정할 수 없다) ed25519 공개 키만 받는다
 - OMV 관리자는 원래 OMV RPC로 root와 같은 일을 할 수 있으므로 "OMV 관리자 + 상승 그룹 + 비밀번호 재확인"은 새 권한이 아니라 더 보수적인 겹침이다
 - 2차 인증은 도우미가 직접 확인하지 않는다. onmaru가 인증을 마친 뒤에만 대기 티켓을 활성화한다(onmaru가 정상일 때 2차 인증을 건너뛸 수 없다)
@@ -26,7 +27,7 @@
 |---|---|
 | `internal/helper/proto` | 프레임 프로토콜, 요청·응답·결과 타입, 오류 코드, 범위별 연산 목록(`Actions`) |
 | `internal/helper/daemon` | root 부모: 소켓 활성화, 상대 uid 확인, 티켓, 실패 제한, 계정·상승 정책, worker 실행, 감사 로그, 유휴 종료 |
-| `internal/helper/worker` | 자식 프로세스의 연산 구현(`id`, `fs.*`). 연결을 fd 3으로 받아 응답·본문을 직접 주고받는다 |
+| `internal/helper/worker` | 자식 프로세스의 연산 구현(`id`, `fs.*`, `ssh.*`, `upgrade.apply`). 연결을 fd 3으로 받아 응답·본문을 직접 주고받는다 |
 | `internal/helper/client` | onmaru 쪽 클라이언트 |
 | `internal/helper/helperfake` | 테스트·`make dev-fake`용 가짜 도우미(진짜 데몬 + 가짜 계정·비밀번호 + 프로세스 없는 worker) |
 | `cmd/onmaru-helper` | 실행 파일(`CGO_ENABLED=0`). onmaru 웹 코드는 링크되지 않는다 |
@@ -38,7 +39,7 @@
 - 티켓 관리: `session.open`(사용자, 비밀번호, pending), `session.activate`, `session.close`, `session.reset`, `session.status`, `session.elevate`(비밀번호), `session.drop`
 - 연산: `run`(티켓, 범위 `user`|`root`, 연산, 인자, `size`). 연산 목록은 `proto.Actions`
   - 사용자 범위: `id`, `fs.list`, `fs.stat`, `fs.read`(offset·length, 응답 뒤 스트림), `fs.write`(요청 뒤 스트림, 같은 폴더 임시 파일에 받은 뒤 이름 바꾸기), `fs.mkdir`, `fs.rename`, `fs.remove`(`recursive`), `ssh.authorize`·`ssh.revoke`(웹 터미널의 임시 SSH 키, 아래 "임시 SSH 키")
-  - root 범위: `id`
+  - root 범위: `id`, `upgrade.apply`(대시보드에서 업그레이드의 적용 요청, 아래 "대시보드에서 업그레이드")
 - 오류는 코드만 준다(`proto.Code*`). 경로·사용자 이름 같은 세부는 도우미 로그에만 남긴다. onmaru는 코드를 HTTP 오류 코드(`api.Err*`)로 바꾼다
 
 ## 티켓과 상승
@@ -81,10 +82,20 @@
 - 감사 로그에는 공개 키 대신 SHA256 지문(`key=SHA256:...`)을 남긴다. sshd 로그의 `Accepted publickey ... SHA256:...`와 맞춰 볼 수 있다
 - 유닛 권한은 바꾸지 않았다(`ReadWritePaths=-/srv -/home`)
 
+## 대시보드에서 업그레이드(upgrade.apply)
+
+- 업그레이드 서비스(설치기의 `--upgrade-service`, `onmaru-upgrade.service`)에 적용 요청을 넘기는 root 연산이다. 흐름은 `ROADMAP.md`의 "대시보드에서 업그레이드", 서비스는 `.claude/rules/installer.md`의 "업그레이드 서비스"
+- 인자(`proto.UpgradeApplyParams`)는 대상 커밋(`config.ValidUpgradeTarget`, 40자리 소문자 16진수)과 설정 이름·값(`config.ValidUpgradeSetting`, 옵션 이름 꼴, 공백·제어 문자 없는 ASCII 512바이트, 32개까지)뿐이다. 명령·경로는 받지 않는다. 요청한 사용자(티켓)와 시각은 worker가 정한다
+- worker는 꼴만 검사하고 요청 디렉터리(`config.UpgradeRequestDir`, `/run/onmaru-upgrade`)에 `apply.json`(0600)을 쓴다. 점으로 시작하는 임시 파일에 쓴 뒤 이름을 바꾸므로 경로 유닛은 다 쓴 요청만 본다. 처리하지 않은 요청은 새 요청으로 바꾼다. 상태 파일은 읽지 않는다. 마지막 확인과 같은 대상인지, 저장소 상태, 설정 값은 업그레이드 서비스가 모두 다시 확인한다
+- 요청 디렉터리는 대시보드에서 업그레이드를 켠 도우미 유닛의 `RuntimeDirectory=onmaru-upgrade`(0700, Preserve)다. 없으면 `upgrade_disabled`다. `ProtectSystem=strict`에서도 RuntimeDirectory는 쓸 수 있으므로 `ReadWritePaths`는 더하지 않았다
+- 감사 로그에는 대상 커밋과 설정 이름만 남긴다(값은 남기지 않는다)
+- 테스트와 가짜 도우미는 `worker.Config.UpgradeDir`로 디렉터리를 바꾼다(가짜 도우미는 Root 아래 `run/onmaru-upgrade`)
+
 ## systemd
 
 - `onmaru-helper.socket`: `/run/onmaru-helper/helper.sock`, `SocketUser=<onmaru 서비스 사용자>`, `SocketMode=0600`. Docker 프록시에 바인드 마운트하는 `/run/onmaru`와 디렉터리를 나눈다(컨테이너 안의 같은 uid가 소켓에 닿지 않게)
 - `onmaru-helper.service`: root지만 `CapabilityBoundingSet=CAP_SETUID CAP_SETGID CAP_KILL`(강등과, uid가 다른 worker 종료), `NoNewPrivileges=yes`, `ProtectSystem=strict` + `ReadWritePaths=-/srv -/home`, `PrivateNetwork=yes`, `RestrictAddressFamilies=AF_UNIX`, `PrivateDevices=yes`, `SystemCallFilter=@system-service` 등. root라도 `CAP_DAC_OVERRIDE`가 없어 남의 파일을 마음대로 읽지 못한다(`/etc/shadow`는 소유자가 root라 `unix_chkpwd`가 읽는다)
+- 대시보드에서 업그레이드를 켜면 `RuntimeDirectory=onmaru-upgrade`, `RuntimeDirectoryMode=0700`, `RuntimeDirectoryPreserve=yes`를 더한다(`upgrade.apply`의 요청 디렉터리. 유휴 종료로 도우미가 멈춰도 남는다). 끄면 이 줄을 빼고 설치기가 디렉터리를 지운다
 - 소켓 활성화로 띄우고, 티켓과 연결이 없이 10분이면 스스로 끝난다(`-idle-exit`). 티켓이 있으면 끝나지 않는다
 - onmaru 유닛은 바꾸지 않는다(`ProtectSystem=strict`에서도 소켓 connect는 된다). `Wants=`·`After=onmaru-helper.socket`만 더한다
 

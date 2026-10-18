@@ -104,17 +104,21 @@ OMV SSH 설정의 추가 옵션에 `AuthenticationMethods publickey,keyboard-int
      - 설치 기록(`installed.json`, `backend/config`로 옮긴 `Version` 상수)
      - 업그레이드 계획 JSON(`--upgrade-plan`): 필요한 설정과 입력 형태, 수동 재설치 사유, 업그레이드 뒤 할 일
      - 수동 재설치 목록
-  2. 업그레이드 서비스와 도우미 연산:
-     - `--web-upgrade` 설정, root 쪽 설정 파일, root 소유 설치기 복사본, 유닛(`.service`·`.path`)
-     - 확인·적용 흐름, 소유자 권한 빌드, 상태 파일
+  2. 업그레이드 서비스와 도우미 연산(완료. 설치·서비스는 `.claude/rules/installer.md`의 "업그레이드 서비스", 도우미 연산은 `.claude/docs/helper.md`의 "대시보드에서 업그레이드"):
+     - `--web-upgrade`·`--build-path` 설정, root 쪽 설정 파일, root 소유 설치기 복사본, 유닛(`.service`·`.path`), 도우미 유닛의 요청 디렉터리(`RuntimeDirectory=`)
+     - 확인·적용 흐름(`--upgrade-service`), 소유자 권한 빌드, 상태 파일(형식은 `backend/config/upgrade_request.go`)
      - 도우미 root 연산 `upgrade.apply`, 제거 처리
      - README의 업그레이드 설명과 위협 모델
-     - 시험 VM에서 확인
+     - 시험 VM에서 확인(남음: 설치기로 켠 뒤 경로 유닛이 요청을 받아 상태 파일을 쓰는지, 소유자 강등·PrivateTmp·도우미 요청 디렉터리)
   3. 업데이트 페이지:
      - 백엔드 API(상태 읽기, 확인 요청, 적용)
-     - 설정 앱의 관리자 페이지(버전, 커밋, 설정 입력, 수동 안내, 진행 상황)
+       - 켜져 있는지는 `config.UpgradeEnvFile`(`/etc/default/onmaru-upgrade`, 0644)이 있는지로 안다
+       - 확인 요청은 상태 디렉터리의 `config.UpgradeCheckRequestName`에 `config.UpgradeCheckRequest`를 원자적으로 쓴다. 경로 유닛은 `/var/lib/onmaru/upgrade-check.json`을 지켜보므로 `ONMARU_STATE_DIR`로 상태 디렉터리를 옮긴 설치는 지원하지 않는다. 확인마다 저장소 소유자의 `git fetch`와 임시 빌드가 돌므로 요청 빈도를 제한한다
+       - 적용은 `requireAdmin`과 root 권한 상승 뒤 도우미 클라이언트의 `upgrade.apply`(대상 커밋, 설정)로 한다. `upgrade_disabled` 등 새 오류 코드를 `api.Err*`로 바꾼다
+       - 상태 파일의 `checking`·`applying`이 유닛의 `TimeoutStartSec`(2시간)보다 오래되었으면 중단된 실행으로 본다(서비스가 죽으면 상태를 고치지 못한다)
+     - 설정 앱의 관리자 페이지(버전, 커밋, 설정 입력, 수동 안내, 진행 상황). 질문의 `Dash` 설정은 `-`를 빈 값으로 보내도 된다(서비스가 바꾼다)
      - 다시 시작 대기와 로그인 뒤 결과 표시
-     - `make dev-fake`의 가짜 업그레이드 서비스
+     - `make dev-fake`의 가짜 업그레이드 서비스(가짜 도우미의 `UpgradeDir()`에 적용 요청이 쌓인다)
   4. 나중에:
      - 되돌리기(이전 실행 파일 보관, 상태 형식 호환 확인)
      - 원격 확인에서 새 릴리스 태그 따라가기(태그를 체크아웃한 설치를 원격으로 올리기)
