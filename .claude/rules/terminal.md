@@ -40,4 +40,4 @@ paths:
 - Go: `sshfake`(x/crypto 서버, 장난감 셸)와 `helperfake`를 이어 인증 순서·임시 키·취소·호스트 키·창 공유를 시험한다(`internal/terminal`). 서버 테스트는 `envOptions{terminal: true, sshd: ...}`가 `httptest.Server`에 붙여 실제 WebSocket으로 시험한다(`internal/server/terminal_test.go`)
   - 가짜 sshd는 window-change 요청과 입력을 다른 고루틴에서 처리하므로, 크기를 바꾼 직후의 `size` 출력은 반영될 때까지 다시 묻는다
 - `make dev-fake`: `FAKESSH_LISTEN`(기본 `127.0.0.1:8092`, Claude는 8192)과 `FAKESSH_AUTH`(예: `publickey`)
-- 실제 sshd·도우미: 순정 OMV VM의 `helper-test/term-test.sh`(`~/.cache/onmaru-vm`). 이 NAS의 실제 확인은 사용자가 한다(CLAUDE.md "나중에 확인할 것")
+- 실제 sshd·도우미: 순정 OMV를 설치한 테스트 VM에서 확인한다(VM 구성은 `CLAUDE.local.md`). 실제 NAS의 확인은 사용자가 한다

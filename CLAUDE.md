@@ -4,7 +4,7 @@
 
 OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표시줄·아이콘이 있는 데스크톱형 웹 대시보드.
 
-영역별 상세 규칙은 `.claude/rules/`에 있고 해당 파일을 다룰 때 로드된다: `auth-omv.md`(OMV 8 동작, 인증 설계), `backend.md`, `helper.md`(권한 도우미), `terminal.md`(웹 터미널), `security.md`(보안 강화 모드), `frontend.md`, `frontend-shell.md`(창·작업표시줄·애니메이션), `i18n.md`, `icons.md`. 작업 전 설계를 논의할 때는 해당 파일을 직접 읽는다.
+영역별 상세 규칙은 `.claude/rules/`에 있고 해당 파일을 다룰 때 로드된다: `auth-omv.md`(OMV 8 동작, 인증 설계), `backend.md`, `helper.md`(권한 도우미), `terminal.md`(웹 터미널), `security.md`(보안 강화 모드), `frontend.md`, `frontend-shell.md`(창·작업표시줄·애니메이션), `i18n.md`, `icons.md`, `installer.md`(설치기). 작업 전 설계를 논의할 때는 해당 파일을 직접 읽는다. 설계 문서는 `.claude/docs/`(`addons.md`, `data-sources.md`, `helper.md`)에 있다.
 
 ## 목표와 범위
 
@@ -34,21 +34,19 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 
 - **배포**: 앞단 리버스 프록시(Caddy 등)가 HTTPS를 처리하고 대시보드를 둘 호스트·경로를 정한다(예: 별도 서브도메인 루트, 또는 OMV와 같은 도메인의 경로 접두사). 프론트는 상대 경로(`base: './'`)로 빌드하므로 경로 접두사에 묶이지 않고, 백엔드 라우트는 대시보드 루트(`/api/*`) 기준이다. OMV의 nginx 설정은 건드리지 않는다
   - 도메인 등 개인 환경 정보는 `*.local.md`(커밋 안 함)에 둔다. 커밋되는 파일에 도메인·IP를 하드코딩하지 않는다
-  - OMV 웹 UI(workbench)는 대시보드 안 창이 아니라 이름 붙은 브라우저 탭으로 연다. 브라우저 기준 주소는 `-workbench-url`(`ONMARU_WORKBENCH_URL`)이며, 비우면 "OMV 워크벤치" 앱을 숨긴다(`README.md`의 "OMV 워크벤치 열기")
-  - OMV 화면을 iframe으로 띄우는 실험은 OMV와 같은 출처(같은 도메인의 경로 접두사)에 둘 때만 가능하다(OMV가 `X-Frame-Options: SAMEORIGIN`을 보낸다). 인증과는 무관하다
+  - OMV 웹 UI(workbench)는 대시보드 안 창(iframe)이 아니라 이름 붙은 브라우저 탭으로 연다. 브라우저 기준 주소는 `-workbench-url`(`ONMARU_WORKBENCH_URL`)이며, 비우면 "OMV 워크벤치" 앱을 숨긴다(`README.md`의 "OMV 워크벤치 열기")
 - **실행**: systemd 서비스로 Go 실행 파일 하나를 전용 일반 사용자로 실행한다. 프론트엔드는 `go:embed`로 포함한다. 수신은 기본적으로 루프백 TCP(`127.0.0.1:8090`)이고, Docker 안의 프록시처럼 루프백에 닿지 못하는 경우를 위해 Unix 소켓(`unix:/경로`)을 지원한다. 루프백이 아닌 주소는 `-allow-non-loopback`을 명시해야만 허용한다
   - Docker는 쓰지 않는다(호스트 `/proc`, `/sys`, 네트워크를 직접 봐야 하므로)
-  - 설치는 루트의 `install.sh`(영어·한국어 안내)가 한다. `install.sh`는 Go 설치기(`installer/` → `bin/onmaru-install`, huh TUI)를 빌드해 실행하는 부트스트랩이고, 설치기가 systemd 유닛과 `/etc/default/onmaru`를 직접 만든다. Claude는 작성만 하고 실행은 사용자가 한다(확인은 Go 테스트와 `--dry-run`). 리버스 프록시는 설정하지 않는다. 구조와 규칙은 `.claude/rules/installer.md`
-    - 2단계 구조: 설치기가 설정 질문과 확인, 실행한 계정으로 빌드(1단계)를 한 뒤, root가 아니면 설정을 옵션으로 넘겨 `sudo bin/onmaru-install --service-install ...`로 자신을 다시 실행해 사용자 생성·유닛 작성·시작(2단계)을 한다. 2단계는 받은 설정을 다시 검증하고, 설정이 모두 있으면 묻지 않는다. root만 있는 환경은 sudo 없이 이어서 진행한다. 일반 사용자가 sudo로 실행하면 root로 빌드하지 않는다
-    - 기존 설치(유닛과 `/etc/default/onmaru`가 모두 있음)가 있으면 옵션 없는 실행이 업그레이드다. 설치된 설정(유닛의 `User=`, 환경 파일)을 쓰고 기존 설치에 없거나 이 버전의 검사를 통과하지 못한 설정만 묻는다. 요약 뒤 터미널이면 업그레이드·설정 바꾸기·취소를 고르고, 비TTY는 묻지 않는다. `--reinstall`은 설치된 값을 기본값으로 모두 다시 묻고, `--upgrade`(스크립트용)는 기존 설치가 없으면 실패하고 확인 없이 진행한다. 설치 설정을 새로 더하면 설정 레지스트리(`installer/internal/setup/setting_*.go`)에 기존 설치에서 읽는 법(`Load`)도 정의한다
+  - 설치는 루트의 `install.sh`(영어·한국어 안내)가 한다. `install.sh`는 Go 설치기(`installer/` → `bin/onmaru-install`, huh TUI)를 빌드해 실행하는 부트스트랩이고, 설치기가 systemd 유닛과 `/etc/default/onmaru`를 직접 만든다. 리버스 프록시는 설정하지 않는다. Claude는 작성만 하고 실행은 사용자가 한다(확인은 Go 테스트와 `--dry-run`)
+    - 흐름(1단계 빌드 → sudo 2단계), 설치 방식(새 설치, `--reinstall`, 업그레이드), 설정·단계를 더하는 절차는 `.claude/rules/installer.md`, 사용자 설명은 `README.md`의 "설치 스크립트"·"업그레이드"
   - 사용자 대상 설치·설정·프록시 안내는 `README.md`에 둔다. 플래그를 추가·변경하면 `README.md`의 설정 표와 설치기 레지스트리도 함께 고친다
-- **백엔드는 얇은 API 서버**다. 역할은 (1) 현황 읽기: `/proc`·`/sys` 직접 읽기, root가 필요한 정보는 OMV RPC, (2) 설정 변경 요청을 OMV `rpc.php`로 전달, (3) 대시보드 설정(사용자별 위젯 배치·바로가기·화면 설정, 관리자의 전역 설정, 배경 이미지) 저장, 세 가지뿐이다. OMV RPC로 할 수 없는 권한 작업은 (4) 권한 도우미에 맡긴다(아래 "권한 도우미"). (5) 웹 터미널은 같은 호스트의 sshd에 SSH 클라이언트로 붙어 셸을 중계한다(아래 "웹 터미널")
-  - (3)은 대시보드 자신의 상태만 다룬다. 상태 디렉터리(`-state-dir`, systemd `StateDirectory=`)의 사용자별 JSON 파일, 관리자가 바꾸는 전역 설정(`site.json`), 올린 배경 이미지(`images/`), 보안 강화 모드의 인증 수단 기록(`security/`)이며 OMV 설정·시스템 파일과 무관하다(`internal/prefs`)
-  - 설정 창 앱(`src/settings/`)이 프로필(사진, 자기 OMV 계정의 전자 우편·태그), 화면(테마·바탕화면), 보안(인증 수단) 같은 사용자 설정과 관리자 전용 전역 설정(로그인 화면, 기본 화면, 서버, 보안 정책), 정보 페이지를 맡는다. 전역에 적용되는 설정은 관리자만 바꾼다. 그 밖의 OMV·OS 설정은 넣지 않고, 넣게 되면 페이지 그룹으로 더한다
-  - 가동 설정 중 재시작 없이 바뀌는 워크벤치 주소, SMART 확인 시각, 웹 터미널 허용만 웹에서 덮어쓴다(`site.json`, 플래그보다 우선). 나머지는 `/etc/default/onmaru`를 root가 고치며, 웹에서 sudo로 바꾸는 방식은 `ROADMAP.md`에 있다
-- **권한 도우미**(`onmaru-helper`, `install.sh`가 기본으로 설치하고 `--no-helper`로 뺄 수 있다): root로 도는 별도 실행 파일이 systemd 소켓 활성화(`/run/onmaru-helper/helper.sock`)로 onmaru 서비스 사용자의 연결만 받는다. 로그인할 때 도우미가 비밀번호를 `unix_chkpwd`로 직접 확인해 세션에 티켓을 주고, 연산마다 자식 프로세스를 그 사용자 권한으로 강등해 실행한다(홈과 `/srv` 아래 마운트의 파일 연산). root 연산은 `openmediavault-admin`과 상승 그룹(기본 `sudo`)에 속한 관리자가 비밀번호를 다시 입력하면 그 세션에서 5분 동안만, 정해진 목록에서만 쓸 수 있다(지금은 `id`뿐). onmaru 쪽 설정은 `-helper-socket`(비우면 끔). 상세는 `.claude/docs/helper.md`, 규칙은 `.claude/rules/helper.md`
-- **웹 터미널**(`internal/terminal`, 기본 꺼짐, `-terminal`·설정 앱으로 허용): 백엔드가 `127.0.0.1`의 sshd에 대시보드 세션 사용자로만 접속해 WebSocket(`/api/terminal`)으로 셸을 중계한다. TTY를 직접 띄우지 않으므로 도우미에 셸·명령 실행 연산을 두지 않는 규칙은 그대로다. 누가 들어갈 수 있는지는 OMV의 SSH 설정(`AllowGroups`, 인증 방식)이 정한다. 인증은 도우미 임시 키(`ssh.authorize`, 2분짜리 `authorized_keys` 줄) → sshd가 묻는 비밀번호 중계 순서다. 상세는 `.claude/rules/terminal.md`, 사용자 설명은 `README.md`의 "웹 터미널"
-- **보안 강화 모드**(`internal/security`, 정책은 `site.json`의 `security`): 웹 터미널·root 권한 상승을 세션의 보증 수준(`auth.Session.Assurance`: 로그인 < 비밀번호 재확인 < 2차 인증)으로 막는다. 2차 인증은 패스키(WebAuthn, CBOR 없이 표준 라이브러리)·TOTP·복구 코드·OMV 2차 인증이고, 확인은 onmaru가 하며 도우미에 넣지 않는다. 수단 기록은 상태 디렉터리의 `security/<이름>.json`(0600, 읽을 수 없으면 비우지 않고 오류). 패스키의 RP는 `-public-origin`이다. 상세는 `.claude/rules/security.md`, 사용자 설명은 `README.md`의 "보안 강화 모드"
+- **백엔드는 얇은 API 서버**다. 역할은 (1) 현황 읽기: `/proc`·`/sys` 직접 읽기, root가 필요한 정보는 OMV RPC, (2) 설정 변경 요청을 OMV `rpc.php`로 전달, (3) 대시보드 설정(사용자별 위젯 배치·바로가기·화면 설정, 관리자의 전역 설정, 배경 이미지) 저장, 세 가지뿐이다. OMV RPC로 할 수 없는 권한 작업은 (4) 권한 도우미에 맡긴다. (5) 웹 터미널은 같은 호스트의 sshd에 SSH 클라이언트로 붙어 셸을 중계한다
+  - (3)은 상태 디렉터리(`-state-dir`, `internal/prefs`)에 대시보드 자신의 상태만 두며 OMV 설정·시스템 파일을 쓰지 않는다. 내용은 `.claude/rules/backend.md`
+  - 설정 앱(`src/settings/`)은 대시보드 설정, 자기 계정 프로필, 보안 수단, 정보만 다룬다. 전역에 적용되는 설정은 관리자만 바꾸고, 그 밖의 OMV·OS 설정은 넣지 않는다. 페이지 목록은 `README.md`의 "설정 앱"
+  - 웹에서 덮어쓰는 가동 설정은 재시작 없이 바뀌는 워크벤치 주소, SMART 확인 시각, 웹 터미널 허용뿐이다(`site.json`, 플래그보다 우선). 나머지는 root가 `/etc/default/onmaru`를 고친다
+- **권한 도우미**(`onmaru-helper`, `-helper-socket`, 설치기가 기본으로 설치): root로 도는 별도 실행 파일이 소켓 활성화로 onmaru 서비스 사용자의 연결만 받는다. 로그인할 때 비밀번호를 `unix_chkpwd`로 확인해 티켓을 주고, 연산을 그 사용자 권한으로 강등해 실행한다. root 연산은 권한 상승한 관리자 세션에서 5분 동안, 정해진 목록만 쓴다(지금은 `id`뿐). 상세는 `.claude/docs/helper.md`, 규칙은 `.claude/rules/helper.md`
+- **웹 터미널**(`internal/terminal`, 기본 꺼짐): 백엔드가 루프백 sshd에 대시보드 세션 사용자로만 접속해 WebSocket(`/api/terminal`)으로 셸을 중계한다. TTY를 직접 띄우지 않으며, 누가 들어갈 수 있는지는 OMV의 SSH 설정이 정한다. 상세는 `.claude/rules/terminal.md`
+- **보안 강화 모드**(`internal/security`): 웹 터미널·root 권한 상승을 세션의 보증 수준(로그인 < 비밀번호 재확인 < 2차 인증)으로 막는다. 2차 인증(패스키·TOTP·복구 코드·OMV 2차 인증)의 확인은 onmaru가 하며 도우미에 넣지 않는다. 상세는 `.claude/rules/security.md`
 - **OMV RPC는 항상 백엔드가 중계한다**: 브라우저 → `/api/rpc` → 백엔드 → OMV `rpc.php`. 브라우저가 `rpc.php`를 직접 호출하지 않는다
   - 백엔드는 대시보드 세션마다 OMV 세션을 메모리에 보관하고, 항상 같은 주소(127.0.0.1)와 고정 User-Agent로 OMV를 호출한다
   - 브라우저의 쿠키를 OMV에 그대로 전달하지 않는다. OMV는 User-Agent가 다르면 세션을 파기하므로 사용자를 로그아웃시키게 된다
@@ -58,7 +56,7 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 
 - **백엔드**: Go 표준 라이브러리 위주(`backend/`). 런타임 외부 의존성은 웹 터미널의 `golang.org/x/crypto/ssh`와 `github.com/coder/websocket`뿐이며, 권한 도우미 실행 파일에는 링크하지 않는다
 - **설치기**: 별도 Go 모듈 `installer/`(`go.work` 없이 `replace`로 로컬 `backend`). TUI 의존성 `charm.land/huh/v2`는 이 모듈에만 있다. 백엔드와 공유하는 검증 함수·환경 변수 키·기본값은 공개 패키지 `backend/config`(표준 라이브러리만)에 둔다
-- **프론트엔드**: TypeScript + Vite + React(`frontend/`), 창 상태는 Zustand 단일 저장소(`windows[]`). 웹 터미널 화면은 xterm.js(터미널 창의 지연 청크에만 싣는다), 인증 앱 등록의 QR 코드는 uqr(등록 대화상자의 지연 청크에만 싣는다). 린트 oxlint, 테스트 Vitest(DOM 환경 없이 순수 함수·저장소만)
+- **프론트엔드**: TypeScript + Vite + React(`frontend/`), 창 상태는 Zustand 단일 저장소(`windows[]`). 웹 터미널의 xterm.js와 인증 앱 QR의 uqr은 쓰는 화면의 지연 청크에만 싣는다. 린트 oxlint, 테스트 Vitest(DOM 환경 없이 순수 함수·저장소만)
 - **타입 공유**: tygo로 `backend/internal/api` → `frontend/src/api/types.gen.ts`. 생성물은 커밋하며 직접 수정하지 않는다
 - **현지화**: 1차 지원 `en`, `ko`는 항상 완전하게 두고, 나머지 언어(`languages.ts`의 `SUPPORTED_LANGUAGES`)는 기여나 일괄 번역으로 채운다. 화면 문구(aria-label·title 포함)는 모두 `t()`를 거치고, 새 키는 `en.json`과 `ko.json`에 함께 넣는다. 로그인 대기 이스터에그 문구와 로그인 화면의 브랜드 영역(한글 이름, 로마자 표기, 태그라인)은 현지화 제외
 - **아이콘**: Colloid 테마 하나만, 리졸버 `getIcon(name)`으로 freedesktop 이름을 써서 가져온다
@@ -83,9 +81,9 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 
 | 명령 | 내용 |
 |---|---|
-| `make dev` | 개발 서버. 백엔드 `127.0.0.1:8090`(`go run`) + Vite `0.0.0.0:5173`. 접속은 `http://<NAS-IP>:5173/`. Ctrl+C로 둘 다 종료. 실제 OMV에 연결하므로 `frontend/.env.local`에 `ONMARU_OMV_URL`(이 NAS의 OMV 주소)을 둔다. git 워크트리에서 실행하면 주 체크아웃의 `frontend/.env.local`(워크트리에 있으면 그 값이 우선)과 `.dev-state`를 쓴다. `make dev BRANCH=<브랜치>`(`make dev-fake`도 같다)는 그 브랜치가 체크아웃된 워크트리의 코드를 같은 방식으로 실행하므로 워크트리에 들어가지 않아도 된다. 실행은 부른 쪽의 `scripts/dev.sh`가 한다 |
-| `make dev-fake` | `make dev`와 같지만 가짜 OMV(`127.0.0.1:8091`)와 가짜 권한 도우미(상태 디렉터리의 `helper.sock`, 파일 연산은 `helper-root/` 아래에서만)를 함께 띄워 연결한다. `FAKEOMV_TIMEOUT=1m make dev-fake`처럼 세션 timeout을 분 단위로 바꿀 수 있고, `FAKEOMV_VERSION=8.3`처럼 옛 OMV 버전의 응답을 흉내 낼 수 있다(`omvfake.Version`). 가짜 sshd(`FAKESSH_LISTEN`, 기본 `127.0.0.1:8092`, 장난감 셸)도 띄워 웹 터미널을 연결하며, `FAKESSH_AUTH=publickey`처럼 받는 인증 방법을 고른다. 웹 터미널 허용은 설정 앱이나 `ONMARU_TERMINAL=true`로 켠다. 포트는 `ONMARU_LISTEN`(백엔드), `FAKEOMV_LISTEN`(가짜 OMV), `FAKESSH_LISTEN`(가짜 sshd), `DEV_PORT`(Vite)로 바꾼다 |
-| `make dev-pick` | 브랜치가 체크아웃된 워크트리 목록과 OMV 연결(실제·가짜)을 번호로 골라 `make dev BRANCH=<브랜치>` 또는 `make dev-fake BRANCH=<브랜치>`처럼 실행한다(`scripts/dev-pick.sh`). 입력을 기다리므로 Claude는 쓰지 않고 `make dev-fake`에 환경 변수를 준다 |
+| `make dev` | 개발 서버. 백엔드 `127.0.0.1:8090`(`go run`) + Vite `0.0.0.0:5173`(`http://<NAS-IP>:5173/`), Ctrl+C로 둘 다 종료. 실제 OMV에 연결하므로 `frontend/.env.local`에 `ONMARU_OMV_URL`(이 NAS의 OMV 주소)을 둔다 |
+| `make dev-fake` | `make dev`에 가짜 OMV(`127.0.0.1:8091`), 가짜 권한 도우미(상태 디렉터리의 `helper.sock`, 파일 연산은 `helper-root/` 아래만), 가짜 sshd(`127.0.0.1:8092`, 장난감 셸)를 함께 띄워 연결한다 |
+| `make dev-pick` | 워크트리와 OMV 연결(실제·가짜)을 번호로 골라 개발 서버를 띄운다(`scripts/dev-pick.sh`). 입력을 기다리므로 Claude는 쓰지 않는다 |
 | `make build` | 프론트 빌드 → `backend/internal/web/static/dist/` → `bin/onmaru` 단일 실행 파일, 권한 도우미 `bin/onmaru-helper`(`CGO_ENABLED=0`), 설치기 `bin/onmaru-install` |
 | `make lint` | `gofmt -l`, `go vet`(backend·installer 두 모듈), oxlint, `tsc -b` |
 | `make test` | `go test -count=1 ./...`(backend·installer 두 모듈. 모듈 밖 생성물 검사가 캐시로 통과하지 않게), `vitest run` |
@@ -93,6 +91,13 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 | `make types` | Go 구조체에서 TS 다시 생성: `internal/api` → `src/api/types.gen.ts`, 내장 애드온 manifest → `src/addons/manifests.gen.ts`. 둘 중 하나라도 바꾸면 반드시 실행하고 생성물도 함께 커밋한다(manifest 생성물은 Go 테스트가 검사) |
 
 개별 실행: `cd backend && go test ./internal/addons/sysinfo -run TestParseMemInfo`, `cd installer && go test ./internal/setup -run TestGolden`, `cd frontend && npx vitest run src/icons`
+
+개발 서버 환경 변수와 워크트리:
+
+- 포트: `ONMARU_LISTEN`(백엔드), `FAKEOMV_LISTEN`(가짜 OMV), `FAKESSH_LISTEN`(가짜 sshd), `DEV_PORT`(Vite). 상태 디렉터리는 `ONMARU_STATE_DIR`
+- `make dev-fake` 전용: `FAKEOMV_TIMEOUT=1m`(세션 timeout, 분 단위), `FAKEOMV_VERSION=8.3`(옛 OMV 응답, `omvfake.Version`), `FAKESSH_AUTH=publickey`(가짜 sshd가 받는 인증 방법)
+- 웹 터미널 허용은 설정 앱이나 `ONMARU_TERMINAL=true`로 켠다
+- git 워크트리에서 실행하면 주 체크아웃의 `frontend/.env.local`(워크트리에 있으면 그 값이 우선)과 `.dev-state`를 쓴다. 주 체크아웃에서 `make dev BRANCH=<브랜치>`(`make dev-fake`도 같다)로 그 브랜치가 체크아웃된 워크트리의 코드를 실행할 수 있다(실행은 부른 쪽의 `scripts/dev.sh`)
 
 ## 테스트 전략
 
@@ -131,7 +136,7 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
   - 작업 브랜치 이름은 `<종류>/<짧은-설명>`(영어 소문자, 하이픈)으로 짓는다. 종류는 `feat`(새 기능·앱), `fix`(버그 수정), `docs`(문서), `i18n`(번역), `chore`(빌드·CI·정리), `refactor`(동작 변화 없는 구조 변경)
   - 주 체크아웃에서 `git worktree add -b <브랜치> .claude/worktrees/<이름> main`으로 만들고 `EnterWorktree`의 `path`로 들어간다. `EnterWorktree`의 `name`은 로컬 `main`보다 뒤처질 수 있는 `origin/main`에서 갈라지므로 쓰지 않는다
   - 워크트리 안에서 `git submodule update --init --depth 1`과 `npm --prefix frontend ci`를 먼저 실행한다
-  - 사용자는 주 체크아웃에서 `make dev BRANCH=<브랜치>`나 `make dev-pick`(번호 선택)으로 그 워크트리의 개발 서버를 띄울 수 있다
+  - 사용자는 주 체크아웃에서 `make dev BRANCH=<브랜치>`나 `make dev-pick`으로 그 워크트리의 개발 서버를 띄운다
   - `main` 병합(rebase 후 fast-forward)은 `ExitWorktree`(keep)로 주 체크아웃에 돌아간 뒤 `git merge --ff-only <브랜치>`로 한다. 워크트리 안에서는 주 체크아웃을 대상으로 한 git 명령이 거부된다. 병합한 뒤에는 워크트리 디렉터리를 `trash-put`으로 지우고 `git worktree prune`을 실행한다
 - 작은 단위로 작업하고, 작업 단위 하나가 끝날 때마다 승인을 기다리지 않고 브랜치에 커밋한다
 - 브랜치의 작업이 모두 끝나면 변경 요약을 제시하고, `main` 병합은 사용자가 승인한 뒤에만 한다
@@ -159,25 +164,3 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
   4. `main`, 태그, `stable`을 push하고(`git push origin main v<버전> stable`) GitHub Release에 변경 요약을 올린다
   - 첫 공개 릴리스에서 `stable`을 처음 만든다. 그 전에는 `stable`이 없으므로 `README.md`의 `git clone -b stable`은 동작하지 않는다
   - 릴리스 뒤에 급한 수정이 필요하면 `main`에서 고치고 패치 버전으로 위 절차를 반복한다. 릴리스 브랜치를 따로 만들지 않는다
-
-## 나중에 확인할 것
-
-- provider 내부 RPC 경로(`GET /api/addons/{id}` → OMV)를 실제 OMV로 확인한다: 컨테이너(`Compose.getContainers`), SMART(`Smart.getList`, 관리자), cputemp(hwmon에 CPU 센서가 없을 때만). 지금은 Go 테스트(omvfake)로만 검증했다. `/api/rpc` 중계 통과 경로도 아직 실제 OMV로 확인하지 않았다
-- Podman 모드의 컨테이너 목록(미검증 표시 중)
-- 시스템 정보 창을 설치본(유닛 하드닝)에서 확인한다(사용자가). 프로세스 목록에 모든 PID와 사용자 이름이 나오는지(유닛에 `ProtectProc=`·`ProcSubset=`을 더하면 사라진다), 디스크 I/O 합계가 나오는지(`/sys/block`). 지금은 사용자 권한의 `make dev-fake`로만 확인했다
-- 컨테이너·서비스 조작을 실제 OMV로 확인한다(사용자가 `make dev`로). 컨테이너: `Compose.doContainerCommand` → `Exec.isRunning` 흐름, 실패한 docker 명령이 `Exec.isRunning` 예외로 오는지. 서비스: `Services.getStatus`의 실제 이름·값, 어댑터별 get → set(스키마 속성만) → `Config.applyChangesBg` → `Exec.isRunning` 흐름, 적용 대기 중 거절. 지금은 omvfake로만 검증했다
-
-- 설정 앱을 실제 OMV·설치본으로 확인한다(사용자가). 유닛 하드닝 아래에서 `site.json`·`images/` 쓰기와 이미지 올리기(리버스 프록시의 본문 크기 제한이 20MB보다 작으면 413), 워크벤치 주소·SMART 시각 덮어쓰기가 재시작 뒤에도 유지되는지. 지금은 가짜 OMV와 `make dev-fake`로만 확인했다
-- 프로필 저장을 실제 OMV로 확인한다(사용자가 `make dev`로). 관리자(일반 계정)는 저장 후 `/etc/passwd`의 GECOS·OMV 전자 우편이 바뀌고 적용 대기가 남지 않는지, 일반 사용자는 적용 대기가 생기는지, 내장 `admin`은 읽기 전용으로 보이는지, "OMV에서 사용자 편집"이 실제 편집 화면(`#/usermgmt/users/edit/<이름>`)을 여는지. 지금은 omvfake로만 확인했다
-- 강제 테마(라이트·다크)에서 묶음 로고(`<img>` 안 SVG의 `prefers-color-scheme`) 글자색이 따라가는지 Firefox·Safari에서 확인한다. Chromium에서는 따라간다. 따르지 않으면 로고를 `?raw`로 인라인한다
-- `install.sh`로 실제 설치한 뒤(사용자가 실행): 유닛 하드닝(`ProtectSystem=strict`, `DevicePolicy=closed`, `RestrictAddressFamilies` 등. `PrivateDevices=yes`는 `/dev/disk/by-label`을 숨겨 파일시스템 라벨이 사라지므로 쓰지 않는다) 아래에서 모든 애드온 데이터가 나오는지, Docker Caddy의 `/run/onmaru` 바인드 마운트가 서비스 재시작·재부팅 후에도 유지되는지. 지금은 `systemd-run --user`로 비슷한 제한을 걸어 가짜 OMV로만 확인했다
-- OMV 워크벤치 링크 앱을 실제 OMV로 확인한다(사용자가 `make dev`에 `ONMARU_WORKBENCH_URL`을 두고). 같은 탭을 다시 쓸 때 브라우저가 그 탭으로 전환하는지(Chrome·Firefox), 그 탭의 OMV 로그인이 유지되는지. 지금은 가짜 OMV와 같은 출처 주소로만 확인했다
-- 권한 도우미를 이 NAS(실제 설치)에서 확인한다(사용자가 `./install.sh`로 도우미와 함께 설치하고). 순정 OMV 8.3.1 테스트 VM(`~/.cache/onmaru-vm`)에서는 2026-10-17에 확인했다: 소켓 소유·`0600`과 onmaru의 connect, 다른 uid의 접속 거절(`forbidden_peer`, `rejected connection` 로그), 실제 강등(사용자 uid·보조 그룹, 남의 홈과 root 소유 `0600` 파일은 읽지 못함, 올린 파일의 소유자·`0664`), 상승(틀린·맞는 비밀번호, root uid 0, 5분 뒤 끝남, 사용해도 늘지 않음, 해제), `openmediavault-admin`만 있는 계정과 내장 `admin`의 상승 거절, 실패 제한, 하드닝(`CapBnd` `0xe0`, `NoNewPrivs`, seccomp, `systemd-analyze security` 1.8), 시작 뒤 `/srv`에 마운트한 디스크, 유휴 종료와 소켓 재활성화, 도우미 재시작 뒤 "다시 로그인 필요", `--upgrade`·`--no-helper`·`--uninstall`
-  - 남은 것: 이 NAS의 실제 계정·공유 폴더 ACL에서의 동작, Docker Caddy(`/run/onmaru` 바인드 마운트)와 함께 돌 때, 시간 초과로 worker를 강제 종료하는 경로(`CAP_KILL`), OMV 8.5의 2차 인증 계정에서 대기 티켓이 활성화되는지(VM은 8.3.1이라 2차 인증이 없다)
-- 웹 터미널을 이 NAS에서 확인한다(사용자가 `make dev`에 `ONMARU_TERMINAL=true`를 두거나 설치본에서). 순정 OMV 8.3.1 테스트 VM(`~/.cache/onmaru-vm`, `helper-test/term-test.sh`)에서는 2026-10-17에 실제 sshd·도우미로 확인했다: `_ssh` 밖 계정의 그룹 힌트, 도우미 임시 키로 비밀번호 없이 접속(`Accepted publickey ... from 127.0.0.1`, PTY, 접속 직후 키 줄 삭제, 감사 로그의 지문), 공개 키만 받는 sshd, 그룹 쓰기 가능한 홈의 `ssh_strict_modes`, 실제 PAM의 비밀번호 대체(틀린 비밀번호 재입력 포함)
-  - 남은 것: 이 NAS(공개 키만 받는 sshd)에서 자기 `_ssh` 계정으로 접속, 공유 폴더 위 홈(그룹 쓰기 가능)에서의 안내, Docker Caddy의 WebSocket 전달(Unix 소켓)과 Origin 검사, 설치본 유닛 하드닝 아래의 접속, OMV에서 SSH 포트를 바꿨을 때, keyboard-interactive(2차 인증 PAM)를 쓰는 sshd
-- 보안 강화 모드를 이 NAS와 실제 기기로 확인한다(사용자가). 테스트 VM(desk-test, OMV 8.3.1)에서는 2026-10-18에 Playwright 가상 인증기로 패스키 등록, 로그인 직후 패스키 확인, root 상승 전 패스키 확인과 재시도, 비밀번호 재확인(실제 OMV `Session.login` → `Logout`), 정책 변경 가드를 확인했고, 가짜 OMV(`make dev-fake`)에서 TOTP 등록(QR)·복구 코드·터미널 잠금 해제를 확인했다
-  - 남은 것: 실제 기기의 패스키(Android, iOS·macOS, Windows Hello, 보안 키)와 실제 인증 앱이 QR을 읽는지, OMV 8.5 2차 인증 계정의 로그인(→ 2차 인증 세션)과 비밀번호 재확인(`challengeRequired`), `install.sh`의 `--public-origin` 질문과 `--upgrade`에서 그것만 묻는지, 설치본 유닛 하드닝 아래 `security/` 쓰기
-  - VM에서 VM과 onmaru를 막 띄운 직후 첫 비밀번호 재확인 한 번이 OMV `Session.login` 15초 시간 초과로 실패했다(다시 하면 0.4초). VM 안에서 직접 부른 `Session.login`은 늘 빨랐다. 다시 나타나는지 지켜본다
-- (보류: 새 탭 방식을 택했다) 같은 출처에서 OMV workbench를 iframe 창으로 띄울 수 있는지
-- (보류) 같은 탭 iframe은 sessionStorage를 공유하므로, 대시보드 로그인 후 OMV 창도 로그인 상태로 보이게 할 수 있는지. OMV 내부 저장 키(`username`, `permissions`)에 의존하는 실험이라 OMV 업데이트 시 깨질 수 있다. 실험 브랜치에서만 다룬다
