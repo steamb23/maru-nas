@@ -19,8 +19,8 @@ paths:
 - 일반 전역 CSS다(CSS Modules 아님). 진입점은 `src/index.css` 하나이고 주석과 `@import` 목록만 둔다. 컴포넌트는 CSS를 직접 import하지 않는다(적용 순서를 모듈 그래프가 아니라 이 목록이 정하게)
   - 예외: 지연 청크에서만 쓰는 제3자 스타일(`@xterm/xterm/css/xterm.css`)은 그 보기 컴포넌트(`terminal/TerminalWindow.tsx`)가 import한다. 자기 클래스(`.xterm*`)만 다뤄 순서에 영향이 없고, 진입 CSS에 넣지 않기 위해서다. 덮어쓰는 규칙은 우리 CSS에서 명시도를 높여 둔다
 - 파일 위치는 클래스를 보고 짐작할 수 있게 정한다
-  1. 컴포넌트 폴더(`shell/`, `auth/`, `icons/`, `settings/`, `addons/` 루트): 클래스를 그리는 컴포넌트와 같은 이름으로 옆에 둔다(`Taskbar.tsx` → `Taskbar.css`)
+  1. 컴포넌트 폴더(`shell/`, `auth/`, `icons/`, `settings/`, `terminal/`, `addons/` 루트): 클래스를 그리는 컴포넌트와 같은 이름으로 옆에 둔다(`Taskbar.tsx` → `Taskbar.css`)
   2. 애드온 폴더(`addons/<id>/`, `addons/common/`): 폴더 이름의 파일 하나에 창·위젯 스타일을 함께 둔다(`addons/network/network.css`). 쓸 스타일이 없으면 만들지 않는다
   3. 여러 곳이 쓰는 클래스는 주인(이름 접두사를 가진 쪽) 파일 한 곳에만 둔다. 애드온 공통 클래스(`.addon-*`, `.widget-line` 등, `.status-dot`, `.row-*`)는 `addons/common/common.css`
   - 전역 토대(디자인 토큰, reset, `user-select`)는 `src/base.css`
-- 같은 명시도로 덮어쓰는 규칙은 덮이는 쪽보다 뒤 파일에 둔다(`index.css`의 import 순서: base → shell → auth → 애드온 공통 → 애드온별). 새 CSS 파일은 `index.css`에 반드시 추가한다. `src/styles.test.ts`가 빠진 파일을 잡는다
+- 같은 명시도로 덮어쓰는 규칙은 덮이는 쪽보다 뒤 파일에 둔다(`index.css`의 import 순서: base → icons → shell → auth → 애드온(루트·공통·애드온별) → terminal → settings). 새 CSS 파일은 `index.css`에 반드시 추가한다. `src/styles.test.ts`가 빠진 파일을 잡는다
