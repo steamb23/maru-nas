@@ -104,9 +104,17 @@ func TestSecurityPasswordConfirm(t *testing.T) {
 		t.Errorf("omv logins = %d, want %d", logins(), before+2)
 	}
 	// 확인에 쓴 OMV 세션은 바로 끝내고, 대시보드 세션은 그대로다.
-	last := e.fake.Calls()[len(e.fake.Calls())-1]
-	if last.Service != "Session" || last.Method != "logout" {
-		t.Errorf("last omv call = %s.%s", last.Service, last.Method)
+	logouts := func() int {
+		n := 0
+		for _, c := range e.fake.Calls() {
+			if c.Service == "Session" && c.Method == "logout" {
+				n++
+			}
+		}
+		return n
+	}
+	if logouts() != 1 {
+		t.Errorf("omv logouts = %d, want 1", logouts())
 	}
 	if s := decode[api.SessionInfo](t, b.do(http.MethodGet, "/api/session", nil)); s.Assurance != api.AssurancePassword {
 		t.Errorf("session = %+v", s)
@@ -117,6 +125,22 @@ func TestSecurityPasswordConfirm(t *testing.T) {
 	// OMV 2차 인증 계정도 비밀번호만 확인한다(challengeRequired는 비밀번호가 맞았다는 뜻).
 	a := e.strongAdmin()
 	wantStatus(t, a.do(http.MethodPost, "/api/security/verify", api.SecurityVerifyRequest{Method: api.FactorPassword, Password: "totp"}), http.StatusOK)
+	if logouts() != 2 {
+		t.Errorf("pending omv session not logged out: %d logouts", logouts())
+	}
+}
+
+func TestSecurityVerifyTouchesSession(t *testing.T) {
+	e := newEnv(t, envOptions{})
+	b := e.browser()
+	wantStatus(t, b.login("user", "user"), http.StatusOK)
+	// 로그인 직후 단계에서 수단을 찾느라 4분이 지났다. 확인하면 OMV 세션도 연장한다.
+	e.clk.Add(4 * time.Minute)
+	wantStatus(t, b.do(http.MethodPost, "/api/security/verify", api.SecurityVerifyRequest{Method: api.FactorPassword, Password: "user"}), http.StatusOK)
+	e.clk.Add(4 * time.Minute)
+	if s := decode[api.SessionInfo](t, b.do(http.MethodGet, "/api/session", nil)); s.ExpiresInSeconds == nil || *s.ExpiresInSeconds != 60 {
+		t.Fatalf("session = %+v", s)
+	}
 }
 
 func TestSecurityPasswordConfirmRateLimit(t *testing.T) {

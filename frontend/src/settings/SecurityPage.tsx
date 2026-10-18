@@ -101,7 +101,8 @@ export function SecurityPage() {
             <SettingsCard>
               <SettingsRow label={t('settings.security.assurance')} description={t(ASSURANCE_DESC_KEYS[data.assurance])}>
                 <span className={`settings-badge security-assurance ${data.assurance}`}>{t(ASSURANCE_KEYS[data.assurance])}</span>
-                {data.assurance !== 'twoFactor' && (
+                {/* 수단이 없으면 비밀번호 재확인까지만 할 수 있다 */}
+                {data.assurance !== 'twoFactor' && (data.methods.length > 0 || data.assurance === 'login') && (
                   <button type="button" className="addon-button" disabled={busy} onClick={() => void verifyNow()}>
                     {t('settings.security.verifyNow')}
                   </button>

@@ -50,6 +50,7 @@ export function ElevationForm({
             return
           } catch (again) {
             setError(elevationError(again))
+            setPassword('')
           }
         }
         setBusy(false)

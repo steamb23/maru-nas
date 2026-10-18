@@ -37,6 +37,8 @@ paths:
   - challenge는 대시보드 세션과 목적(`assert`, `register`)에 묶인 1회용이다(`challenges`, 5분). 사용자 핸들(`Record.Handle`)은 무작위이고 응답의 userHandle이 있으면 같아야 한다. 서명 횟수가 늘지 않으면 기록만 남긴다(동기화 패스키는 늘 0)
   - RP는 `-public-origin`(`ONMARU_PUBLIC_ORIGIN`, `security.ParseOrigin`: `https://호스트[:포트]`, IP 거부)에서 정한다. 비우면 패스키를 숨긴다. 웹에서 덮어쓰지 않는다
 - **관리 창**(`ManageUntil`, 5분): 수단 등록·삭제·복구 코드 다시 만들기 전에 비밀번호와(등록한 수단이 있으면) 그 수단을 함께 확인한다. 없으면 403 `manage_required`. 세션을 빼앗은 쪽이 자기 수단을 등록하지 못하게 한다
+- 확인(`verify`)·관리 확인(`manage`)이 성공하면 OMV 세션도 연장한다(`touchSession`, 활동 신호와 같다). 로그인 직후 단계에서는 활동 신호가 돌지 않기 때문이다. 그 단계에서 세션이 끝나면 프론트의 `expire`가 로그인 화면으로 돌린다
+- 첫 수단은 비밀번호만으로 등록된다(관리 창에 확인할 기존 수단이 없다). 그래서 비밀번호 유출은 수단을 이미 등록한 계정만 막는다(README의 한계)
 - **관리자 초기화**(`DELETE /api/security/users/{name}`): 관리자이면서 `twoFactor` 세션만 한다. 기록을 지우고 그 사용자의 대시보드 세션을 모두 끝낸다(`auth.Store.DeleteUser`, 삭제 훅이 도우미 티켓·터미널을 정리한다). 손상된 기록도 지운다
 
 ## 저장

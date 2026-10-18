@@ -176,6 +176,11 @@ export function createAuthStore({ api, resetWindows, now = Date.now, beforeScree
       },
 
       expire: () => {
+        // 로그인 직후 2차 인증을 권하는 동안 세션이 끝났으면(오래 기다림) 애니메이션 없이 로그인 화면으로 돌린다.
+        if (get().status === 'stepUp') {
+          set({ status: 'loggedOut', user: null, stepUp: null, notice: 'expired', expiresAt: null })
+          return
+        }
         if (get().status !== 'loggedIn' || signingOut) return
         const expired = () => set({ status: 'loggedOut', user: null, notice: 'expired', expiresAt: null })
         if (!beforeScreenChange) return expired()

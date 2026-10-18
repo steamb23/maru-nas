@@ -712,7 +712,7 @@ Summary
   listen        $S_LISTEN$allow_note
   OMV address   $S_OMV
   OMV Workbench $workbench
-  passkey origin $origin
+  passkeys      $origin
   SMART refresh $S_SMART
   helper        $helper
   state dir     $STATE_DIR

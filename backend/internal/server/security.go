@@ -218,6 +218,27 @@ func (h *handler) securityInfo(w http.ResponseWriter, _ *http.Request, s auth.Se
 	h.writeSecurityStatus(w, s)
 }
 
+// touchSession은 확인을 마친 세션의 OMV 마지막 접근 시각을 갱신한다(활동 신호와 같다). 확인 값을 입력한 것은
+// 사용자 활동이고, 로그인 직후 단계에서는 활동 신호가 돌지 않아 수단을 찾는 동안 세션이 만료에 가까워진다.
+// OMV에 닿지 않으면 그대로 둔다.
+func (h *handler) touchSession(ctx context.Context, s auth.Session) auth.Session {
+	now := h.Now()
+	st, err := h.OMV.Probe(ctx, s.OMVSessionID, true)
+	if err != nil {
+		if !omv.IsUnauthorized(err) {
+			log.Printf("security: touch session: omv error: %v", err)
+		}
+		return s
+	}
+	if upd, ok := h.Sessions.Update(s.ID, func(ss *auth.Session) {
+		ss.LastTouch, ss.LastOMVCheck = now, now
+		applyState(ss, st)
+	}); ok {
+		return upd
+	}
+	return s
+}
+
 // raise는 세션의 보증 수준을 올린 결과다. 그사이 세션이 지워졌으면 s를 그대로 돌려준다.
 func (h *handler) raise(s auth.Session, a auth.Assurance) auth.Session {
 	if upd, ok := h.Sessions.Update(s.ID, func(ss *auth.Session) { ss.Raise(a) }); ok {
@@ -248,7 +269,7 @@ func (h *handler) verifySecurity(w http.ResponseWriter, r *http.Request, s auth.
 		writeError(w, http.StatusBadRequest, api.ErrBadRequest, "unknown method")
 		return
 	}
-	upd := h.raise(s, level)
+	upd := h.touchSession(r.Context(), h.raise(s, level))
 	log.Printf("security: verified: user=%q ip=%s method=%s assurance=%s", s.Username, clientIP(r), req.Method, assuranceName(upd.Assurance))
 	h.writeSecurityStatus(w, upd)
 }
@@ -288,6 +309,7 @@ func (h *handler) manageSecurity(w http.ResponseWriter, r *http.Request, s auth.
 	if !ok {
 		upd = s
 	}
+	upd = h.touchSession(r.Context(), upd)
 	log.Printf("security: manage window opened: user=%q ip=%s", s.Username, clientIP(r))
 	h.writeSecurityStatus(w, upd)
 }

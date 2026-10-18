@@ -88,6 +88,12 @@ describe('login', () => {
     // 데스크톱에서는 아무 일도 하지 않는다.
     await skip.getState().finishStepUp('twoFactor')
     expect(skip.getState().user?.assurance).toBe('login')
+
+    // 권하는 동안 세션이 끝나면 로그인 화면으로 돌아간다.
+    const late = setup({ login: async () => stepped }).store
+    await late.getState().login('user', 'pw')
+    late.getState().expire()
+    expect(late.getState()).toMatchObject({ status: 'loggedOut', notice: 'expired', stepUp: null, user: null })
   })
 
   it('2차 인증이 필요하면 challenge를 거쳐 로그인한다', async () => {
