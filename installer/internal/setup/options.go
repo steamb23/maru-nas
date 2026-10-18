@@ -19,12 +19,15 @@ const (
 
 // Options는 설정이 아닌 명령줄 옵션이다.
 type Options struct {
-	Action  Action
-	Upgrade bool
-	NoBuild bool
-	DryRun  bool
-	Plain   bool
-	Help    bool
+	Action Action
+	// Upgrade는 --upgrade(기존 설치가 있어야 하고 확인 없이 진행), Reinstall은 --reinstall(모든 설정을 다시 묻는다)이다.
+	// 둘 다 없으면 기존 설치가 있는지로 정한다(resolveMode).
+	Upgrade   bool
+	Reinstall bool
+	NoBuild   bool
+	DryRun    bool
+	Plain     bool
+	Help      bool
 	// Lang은 --lang 값이다. 비면 로캘로 고른다.
 	Lang string
 }
@@ -73,6 +76,8 @@ func parseArgs(reg Registry, args []string) (Options, Values, error) {
 		switch name {
 		case "upgrade":
 			err, opts.Upgrade = noValue(), true
+		case "reinstall":
+			err, opts.Reinstall = noValue(), true
 		case "no-build":
 			err, opts.NoBuild = noValue(), true
 		case "dry-run":
@@ -114,8 +119,13 @@ func parseArgs(reg Registry, args []string) (Options, Values, error) {
 			return opts, nil, err
 		}
 	}
-	if opts.Upgrade && opts.Action == ActionUninstall {
+	switch {
+	case opts.Upgrade && opts.Reinstall:
+		return opts, nil, &usageError{"--upgrade and --reinstall cannot be used together"}
+	case opts.Upgrade && opts.Action == ActionUninstall:
 		return opts, nil, &usageError{"--upgrade cannot be used with --uninstall"}
+	case opts.Reinstall && opts.Action == ActionUninstall:
+		return opts, nil, &usageError{"--reinstall cannot be used with --uninstall"}
 	}
 	return opts, values, nil
 }
@@ -124,9 +134,12 @@ func parseArgs(reg Registry, args []string) (Options, Values, error) {
 func usage(reg Registry, lang, name string) string {
 	var b strings.Builder
 	if lang == "ko" {
-		fmt.Fprintf(&b, "사용법: %s [--upgrade] [--no-build | --uninstall | --service-install] [설정 옵션] [--lang en|ko]\n\n", name)
-		b.WriteString(`  (옵션 없음)        설정을 묻고 빌드한 뒤 설치하거나 업그레이드합니다. 설치 단계에서 필요하면 sudo를 사용합니다
-  --upgrade          기존 설치의 설정 그대로 묻지 않고 빌드한 뒤 업그레이드합니다
+		fmt.Fprintf(&b, "사용법: %s [--upgrade | --reinstall] [--no-build | --uninstall | --service-install] [설정 옵션] [--lang en|ko]\n\n", name)
+		b.WriteString(`  (옵션 없음)        설정을 묻고 빌드한 뒤 설치합니다. 이미 설치되어 있으면 설치된 설정으로 업그레이드합니다
+                     (기존 설치에 없는 설정만 묻고, 요약 뒤에 업그레이드·설정 바꾸기·취소를 고릅니다)
+                     설치 단계에서 필요하면 sudo를 사용합니다
+  --reinstall        설치된 값을 기본값으로 모든 설정을 다시 묻고 다시 설치합니다
+  --upgrade          설치된 설정으로 확인 없이 업그레이드합니다(스크립트용). 설치되어 있지 않으면 실패합니다
                      기존 설치에 없는 설정(새 버전에서 생긴 설정)만 묻습니다
   --no-build         빌드를 건너뛰고 기존 bin/onmaru를 설치합니다
   --uninstall        서비스, 실행 파일, 설정을 제거합니다
@@ -143,10 +156,13 @@ func usage(reg Registry, lang, name string) string {
 		b.WriteString("\n일반 사용자는 sudo 없이 실행하세요. 빌드는 그 사용자로 하고, 설치 단계만 sudo로 실행합니다.\n")
 		return b.String()
 	}
-	fmt.Fprintf(&b, "Usage: %s [--upgrade] [--no-build | --uninstall | --service-install] [settings] [--lang en|ko]\n\n", name)
-	b.WriteString(`  (no option)        ask for settings, build, then install or upgrade. Uses sudo for the install step when needed
-  --upgrade          build and upgrade with the installed settings, without questions
-                     only settings missing from the installation (new in this version) are asked
+	fmt.Fprintf(&b, "Usage: %s [--upgrade | --reinstall] [--no-build | --uninstall | --service-install] [settings] [--lang en|ko]\n\n", name)
+	b.WriteString(`  (no option)        ask for settings, build, then install. If onmaru is already installed, upgrade with the
+                     installed settings (only missing settings are asked; after the summary choose
+                     Upgrade, Change settings or Cancel). Uses sudo for the install step when needed
+  --reinstall        ask every setting again, with the installed values as defaults, then reinstall
+  --upgrade          upgrade with the installed settings without any confirmation (for scripts); fails if
+                     nothing is installed. Only settings missing from the installation (new in this version) are asked
   --no-build         skip the build and install the existing bin/onmaru
   --uninstall        remove the service, binary and settings
   --service-install  run only the install step, without building (root only). No questions if all settings are given

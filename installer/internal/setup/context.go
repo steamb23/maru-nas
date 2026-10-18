@@ -39,6 +39,13 @@ type Context struct {
 	Values    Values
 	Installed *Installed
 
+	// mode는 이 실행의 설치 방식이다(resolveMode).
+	mode installMode
+	// prefill은 "설정 바꾸기"에서 질문의 기본값으로 쓸 지금 값이다.
+	prefill Values
+	// invalid는 기존 설치에서 읽었지만 이 버전의 검사를 통과하지 못해 다시 묻는 설정과 그 오류다.
+	invalid map[string]error
+
 	// 단계 사이에 넘기는 값
 	build          bool // 1단계에서 빌드하는지
 	distWarned     bool // 프론트엔드 빌드가 없다고 이미 경고했는지
@@ -92,6 +99,13 @@ func (c *Context) confirm(q prompt.Confirm) (bool, error) {
 			fmt.Sprintf("%q 질문을 할 수 없습니다: 표준 입력이 터미널이 아닙니다", q.Title)).In(c.Lang))
 	}
 	return c.P.Confirm(q)
+}
+
+// withoutInstalled는 기존 설치를 보지 않는 Context 사본이다(기존 값이 잘못됐을 때의 기본값 계산용).
+func (c *Context) withoutInstalled() *Context {
+	cc := *c
+	cc.Installed = &Installed{}
+	return &cc
 }
 
 // binSrc 등은 저장소 안의 빌드 결과 경로다.

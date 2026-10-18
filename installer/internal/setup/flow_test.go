@@ -141,19 +141,6 @@ func TestFlowUpgradeNeedsInstallation(t *testing.T) {
 	}
 }
 
-// 기존 설치의 값이 이 버전의 검사를 통과하지 못하면 고치는 방법을 알리고 멈춘다.
-func TestFlowUpgradeInvalidInstalled(t *testing.T) {
-	f := installedFake(t)
-	env, _ := f.read(t, envFile)
-	f.put(t, envFile, strings.Replace(env, "ONMARU_SMART_REFRESH_AT=00:00", "ONMARU_SMART_REFRESH_AT=25:00", 1), 0o644)
-	c, out, _ := newTestContext(t, f, prompt.Fail{}, "--upgrade", "--no-build")
-	c.IsRoot = true
-	code, msg := ExitCode(Run(c))
-	if code != 1 || !strings.Contains(msg, "invalid time: 25:00") || !strings.Contains(out.String(), "without --upgrade to fix them") {
-		t.Errorf("got %d %q\n%s", code, msg, out)
-	}
-}
-
 // 도우미를 설치했다가 --no-helper로 다시 설치하면 도우미 파일과 유닛을 지운다.
 func TestFlowHelperRemoved(t *testing.T) {
 	f := installedFake(t)
@@ -483,6 +470,7 @@ func TestNoticeForceSSL(t *testing.T) {
 		t.Errorf("code %d\n%s", code, out)
 	}
 	c2, _, _ := newTestContext(t, f, prompt.Fail{}, "--upgrade")
+	c2.mode = modeUpgrade
 	if err := noticeForceSSL(c2); err != nil {
 		t.Error(err)
 	}

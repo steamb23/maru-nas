@@ -1,8 +1,10 @@
 // Package setup은 온마루 설치기다. 설정 레지스트리(settings.go)와 설치·제거 단계(steps.go)로 install.sh가 하던 일을 한다.
 //
-//	./install.sh                    1단계: 설정을 묻고 실행한 계정으로 빌드한다(일반 사용자 또는 root만 있는 환경의 root)
+//	./install.sh                    1단계: 설정을 묻고 실행한 계정으로 빌드한다(일반 사용자 또는 root만 있는 환경의 root).
+//	                                이미 설치되어 있으면 설치된 설정으로 업그레이드한다(mode.go)
 //	                                2단계: root가 아니면 sudo로 bin/onmaru-install --service-install을 실행한다
-//	./install.sh --upgrade          기존 설치의 설정 그대로 묻지 않고 빌드·설치한다. 기존 설치에 없는 설정만 묻는다
+//	./install.sh --reinstall        설치된 값을 기본값으로 모든 설정을 다시 묻는다
+//	./install.sh --upgrade          기존 설치의 설정 그대로 묻지 않고 빌드·설치한다(스크립트용). 기존 설치에 없는 설정만 묻는다
 //	./install.sh --service-install  2단계만 실행한다(root 전용). 설정을 모두 주면 묻지 않는다
 //	./install.sh --uninstall        제거한다(root가 아니면 sudo로 다시 실행한다)
 //	./install.sh --dry-run          바꾸는 작업 없이 쓸 파일의 차이와 실행할 명령만 보여 준다
@@ -132,7 +134,13 @@ func Run(c *Context) error {
 		if err := requireSystemd(c); err != nil {
 			return err
 		}
+		if err := resolveMode(c); err != nil {
+			return err
+		}
 		return installService(c)
+	}
+	if err := resolveMode(c); err != nil {
+		return err
 	}
 	return runInstall(c)
 }
@@ -144,10 +152,11 @@ func runInstall(c *Context) error {
 	// 저장소 소유자가 root가 아니면 root로 빌드하지 않는다.
 	if c.build && c.IsRoot {
 		if uid, owner := repoOwner(c); uid != 0 {
-			// --upgrade는 묻지 않으므로, 빌드하지 않은 예전 실행 파일을 몰래 설치하지 않고 멈춘다.
-			if c.Opts.Upgrade {
-				return fail(c.L("running as root on a repository owned by "+owner+": the build would create root-owned files. Run "+c.entry()+" --upgrade as that user without sudo, or add --no-build to install the existing "+c.binSrc()+".",
-					"root로 "+owner+" 소유 저장소에서 실행했습니다. root로 빌드하면 root 소유 파일이 생깁니다. 그 사용자로 sudo 없이 "+c.entry()+" --upgrade 를 실행하거나, 기존 "+c.binSrc()+" 를 설치하려면 --no-build를 더하세요."))
+			// --upgrade(또는 물을 수 없는 자동 업그레이드)는 묻지 않으므로, 빌드하지 않은 예전 실행 파일을 몰래
+			// 설치하지 않고 멈춘다.
+			if c.Opts.Upgrade || (c.autoUpgrade() && !c.Interactive && !c.Sys.DryRun()) {
+				return fail(c.L("running as root on a repository owned by "+owner+": the build would create root-owned files. Run "+c.entry()+" as that user without sudo, or add --no-build to install the existing "+c.binSrc()+".",
+					"root로 "+owner+" 소유 저장소에서 실행했습니다. root로 빌드하면 root 소유 파일이 생깁니다. 그 사용자로 sudo 없이 "+c.entry()+" 를 실행하거나, 기존 "+c.binSrc()+" 를 설치하려면 --no-build를 더하세요."))
 			}
 			c.Warn(L("running as root on a repository owned by "+owner+": the build is skipped to avoid root-owned files. To build, run "+c.entry()+" as that user without sudo.",
 				"root로 "+owner+" 소유 저장소에서 실행되어 빌드를 건너뜁니다(root 소유 파일이 생기지 않게). 빌드하려면 그 사용자로 sudo 없이 "+c.entry()+" 를 실행하세요."))
@@ -193,7 +202,7 @@ func repoOwner(c *Context) (int, string) {
 }
 
 // installService는 2단계다(root). 설정이 모두 정해져 있으면 묻지 않고 설치한다. root가 옵션 없이
-// --service-install을 직접 실행했다면 여기서 묻는다(--upgrade면 기존 설치에 없는 설정만).
+// --service-install을 직접 실행했다면 여기서 묻는다(업그레이드면 기존 설치에 없는 설정만).
 func installService(c *Context) error {
 	if err := requireBinary(c); err != nil {
 		return err
@@ -204,80 +213,63 @@ func installService(c *Context) error {
 	return runSteps(c, installSteps, PhaseRoot)
 }
 
-// settingsPhase는 설정을 정한다: --upgrade면 기존 설치에서 읽고, 빠진 설정을 묻고, 검사하고, 요약을 보여 주고,
-// 진행을 확인한다. always가 아니면(2단계) 설정이 모두 정해졌을 때 검사만 한다.
+// settingsPhase는 설정을 정한다. 업그레이드면 기존 설치에서 읽고(검사를 통과하지 못한 값은 버리고), 빠진 설정을
+// 묻고, 검사하고, 요약을 보여 준 뒤 확인한다. always가 아니면(2단계) 설정이 모두 정해졌을 때 검사만 한다.
+//   - 새 설치·다시 설치: "진행할까요?"
+//   - 자동 감지한 업그레이드: 터미널이면 업그레이드·설정 바꾸기·취소, 아니면 묻지 않는다
+//   - --upgrade, dry-run: 묻지 않는다
 func settingsPhase(c *Context, always bool) error {
-	if c.Opts.Upgrade {
-		if !c.Installed.UnitExists || c.Installed.Env == nil {
-			return fail(c.L("--upgrade needs an existing installation ("+unitFile+", "+envFile+"). Run "+c.entry()+" without --upgrade to install.",
-				"--upgrade는 기존 설치("+unitFile+", "+envFile+")가 있어야 합니다. 처음 설치라면 --upgrade 없이 "+c.entry()+" 를 실행하세요."))
-		}
-		c.Reg.load(c)
+	if c.upgrading() {
+		c.invalid = c.Reg.dropInvalid(c, c.Reg.load(c))
 	}
 	if !always && c.Reg.complete(c) {
-		return checkSettings(c)
+		return c.Reg.validate(c)
 	}
 	if err := askSettings(c); err != nil {
 		return err
 	}
-	if err := checkSettings(c); err != nil {
+	if err := c.Reg.validate(c); err != nil {
 		return err
 	}
 	if err := c.P.Note(c.L("Summary", "요약"), c.Reg.summary(c)); err != nil {
 		return err
 	}
-	// --upgrade는 확인 질문 없이 진행한다. dry-run은 쓰지 않으므로 확인할 것이 없다.
-	if c.Opts.Upgrade || c.Sys.DryRun() {
+	switch {
+	case c.Opts.Upgrade || c.Sys.DryRun():
 		return nil
+	case c.autoUpgrade():
+		if !c.Interactive {
+			return nil
+		}
+		return chooseUpgradeAction(c)
 	}
-	if !c.Interactive {
-		return fail(c.L("cannot ask \"Proceed?\": standard input is not a terminal. Without a terminal use --upgrade, or run --service-install as root with every setting option.",
-			"\"진행할까요?\" 질문을 할 수 없습니다: 표준 입력이 터미널이 아닙니다. 터미널 없이 설치하려면 --upgrade를 쓰거나, root로 설정 옵션을 모두 준 --service-install을 실행하세요."))
-	}
-	ok, err := c.P.Confirm(prompt.Confirm{ID: "proceed", Title: c.L("Proceed?", "진행할까요?"), Default: true})
-	if err != nil {
-		return err
-	}
-	if !ok {
-		return quit(0)
-	}
-	return nil
+	return confirmProceed(c)
 }
 
 // askSettings는 아직 정하지 않은 설정만 묻는다. 기존 설치가 있으면 그 값을 기본값으로 쓴다.
 // 물을 수 없으면(비TTY) 빠진 옵션 목록을 알리고 끝낸다.
 func askSettings(c *Context) error {
-	if c.Opts.Upgrade {
-		c.Info(L("Upgrading with the installed settings.", "기존 설치의 설정으로 업그레이드합니다."))
-		if !c.Reg.complete(c) {
-			c.Info(L("Some settings are new in this version. Please answer them.",
-				"이 버전에서 새로 생긴 설정이 있습니다. 그 설정만 입력해 주세요."))
-		}
-	} else if c.Installed.UnitExists {
-		c.Info(L("Existing installation found. Current settings are used as defaults.",
-			"기존 설치를 찾았습니다. 현재 설정을 기본값으로 씁니다."))
-	}
+	announceMode(c)
 	if missing := c.Reg.missing(c); len(missing) > 0 && !c.Interactive {
 		specs := make([]string, len(missing))
 		for i, s := range missing {
 			specs[i] = s.flagSpec()
 		}
-		return &exitError{code: 2, msg: c.L(
-			"standard input is not a terminal, so these settings cannot be asked; pass them as options: "+strings.Join(specs, ", "),
-			"표준 입력이 터미널이 아니라 다음 설정을 물을 수 없습니다. 옵션으로 주세요: "+strings.Join(specs, ", "))}
+		msg := c.L("standard input is not a terminal, so these settings cannot be asked; pass them as options: "+strings.Join(specs, ", "),
+			"표준 입력이 터미널이 아니라 다음 설정을 물을 수 없습니다. 옵션으로 주세요: "+strings.Join(specs, ", "))
+		var bad []string
+		for _, s := range c.Reg {
+			if err, ok := c.invalid[s.Name]; ok {
+				bad = append(bad, "--"+s.Name+" ("+err.Error()+")")
+			}
+		}
+		if len(bad) > 0 {
+			msg += c.L(". Not valid for this version in the existing installation: "+strings.Join(bad, "; ")+". Pass a valid value, or run with --reinstall",
+				". 기존 설치의 값이 이 버전의 검사를 통과하지 못했습니다: "+strings.Join(bad, "; ")+". 올바른 값을 옵션으로 주거나 --reinstall로 실행하세요")
+		}
+		return &exitError{code: 2, msg: msg}
 	}
 	return c.Reg.ask(c)
-}
-
-// checkSettings는 설정을 검사한다. --upgrade에서 기존 설치의 값이 이 버전의 검사를 통과하지 못하면 고치는 방법을
-// 먼저 알린다(검사가 엄격해졌거나 손으로 고친 설정 파일).
-func checkSettings(c *Context) error {
-	err := c.Reg.validate(c)
-	if err != nil && c.Opts.Upgrade {
-		c.Warn(L("the installed settings do not pass this version's checks. Run "+c.entry()+" without --upgrade to fix them.",
-			"기존 설치의 설정이 이 버전의 검사를 통과하지 못했습니다. --upgrade 없이 "+c.entry()+" 를 실행해 고치세요."))
-	}
-	return err
 }
 
 // asRoot는 2단계로 넘어간다. root(또는 dry-run)면 같은 프로세스에서 이어 가고, 아니면 1단계에서 정한 설정을
@@ -289,11 +281,8 @@ func asRoot(c *Context) error {
 		}
 		return installService(c)
 	}
-	args := c.Reg.stage2Args(c.Values)
-	// 2단계도 확인 질문 없이 진행한다.
-	if c.Opts.Upgrade {
-		args = append(args, "--upgrade")
-	}
+	// 2단계는 설정이 모두 정해졌으므로 묻지 않고, 1단계가 정한 설치 방식을 그대로 따른다.
+	args := append(c.Reg.stage2Args(c.Values), stage2ModeArgs(c)...)
 	return reexecSudo(c, "--service-install", args)
 }
 

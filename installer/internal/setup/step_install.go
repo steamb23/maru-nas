@@ -6,7 +6,7 @@ import "onmaru/backend/config"
 // 그대로 맞으므로 끝난 뒤의 안내를 줄인다. 파일을 다시 쓰기 전의 기존 설치와 비교한다.
 func stepProxyUnchanged(c *Context) error {
 	inst := c.Installed
-	c.proxyUnchanged = c.Opts.Upgrade && inst.UnitExists &&
+	c.proxyUnchanged = c.upgrading() && inst.UnitExists &&
 		inst.Env.Value(config.EnvListen) == c.Values.Get(nameListen) && inst.UnitUser == c.Values.Get(nameUser)
 	return nil
 }

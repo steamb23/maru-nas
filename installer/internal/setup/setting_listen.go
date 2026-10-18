@@ -107,6 +107,18 @@ func errInvalidAddress(c *Context, v string) error {
 		"주소가 올바르지 않습니다: "+v+" (IP:포트 형식, 예: 0.0.0.0:8090)"))
 }
 
+// currentListen은 수신 방식 질문의 기본값이 될 지금 수신 주소다. "설정 바꾸기"면 지금 값, 기존 설치의 값이 잘못됐으면
+// 없음(기본 루프백), 아니면 기존 설치의 값이다.
+func currentListen(c *Context) string {
+	if v, ok := c.prefill[nameListen]; ok {
+		return v
+	}
+	if _, bad := c.invalid[nameListen]; bad {
+		return ""
+	}
+	return c.Installed.Env.Value(config.EnvListen)
+}
+
 // 수신 방식 선택지
 const (
 	listenLoopback = "loopback"
@@ -117,7 +129,7 @@ const (
 // askListen은 리버스 프록시가 onmaru에 접속하는 방식을 고르게 하고 수신 주소를 정한다.
 // 기본 선택은 기존 설치의 수신 주소를 따른다.
 func askListen(c *Context) error {
-	cur := c.Installed.Env.Value(config.EnvListen)
+	cur := currentListen(c)
 	mode := listenLoopback
 	switch {
 	case strings.HasPrefix(cur, config.UnixPrefix):

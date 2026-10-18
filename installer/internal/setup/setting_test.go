@@ -163,9 +163,13 @@ func TestParseArgs(t *testing.T) {
 	if opts, _, _ := parseArgs(settings, []string{"--service-install"}); opts.Action != ActionServiceInstall {
 		t.Error("--service-install")
 	}
+	if opts, _, err := parseArgs(settings, []string{"--service-install", "--reinstall"}); err != nil || !opts.Reinstall {
+		t.Errorf("--reinstall: %+v %v", opts, err)
+	}
 	for _, bad := range [][]string{
 		{"--user"}, {"--user", ""}, {"--user="}, {"--lang", "fr"}, {"--upgrade=1"}, {"--helper=yes"}, {"--bogus"},
 		{"extra"}, {"-x"}, {"--upgrade", "--uninstall"}, {"--terminal"}, {"--"},
+		{"--upgrade", "--reinstall"}, {"--reinstall", "--uninstall"}, {"--reinstall=1"},
 	} {
 		if _, _, err := parseArgs(settings, bad); err == nil {
 			t.Errorf("%q accepted", bad)
@@ -181,7 +185,7 @@ func TestUsageListsEverySetting(t *testing.T) {
 				t.Errorf("%s usage misses %s", lang, s.flagSpec())
 			}
 		}
-		for _, o := range []string{"--upgrade", "--no-build", "--uninstall", "--service-install", "--dry-run", "--plain", "--lang en|ko", "--help"} {
+		for _, o := range []string{"--upgrade", "--reinstall", "--no-build", "--uninstall", "--service-install", "--dry-run", "--plain", "--lang en|ko", "--help"} {
 			if !strings.Contains(u, o) {
 				t.Errorf("%s usage misses %s", lang, o)
 			}

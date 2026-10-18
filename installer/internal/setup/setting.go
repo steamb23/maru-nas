@@ -115,9 +115,17 @@ func (s *Setting) active(v Values) bool { return s.When == nil || s.When(v) }
 // asked는 질문으로 정해야 하는 설정인지다.
 func (s *Setting) asked() bool { return s.Prompt != nil || s.Ask != nil }
 
+// defaultValue는 질문의 기본값이다. "설정 바꾸기"에서는 지금 값(c.prefill)을, 기존 설치의 값이 이 버전의 검사를
+// 통과하지 못했으면 기존 설치를 보지 않은 기본값을 쓴다.
 func (s *Setting) defaultValue(c *Context) string {
+	if v, ok := c.prefill[s.Name]; ok {
+		return v
+	}
 	if s.Default == nil {
 		return ""
+	}
+	if _, bad := c.invalid[s.Name]; bad {
+		return s.Default(c.withoutInstalled())
 	}
 	return s.Default(c)
 }
@@ -178,16 +186,38 @@ func (r Registry) missing(c *Context) []*Setting {
 // complete는 물을 설정이 남지 않았는지다.
 func (r Registry) complete(c *Context) bool { return len(r.missing(c)) == 0 }
 
-// load는 --upgrade에서 아직 정하지 않은 설정을 기존 설치에서 채운다. 기존 설치에 없는 설정은 비워 둔다.
-func (r Registry) load(c *Context) {
+// load는 업그레이드에서 아직 정하지 않은 설정을 기존 설치에서 채우고, 채운 설정을 돌려준다.
+// 기존 설치에 없는 설정은 비워 둔다.
+func (r Registry) load(c *Context) []*Setting {
+	var loaded []*Setting
 	for _, s := range r {
 		if s.Load == nil || c.Values.Has(s.Name) || !s.active(c.Values) {
 			continue
 		}
 		if v, ok := s.Load(c); ok {
 			c.Values.Set(s.Name, v)
+			loaded = append(loaded, s)
 		}
 	}
+	return loaded
+}
+
+// dropInvalid는 기존 설치에서 읽은 값 중 이 버전의 검사를 통과하지 못한 값을 정하지 않은 것으로 돌린다
+// (검사가 엄격해졌거나 손으로 고친 설정 파일). 그 설정은 다시 묻는다. 설정 이름별 검사 오류를 돌려준다.
+func (r Registry) dropInvalid(c *Context, loaded []*Setting) map[string]error {
+	invalid := map[string]error{}
+	for _, s := range loaded {
+		if s.Validate == nil || !s.active(c.Values) {
+			continue
+		}
+		if err := s.Validate(c, c.Values.Get(s.Name)); err != nil {
+			invalid[s.Name] = err
+		}
+	}
+	for name := range invalid {
+		c.Values.Unset(name)
+	}
+	return invalid
 }
 
 // ask는 아직 정하지 않은 설정만 순서대로 묻는다. Notice는 설정을 이미 정했어도 실행한다.
