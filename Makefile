@@ -1,4 +1,4 @@
-.PHONY: dev dev-fake dev-pick types build build-frontend build-backend lint test check
+.PHONY: dev dev-fake dev-pick types build build-frontend build-backend build-installer lint test check
 
 # 개발 서버 (백엔드 127.0.0.1:8090 + Vite 0.0.0.0:5173)
 # BRANCH=<브랜치>: 그 브랜치가 체크아웃된 git 워크트리의 코드로 실행한다(설정·상태는 주 체크아웃의 것)
@@ -18,8 +18,8 @@ dev-pick:
 types:
 	cd backend && go tool tygo generate && go run ./cmd/genaddons
 
-# 프론트엔드를 빌드해 실행 파일에 포함한 bin/onmaru와 권한 도우미 bin/onmaru-helper 생성
-build: build-frontend build-backend
+# 프론트엔드를 빌드해 실행 파일에 포함한 bin/onmaru와 권한 도우미 bin/onmaru-helper, 설치기 bin/onmaru-install 생성
+build: build-frontend build-backend build-installer
 
 build-frontend:
 	npm --prefix frontend run build
@@ -29,9 +29,15 @@ build-backend:
 	cd backend && go build -trimpath -o ../bin/onmaru ./cmd/onmaru
 	cd backend && CGO_ENABLED=0 go build -trimpath -o ../bin/onmaru-helper ./cmd/onmaru-helper
 
+# 설치기는 별도 Go 모듈(installer/)이다. install.sh도 같은 명령으로 빌드한다.
+build-installer:
+	cd installer && go build -trimpath -o ../bin/onmaru-install .
+
 lint:
 	@out=$$(cd backend && gofmt -l .); if [ -n "$$out" ]; then echo "gofmt 필요:"; echo "$$out"; exit 1; fi
+	@out=$$(cd installer && gofmt -l .); if [ -n "$$out" ]; then echo "gofmt 필요(installer):"; echo "$$out"; exit 1; fi
 	cd backend && go vet ./...
+	cd installer && go vet ./...
 	npm --prefix frontend run lint
 	npm --prefix frontend run typecheck
 
@@ -39,6 +45,7 @@ lint:
 # 추적하지 않으므로 생성물 검사가 캐시로 통과하지 않게 매번 실행한다.
 test:
 	cd backend && go test -count=1 ./...
+	cd installer && go test -count=1 ./...
 	npm --prefix frontend test
 
 check: lint test

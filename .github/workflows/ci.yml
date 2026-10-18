@@ -27,7 +27,10 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: backend/go.mod
-          cache-dependency-path: backend/go.sum
+          # 설치기는 별도 모듈이다(installer/go.mod의 go 버전은 backend/go.mod와 같게 둔다)
+          cache-dependency-path: |
+            backend/go.sum
+            installer/go.sum
 
       - uses: actions/setup-node@v4
         with:
