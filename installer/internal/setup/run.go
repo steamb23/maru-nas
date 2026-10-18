@@ -9,6 +9,7 @@
 //	./install.sh --uninstall        제거한다(root가 아니면 sudo로 다시 실행한다)
 //	./install.sh --dry-run          바꾸는 작업 없이 쓸 파일의 차이와 실행할 명령만 보여 준다
 //	./install.sh --upgrade-plan     기존 설치를 읽기만 하고 이 버전으로의 업그레이드 계획을 JSON으로 출력한다(plan.go)
+//	onmaru-install --upgrade-service  대시보드에서 업그레이드의 요청 하나를 처리한다(onmaru-upgrade.service, upgrade_service.go)
 //
 // 리버스 프록시 설정은 하지 않는다. 생성하는 설정 파일(유닛, /etc/default/*)의 주석은 언어와 상관없이 영어로 쓴다.
 package setup
@@ -124,6 +125,13 @@ func Run(c *Context) error {
 		// 계획은 읽기만 한다. 설치 방식을 정하지 않고(방식 안내·일부 설치 경고가 필요 없다) 아무것도 묻지 않는다.
 		c.P = prompt.Fail{}
 		return runUpgradePlan(c)
+	case ActionUpgradeService:
+		// 업그레이드 서비스는 저장소 밖의 root 소유 복사본으로 돌므로 c.RepoDir를 쓰지 않는다(저장소는 설정 파일에서 정한다).
+		c.P = prompt.Fail{}
+		if err := requireSystemd(c); err != nil {
+			return err
+		}
+		return runUpgradeService(c)
 	case ActionUninstall:
 		if !c.IsRoot && !c.Sys.DryRun() {
 			return reexecSudo(c, "--uninstall", nil)
