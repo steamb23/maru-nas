@@ -457,7 +457,8 @@ func (s *upgradeService) runApply(data []byte, rerr, cfgErr error) error {
 	var req config.UpgradeApplyRequest
 	valid := rerr == nil && json.Unmarshal(data, &req) == nil && validApplyRequest(req)
 	s.status.State, s.status.Error = config.UpgradeStateApplying, nil
-	s.status.Apply = &config.UpgradeApply{Target: req.Target, User: clip(req.User, 64), RequestedAt: clip(req.RequestedAt, 64), StartedAt: s.stamp()}
+	// 요청이 올바르지 않을 수 있으므로 상태 파일에 옮기는 값은 길이를 자른다.
+	s.status.Apply = &config.UpgradeApply{Target: clip(req.Target, 64), User: clip(req.User, 64), RequestedAt: clip(req.RequestedAt, 64), StartedAt: s.stamp()}
 	if err := s.stage(config.UpgradeStageInspect); err != nil {
 		return err
 	}
