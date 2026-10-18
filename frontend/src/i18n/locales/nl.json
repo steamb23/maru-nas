@@ -399,7 +399,7 @@
       "overriddenBadge": "Hier gewijzigd",
       "howTo": "Andere instellingen wijzigen",
       "howToDesc": "Deze waarden zijn omgevingsvariabelen in /etc/default/onmaru. Herstart de dienst na het bewerken. Als je het luisteradres wijzigt, pas dan ook de reverse proxy aan.",
-      "howToInstall": "Je kunt ook ./install.sh vanuit de repository opnieuw uitvoeren en de vragen beantwoorden.",
+      "howToInstall": "Je kunt ook ./install.sh --reinstall vanuit de repository opnieuw uitvoeren en de vragen beantwoorden.",
       "copy": "Opdrachten kopiëren",
       "copied": "Gekopieerd",
       "sources": {

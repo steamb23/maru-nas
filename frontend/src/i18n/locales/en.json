@@ -496,7 +496,7 @@
       "overriddenBadge": "Changed here",
       "howTo": "Changing other settings",
       "howToDesc": "These values are environment variables in /etc/default/onmaru. Restart the service after editing. If you change the listen address, update the reverse proxy too.",
-      "howToInstall": "You can also run ./install.sh again from the repository and answer its questions.",
+      "howToInstall": "You can also run ./install.sh --reinstall again from the repository and answer its questions.",
       "copy": "Copy commands",
       "copied": "Copied",
       "sources": {
@@ -532,7 +532,7 @@
         "active": "Active"
       },
       "stateDesc": {
-        "disabled": "Run ./install.sh again and choose to install the helper.",
+        "disabled": "Run ./install.sh --reinstall again and choose to install the helper.",
         "unavailable": "Onmaru can't reach the helper. Check systemctl status onmaru-helper.socket on the server.",
         "none": "The helper didn't accept this account when you signed in (for example a system account, or it was unreachable). Signing in again retries.",
         "reauth": "The helper restarted and no longer knows this session. Sign out and sign in again.",
@@ -648,7 +648,7 @@
       "noAutoLogout": "OpenMediaVault auto logout is off, so a checked session stays checked until sign-out. Turn on auto logout in the OMV web UI.",
       "passkeys": "Passkeys",
       "passkeysOn": "Available for {{rpId}}.",
-      "passkeysOff": "Set the public dashboard address (ONMARU_PUBLIC_ORIGIN in /etc/default/onmaru, or ./install.sh) to use passkeys. Authenticator apps work without it.",
+      "passkeysOff": "Set the public dashboard address (ONMARU_PUBLIC_ORIGIN in /etc/default/onmaru, or ./install.sh --reinstall) to use passkeys. Authenticator apps work without it.",
       "available": "Available",
       "unavailable": "Unavailable",
       "users": "Users’ sign-in methods",

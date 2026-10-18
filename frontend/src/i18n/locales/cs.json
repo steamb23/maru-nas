@@ -411,7 +411,7 @@
       "overriddenBadge": "Změněno zde",
       "howTo": "Změna ostatních nastavení",
       "howToDesc": "Tyto hodnoty jsou proměnné prostředí v /etc/default/onmaru. Po úpravě službu restartujte. Pokud změníte adresu pro naslouchání, upravte i reverzní proxy.",
-      "howToInstall": "Můžete také znovu spustit ./install.sh z repozitáře a odpovědět na jeho otázky.",
+      "howToInstall": "Můžete také znovu spustit ./install.sh --reinstall z repozitáře a odpovědět na jeho otázky.",
       "copy": "Kopírovat příkazy",
       "copied": "Zkopírováno",
       "sources": {

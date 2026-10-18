@@ -405,7 +405,7 @@
       "overriddenBadge": "Modificato qui",
       "howTo": "Cambiare le altre impostazioni",
       "howToDesc": "Questi valori sono variabili d'ambiente in /etc/default/onmaru. Dopo averli modificati, riavvia il servizio. Se cambi l'indirizzo di ascolto, aggiorna anche il reverse proxy.",
-      "howToInstall": "Puoi anche eseguire di nuovo ./install.sh dal repository e rispondere alle domande.",
+      "howToInstall": "Puoi anche eseguire di nuovo ./install.sh --reinstall dal repository e rispondere alle domande.",
       "copy": "Copia i comandi",
       "copied": "Copiati",
       "sources": {

@@ -411,7 +411,7 @@
       "overriddenBadge": "Zmieniono tutaj",
       "howTo": "Zmiana innych ustawień",
       "howToDesc": "Te wartości to zmienne środowiskowe w /etc/default/onmaru. Po edycji uruchom ponownie usługę. Jeśli zmienisz adres nasłuchiwania, zaktualizuj też odwrotne proxy.",
-      "howToInstall": "Możesz też ponownie uruchomić ./install.sh z repozytorium i odpowiedzieć na pytania.",
+      "howToInstall": "Możesz też ponownie uruchomić ./install.sh --reinstall z repozytorium i odpowiedzieć na pytania.",
       "copy": "Kopiuj polecenia",
       "copied": "Skopiowano",
       "sources": {

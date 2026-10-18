@@ -393,7 +393,7 @@
       "overriddenBadge": "已在這裡變更",
       "howTo": "變更其他設定",
       "howToDesc": "這些值是 /etc/default/onmaru 中的環境變數。編輯後需重新啟動服務才會生效。如果變更了監聽位址，也請一併更新反向代理的設定。",
-      "howToInstall": "也可以在存放庫中重新執行 ./install.sh 並回答問題。",
+      "howToInstall": "也可以在存放庫中重新執行 ./install.sh --reinstall 並回答問題。",
       "copy": "複製指令",
       "copied": "已複製",
       "sources": {
