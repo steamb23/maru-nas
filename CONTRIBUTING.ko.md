@@ -57,7 +57,7 @@ make dev-fake
 
 ## 코드 규칙
 
-- 백엔드는 Go 표준 라이브러리를 쓰고, 웹 터미널에만 `golang.org/x/crypto/ssh`와 `github.com/coder/websocket`을 씁니다. 권한 도우미에는 둘 다 링크하지 않습니다. 프론트엔드는 TypeScript, Vite, React, Zustand이고 웹 터미널에 xterm.js를 씁니다.
+- 백엔드는 Go 표준 라이브러리를 쓰고, 웹 터미널에만 `golang.org/x/crypto/ssh`와 `github.com/coder/websocket`을 씁니다. 권한 도우미에는 둘 다 링크하지 않습니다. 프론트엔드는 TypeScript, Vite, React, Zustand이고 웹 터미널에 xterm.js, 인증 앱 QR 코드에 uqr를 씁니다.
 - 의존성을 추가하기 전에 왜 필요한지와 대안이 무엇이었는지 풀 리퀘스트에 설명해 주세요.
 - `backend/internal/api`의 구조체나 애드온 manifest를 바꾸면 `make types`를 실행하고 생성물(`frontend/src/api/types.gen.ts`, `frontend/src/addons/manifests.gen.ts`)을 함께 커밋합니다. 테스트가 최신 상태인지 검사합니다.
 - 식별자, 로그, 에러 메시지는 영어로 유지합니다.
@@ -70,7 +70,7 @@ make dev-fake
 - 서비스 프로세스는 권한을 올리지 않습니다. root가 필요한 정보와 변경은 로그인한 사용자 자신의 OMV 세션으로 OMV RPC API를 거칩니다.
 - `omv-rpc`를 호출하거나, OMV 엔진 소켓에 붙거나, Docker·Podman 소켓을 직접 읽는 코드는 추가하지 않습니다. 서비스 사용자를 `docker`나 `openmediavault-engined` 그룹에 넣는 풀 리퀘스트는 받지 않습니다.
 - OMV RPC로 할 수 없는 권한 작업(사용자 자신의 파일, root 작업)은 권한 도우미(`backend/cmd/onmaru-helper`)의 정해진 연산으로만 합니다. 임의 명령을 실행하는 기능은 없습니다. root 연산을 더하려면 이슈에서 먼저 상의해 주세요.
-- 비밀번호, OMV 세션 ID, 토큰을 로그·테스트 픽스처·커밋에 남기지 않습니다.
+- 비밀번호, OMV 세션 ID, 토큰을 로그·테스트 픽스처·커밋에 남기지 않습니다. 보안 강화 모드의 인증 앱 비밀 키와 복구 코드도 비밀 값입니다.
 - 테스트 픽스처(`testdata/` 등)에는 합성한 값만 씁니다. 디스크 시리얼, MAC·IP 주소, 호스트 이름, 사용자 이름은 가짜 값으로 바꿉니다.
 - 도메인, IP 주소 같은 개인 환경 정보는 git이 무시하는 `*.local.md` 파일에 둡니다. 커밋되는 파일에 하드코딩하지 않습니다.
 

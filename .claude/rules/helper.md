@@ -23,6 +23,7 @@ paths:
 - 유닛의 권한(`CapabilityBoundingSet`, `ReadWritePaths` 등)은 연산이 실제로 필요한 만큼만 둔다. 늘리면 `install.sh`, `README.md`의 보안 설계, `.claude/docs/helper.md`를 함께 고친다
 - onmaru 쪽: 티켓은 `auth.Session.HelperTicket`에만 두고 응답에 넣지 않는다. 세션 삭제 훅이 폐기하므로 세션을 지우는 새 경로를 만들어도 따로 닫지 않는다. 2차 인증을 마친 대기는 `ClaimPending`으로 꺼낸다(`DeletePending`은 티켓을 폐기한다)
 - 상승 API는 관리자 전용(`requireAdmin`)이다. root 권한이 필요한 화면은 `elevation_required`를 받으면 `requestElevation`(`shell/elevationDialog.tsx`)으로 상승한 뒤 다시 시도한다
+- 보안 강화 정책(`security.elevation`)을 채우지 못한 세션의 상승은 도우미를 부르기 전에 403 `security_required`로 막는다. `ElevationForm`이 확인(`requestStepUp`) 뒤 같은 비밀번호로 다시 시도한다. 확인은 onmaru가 하고 도우미에 넣지 않는다(`.claude/rules/security.md`)
 
 ## 테스트
 

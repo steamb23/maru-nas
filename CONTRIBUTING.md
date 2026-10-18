@@ -57,7 +57,7 @@ Useful commands (run from the repository root):
 
 ## Code rules
 
-- The backend uses the Go standard library, plus `golang.org/x/crypto/ssh` and `github.com/coder/websocket` for the web terminal only. The privileged helper links neither. The frontend is TypeScript, Vite, React and Zustand, plus xterm.js for the web terminal.
+- The backend uses the Go standard library, plus `golang.org/x/crypto/ssh` and `github.com/coder/websocket` for the web terminal only. The privileged helper links neither. The frontend is TypeScript, Vite, React and Zustand, plus xterm.js for the web terminal and uqr for the authenticator-app QR code.
 - Before adding a dependency, explain in the pull request why it is needed and what the alternatives were.
 - If you change a struct under `backend/internal/api` or an addon manifest, run `make types` and commit the generated files (`frontend/src/api/types.gen.ts`, `frontend/src/addons/manifests.gen.ts`). Tests check that they are up to date.
 - Identifiers, log messages and error messages stay in English.
@@ -70,7 +70,7 @@ Onmaru runs as an unprivileged system user and must stay that way.
 - The service process never escalates privileges. Information and changes that need root go through the OMV RPC API, using the signed-in user's own OMV session.
 - Do not add code that calls `omv-rpc`, connects to the OMV engine socket or reads the Docker or Podman socket directly. We do not accept pull requests that add the service user to the `docker` or `openmediavault-engined` group.
 - Privileged work that OMV RPC cannot do (a user's own files, root operations) goes only through the privileged helper (`backend/cmd/onmaru-helper`), as typed operations from its fixed list. There is no generic command execution. Adding a root operation must be discussed in an issue first.
-- Never put passwords, OMV session IDs or tokens in logs, test fixtures or commits.
+- Never put passwords, OMV session IDs or tokens in logs, test fixtures or commits. Authenticator-app secrets and recovery codes of the security hardening mode count as secrets too.
 - Test fixtures (`testdata/` and the like) contain synthetic data only. Replace disk serials, MAC and IP addresses, host names and user names with fake values.
 - Personal environment details (domains, IP addresses) belong in `*.local.md` files, which are ignored by git. Do not hardcode them in committed files.
 

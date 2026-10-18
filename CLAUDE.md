@@ -4,7 +4,7 @@
 
 OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표시줄·아이콘이 있는 데스크톱형 웹 대시보드.
 
-영역별 상세 규칙은 `.claude/rules/`에 있고 해당 파일을 다룰 때 로드된다: `auth-omv.md`(OMV 8 동작, 인증 설계), `backend.md`, `helper.md`(권한 도우미), `terminal.md`(웹 터미널), `frontend.md`, `frontend-shell.md`(창·작업표시줄·애니메이션), `i18n.md`, `icons.md`. 작업 전 설계를 논의할 때는 해당 파일을 직접 읽는다.
+영역별 상세 규칙은 `.claude/rules/`에 있고 해당 파일을 다룰 때 로드된다: `auth-omv.md`(OMV 8 동작, 인증 설계), `backend.md`, `helper.md`(권한 도우미), `terminal.md`(웹 터미널), `security.md`(보안 강화 모드), `frontend.md`, `frontend-shell.md`(창·작업표시줄·애니메이션), `i18n.md`, `icons.md`. 작업 전 설계를 논의할 때는 해당 파일을 직접 읽는다.
 
 ## 목표와 범위
 
@@ -42,11 +42,12 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
     - `--upgrade`는 기존 설치(유닛의 `User=`, `/etc/default/onmaru`)의 설정으로 질문·확인 없이 진행하고, 기존 설치에 없는 설정만 묻는다. 설치 설정을 새로 더하면 `load_installed_settings`에서도 읽게 한다
   - 사용자 대상 설치·설정·프록시 안내는 `README.md`에 둔다. 플래그를 추가·변경하면 `README.md`의 설정 표와 `install.sh`도 함께 고친다
 - **백엔드는 얇은 API 서버**다. 역할은 (1) 현황 읽기: `/proc`·`/sys` 직접 읽기, root가 필요한 정보는 OMV RPC, (2) 설정 변경 요청을 OMV `rpc.php`로 전달, (3) 대시보드 설정(사용자별 위젯 배치·바로가기·화면 설정, 관리자의 전역 설정, 배경 이미지) 저장, 세 가지뿐이다. OMV RPC로 할 수 없는 권한 작업은 (4) 권한 도우미에 맡긴다(아래 "권한 도우미"). (5) 웹 터미널은 같은 호스트의 sshd에 SSH 클라이언트로 붙어 셸을 중계한다(아래 "웹 터미널")
-  - (3)은 대시보드 자신의 상태만 다룬다. 상태 디렉터리(`-state-dir`, systemd `StateDirectory=`)의 사용자별 JSON 파일, 관리자가 바꾸는 전역 설정(`site.json`), 올린 배경 이미지(`images/`)이며 OMV 설정·시스템 파일과 무관하다(`internal/prefs`)
-  - 설정 창 앱(`src/settings/`)이 프로필(사진, 자기 OMV 계정의 전자 우편·태그), 화면(테마·바탕화면) 같은 사용자 설정과 관리자 전용 전역 설정(로그인 화면, 기본 화면, 서버), 정보 페이지를 맡는다. 전역에 적용되는 설정은 관리자만 바꾼다. 그 밖의 OMV·OS 설정은 넣지 않고, 넣게 되면 페이지 그룹으로 더한다
+  - (3)은 대시보드 자신의 상태만 다룬다. 상태 디렉터리(`-state-dir`, systemd `StateDirectory=`)의 사용자별 JSON 파일, 관리자가 바꾸는 전역 설정(`site.json`), 올린 배경 이미지(`images/`), 보안 강화 모드의 인증 수단 기록(`security/`)이며 OMV 설정·시스템 파일과 무관하다(`internal/prefs`)
+  - 설정 창 앱(`src/settings/`)이 프로필(사진, 자기 OMV 계정의 전자 우편·태그), 화면(테마·바탕화면), 보안(인증 수단) 같은 사용자 설정과 관리자 전용 전역 설정(로그인 화면, 기본 화면, 서버, 보안 정책), 정보 페이지를 맡는다. 전역에 적용되는 설정은 관리자만 바꾼다. 그 밖의 OMV·OS 설정은 넣지 않고, 넣게 되면 페이지 그룹으로 더한다
   - 가동 설정 중 재시작 없이 바뀌는 워크벤치 주소, SMART 확인 시각, 웹 터미널 허용만 웹에서 덮어쓴다(`site.json`, 플래그보다 우선). 나머지는 `/etc/default/onmaru`를 root가 고치며, 웹에서 sudo로 바꾸는 방식은 `ROADMAP.md`에 있다
 - **권한 도우미**(`onmaru-helper`, `install.sh`가 기본으로 설치하고 `--no-helper`로 뺄 수 있다): root로 도는 별도 실행 파일이 systemd 소켓 활성화(`/run/onmaru-helper/helper.sock`)로 onmaru 서비스 사용자의 연결만 받는다. 로그인할 때 도우미가 비밀번호를 `unix_chkpwd`로 직접 확인해 세션에 티켓을 주고, 연산마다 자식 프로세스를 그 사용자 권한으로 강등해 실행한다(홈과 `/srv` 아래 마운트의 파일 연산). root 연산은 `openmediavault-admin`과 상승 그룹(기본 `sudo`)에 속한 관리자가 비밀번호를 다시 입력하면 그 세션에서 5분 동안만, 정해진 목록에서만 쓸 수 있다(지금은 `id`뿐). onmaru 쪽 설정은 `-helper-socket`(비우면 끔). 상세는 `.claude/docs/helper.md`, 규칙은 `.claude/rules/helper.md`
 - **웹 터미널**(`internal/terminal`, 기본 꺼짐, `-terminal`·설정 앱으로 허용): 백엔드가 `127.0.0.1`의 sshd에 대시보드 세션 사용자로만 접속해 WebSocket(`/api/terminal`)으로 셸을 중계한다. TTY를 직접 띄우지 않으므로 도우미에 셸·명령 실행 연산을 두지 않는 규칙은 그대로다. 누가 들어갈 수 있는지는 OMV의 SSH 설정(`AllowGroups`, 인증 방식)이 정한다. 인증은 도우미 임시 키(`ssh.authorize`, 2분짜리 `authorized_keys` 줄) → sshd가 묻는 비밀번호 중계 순서다. 상세는 `.claude/rules/terminal.md`, 사용자 설명은 `README.md`의 "웹 터미널"
+- **보안 강화 모드**(`internal/security`, 정책은 `site.json`의 `security`): 웹 터미널·root 권한 상승을 세션의 보증 수준(`auth.Session.Assurance`: 로그인 < 비밀번호 재확인 < 2차 인증)으로 막는다. 2차 인증은 패스키(WebAuthn, CBOR 없이 표준 라이브러리)·TOTP·복구 코드·OMV 2차 인증이고, 확인은 onmaru가 하며 도우미에 넣지 않는다. 수단 기록은 상태 디렉터리의 `security/<이름>.json`(0600, 읽을 수 없으면 비우지 않고 오류). 패스키의 RP는 `-public-origin`이다. 상세는 `.claude/rules/security.md`, 사용자 설명은 `README.md`의 "보안 강화 모드"
 - **OMV RPC는 항상 백엔드가 중계한다**: 브라우저 → `/api/rpc` → 백엔드 → OMV `rpc.php`. 브라우저가 `rpc.php`를 직접 호출하지 않는다
   - 백엔드는 대시보드 세션마다 OMV 세션을 메모리에 보관하고, 항상 같은 주소(127.0.0.1)와 고정 User-Agent로 OMV를 호출한다
   - 브라우저의 쿠키를 OMV에 그대로 전달하지 않는다. OMV는 User-Agent가 다르면 세션을 파기하므로 사용자를 로그아웃시키게 된다
@@ -55,7 +56,7 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 ## 기술 스택
 
 - **백엔드**: Go 표준 라이브러리 위주(`backend/`). 런타임 외부 의존성은 웹 터미널의 `golang.org/x/crypto/ssh`와 `github.com/coder/websocket`뿐이며, 권한 도우미 실행 파일에는 링크하지 않는다
-- **프론트엔드**: TypeScript + Vite + React(`frontend/`), 창 상태는 Zustand 단일 저장소(`windows[]`). 웹 터미널 화면은 xterm.js(터미널 창의 지연 청크에만 싣는다). 린트 oxlint, 테스트 Vitest(DOM 환경 없이 순수 함수·저장소만)
+- **프론트엔드**: TypeScript + Vite + React(`frontend/`), 창 상태는 Zustand 단일 저장소(`windows[]`). 웹 터미널 화면은 xterm.js(터미널 창의 지연 청크에만 싣는다), 인증 앱 등록의 QR 코드는 uqr(등록 대화상자의 지연 청크에만 싣는다). 린트 oxlint, 테스트 Vitest(DOM 환경 없이 순수 함수·저장소만)
 - **타입 공유**: tygo로 `backend/internal/api` → `frontend/src/api/types.gen.ts`. 생성물은 커밋하며 직접 수정하지 않는다
 - **현지화**: 1차 지원 `en`, `ko`는 항상 완전하게 두고, 나머지 언어(`languages.ts`의 `SUPPORTED_LANGUAGES`)는 기여나 일괄 번역으로 채운다. 화면 문구(aria-label·title 포함)는 모두 `t()`를 거치고, 새 키는 `en.json`과 `ko.json`에 함께 넣는다. 로그인 대기 이스터에그 문구와 로그인 화면의 브랜드 영역(한글 이름, 로마자 표기, 태그라인)은 현지화 제외
 - **아이콘**: Colloid 테마 하나만, 리졸버 `getIcon(name)`으로 freedesktop 이름을 써서 가져온다
@@ -173,5 +174,8 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
   - 남은 것: 이 NAS의 실제 계정·공유 폴더 ACL에서의 동작, Docker Caddy(`/run/onmaru` 바인드 마운트)와 함께 돌 때, 시간 초과로 worker를 강제 종료하는 경로(`CAP_KILL`), OMV 8.5의 2차 인증 계정에서 대기 티켓이 활성화되는지(VM은 8.3.1이라 2차 인증이 없다)
 - 웹 터미널을 이 NAS에서 확인한다(사용자가 `make dev`에 `ONMARU_TERMINAL=true`를 두거나 설치본에서). 순정 OMV 8.3.1 테스트 VM(`~/.cache/onmaru-vm`, `helper-test/term-test.sh`)에서는 2026-10-17에 실제 sshd·도우미로 확인했다: `_ssh` 밖 계정의 그룹 힌트, 도우미 임시 키로 비밀번호 없이 접속(`Accepted publickey ... from 127.0.0.1`, PTY, 접속 직후 키 줄 삭제, 감사 로그의 지문), 공개 키만 받는 sshd, 그룹 쓰기 가능한 홈의 `ssh_strict_modes`, 실제 PAM의 비밀번호 대체(틀린 비밀번호 재입력 포함)
   - 남은 것: 이 NAS(공개 키만 받는 sshd)에서 자기 `_ssh` 계정으로 접속, 공유 폴더 위 홈(그룹 쓰기 가능)에서의 안내, Docker Caddy의 WebSocket 전달(Unix 소켓)과 Origin 검사, 설치본 유닛 하드닝 아래의 접속, OMV에서 SSH 포트를 바꿨을 때, keyboard-interactive(2차 인증 PAM)를 쓰는 sshd
+- 보안 강화 모드를 이 NAS와 실제 기기로 확인한다(사용자가). 테스트 VM(desk-test, OMV 8.3.1)에서는 2026-10-18에 Playwright 가상 인증기로 패스키 등록, 로그인 직후 패스키 확인, root 상승 전 패스키 확인과 재시도, 비밀번호 재확인(실제 OMV `Session.login` → `Logout`), 정책 변경 가드를 확인했고, 가짜 OMV(`make dev-fake`)에서 TOTP 등록(QR)·복구 코드·터미널 잠금 해제를 확인했다
+  - 남은 것: 실제 기기의 패스키(Android, iOS·macOS, Windows Hello, 보안 키)와 실제 인증 앱이 QR을 읽는지, OMV 8.5 2차 인증 계정의 로그인(→ 2차 인증 세션)과 비밀번호 재확인(`challengeRequired`), `install.sh`의 `--public-origin` 질문과 `--upgrade`에서 그것만 묻는지, 설치본 유닛 하드닝 아래 `security/` 쓰기
+  - VM에서 VM과 onmaru를 막 띄운 직후 첫 비밀번호 재확인 한 번이 OMV `Session.login` 15초 시간 초과로 실패했다(다시 하면 0.4초). VM 안에서 직접 부른 `Session.login`은 늘 빨랐다. 다시 나타나는지 지켜본다
 - (보류: 새 탭 방식을 택했다) 같은 출처에서 OMV workbench를 iframe 창으로 띄울 수 있는지
 - (보류) 같은 탭 iframe은 sessionStorage를 공유하므로, 대시보드 로그인 후 OMV 창도 로그인 상태로 보이게 할 수 있는지. OMV 내부 저장 키(`username`, `permissions`)에 의존하는 실험이라 OMV 업데이트 시 깨질 수 있다. 실험 브랜치에서만 다룬다

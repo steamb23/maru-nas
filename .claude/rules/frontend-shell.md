@@ -139,6 +139,7 @@ paths:
 
 - `src/settings/`. 페이지 목록은 데이터(`pages.ts`: id, 문구 키, 아이콘, 그룹, `requires: 'admin'`)이고 화면 컴포넌트는 `pageViews.ts`의 `Record`에 둔다(빠지면 tsc가 잡는다). 관리자 전용 페이지(전역 설정)는 일반 사용자에게 숨긴다. OMV·시스템 설정을 넣게 되면 그룹을 더한다
 - 어느 페이지를 보일지는 창 저장소가 아니라 `navStore.ts`에 둔다(창 밖에서 특정 페이지로 열 때 `show` 후 `launchApp`). 창이 닫힌 뒤 다시 열면 기본 페이지로 연다. 창 저장소를 구독해 창이 사라질 때 표시(`resetPending`)만 해 두고 다시 열릴 때 되돌린다(닫히는 창은 닫기 애니메이션 동안 이 저장소의 페이지로 그려지므로, 닫힐 때 바꾸면 기본 페이지가 잠깐 보인다). 그 사이 `show`를 부르면 표시가 지워진다. 창 컴포넌트의 정리 함수는 쓰지 않는다(StrictMode 개발 모드에서 마운트 직후에도 불린다)
+- 보안 페이지(`security`, 사용자)와 보안 정책 페이지(`security-policy`, 관리자)는 보안 강화 모드의 화면이다. 확인·관리 대화상자와 수단 등록 대화상자는 `src/security/`에 있다(`.claude/rules/security.md`)
 - 프로필 페이지(`profile`)는 사이드바 목록에 넣지 않고(`nav: 'card'`) 사이드바 맨 위 사용자 카드 버튼으로 연다. 볼 수 없는 페이지를 요청하면 기본 페이지(화면)로 간다
 - 프로필 사진 자르기 편집기(`AvatarEditor.tsx`, 계산은 `profile/avatarCrop.ts`)는 창 범위 대화상자다. 끌기는 `usePointerDrag`, 휠은 passive가 아닌 네이티브 리스너로 받고, 저장은 512px WebP(안 되면 PNG)다. OMV 사용자 편집 화면은 워크벤치 앱과 같은 이름 붙은 탭으로 연다(`launchApp.ts`의 `openWorkbenchRoute`, 라우트는 `windows/links.ts`)
 - 사이드바 틀은 `shell/SidebarLayout`이다(시스템 정보 창도 쓴다. 아래 "사이드바 틀"). 설정의 좁은 기준은 `SETTINGS_NARROW_WIDTH`(640px)이고, 사용자 카드·그룹·페이지 영역(`.settings-body`)은 설정 것이다

@@ -54,6 +54,7 @@ OMV 8의 모든 버전을 지원한다. OMV 패키지(`packages.openmediavault.o
 - 로그아웃하거나 다른 사용자가 로그인하면 창을 모두 닫는다. 세션 만료 후 같은 사용자가 다시 로그인하면 창 배치를 남긴다
 - 권한 도우미(`-helper-socket`)가 있으면 OMV 로그인에 성공한 뒤 같은 비밀번호로 도우미 티켓을 받는다(도우미가 `unix_chkpwd`로 직접 확인, 5초 제한). 실패해도 로그인은 진행하고 도우미 기능만 없다. 2차 인증이면 대기 티켓을 `auth.Pending`에 두고, `Session.verify`가 성공하면 `activate`해 세션으로 옮긴다(`Store.ClaimPending`). 세션·대기가 지워지면(로그아웃, 만료, 밀려남, 유휴 정리, 대기 만료) 저장소의 삭제 훅이 티켓을 폐기한다
   - root 권한 상승(`POST /api/helper/elevation`, 관리자)은 비밀번호를 다시 받아 도우미가 직접 확인하고, 그 대시보드 세션에만 5분 붙는다. 비밀번호는 저장·기록하지 않는다. 도우미의 실패 제한이 따로 있다(사용자별 5분 안 3번 실패부터 잠금, 429 `Retry-After`). 상세는 `.claude/docs/helper.md`
+- 보안 강화 모드: 세션마다 보증 수준(`Session.Assurance`)이 있고 `SessionInfo.assurance`로 알린다. OMV 2차 인증(`Session.verify`)을 마친 로그인은 `twoFactor`로 시작한다. 2차 인증을 요구하는 기능이 있고 사용자에게 수단이 있으면 로그인 응답에만 `stepUp`을 담는다(세션은 이미 만들어졌고 건너뛸 수 있다). 비밀번호 재확인은 `Session.login` → 바로 `Logout`이고 로그인 실패 제한을 함께 쓴다. 상세는 `.claude/rules/security.md`
 
 ### 세션 만료는 브라우저 타이머로 처리한다
 

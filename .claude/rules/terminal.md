@@ -24,6 +24,7 @@ paths:
   - 그룹 소속(`AllowGroups`)은 접속을 막는 데 쓰지 않고 실패 안내에만 쓴다(`NotAllowedGroups`). sshd가 최종 판단한다
 - 세션: 대시보드 세션 하나에 `ssh.Client` 하나, 창마다 채널(`NewSession`) 하나다(`Manager`). 인증은 첫 창에서만 하고, 같은 세션의 다른 창(같은 탭의 새 창, 다른 탭)은 기다렸다가 함께 쓴다. 세션당 창 4개(sshd `MaxSessions` 10보다 작게), 클라이언트 32개까지. 마지막 창이 닫히거나 세션이 끝나면(`auth.Store.OnRemove`, 접속 중이면 질문 대기도 취소) 닫는다
 - 허용: `-terminal`(기본 끔)과 설정 앱의 덮어쓰기(`site.json`의 `server.terminal`). 꺼져 있으면 `/api/terminal`이 403 `terminal_disabled`, 끄는 순간 `Manager.CloseAll`로 열린 터미널을 닫는다. 프론트는 `capabilities.terminal`로 앱을 숨긴다
+- 보안 강화 정책(`security.terminal`)을 채우지 못한 세션은 WebSocket을 받은 뒤 `status closed reason=security_required`(+ `required`)로 닫는다. 정책을 올리면 조건을 채우지 못하는 세션의 터미널을 `CloseSession(id, ReasonSecurityRequired)`로 닫는다. 프론트는 닫힘 막대에 확인 단추를 두고 확인한 뒤 다시 연결한다(`.claude/rules/security.md`)
 - 프로토콜(`api.Terminal*Message`): 바이너리 프레임은 입출력 바이트, 텍스트 프레임은 JSON 제어 메시지(`resize`, `answer`, `cancel` / `status`, `prompt`). Origin은 coder/websocket 기본 검사(Host와 같아야 함). 30초마다 ping. 브라우저 메시지 하나는 64KiB까지라 프론트가 입력을 16KiB씩 나눈다
 - 세션 연장은 프론트의 키 입력(`useSessionKeeper`의 document capture `keydown`)으로 된다. 출력만으로는 연장하지 않는다(README가 tmux를 권한다)
 
