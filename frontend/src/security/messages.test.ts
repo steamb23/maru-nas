@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { ApiError } from '../api/client'
-import { firstFactor, groupSecret, qrPath, satisfies, securityError, usableFactors } from './messages'
+import { firstFactor, groupSecret, passkeyNotSaved, qrPath, satisfies, securityError, usableFactors } from './messages'
 
 describe('securityError', () => {
   it('틀린 값은 시도한 수단에 맞는 문구다', () => {
@@ -24,9 +24,28 @@ describe('securityError', () => {
     expect(securityError(new DOMException('x', 'SecurityError')).key).toBe('security.errors.passkeyDomain')
   })
 
+  it('사용자 확인을 알리지 않는 패스키 저장소를 안내한다', () => {
+    expect(securityError(new ApiError(400, 'x', 'passkey_uv_unsupported'), 'passkey').key).toBe('security.errors.passkeyNoUV')
+  })
+
   it('모르는 오류는 일반 실패다', () => {
     expect(securityError(new Error('boom')).key).toBe('security.errors.failed')
     expect(securityError(new ApiError(503, 'x', 'security_unavailable')).key).toBe('security.errors.unavailable')
+  })
+})
+
+describe('passkeyNotSaved', () => {
+  it('거절된 요청만 저장하지 않았다고 본다', () => {
+    expect(passkeyNotSaved(new ApiError(400, 'x', 'passkey_uv_unsupported'))).toBe(true)
+    expect(passkeyNotSaved(new ApiError(400, 'x', 'factor_failed'))).toBe(true)
+    expect(passkeyNotSaved(new ApiError(403, 'x', 'manage_required'))).toBe(true)
+    expect(passkeyNotSaved(new ApiError(429, 'x', 'rate_limited'))).toBe(true)
+    // 이미 등록한 패스키일 수 있다.
+    expect(passkeyNotSaved(new ApiError(409, 'x', 'bad_request'))).toBe(false)
+    // 연결이 끊겼으면 저장됐는지 모른다.
+    expect(passkeyNotSaved(new ApiError(502, 'x'))).toBe(false)
+    expect(passkeyNotSaved(new TypeError('network'))).toBe(false)
+    expect(passkeyNotSaved(new DOMException('x', 'NotAllowedError'))).toBe(false)
   })
 })
 

@@ -114,18 +114,34 @@ export function registrationJSON(cred: AttestationLike): PasskeyRegistration {
   }
 }
 
-// getPasskey는 확인 challenge를 받아 패스키로 서명한다. 사용자가 취소하면 DOMException(NotAllowedError)을 던진다.
-export async function getPasskey(): Promise<PasskeyAssertion> {
-  const opts = await passkeyChallenge('assert')
+// assertWith는 받은 확인 옵션으로 패스키에 서명을 받는다. 사용자가 취소하면 DOMException(NotAllowedError)을 던진다.
+export async function assertWith(opts: PasskeyOptions): Promise<PasskeyAssertion> {
   const cred = await navigator.credentials.get({ publicKey: requestOptions(opts) })
   if (!(cred instanceof PublicKeyCredential)) throw new Error('passkey: no credential')
   return assertionJSON(cred as unknown as AssertionLike)
 }
 
-// createPasskey는 등록 challenge를 받아 새 패스키를 만든다(관리 창 필요).
-export async function createPasskey(): Promise<PasskeyRegistration> {
+// getPasskey는 확인 challenge를 받아 패스키로 서명한다.
+export async function getPasskey(): Promise<PasskeyAssertion> {
+  return assertWith(await passkeyChallenge('assert'))
+}
+
+// createPasskey는 등록 challenge를 받아 새 패스키를 만든다(관리 창 필요). rpId는 거절됐을 때 forgetPasskey에 쓴다.
+export async function createPasskey(): Promise<{ rpId: string; registration: PasskeyRegistration }> {
   const opts = await passkeyChallenge('register')
   const cred = await navigator.credentials.create({ publicKey: creationOptions(opts) })
   if (!(cred instanceof PublicKeyCredential)) throw new Error('passkey: no credential')
-  return registrationJSON(cred as unknown as AttestationLike)
+  return { rpId: opts.rpId, registration: registrationJSON(cred as unknown as AttestationLike) }
+}
+
+// forgetPasskey는 백엔드가 저장하지 않은 새 패스키를 브라우저에 알려 패스키 저장소에서 지우게 한다
+// (PublicKeyCredential.signalUnknownCredential. 없는 브라우저가 있다). 알렸으면 true다.
+export async function forgetPasskey(rpId: string, credentialId: string): Promise<boolean> {
+  if (typeof PublicKeyCredential === 'undefined' || typeof PublicKeyCredential.signalUnknownCredential !== 'function') return false
+  try {
+    await PublicKeyCredential.signalUnknownCredential({ rpId, credentialId })
+    return true
+  } catch {
+    return false
+  }
 }

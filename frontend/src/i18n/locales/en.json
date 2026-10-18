@@ -611,6 +611,7 @@
       "passkeysUnsupported": "This browser cannot use passkeys at this address. Passkeys need HTTPS with a trusted certificate.",
       "passkeyCreated": "Added {{created}}",
       "passkeyUsed": "Added {{created}} · last used {{used}}",
+      "passkeySynced": "Synced",
       "passkeyDefaultName": "Passkey {{n}}",
       "noPasskeys": "No passkeys yet.",
       "addPasskey": "Add a passkey",
@@ -704,6 +705,7 @@
       "wrongCode": "Incorrect code.",
       "wrongEither": "The password or the second step was incorrect.",
       "passkeyFailed": "The passkey could not be verified.",
+      "passkeyNoUV": "This passkey provider does not report user verification (PIN or biometrics), so the passkey was not added. In the browser's prompt, choose this device (such as Windows Hello) or a security key and try again.",
       "passkeyCanceled": "The passkey check was canceled or timed out.",
       "passkeyExists": "This passkey is already registered.",
       "passkeyDomain": "Passkeys do not work at this address. Open the dashboard at its configured domain.",
@@ -750,7 +752,12 @@
       "addIntro": "Name this passkey so you can tell it apart later, then follow your browser’s prompt.",
       "name": "Name",
       "create": "Create passkey",
-      "creating": "Waiting for the passkey…"
+      "creating": "Waiting for the passkey…",
+      "confirmIntro": "To make sure the passkey works, you will use it once more. Follow your browser's prompts.",
+      "confirming": "Waiting for verification…",
+      "retryConfirm": "Verify again",
+      "leftoverSignaled": "Your browser was asked to remove this passkey.",
+      "leftoverManual": "This passkey for {{rpId}} cannot be used. Remove it from your passkey provider."
     }
   }
 }

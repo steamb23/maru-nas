@@ -16,7 +16,9 @@ import type {
   ImageInfo,
   LoginResponse,
   OverridableSetting,
+  PasskeyAssertion,
   PasskeyChallengeRequest,
+  PasskeyConfirmRequest,
   PasskeyDescriptor,
   PasskeyInfo,
   PasskeyOptions,
@@ -94,6 +96,7 @@ const ERROR_CODES: readonly ErrorCode[] = [
   'factor_failed',
   'manage_required',
   'passkey_unavailable',
+  'passkey_uv_unsupported',
   'security_unavailable',
 ]
 
@@ -690,7 +693,14 @@ function isSecurityPolicy(v: unknown): v is SecurityPolicy {
 }
 
 function isPasskeyInfo(v: unknown): v is PasskeyInfo {
-  return isObj(v) && isStr(v.id) && isStr(v.name) && isStr(v.created) && isOptional(v.lastUsed, isStr)
+  return (
+    isObj(v) &&
+    isStr(v.id) &&
+    isStr(v.name) &&
+    isStr(v.created) &&
+    isOptional(v.lastUsed, isStr) &&
+    isOptional(v.backupEligible, isBool)
+  )
 }
 
 export function isSecurityStatus(v: unknown): v is SecurityStatus {
@@ -783,9 +793,18 @@ export async function passkeyChallenge(purpose: PasskeyChallengeRequest['purpose
   return data
 }
 
-export function registerPasskey(name: string, credential: PasskeyRegistration): Promise<SecurityChangeResponse> {
+// registerPasskey는 새 패스키의 등록 값을 보낸다. 백엔드는 아직 저장하지 않고, 그 패스키로 시험 확인할 옵션을 준다.
+export async function registerPasskey(name: string, credential: PasskeyRegistration): Promise<PasskeyOptions> {
   const body: PasskeyRegisterRequest = { name, credential }
-  return securityChangeFrom('/security/passkeys', postJSON('/security/passkeys', { body }))
+  const data = await postJSON('/security/passkeys', { body })
+  if (!isPasskeyOptions(data)) throw new Error('/security/passkeys: unexpected response shape')
+  return data
+}
+
+// confirmPasskey는 새 패스키로 한 시험 확인을 보낸다. 통과하면 백엔드가 패스키를 저장한다.
+export function confirmPasskey(passkey: PasskeyAssertion): Promise<SecurityChangeResponse> {
+  const body: PasskeyConfirmRequest = { passkey }
+  return securityChangeFrom('/security/passkeys/confirm', postJSON('/security/passkeys/confirm', { body }))
 }
 
 export async function deletePasskey(id: string): Promise<SecurityChangeResponse> {

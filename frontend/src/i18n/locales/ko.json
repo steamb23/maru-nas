@@ -611,6 +611,7 @@
       "passkeysUnsupported": "이 브라우저는 이 주소에서 패스키를 쓸 수 없습니다. 패스키는 믿을 수 있는 인증서의 HTTPS가 필요합니다.",
       "passkeyCreated": "{{created}} 추가",
       "passkeyUsed": "{{created}} 추가 · 마지막 사용 {{used}}",
+      "passkeySynced": "동기화됨",
       "passkeyDefaultName": "패스키 {{n}}",
       "noPasskeys": "아직 패스키가 없습니다.",
       "addPasskey": "패스키 추가",
@@ -704,6 +705,7 @@
       "wrongCode": "코드가 올바르지 않습니다.",
       "wrongEither": "비밀번호나 두 번째 확인이 올바르지 않습니다.",
       "passkeyFailed": "패스키를 확인하지 못했습니다.",
+      "passkeyNoUV": "이 패스키 저장소는 사용자 확인(PIN, 생체 인식)을 알려 주지 않아 등록하지 않았습니다. 브라우저 창에서 이 기기(Windows Hello 등)나 보안 키를 골라 다시 등록하세요.",
       "passkeyCanceled": "패스키 확인을 취소했거나 시간이 지났습니다.",
       "passkeyExists": "이미 등록한 패스키입니다.",
       "passkeyDomain": "이 주소에서는 패스키를 쓸 수 없습니다. 설정된 도메인으로 대시보드에 접속하세요.",
@@ -750,7 +752,12 @@
       "addIntro": "나중에 구분할 수 있게 이름을 정한 뒤 브라우저의 안내를 따르세요.",
       "name": "이름",
       "create": "패스키 만들기",
-      "creating": "패스키를 기다리는 중…"
+      "creating": "패스키를 기다리는 중…",
+      "confirmIntro": "패스키가 제대로 동작하는지 보려고 한 번 더 인증합니다. 브라우저의 안내를 따르세요.",
+      "confirming": "확인을 기다리는 중…",
+      "retryConfirm": "다시 확인",
+      "leftoverSignaled": "브라우저에 이 패스키를 지우도록 알렸습니다.",
+      "leftoverManual": "패스키 저장소에 남은 {{rpId}}의 이 패스키는 쓸 수 없으니 직접 지우세요."
     }
   }
 }

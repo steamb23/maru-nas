@@ -127,11 +127,13 @@ export function SecurityPage() {
                 <SettingsRow
                   key={p.id}
                   label={<span className="selectable">{p.name}</span>}
-                  description={
+                  description={[
                     p.lastUsed
                       ? t('settings.security.passkeyUsed', { created: date(p.created), used: date(p.lastUsed) })
-                      : t('settings.security.passkeyCreated', { created: date(p.created) })
-                  }
+                      : t('settings.security.passkeyCreated', { created: date(p.created) }),
+                    // 동기화 저장소(iCloud 키체인, 비밀번호 관리자)의 패스키. 막지 않고 표시만 한다.
+                    ...(p.backupEligible ? [t('settings.security.passkeySynced')] : []),
+                  ].join(' · ')}
                 >
                   <button
                     type="button"

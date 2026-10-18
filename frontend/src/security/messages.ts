@@ -43,6 +43,8 @@ export function securityError(err: unknown, method?: Factor | 'password' | 'both
       return { key: 'security.errors.rateLimited', retryAfter: err.retryAfterSeconds ?? 0 }
     case 'passkey_unavailable':
       return { key: 'security.errors.passkeyUnavailable' }
+    case 'passkey_uv_unsupported':
+      return { key: 'security.errors.passkeyNoUV' }
     case 'security_unavailable':
       return { key: 'security.errors.unavailable' }
     case 'manage_required':
@@ -52,6 +54,12 @@ export function securityError(err: unknown, method?: Factor | 'password' | 'both
     default:
       return { key: 'security.errors.failed' }
   }
+}
+
+// passkeyNotSaved는 새 패스키의 등록·시험 확인 요청이 거절돼 백엔드가 그 패스키를 저장하지 않았다고 확실히 알 수
+// 있는지다(400, 403, 429). 그때만 저장소에서 지우게 한다. 409(이미 등록됨일 수 있다)·연결 실패는 모른다.
+export function passkeyNotSaved(err: unknown): boolean {
+  return err instanceof ApiError && (err.status === 400 || err.status === 403 || err.status === 429)
 }
 
 export const ASSURANCE_KEYS: Record<Assurance, ParseKeys> = {
