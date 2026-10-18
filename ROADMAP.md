@@ -109,7 +109,7 @@ OMV SSH 설정의 추가 옵션에 `AuthenticationMethods publickey,keyboard-int
      - 확인·적용 흐름(`--upgrade-service`), 소유자 권한 빌드, 상태 파일(형식은 `backend/config/upgrade_request.go`)
      - 도우미 root 연산 `upgrade.apply`, 제거 처리
      - README의 업그레이드 설명과 위협 모델
-     - 시험 VM에서 확인(남음: 설치기로 켠 뒤 경로 유닛이 요청을 받아 상태 파일을 쓰는지, 소유자 강등·PrivateTmp·도우미 요청 디렉터리)
+     - 시험 VM에서 확인: 켜기·끄기(파일, 경로 유닛, 도우미 유닛의 요청 디렉터리, 끈 뒤 `upgrade_disabled`), onmaru 사용자가 쓴 확인 요청, 저장소 소유자로 강등한 원격 확인(fetch, 계획), 도우미 `upgrade.apply`로 적용(fast-forward, GitHub에서 서브모듈, 빌드 결과 확인, 새 설치기의 root 설치와 onmaru 재시작)까지. 컴파일(go·npm·make)은 미리 빌드한 실행 파일을 복사하는 shim으로 대신했다
   3. 업데이트 페이지:
      - 백엔드 API(상태 읽기, 확인 요청, 적용)
        - 켜져 있는지는 `config.UpgradeEnvFile`(`/etc/default/onmaru-upgrade`, 0644)이 있는지로 안다
