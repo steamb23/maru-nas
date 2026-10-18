@@ -91,7 +91,9 @@ func Main(args []string) int {
 
 // newPrompter는 질문 방식을 고른다. 표준 입력·출력이 터미널이고 TERM이 dumb가 아니며 --plain이 아니면 TUI다.
 func newPrompter(tui bool, lang string) prompt.Prompter {
-	_ = tui // TUI(huh)는 아직 없다
+	if tui {
+		return prompt.NewHuh(lang)
+	}
 	return prompt.NewPlain(os.Stdin, os.Stderr, lang)
 }
 
