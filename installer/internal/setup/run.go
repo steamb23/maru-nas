@@ -8,6 +8,7 @@
 //	./install.sh --service-install  2단계만 실행한다(root 전용). 설정을 모두 주면 묻지 않는다
 //	./install.sh --uninstall        제거한다(root가 아니면 sudo로 다시 실행한다)
 //	./install.sh --dry-run          바꾸는 작업 없이 쓸 파일의 차이와 실행할 명령만 보여 준다
+//	./install.sh --upgrade-plan     기존 설치를 읽기만 하고 이 버전으로의 업그레이드 계획을 JSON으로 출력한다(plan.go)
 //
 // 리버스 프록시 설정은 하지 않는다. 생성하는 설정 파일(유닛, /etc/default/*)의 주석은 언어와 상관없이 영어로 쓴다.
 package setup
@@ -121,6 +122,10 @@ func Run(c *Context) error {
 	}
 	c.Installed = inst
 	switch c.Opts.Action {
+	case ActionUpgradePlan:
+		// 계획은 읽기만 한다. 설치 방식을 정하지 않고(방식 안내·일부 설치 경고가 필요 없다) 아무것도 묻지 않는다.
+		c.P = prompt.Fail{}
+		return runUpgradePlan(c)
 	case ActionUninstall:
 		if !c.IsRoot && !c.Sys.DryRun() {
 			return reexecSudo(c, "--uninstall", nil)

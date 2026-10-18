@@ -1,6 +1,10 @@
 package setup
 
-import "strings"
+import (
+	"strings"
+
+	"onmaru/backend/config"
+)
 
 // Text는 영어·한국어 문구 한 쌍이다. 문구는 쓰는 곳(설정·단계 파일) 옆에 L(en, ko)로 둔다.
 // 생성하는 설정 파일(유닛, /etc/default/*)의 주석은 언어와 상관없이 영어로 쓰므로 Text를 쓰지 않는다.
@@ -8,6 +12,9 @@ type Text struct{ En, Ko string }
 
 // L은 문구 한 쌍을 만든다.
 func L(en, ko string) Text { return Text{En: en, Ko: ko} }
+
+// localized는 JSON으로 내보낼 두 언어 문구다(업그레이드 계획).
+func (t Text) localized() config.LocalizedText { return config.LocalizedText{En: t.En, Ko: t.Ko} }
 
 // In은 lang(en, ko)의 문구다.
 func (t Text) In(lang string) string {

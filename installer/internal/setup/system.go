@@ -57,6 +57,8 @@ type System interface {
 	RunSilent(name string, args ...string) error
 	// Check는 읽기 전용 확인 명령(systemctl is-active 등)이다. 출력을 버리고 종료 코드만 본다. dry-run에서도 실행한다.
 	Check(name string, args ...string) error
+	// Output은 읽기 전용 명령(node --version 등)의 표준 출력이다. 오류 출력은 버린다. dry-run에서도 실행한다.
+	Output(name string, args ...string) ([]byte, error)
 	// RunUser는 실행한 계정의 빌드 명령이다. 저장소 안에만 쓰므로 dry-run에서도 실행한다.
 	RunUser(dir, name string, args ...string) error
 	// LookPath는 PATH에 명령이 있는지다.
@@ -222,6 +224,14 @@ func (s *realSystem) exec(stdout, stderr io.Writer, dir, name string, args ...st
 		return fmt.Errorf("%s: %w", commandLine(name, args), err)
 	}
 	return nil
+}
+
+func (s *realSystem) Output(name string, args ...string) ([]byte, error) {
+	out, err := exec.Command(name, args...).Output()
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", commandLine(name, args), err)
+	}
+	return out, nil
 }
 
 func (s *realSystem) Run(name string, args ...string) error {

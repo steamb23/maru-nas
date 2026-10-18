@@ -55,7 +55,7 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 ## 기술 스택
 
 - **백엔드**: Go 표준 라이브러리 위주(`backend/`). 런타임 외부 의존성은 웹 터미널의 `golang.org/x/crypto/ssh`와 `github.com/coder/websocket`뿐이며, 권한 도우미 실행 파일에는 링크하지 않는다
-- **설치기**: 별도 Go 모듈 `installer/`(`go.work` 없이 `replace`로 로컬 `backend`). TUI 의존성 `charm.land/huh/v2`는 이 모듈에만 있다. 백엔드와 공유하는 검증 함수·환경 변수 키·기본값·버전은 공개 패키지 `backend/config`(표준 라이브러리만)에 둔다
+- **설치기**: 별도 Go 모듈 `installer/`(`go.work` 없이 `replace`로 로컬 `backend`). TUI 의존성 `charm.land/huh/v2`는 이 모듈에만 있다. 백엔드와 공유하는 검증 함수·환경 변수 키·기본값·버전·업그레이드 파일 형식은 공개 패키지 `backend/config`(표준 라이브러리만)에 둔다
 - **프론트엔드**: TypeScript + Vite + React(`frontend/`), 창 상태는 Zustand 단일 저장소(`windows[]`). 웹 터미널의 xterm.js와 인증 앱 QR의 uqr은 쓰는 화면의 지연 청크에만 싣는다. 린트 oxlint, 테스트 Vitest(DOM 환경 없이 순수 함수·저장소만)
 - **타입 공유**: tygo로 `backend/internal/api` → `frontend/src/api/types.gen.ts`. 생성물은 커밋하며 직접 수정하지 않는다
 - **현지화**: 1차 지원 `en`, `ko`는 항상 완전하게 두고, 나머지 언어(`languages.ts`의 `SUPPORTED_LANGUAGES`)는 기여나 일괄 번역으로 채운다. 화면 문구(aria-label·title 포함)는 모두 `t()`를 거치고, 새 키는 `en.json`과 `ko.json`에 함께 넣는다. 로그인 대기 이스터에그 문구와 로그인 화면의 브랜드 영역(한글 이름, 로마자 표기, 태그라인)은 현지화 제외

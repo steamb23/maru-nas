@@ -31,6 +31,8 @@ type fakeSystem struct {
 	// noCommands는 PATH에 없는 명령이다.
 	noCommands map[string]bool
 	portsInUse map[string]bool
+	// outputs는 Output이 돌려줄 명령별 표준 출력이다(키는 명령 기록 꼴). 없는 명령은 실패한다(PATH에 없음).
+	outputs map[string]string
 	// buildInfo는 경로별 Go 빌드 정보다. 없는 경로는 Go 실행 파일이 아닌 것으로 본다(가짜 저장소의 실행 파일은 셸 스크립트다).
 	buildInfo map[string]*debug.BuildInfo
 	health    error
@@ -49,7 +51,16 @@ func newFake(t *testing.T) *fakeSystem {
 		noCommands:    map[string]bool{},
 		portsInUse:    map[string]bool{},
 		buildInfo:     map[string]*debug.BuildInfo{},
+		outputs:       map[string]string{},
 	}
+}
+
+func (f *fakeSystem) Output(name string, args ...string) ([]byte, error) {
+	f.record(name, args...)
+	if out, ok := f.outputs[commandLine(name, args)]; ok {
+		return []byte(out), nil
+	}
+	return nil, errors.New(name + ": executable file not found in $PATH")
 }
 
 func (f *fakeSystem) ReadBuildInfo(path string) (*debug.BuildInfo, error) {

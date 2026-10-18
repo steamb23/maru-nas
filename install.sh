@@ -27,9 +27,10 @@ if [[ $lang != en && $lang != ko ]]; then
 fi
 
 t() { if [[ $lang == ko ]]; then printf '%s' "$2"; else printf '%s' "$1"; fi; }
+# 이 스크립트의 안내는 모두 오류 출력에 쓴다. 표준 출력은 설치기의 것이다(--upgrade-plan의 JSON 등).
 blue="" red="" reset=""
-if [[ -t 1 ]]; then blue=$'\033[1;34m' red=$'\033[1;31m' reset=$'\033[0m'; fi
-info() { printf '%s==>%s %s\n' "$blue" "$reset" "$(t "$1" "$2")"; }
+if [[ -t 2 ]]; then blue=$'\033[1;34m' red=$'\033[1;31m' reset=$'\033[0m'; fi
+info() { printf '%s==>%s %s\n' "$blue" "$reset" "$(t "$1" "$2")" >&2; }
 die() { printf '%s%s%s %s\n' "$red" "$(t error: 오류:)" "$reset" "$(t "$1" "$2")" >&2; exit 1; }
 
 owner_uid=$(stat -c %u "$repo")

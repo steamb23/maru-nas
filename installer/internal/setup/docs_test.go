@@ -20,7 +20,7 @@ func TestReadmeListsEveryOption(t *testing.T) {
 		}
 	}
 	table := strings.Join(rows, "\n")
-	want := []string{"--upgrade", "--reinstall", "--no-build", "--uninstall", "--service-install", "--dry-run", "--plain", "--lang", "--help"}
+	want := []string{"--upgrade", "--reinstall", "--no-build", "--uninstall", "--service-install", "--dry-run", "--upgrade-plan", "--plain", "--lang", "--help"}
 	for _, s := range settings {
 		switch s.Flag {
 		case FlagNone:
