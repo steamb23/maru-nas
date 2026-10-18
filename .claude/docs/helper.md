@@ -65,7 +65,7 @@
 - 기준 디렉터리 = 사용자 홈(`/`가 아닐 때) + `/srv` 아래 마운트 지점(`/proc/self/mountinfo`). `/srv` 자체와 그 안의 루트 파일시스템 디렉터리(`/srv/salt`, `/srv/pillar`)는 기준이 아니다. 가장 긴 기준을 골라 `os.OpenRoot`로 가두므로 `..`·심볼릭 링크로 기준 밖에 나갈 수 없다(`outside_roots`)
 - 실제로 열 수 있는지는 커널이 사용자 권한(소유권·ACL)으로 정한다. 기준 정책은 onmaru가 뚫렸을 때 닿는 범위를 줄이는 겹침이다
 - 공유 폴더 단위로 보이는 일은 onmaru의 파일 API(파일 탐색기)가 한다. OMV의 공유 폴더 RPC(`ShareMgmt.*`)는 모두 관리자 전용이라 일반 사용자 세션으로는 목록을 받을 수 없으므로, 관리자 세션이 받은 목록을 전역 설정(`site.json`)에 스냅숏으로 둔다. 스냅숏은 처음 보이는 폴더의 이름표일 뿐이고 도우미는 믿지 않는다(범위는 위 기준이 정한다). OMV 공유 폴더 권한(Privileges)은 SMB 같은 서비스에만 적용되므로 따르지 않는다(`ROADMAP.md`의 파일 탐색기)
-- 루트 파일시스템의 공유 폴더(openmediavault-sharerootfs, 예: `/kvm`)는 기준 밖이다. 파일 탐색기에서 열려면 root가 정하는 추가 기준 경로 설정을 도우미에 더한다. onmaru가 보낸 경로는 믿지 않으므로 도우미 쪽 설정이어야 하고, `install.sh`가 묻고 유닛의 `ReadWritePaths`에도 더한다(`ProtectSystem=strict`라 없으면 읽기 전용이다). `/`는 받지 않는다. mergerfs 풀(`/srv/mergerfs/<이름>`)은 이미 기준 안이다
+- 루트 파일시스템의 공유 폴더(openmediavault-sharerootfs, 예: `/kvm`)는 기준 밖이다. 파일 탐색기에서 열려면 root가 정하는 추가 기준 경로 설정을 도우미에 더한다. onmaru가 보낸 경로는 믿지 않으므로 도우미 쪽 설정이어야 하고, 설치기가 묻고(설정 레지스트리에 설정 하나로 더한다) 유닛 템플릿의 `ReadWritePaths`에도 더한다(`ProtectSystem=strict`라 없으면 읽기 전용이다). `/`는 받지 않는다. mergerfs 풀(`/srv/mergerfs/<이름>`)은 이미 기준 안이다
 - 기준 디렉터리 자체는 지우거나 옮기거나 덮어쓸 수 없다. 이름 바꾸기는 같은 기준 안에서만 하고 대상이 있으면 `exists`다
 - 읽기는 일반 파일만(`O_NONBLOCK`으로 열어 FIFO에서 멈추지 않음). 목록은 1만 개까지(`truncated`). umask는 0002(OMV Samba의 create mask 0664 / directory mask 0775)
 - 덮어쓰기는 새 inode로 바꾸므로 소유자는 올린 사용자가 되고 ACL은 폴더의 기본 ACL을 따른다. rwx 권한 비트는 되도록 유지하고(소유자일 때만 바뀐다) setuid·setgid·sticky는 옮기지 않는다. 덮어쓰지 않을 때는 하드 링크로 같은 이름이 없는지 원자적으로 확인하고, 하드 링크를 못 쓰는 파일시스템이면 다시 확인한 뒤 이름을 바꾼다
@@ -92,7 +92,7 @@
 
 1. 기능이 정말 OMV RPC로 안 되는지 먼저 확인한다(OMV 소스 `/usr/share/openmediavault/engined/rpc/`)
 2. `proto`에 연산 이름과 인자·결과 타입을 더하고 `proto.Actions[ScopeRoot]`에 넣는다. 임의 명령·셸·브라우저가 보낸 경로가 exec 인자로 가는 연산은 만들지 않는다. 인자는 worker가 허용 목록으로 검사하고 실행 인자는 직접 만든다
-3. `worker`에 구현하고, 필요한 권한만 유닛에 더한다(`CapabilityBoundingSet`, `ReadWritePaths` 등). `install.sh`의 유닛과 README의 보안 설계도 함께 고친다
+3. `worker`에 구현하고, 필요한 권한만 유닛에 더한다(`CapabilityBoundingSet`, `ReadWritePaths` 등). 설치기의 유닛 템플릿(`installer/internal/setup/templates/onmaru-helper.service.tmpl`)과 골든, README의 보안 설계도 함께 고친다
 4. 감사 로그(`daemon.audit`)에 필요한 세부가 남는지 확인한다(root 범위는 인자의 경로를 남긴다)
 5. onmaru 쪽은 관리자 전용 API(`requireAdmin`)로 부르고, `elevation_required`(403)를 받은 화면은 `requestElevation`(`shell/elevationDialog.tsx`)으로 상승한 뒤 다시 시도한다
 6. 테스트: `proto.Allowed`의 범위 검사, worker 단위 테스트, 데몬의 상승 필요·그룹 재확인, 서버 테스트(helperfake)

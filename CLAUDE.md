@@ -38,10 +38,10 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
   - OMV 화면을 iframe으로 띄우는 실험은 OMV와 같은 출처(같은 도메인의 경로 접두사)에 둘 때만 가능하다(OMV가 `X-Frame-Options: SAMEORIGIN`을 보낸다). 인증과는 무관하다
 - **실행**: systemd 서비스로 Go 실행 파일 하나를 전용 일반 사용자로 실행한다. 프론트엔드는 `go:embed`로 포함한다. 수신은 기본적으로 루프백 TCP(`127.0.0.1:8090`)이고, Docker 안의 프록시처럼 루프백에 닿지 못하는 경우를 위해 Unix 소켓(`unix:/경로`)을 지원한다. 루프백이 아닌 주소는 `-allow-non-loopback`을 명시해야만 허용한다
   - Docker는 쓰지 않는다(호스트 `/proc`, `/sys`, 네트워크를 직접 봐야 하므로)
-  - 설치는 루트의 인터랙티브 `install.sh`(영어·한국어 안내)가 한다. systemd 유닛과 `/etc/default/onmaru`를 직접 만들며, Claude는 작성만 하고 실행은 사용자가 한다. 리버스 프록시는 설정하지 않는다
-    - 2단계 구조: `./install.sh`가 설정 질문과 확인, 실행한 계정으로 빌드(1단계)를 한 뒤, root가 아니면 설정을 옵션으로 넘겨 `sudo ./install.sh --service-install ...`로 자신을 다시 실행해 사용자 생성·유닛 작성·시작(2단계)을 한다. 2단계는 받은 설정을 다시 검증하고, 설정이 모두 있으면 묻지 않는다. root만 있는 환경은 sudo 없이 이어서 진행한다. 일반 사용자가 sudo로 실행하면 root로 빌드하지 않는다
-    - `--upgrade`는 기존 설치(유닛의 `User=`, `/etc/default/onmaru`)의 설정으로 질문·확인 없이 진행하고, 기존 설치에 없는 설정만 묻는다. 설치 설정을 새로 더하면 `load_installed_settings`에서도 읽게 한다
-  - 사용자 대상 설치·설정·프록시 안내는 `README.md`에 둔다. 플래그를 추가·변경하면 `README.md`의 설정 표와 `install.sh`도 함께 고친다
+  - 설치는 루트의 `install.sh`(영어·한국어 안내)가 한다. `install.sh`는 Go 설치기(`installer/` → `bin/onmaru-install`, huh TUI)를 빌드해 실행하는 부트스트랩이고, 설치기가 systemd 유닛과 `/etc/default/onmaru`를 직접 만든다. Claude는 작성만 하고 실행은 사용자가 한다(확인은 Go 테스트와 `--dry-run`). 리버스 프록시는 설정하지 않는다. 구조와 규칙은 `.claude/rules/installer.md`
+    - 2단계 구조: 설치기가 설정 질문과 확인, 실행한 계정으로 빌드(1단계)를 한 뒤, root가 아니면 설정을 옵션으로 넘겨 `sudo bin/onmaru-install --service-install ...`로 자신을 다시 실행해 사용자 생성·유닛 작성·시작(2단계)을 한다. 2단계는 받은 설정을 다시 검증하고, 설정이 모두 있으면 묻지 않는다. root만 있는 환경은 sudo 없이 이어서 진행한다. 일반 사용자가 sudo로 실행하면 root로 빌드하지 않는다
+    - `--upgrade`는 기존 설치(유닛의 `User=`, `/etc/default/onmaru`)의 설정으로 질문·확인 없이 진행하고, 기존 설치에 없는 설정만 묻는다. 설치 설정을 새로 더하면 설정 레지스트리(`installer/internal/setup/setting_*.go`)에 기존 설치에서 읽는 법(`Load`)도 정의한다
+  - 사용자 대상 설치·설정·프록시 안내는 `README.md`에 둔다. 플래그를 추가·변경하면 `README.md`의 설정 표와 설치기 레지스트리도 함께 고친다
 - **백엔드는 얇은 API 서버**다. 역할은 (1) 현황 읽기: `/proc`·`/sys` 직접 읽기, root가 필요한 정보는 OMV RPC, (2) 설정 변경 요청을 OMV `rpc.php`로 전달, (3) 대시보드 설정(사용자별 위젯 배치·바로가기·화면 설정, 관리자의 전역 설정, 배경 이미지) 저장, 세 가지뿐이다. OMV RPC로 할 수 없는 권한 작업은 (4) 권한 도우미에 맡긴다(아래 "권한 도우미"). (5) 웹 터미널은 같은 호스트의 sshd에 SSH 클라이언트로 붙어 셸을 중계한다(아래 "웹 터미널")
   - (3)은 대시보드 자신의 상태만 다룬다. 상태 디렉터리(`-state-dir`, systemd `StateDirectory=`)의 사용자별 JSON 파일, 관리자가 바꾸는 전역 설정(`site.json`), 올린 배경 이미지(`images/`), 보안 강화 모드의 인증 수단 기록(`security/`)이며 OMV 설정·시스템 파일과 무관하다(`internal/prefs`)
   - 설정 창 앱(`src/settings/`)이 프로필(사진, 자기 OMV 계정의 전자 우편·태그), 화면(테마·바탕화면), 보안(인증 수단) 같은 사용자 설정과 관리자 전용 전역 설정(로그인 화면, 기본 화면, 서버, 보안 정책), 정보 페이지를 맡는다. 전역에 적용되는 설정은 관리자만 바꾼다. 그 밖의 OMV·OS 설정은 넣지 않고, 넣게 되면 페이지 그룹으로 더한다
@@ -57,6 +57,7 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 ## 기술 스택
 
 - **백엔드**: Go 표준 라이브러리 위주(`backend/`). 런타임 외부 의존성은 웹 터미널의 `golang.org/x/crypto/ssh`와 `github.com/coder/websocket`뿐이며, 권한 도우미 실행 파일에는 링크하지 않는다
+- **설치기**: 별도 Go 모듈 `installer/`(`go.work` 없이 `replace`로 로컬 `backend`). TUI 의존성 `charm.land/huh/v2`는 이 모듈에만 있다. 백엔드와 공유하는 검증 함수·환경 변수 키·기본값은 공개 패키지 `backend/config`(표준 라이브러리만)에 둔다
 - **프론트엔드**: TypeScript + Vite + React(`frontend/`), 창 상태는 Zustand 단일 저장소(`windows[]`). 웹 터미널 화면은 xterm.js(터미널 창의 지연 청크에만 싣는다), 인증 앱 등록의 QR 코드는 uqr(등록 대화상자의 지연 청크에만 싣는다). 린트 oxlint, 테스트 Vitest(DOM 환경 없이 순수 함수·저장소만)
 - **타입 공유**: tygo로 `backend/internal/api` → `frontend/src/api/types.gen.ts`. 생성물은 커밋하며 직접 수정하지 않는다
 - **현지화**: 1차 지원 `en`, `ko`는 항상 완전하게 두고, 나머지 언어(`languages.ts`의 `SUPPORTED_LANGUAGES`)는 기여나 일괄 번역으로 채운다. 화면 문구(aria-label·title 포함)는 모두 `t()`를 거치고, 새 키는 `en.json`과 `ko.json`에 함께 넣는다. 로그인 대기 이스터에그 문구와 로그인 화면의 브랜드 영역(한글 이름, 로마자 표기, 태그라인)은 현지화 제외
@@ -85,13 +86,13 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 | `make dev` | 개발 서버. 백엔드 `127.0.0.1:8090`(`go run`) + Vite `0.0.0.0:5173`. 접속은 `http://<NAS-IP>:5173/`. Ctrl+C로 둘 다 종료. 실제 OMV에 연결하므로 `frontend/.env.local`에 `ONMARU_OMV_URL`(이 NAS의 OMV 주소)을 둔다. git 워크트리에서 실행하면 주 체크아웃의 `frontend/.env.local`(워크트리에 있으면 그 값이 우선)과 `.dev-state`를 쓴다. `make dev BRANCH=<브랜치>`(`make dev-fake`도 같다)는 그 브랜치가 체크아웃된 워크트리의 코드를 같은 방식으로 실행하므로 워크트리에 들어가지 않아도 된다. 실행은 부른 쪽의 `scripts/dev.sh`가 한다 |
 | `make dev-fake` | `make dev`와 같지만 가짜 OMV(`127.0.0.1:8091`)와 가짜 권한 도우미(상태 디렉터리의 `helper.sock`, 파일 연산은 `helper-root/` 아래에서만)를 함께 띄워 연결한다. `FAKEOMV_TIMEOUT=1m make dev-fake`처럼 세션 timeout을 분 단위로 바꿀 수 있고, `FAKEOMV_VERSION=8.3`처럼 옛 OMV 버전의 응답을 흉내 낼 수 있다(`omvfake.Version`). 가짜 sshd(`FAKESSH_LISTEN`, 기본 `127.0.0.1:8092`, 장난감 셸)도 띄워 웹 터미널을 연결하며, `FAKESSH_AUTH=publickey`처럼 받는 인증 방법을 고른다. 웹 터미널 허용은 설정 앱이나 `ONMARU_TERMINAL=true`로 켠다. 포트는 `ONMARU_LISTEN`(백엔드), `FAKEOMV_LISTEN`(가짜 OMV), `FAKESSH_LISTEN`(가짜 sshd), `DEV_PORT`(Vite)로 바꾼다 |
 | `make dev-pick` | 브랜치가 체크아웃된 워크트리 목록과 OMV 연결(실제·가짜)을 번호로 골라 `make dev BRANCH=<브랜치>` 또는 `make dev-fake BRANCH=<브랜치>`처럼 실행한다(`scripts/dev-pick.sh`). 입력을 기다리므로 Claude는 쓰지 않고 `make dev-fake`에 환경 변수를 준다 |
-| `make build` | 프론트 빌드 → `backend/internal/web/static/dist/` → `bin/onmaru` 단일 실행 파일, 권한 도우미 `bin/onmaru-helper`(`CGO_ENABLED=0`) |
-| `make lint` | `gofmt -l`, `go vet`, oxlint, `tsc -b` |
-| `make test` | `go test -count=1 ./...`(모듈 밖 생성물 검사가 캐시로 통과하지 않게), `vitest run` |
+| `make build` | 프론트 빌드 → `backend/internal/web/static/dist/` → `bin/onmaru` 단일 실행 파일, 권한 도우미 `bin/onmaru-helper`(`CGO_ENABLED=0`), 설치기 `bin/onmaru-install` |
+| `make lint` | `gofmt -l`, `go vet`(backend·installer 두 모듈), oxlint, `tsc -b` |
+| `make test` | `go test -count=1 ./...`(backend·installer 두 모듈. 모듈 밖 생성물 검사가 캐시로 통과하지 않게), `vitest run` |
 | `make check` | lint + test |
 | `make types` | Go 구조체에서 TS 다시 생성: `internal/api` → `src/api/types.gen.ts`, 내장 애드온 manifest → `src/addons/manifests.gen.ts`. 둘 중 하나라도 바꾸면 반드시 실행하고 생성물도 함께 커밋한다(manifest 생성물은 Go 테스트가 검사) |
 
-개별 실행: `cd backend && go test ./internal/addons/sysinfo -run TestParseMemInfo`, `cd frontend && npx vitest run src/icons`
+개별 실행: `cd backend && go test ./internal/addons/sysinfo -run TestParseMemInfo`, `cd installer && go test ./internal/setup -run TestGolden`, `cd frontend && npx vitest run src/icons`
 
 ## 테스트 전략
 

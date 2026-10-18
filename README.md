@@ -30,16 +30,16 @@ OMV 설치 이미지(ISO)로 막 설치했다면 이미지의 버전이 그대�
 | git | | `git`(2.47) | 소스와 아이콘 서브모듈을 받고, 빌드할 때 커밋 정보를 실행 파일에 넣습니다. |
 
 ```sh
-sudo apt install git make nodejs npm curl
+sudo apt install git make nodejs npm
 sudo apt install -t trixie-backports golang-go
 ```
 
 - OMV는 커널 업데이트용으로 Debian의 trixie-backports 저장소를 기본으로 켜 둡니다. 두 번째 줄은 그 저장소에서 Go 1.27을 설치합니다.
 - `-t trixie-backports` 없이 설치하면 Go 1.24가 설치됩니다. 이때는 첫 빌드에서 Go가 1.27.1 툴체인을 proxy.golang.org에서 자동으로 내려받습니다(약 75MB). 내려받은 파일과 푼 툴체인을 합쳐 `~/go/pkg/mod`에 약 330MB가 생깁니다. `GOTOOLCHAIN=local`로 설정했거나 proxy.golang.org에 접속할 수 없다면 backports나 [go.dev/dl](https://go.dev/dl/)의 배포본을 설치해 주세요.
-- `curl`은 선택입니다. 없으면 설치 끝의 상태 확인을 건너뜁니다. C 컴파일러는 필요하지 않습니다.
+- C 컴파일러와 `curl`은 필요하지 않습니다. 설치 끝의 상태 확인은 설치기가 직접 합니다.
 - Node.js 20에서는 `npm ci`가 Vitest의 `EBADENGINE` 경고를 표시합니다. 개발용 테스트 도구에 대한 경고이므로 빌드에는 영향이 없습니다.
 - root 계정이라면 `sudo` 없이 실행합니다.
-- 빌드하는 동안 github.com(아이콘 서브모듈)과 registry.npmjs.org(npm 의존성)에 접속하며, 도구 설치와 빌드에 약 1.1GB의 여유 공간이 필요합니다(backports의 Go 기준. 기본 저장소의 Go 1.24를 쓰면 툴체인 때문에 약 0.3GB가 더 필요합니다).
+- 빌드하는 동안 github.com(아이콘 서브모듈), registry.npmjs.org(npm 의존성), proxy.golang.org(Go 의존성)에 접속하며, 도구 설치와 빌드에 약 1.1GB의 여유 공간이 필요합니다(backports의 Go 기준. 기본 저장소의 Go 1.24를 쓰면 툴체인 때문에 약 0.3GB가 더 필요합니다).
 
 소스는 git으로 받습니다. `stable` 브랜치가 최신 릴리스이고 `main`은 개발 중인 코드이므로 설치에는 `stable`을 받습니다. 아이콘 서브모듈은 설치 스크립트가 받으므로 `--recurse-submodules`는 필요 없습니다.
 
@@ -56,11 +56,13 @@ cd Onmaru
 ./install.sh
 ```
 
-일반 사용자 계정이라면 **sudo 없이** 실행해 주세요. 인터랙티브 설치 스크립트이며 다음 순서로 진행됩니다.
+일반 사용자 계정이라면 **sudo 없이** 실행해 주세요. `install.sh`는 Go로 만든 설치기(`installer/`)를 실행한 계정으로 빌드해(`bin/onmaru-install`) 실행하며, 설치는 다음 순서로 진행됩니다.
 
-1. **설정 입력**: 서비스 사용자, 수신 방식, OMV 주소, SMART 갱신 시각, OMV 워크벤치 주소, 권한 도우미 설치 여부를 묻고 요약을 보여 준 뒤 확인을 받습니다. 입력은 이 단계에서 모두 끝납니다.
-2. **빌드**: 실행한 계정으로 빌드합니다. 처음 클론한 상태라면 아이콘 서브모듈과 npm 의존성부터 준비합니다(`make build` → `bin/onmaru`, `bin/onmaru-helper`).
-3. **설치**: root 권한이 필요한 단계입니다. 일반 사용자라면 스크립트가 1단계의 설정을 옵션으로 넘겨 스스로 `sudo ./install.sh --service-install ...`을 실행하므로 비밀번호만 한 번 입력하면 됩니다. root 계정만 있는 환경이라면 sudo 없이 그대로 이어서 진행합니다.
+1. **설정 입력**: 서비스 사용자, 수신 방식, OMV 주소, SMART 갱신 시각, OMV 워크벤치 주소, 패스키에 쓸 공개 주소, 권한 도우미 설치 여부를 묻고 요약을 보여 준 뒤 확인을 받습니다. 입력은 이 단계에서 모두 끝납니다.
+2. **빌드**: 실행한 계정으로 빌드합니다. 처음 클론한 상태라면 아이콘 서브모듈과 npm 의존성부터 준비합니다(`make build` → `bin/onmaru`, `bin/onmaru-helper`, `bin/onmaru-install`).
+3. **설치**: root 권한이 필요한 단계입니다. 일반 사용자라면 설치기가 1단계의 설정을 옵션으로 넘겨 스스로 `sudo bin/onmaru-install --service-install ...`을 실행하므로 비밀번호만 한 번 입력하면 됩니다. root 계정만 있는 환경이라면 sudo 없이 그대로 이어서 진행합니다.
+
+터미널에서 실행하면 화살표 키로 고르고 값을 입력하는 화면(TUI)으로 묻고, 잘못된 값은 입력하는 동안 바로 알려 줍니다. `--plain`을 주거나 `TERM=dumb`이면 한 줄씩 묻습니다. 표준 입력이 터미널이 아니면(파이프, 자동화 등) 묻지 않고, 빠진 설정 옵션의 목록을 알린 뒤 멈춥니다.
 
 OMV 설치 이미지가 만든 일반 사용자는 sudo 그룹에 들어 있으므로 이 방식으로 설치할 수 있습니다. 다만 OMV는 root와 `_ssh` 그룹 사용자에게만 SSH 접속을 허용하므로, 그 계정으로 SSH에 접속하려면 OMV 웹 UI의 사용자 편집 화면에서 `_ssh` 그룹을 더해 주세요.
 
@@ -71,7 +73,7 @@ OMV 설치 이미지가 만든 일반 사용자는 sudo 그룹에 들어 있으�
 - 사용자 설정(위젯 배치, 바탕화면 바로가기, 화면 설정 등), 관리자의 전역 설정, 올린 배경 이미지는 `/var/lib/onmaru`(`StateDirectory=`)에 저장됩니다.
 - 권한 도우미(기본값 설치)는 `/usr/local/bin/onmaru-helper`, `/etc/default/onmaru-helper`, `/etc/systemd/system/onmaru-helper.socket`·`.service`를 작성하고 소켓을 켭니다. 설치하지 않기로 하면 이전에 설치한 도우미를 지웁니다(아래 "권한 도우미" 참고).
 
-다시 실행하면 기존 설정을 기본값으로 보여 주며, 업그레이드할 때도 같은 명령을 사용합니다. 설정을 바꾸지 않고 업그레이드만 하려면 `./install.sh --upgrade`를 사용합니다(아래 "업그레이드" 참고). 설정이 바뀌면 기존 `/etc/default/onmaru`는 `/etc/default/onmaru.bak-<시각>`으로 백업됩니다. 안내 문구는 로캘에 따라 영어 또는 한국어로 표시되며, `--lang en|ko`로 직접 고를 수도 있습니다.
+다시 실행하면 기존 설정을 기본값으로 보여 주며, 업그레이드할 때도 같은 명령을 사용합니다. 설정을 바꾸지 않고 업그레이드만 하려면 `./install.sh --upgrade`를 사용합니다(아래 "업그레이드" 참고). 설정이 바뀌면 기존 `/etc/default/onmaru`는 `/etc/default/onmaru.bak-<시각>`으로 백업됩니다. 설치기가 묻지 않는 줄은 그대로 남습니다. 웹 터미널 줄(`ONMARU_TERMINAL` 등)은 기존 값을 옮기고, 손으로 넣은 다른 `ONMARU_*` 줄(예: `ONMARU_COOKIE_PATH`)은 파일 끝의 "Kept from the previous file" 주석 아래로 옮깁니다. 안내 문구는 로캘에 따라 영어 또는 한국어로 표시되며, `--lang en|ko`로 직접 고를 수도 있습니다.
 
 | 옵션 | 설명 |
 |---|---|
@@ -80,24 +82,29 @@ OMV 설치 이미지가 만든 일반 사용자는 sudo 그룹에 들어 있으�
 | `--no-build` | 빌드를 건너뛰고 기존 `bin/onmaru`(권한 도우미를 설치하면 `bin/onmaru-helper`도)를 설치합니다. |
 | `--uninstall` | 서비스, 실행 파일, 설정을 제거합니다. |
 | `--service-install` | 빌드 없이 설치 단계만 실행합니다(root 전용). 아래 설정 옵션을 모두 주면 묻지 않고 설치합니다. |
+| `--dry-run` | 설치 단계를 실행하지 않고, 쓸 파일의 바뀌는 내용과 실행할 명령만 보여 줍니다. sudo를 쓰지 않고 시스템을 바꾸지 않습니다. `--no-build`가 없으면 빌드는 실제로 합니다(저장소 안에만 씁니다). |
+| `--plain` | TUI 대신 한 줄씩 묻습니다. |
 | `--lang en\|ko` | 안내 문구 언어를 고릅니다. |
+| `-h`, `--help` | 사용법을 보여 줍니다. |
 | `--user NAME` | 서비스 사용자입니다(기본값 `onmaru`). |
 | `--listen ADDR` | 수신 주소입니다. `127.0.0.1:8090`, `unix:/run/onmaru/onmaru.sock`, 또는 `host:port`를 지정합니다. |
 | `--allow-non-loopback` | 루프백이 아닌 `--listen` 주소를 허용합니다(위험). |
 | `--omv-url URL` | OMV 웹 UI 주소입니다(루프백). |
 | `--smart-refresh-at HH:MM` | SMART 정보를 매일 다시 가져올 시각입니다. |
 | `--workbench-url URL` | 브라우저에서 OMV 웹 UI를 열 주소입니다. 빈 값(`--workbench-url ''`)이면 "OMV 워크벤치" 앱을 숨깁니다. 질문에서는 `-`를 입력하면 끕니다. |
+| `--public-origin URL` | 브라우저가 대시보드에 접속하는 공개 HTTPS 주소입니다(보안 강화 모드의 패스키용). 빈 값(`--public-origin ''`)이면 패스키를 끕니다. 질문에서는 `-`를 입력하면 끕니다. |
 | `--helper`, `--no-helper` | 권한 도우미(root로 도는 `onmaru-helper`)를 설치하거나 설치하지 않습니다. 질문의 기본값은 설치입니다. `--no-helper`는 이미 설치된 도우미를 지웁니다. |
 | `--elevate-group GROUP` | root 권한 상승에 `openmediavault-admin`과 함께 필요한 그룹입니다(기본값 `sudo`). `--helper`일 때만 씁니다. |
 
-설정 옵션으로 준 항목은 묻지 않습니다. 옵션 없이 실행할 때는 설정을 모두 주더라도 요약을 보여 주고 진행 여부를 확인합니다. 확인까지 생략하는 것은 root로 `--service-install`에 설정을 모두 준 경우뿐이므로, 자동화에는 다음과 같이 사용합니다(빌드는 미리 해 두어야 합니다).
+설정 옵션으로 준 항목은 묻지 않습니다. 옵션 없이 실행할 때는 설정을 모두 주더라도 요약을 보여 주고 진행 여부를 확인하므로, 표준 입력이 터미널이 아니면 이 확인에서 멈춥니다. 확인까지 생략하는 것은 `--upgrade`와 root로 `--service-install`에 설정을 모두 준 경우뿐이므로, 자동화에는 다음과 같이 사용합니다(빌드는 미리 해 두어야 합니다). 무엇이 바뀌는지는 같은 옵션에 `--dry-run`을 더해 먼저 볼 수 있습니다.
 
 ```sh
 ./install.sh --service-install --user onmaru --listen unix:/run/onmaru/onmaru.sock \
-  --omv-url http://127.0.0.1 --smart-refresh-at 00:00 --workbench-url https://nas.example.lan/ --no-helper
+  --omv-url http://127.0.0.1 --smart-refresh-at 00:00 --workbench-url https://nas.example.lan/ \
+  --public-origin '' --no-helper
 ```
 
-root로 실행했는데 저장소의 소유자가 root가 아니면(`sudo ./install.sh`, `sudo -i`, `su` 등) 빌드를 건너뜁니다. root로 빌드하면 저장소에 root 소유 파일이 생기고, sudo 환경의 PATH에는 사용자가 설치한 Go·npm이 없을 수 있기 때문입니다. 이때는 기존 `bin/onmaru`로 설치만 할지 물어봅니다(`--upgrade`이면 묻지 않고 멈춥니다).
+root로 실행했는데 저장소의 소유자가 root가 아니면(`sudo ./install.sh`, `sudo -i`, `su` 등) 빌드를 건너뜁니다. root로 빌드하면 저장소에 root 소유 파일이 생기고, sudo 환경의 PATH에는 사용자가 설치한 Go·npm이 없을 수 있기 때문입니다. 이때 설치기도 빌드하지 않고 이미 있는 `bin/onmaru-install`을 쓰며, 기존 `bin/onmaru`로 설치만 할지 물어봅니다(`--upgrade`이면 묻지 않고 멈춥니다). PATH에 `go`가 없을 때도 이미 있는 `bin/onmaru-install`을 씁니다.
 
 ### 업그레이드
 
@@ -116,6 +123,7 @@ git pull
 - 보안 강화 모드가 생기기 전 버전에서 올라오면 패스키에 쓸 공개 주소(`--public-origin`)를 묻습니다. `-`를 입력하면 패스키를 끄고 넘어갑니다.
 - 권한 도우미가 생기기 전 버전에서 올라오면 도우미 설치 여부를 묻습니다. 설치되어 있다면 도우미도 새 실행 파일로 다시 시작합니다(대시보드도 다시 시작하므로 어차피 모두 다시 로그인합니다).
 - 기존 설치가 없거나, 기존 설정이 새 버전의 검사를 통과하지 못하면 멈춥니다. 이때는 `--upgrade` 없이 실행해 설정을 다시 입력합니다.
+- 표준 입력이 터미널이 아니어도 동작합니다. 기존 설치에 없는 설정이 있으면 그 옵션 목록을 알리고 멈추므로 옵션으로 주고 다시 실행합니다.
 
 개발 서버(`make dev`)의 백엔드도 기본으로 `127.0.0.1:8090`을 사용합니다. 같은 머신에서 개발한다면 서비스는 Unix 소켓이나 다른 포트로 설치해 주세요. 설치 스크립트는 포트가 이미 사용 중이면 경고합니다.
 

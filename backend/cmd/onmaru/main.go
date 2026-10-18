@@ -138,14 +138,14 @@ func main() {
 		{flag: "omv-url", env: config.EnvOMVURL, value: *omvURL},
 		{flag: "cookie-path", env: config.EnvCookiePath, value: *cookiePath},
 		{flag: "state-dir", env: config.EnvStateDir, value: *stateDir, systemdEnv: config.EnvSystemdStateDir},
-		// 빈 값은 "끔"이라는 뜻으로 일부러 넣는 값이다(install.sh).
+		// 빈 값은 "끔"이라는 뜻으로 일부러 넣는 값이다(설치기, installer/).
 		{flag: "workbench-url", env: config.EnvWorkbenchURL, value: *workbenchURL, emptyIsSet: true},
 		{flag: "smart-refresh-at", env: config.EnvSmartRefreshAt, value: *smartAt},
 		{flag: "helper-socket", env: config.EnvHelperSocket, value: *helperSocket},
 		{flag: "terminal", env: config.EnvTerminal, value: strconv.FormatBool(*terminalEnabled)},
 		{flag: "ssh-addr", env: config.EnvSSHAddr, value: *sshAddr},
 		{flag: "ssh-host-keys", env: config.EnvSSHHostKeys, value: *sshHostKeys},
-		// 빈 값은 "패스키 끔"이라는 뜻으로 일부러 넣는 값이다(install.sh).
+		// 빈 값은 "패스키 끔"이라는 뜻으로 일부러 넣는 값이다(설치기, installer/).
 		{flag: "public-origin", env: config.EnvPublicOrigin, value: *publicOrigin, emptyIsSet: true},
 	})
 

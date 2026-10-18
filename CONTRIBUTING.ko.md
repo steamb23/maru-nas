@@ -38,7 +38,7 @@ make dev-fake
 | 명령 | 내용 |
 |---|---|
 | `make check` | 린트(`gofmt`, `go vet`, oxlint, `tsc`)와 테스트(`go test`, Vitest) |
-| `make build` | 프로덕션 빌드(`bin/onmaru`) |
+| `make build` | 프로덕션 빌드(`bin/onmaru`, 권한 도우미 `bin/onmaru-helper`, 설치기 `bin/onmaru-install`) |
 | `make types` | Go 구조체와 애드온 manifest에서 TypeScript 다시 생성 |
 
 ## 브랜치와 풀 리퀘스트
@@ -57,7 +57,7 @@ make dev-fake
 
 ## 코드 규칙
 
-- 백엔드는 Go 표준 라이브러리를 쓰고, 웹 터미널에만 `golang.org/x/crypto/ssh`와 `github.com/coder/websocket`을 씁니다. 권한 도우미에는 둘 다 링크하지 않습니다. 프론트엔드는 TypeScript, Vite, React, Zustand이고 웹 터미널에 xterm.js, 인증 앱 QR 코드에 uqr를 씁니다.
+- 백엔드는 Go 표준 라이브러리를 쓰고, 웹 터미널에만 `golang.org/x/crypto/ssh`와 `github.com/coder/websocket`을 씁니다. 권한 도우미에는 둘 다 링크하지 않습니다. 설치기(`installer/`, `install.sh`가 실행하는 별도 Go 모듈)는 터미널 화면에 `charm.land/huh/v2`를 쓰며, 이 의존성은 `installer/go.mod`에만 있고 설치기는 백엔드에서 `backend/config`만 씁니다. 프론트엔드는 TypeScript, Vite, React, Zustand이고 웹 터미널에 xterm.js, 인증 앱 QR 코드에 uqr를 씁니다.
 - 의존성을 추가하기 전에 왜 필요한지와 대안이 무엇이었는지 풀 리퀘스트에 설명해 주세요.
 - `backend/internal/api`의 구조체나 애드온 manifest를 바꾸면 `make types`를 실행하고 생성물(`frontend/src/api/types.gen.ts`, `frontend/src/addons/manifests.gen.ts`)을 함께 커밋합니다. 테스트가 최신 상태인지 검사합니다.
 - 식별자, 로그, 에러 메시지는 영어로 유지합니다.

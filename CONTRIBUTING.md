@@ -38,7 +38,7 @@ Useful commands (run from the repository root):
 | Command | What it does |
 |---|---|
 | `make check` | lint (`gofmt`, `go vet`, oxlint, `tsc`) and tests (`go test`, Vitest) |
-| `make build` | production build into `bin/onmaru` |
+| `make build` | production build into `bin/onmaru`, the privileged helper `bin/onmaru-helper` and the installer `bin/onmaru-install` |
 | `make types` | regenerate TypeScript from Go structs and addon manifests |
 
 ## Branches and pull requests
@@ -57,7 +57,7 @@ Useful commands (run from the repository root):
 
 ## Code rules
 
-- The backend uses the Go standard library, plus `golang.org/x/crypto/ssh` and `github.com/coder/websocket` for the web terminal only. The privileged helper links neither. The frontend is TypeScript, Vite, React and Zustand, plus xterm.js for the web terminal and uqr for the authenticator-app QR code.
+- The backend uses the Go standard library, plus `golang.org/x/crypto/ssh` and `github.com/coder/websocket` for the web terminal only. The privileged helper links neither. The installer (`installer/`, a separate Go module run by `install.sh`) uses `charm.land/huh/v2` for its terminal UI; that dependency lives only in `installer/go.mod`, and the installer uses nothing from the backend except `backend/config`. The frontend is TypeScript, Vite, React and Zustand, plus xterm.js for the web terminal and uqr for the authenticator-app QR code.
 - Before adding a dependency, explain in the pull request why it is needed and what the alternatives were.
 - If you change a struct under `backend/internal/api` or an addon manifest, run `make types` and commit the generated files (`frontend/src/api/types.gen.ts`, `frontend/src/addons/manifests.gen.ts`). Tests check that they are up to date.
 - Identifiers, log messages and error messages stay in English.
