@@ -33,6 +33,7 @@ paths:
 - **복구 코드**: 10개, base32 10자(50비트), SHA-256 해시로만 저장, 한 번 쓰면 지운다. 첫 수단을 등록할 때 만들어 응답에만 평문을 담는다. 수단이 모두 없어지면 복구 코드도 지운다(`security.Normalize`)
 - **패스키(WebAuthn)**: CBOR 파서 없이 표준 라이브러리만 쓴다
   - 등록은 증명 `none`이고 브라우저의 `getPublicKey()`(SPKI DER), `getPublicKeyAlgorithm()`, `getAuthenticatorData()`를 쓴다. 공개 키가 없으면(브라우저가 알고리즘을 모름) 거부한다. 인증기 데이터의 자격 증명 ID가 `rawId`와 같아야 한다. 증명이 없으므로 등록은 관리 창(비밀번호 + 기존 수단)으로 막는다
+  - 등록할 때 `extensions.prf`를 요청한다(`webauthn.ts`의 `creationOptions`, 아래 "패스키로 로그인"). 보안 키의 CTAP2 hmac-secret은 만들 때 요청해야 생기므로, 요청하지 않고 만든 패스키는 확인할 때 PRF 결과를 주지 않는다
   - 확인은 clientDataJSON(type·challenge·origin, crossOrigin 거부), 인증기 데이터(rpIdHash, UP, **UV 필수**), 서명(authData‖sha256(clientDataJSON))을 본다. ES256·EdDSA·RS256(2048비트 이상). UV는 서명까지 맞은 뒤에 보고, UV만 없으면 `security.ErrUserNotVerified`(`ErrVerify`를 감싼다)다. 플래그는 서명한 인증기 데이터 안에 있어 바꿀 수 없다
   - **등록은 두 단계다.** `POST /api/security/passkeys`는 등록 값을 확인하되 저장하지 않고 세션의 대기(`pendingPasskeys`, 5분, 세션 ID)에 둔 뒤, 그 자격 증명 하나만 허용하는 시험 확인 옵션을 준다. `POST /api/security/passkeys/confirm`이 대기의 패스키로 확인(UV 필수)해 통과해야 저장한다(중복·개수·핸들 검사, 첫 수단의 복구 코드, `twoFactor` 올리기도 이때). 두 요청 모두 관리 창이 필요하고 대기는 한 번만 쓴다. 등록할 때만 UV를 켜고 확인할 때는 켜 주지 않는 저장소(잠금이 풀리면 확인을 건너뛰는 비밀번호 관리자, Windows에서 기기 저장을 끄고 Microsoft Password Manager에만 둔 패스키)를 등록 응답의 플래그로는 걸러 낼 수 없기 때문이다
     - 시험 확인에서 UV만 없으면 400 `passkey_uv_unsupported`이고 `securityLimiter`에 세지 않는다(`Neutral`, 값을 맞히는 시도가 아니다). 그 밖의 실패는 지금처럼 `Failure`·`factor_failed`. 세션 중 확인(`checkFactor`)의 UV 실패는 그대로 `factor_failed`·`Failure`다
@@ -56,13 +57,15 @@ paths:
   - PRF 입력(salt)은 등록마다 브라우저가 만들어 항목에 둔다. 확인은 `allowCredentials = [그 자격 증명]`이라 검색 가능한 자격 증명이 아니어도 되고, 사용자 이름 없이 찾는 단계가 없다
   - AAD = rpId ‖ 사용자 이름 ‖ 자격 증명 ID ‖ 등록 ID. 다른 계정·패스키·등록의 share로 풀 수 없다. 평문은 1KiB까지
 - **등록**(`POST /api/security/passkey-logins`): 비밀번호(`confirmPassword`)와 그 패스키(`checkFactor`, PRF를 함께 요청한 `get()`)를 확인한 뒤 서버가 ID·share를 만들어 응답에만 담는다. 브라우저가 같은 `get()`의 PRF 결과로 암호화해 저장한다. PRF 결과가 없으면 요청을 보내지 않는다. 세션은 `twoFactor`로 오른다
+  - PRF는 패스키를 등록할 때 `extensions.prf`로 함께 요청해 둔다(보안 키의 hmac-secret은 만들 때 요청해야 생긴다). 그 전에 등록한 패스키는 PRF 결과를 주지 않을 수 있어 PRF 미지원 문구가 다시 등록하라고 안내한다
+  - 항목을 저장하면 그 사용자를 "다시 묻지 않기"(`dismissed`)에서 뺀다(`rememberPasskeyLogin`)
   - 비밀번호 로그인 직후 로그인 화면이 권한다(`LoginResponse.passkeyLoginOffer`, 로그인 응답에만). 비밀번호는 LoginScreen 상태에만 있다. 보안 페이지에서도 켠다
   - 해제(`DELETE /api/security/passkey-logins/{id}`)는 관리 창을 요구하지 않는다. 기능을 줄이기만 하고 수단을 지우지 않기 때문이다. 패스키 삭제·관리자 초기화는 그 등록도 지운다(`security.Normalize`)
 - **로그인**(인증 없음, 의식 쿠키 `onmaru_passkey_login`, HttpOnly, SameSite=Strict)
   1. `POST /api/login/passkey/options {username, enrollment}`: 없는 사용자·등록·읽을 수 없는 기록은 모두 400 `passkey_login_unknown`(`Neutral`), 만료면 400 `passkey_login_expired`(등록 삭제). 유효한 등록 ID가 있어야 상태가 생긴다
   2. `POST /api/login/passkey {passkey}`: `securityLimiter`(IP·사용자 이름). 그 등록의 자격 증명·서명·UV를 확인하면 `{share}`
   3. `POST /api/login/passkey/finish {password}`: `h.Limiter`로 센다(브라우저가 보낸 비밀번호라 복호화 결과인지 서버가 알 수 없다). 성공하면 일반 로그인과 같은 마무리를 `twoFactor`로 한다(`completeLogin`. OMV 2차 인증이면 대기 → `verify`). OMV가 400이면 비밀번호를 바꾼 것이므로 등록을 지우고 400 `passkey_login_stale`. 브라우저가 풀지 못하면 `{discard: true}`로 등록을 지운다
-  - 브라우저는 `passkey_login_unknown`·`passkey_login_expired`·`passkey_login_stale`이면 항목을 지운다
+  - 브라우저는 `passkey_login_unknown`·`passkey_login_expired`·`passkey_login_stale`이면 항목을 지운다. 1단계 뒤 패스키가 PRF 결과를 주지 않아도 항목을 지운다(그 자격 증명 하나만 허용하므로 다시 해도 풀 수 없다). share를 받기 전이라 서버 등록은 지우지 못하고 만료나 보안 페이지의 해제로 정리된다
 - **만료**: 관리자가 정책의 `passkeyLoginDays`(7·30·90·180·365, 기본 30, 모르는 값은 7)로 정한다. 등록할 때 `ExpiresAt`을 두고, 실제 만료는 `min(ExpiresAt, Created + 지금 기간)`이다(줄이면 기존 등록에도 바로, 늘리면 새 등록부터). 바꾸려면 `password` 이상의 세션이어야 한다. 만료된 등록은 상태 응답에서 빼고, 쓰는 김에 지운다
 - 로그에는 사용자, IP, 패스키 이름, 등록 ID 앞 6자만 남긴다. share·암호문·PRF 결과는 남기지 않는다
 
@@ -78,7 +81,7 @@ paths:
   - 여는 함수와 컴포넌트를 다른 파일에 둔다(oxlint `only-export-components`)
 - 로그인 직후 단계는 인증 저장소의 `stepUp` 상태(`finishStepUp`)다. 보안에 민감한 기능은 `security_required`를 받으면 `requestStepUp`으로 확인하고 다시 시도한다(터미널은 닫힘 막대의 확인 단추, 상승은 `ElevationForm`이 같은 비밀번호로 다시 시도)
 - 패스키는 `passkeysSupported()`(보안 컨텍스트 + `PublicKeyCredential`)일 때만 보인다. 개발 서버(평문 HTTP)에서는 TOTP·복구 코드만 시험할 수 있다
-- 패스키로 로그인: 순수 모듈 `passkeyLogin.ts`(항목 형식, 분할 키), 저장 `passkeyLoginStorage.ts`(localStorage), 흐름 `passkeyLoginFlow.ts`(`enablePasskeyLogin`, `unlockPasskeyLogin`). 보안 페이지의 "패스키로 로그인하는 브라우저" 절은 관리 창 없이 해제하고 `enablePasskeyLoginDialog`(내용 `PasskeyLoginSetup.tsx`)로 켜며, 받은 상태마다 서버 목록에 없는 이 브라우저 항목을 지운다. 만료 기간은 보안 정책 페이지가 고른다
+- 패스키로 로그인: 순수 모듈 `passkeyLogin.ts`(항목 형식, 분할 키), 저장 `passkeyLoginStorage.ts`(localStorage), 흐름 `passkeyLoginFlow.ts`(`enablePasskeyLogin`, `unlockPasskeyLogin`). 보안 페이지의 "패스키로 로그인하는 브라우저" 절은 관리 창 없이 해제하고 `enablePasskeyLoginDialog`(내용 `PasskeyLoginSetup.tsx`)로 켜며, 받은 상태마다 이 브라우저 항목을 서버 목록에 맞춘다(`syncPasskeyLogins`: 목록에 없으면 지우고, 있으면 `expiresAt`을 서버 값으로. 관리자가 기간을 줄인 경우). 만료 기간은 보안 정책 페이지가 고른다
   - 로그인 화면은 활성 항목마다 "패스키로 로그인" 단추를 두고(풀어 낸 비밀번호는 인증 저장소의 `completePasskeyLogin`에만 넘긴다), 비밀번호 로그인 직후 권유는 인증 저장소의 `passkeyOffer`(`shouldOfferPasskeyLogin`: 이 브라우저 항목·"다시 묻지 않기")다. 권유만 오면 `auth/PasskeyOffer.tsx` 카드, 2차 인증 권유와 함께 오면 `StepUpForm`의 확인란(`passkeyLogin`. PRF가 없으면 같은 확인 값으로 `verifySecurity`)이다. 비밀번호는 권유를 마칠 때까지 LoginScreen 상태에만 둔다
 - 인증 앱 QR은 `uqr`의 `encode`로 모듈 배열을 받아 SVG path로 그린다(`qrPath`, innerHTML 없음). 등록 대화상자를 열 때 `import('uqr')`로 받고 vendor 청크에서 뺀다(`vite.config.ts`)
 
@@ -87,3 +90,5 @@ paths:
 - Go: TOTP는 RFC 6238 SHA-1 벡터, WebAuthn은 테스트 안에서 합성한 인증기(P-256·ed25519·RSA 키로 authData·clientDataJSON·서명을 만든다). 서버 테스트(`security_test.go`, `passkey_test.go`)는 `envOptions{security, rp}`와 omvfake로 정책 가드, 로그인 단계, 터미널·상승 적용, 관리 창, 초기화, 손상된 기록을 시험한다
 - 브라우저: TOTP·화면은 `make dev-fake`, 패스키는 HTTPS 도메인으로 연결한 테스트 VM에서 Playwright 가상 인증기(CDP `WebAuthn.addVirtualAuthenticator`, UV 켬)로 확인한다. 실제 기기 패스키는 사용자가 확인한다
   - 가상 인증기는 `WebAuthn.setUserVerified(false)`로 UV를 끄면 UV=0 응답을 만들지 않고 `get()`이 NotAllowedError로 끝난다(시험 확인의 "다시 확인" 경로). "등록은 UV=1, 확인은 UV=0"인 경우는 Go 테스트(`fakePasskey.noUV`)가 맡고, 화면의 `passkey_uv_unsupported` 안내는 confirm 응답을 `page.route`로 바꿔 확인한다
+  - 패스키로 로그인은 가상 인증기를 `hasPrf: true`로 만들어 확인한다. 등록 옵션에 `extensions.prf`가 있어야 그 자격 증명에 PRF가 생긴다(create 결과 `prf.enabled: true`)
+  - 이 Chrome에서는 `setUserVerified(false)`를 한 번 하면 그 인증기는 `setUserVerified(true)`로 다시 켜도 계속 실패한다. 취소·UV 실패 확인은 따로 만든 인증기로 하거나 마지막에 한다. 자격 증명을 새 인증기로 옮겨도(`getCredentials` → `addCredential`) PRF 상태는 옮겨지지 않는다
