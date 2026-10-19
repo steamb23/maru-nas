@@ -92,7 +92,7 @@ paths:
 
 - `src/security/`: `StepUpForm.tsx`(로그인 카드와 대화상자가 함께 쓰는 확인 폼, `variant`), `stepUpDialog.tsx`(`requestStepUp`, `requestManage`) + 내용 `StepUpBody.tsx`, `securityDialogs.tsx`(패스키·인증 앱 등록, 복구 코드 보기) + 내용 `PasskeyAdd.tsx`·`TOTPSetup.tsx`·`RecoveryCodes.tsx`, 순수 모듈 `messages.ts`(오류 문구, 수단 고르기, QR 경로)·`webauthn.ts`(base64url, 옵션 변환)
   - 여는 함수와 컴포넌트를 다른 파일에 둔다(oxlint `only-export-components`)
-- 관리 확인에서 고를 수 있는 수단과 순서는 `messages.ts`의 `manageChoices`다. 패스키 등록(`requestManage`의 `purpose: 'addPasskey'`, 보안 페이지의 추가 단추)은 인증 앱, 기기 추가 코드, 패스키, 복구 코드 순이다(새 기기에는 그 패스키가 없는 경우가 많다). 그 밖의 관리 확인과 세션 중 확인은 패스키, 인증 앱, 복구 코드 순이고 기기 추가 코드를 보이지 않는다
+- 확인 폼에서 고를 수 있는 수단과 순서는 `messages.ts`의 `factorChoices`다. 패스키 등록(`requestManage`의 `purpose: 'addPasskey'`, 보안 페이지의 추가 단추)은 인증 앱, 기기 추가 코드, 패스키, 복구 코드 순이다(새 기기에는 그 패스키가 없는 경우가 많다). 그 밖의 관리 확인과 세션 중 확인은 패스키, 인증 앱, 복구 코드 순이고 기기 추가 코드를 보이지 않는다
   - 기기 추가 코드 입력 아래 안내가 "이 기기에 패스키가 있으면 패스키 사용"을 알린다(인증 앱이 없으면 같은 기기에 패스키를 하나 더 등록할 때도 코드 입력이 먼저 나온다)
   - 발급은 보안 페이지의 "다른 기기에서 패스키 추가" 행이 관리 창을 연 뒤 코드를 받아 `deviceCodeDialog`(내용 `DeviceCode.tsx`, 남은 시간)로 보인다. 이 브라우저의 패스키 지원과 관계없이 수단이 있고 서버가 패스키를 쓸 수 있으면 켠다
 - 로그인 직후 단계는 인증 저장소의 `stepUp` 상태(`finishStepUp`)다. 보안에 민감한 기능은 `security_required`를 받으면 `requestStepUp`으로 확인하고 다시 시도한다(터미널은 닫힘 막대의 확인 단추, 상승은 `ElevationForm`이 같은 비밀번호로 다시 시도)
