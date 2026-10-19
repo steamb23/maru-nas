@@ -43,11 +43,13 @@ func TestPasskeyLoginEnroll(t *testing.T) {
 	e := newEnv(t, envOptions{rp: testRP})
 	// 패스키가 없으면 켜기를 권하지 않는다.
 	n := e.browser()
-	if got := decode[api.LoginResponse](t, n.login("user", "user")); got.PasskeyLoginOffer {
+	if got := decode[api.LoginResponse](t, n.login("user", "user")); got.PasskeyLoginOffer != nil {
 		t.Fatalf("offer without passkeys: %+v", got)
 	}
 	b, pk := e.passkeyUser()
-	if got := decode[api.LoginResponse](t, e.browser().login("user", "user")); !got.PasskeyLoginOffer {
+	// 권유에는 지금 만료 기간을 담는다.
+	if got := decode[api.LoginResponse](t, e.browser().login("user", "user")); got.PasskeyLoginOffer == nil ||
+		got.PasskeyLoginOffer.Days != api.PasskeyLoginDaysDefault {
 		t.Fatalf("no offer with a passkey: %+v", got)
 	}
 
@@ -122,7 +124,7 @@ func TestPasskeyLoginEnrollWithoutOrigin(t *testing.T) {
 	e := newEnv(t, envOptions{})
 	b := e.browser()
 	got := decode[api.LoginResponse](t, b.login("user", "user"))
-	if got.PasskeyLoginOffer {
+	if got.PasskeyLoginOffer != nil {
 		t.Fatal("offer without an origin")
 	}
 	wantCode(t, b.do(http.MethodPost, "/api/security/passkey-logins", api.PasskeyLoginEnrollRequest{Password: "user", Passkey: &api.PasskeyAssertion{}}),
@@ -138,7 +140,10 @@ func TestPasskeyLoginExpiry(t *testing.T) {
 	e.setPolicy(api.SecurityPolicy{PasskeyLoginDays: 7})
 	e.clk.Add(8 * 24 * time.Hour)
 	b = e.browser()
-	wantStatus(t, b.login("user", "user"), http.StatusOK)
+	// 로그인 권유도 지금 기간을 알린다.
+	if got := decode[api.LoginResponse](t, b.login("user", "user")); got.PasskeyLoginOffer == nil || got.PasskeyLoginOffer.Days != 7 {
+		t.Fatalf("offer = %+v", got.PasskeyLoginOffer)
+	}
 	if st := b.securityStatus(); len(st.PasskeyLogins) != 0 || st.Policy.PasskeyLoginDays != 7 {
 		t.Fatalf("expired login listed: %+v", st)
 	}

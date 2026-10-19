@@ -2,6 +2,7 @@
 import type { ParseKeys } from 'i18next'
 import { ApiError } from '../api/client'
 import type { SecurityPolicy, SecurityStatus } from '../api/types.gen'
+import { PasskeyLoginStorageError, PasswordTooLongError, PrfUnsupportedError } from './passkeyLoginFlow'
 
 export type Factor = SecurityStatus['methods'][number]
 export type Assurance = SecurityStatus['assurance']
@@ -54,6 +55,16 @@ export function securityError(err: unknown, method?: Factor | 'password' | 'both
     default:
       return { key: 'security.errors.failed' }
   }
+}
+
+// passkeyLoginEnableError는 패스키로 로그인 켜기(passkeyLoginFlow.ts의 enablePasskeyLogin)의 실패를 문구 키로 바꾼다.
+// 비밀번호와 패스키를 함께 보내므로 틀린 값은 관리 확인과 같은 문구다(method 'both'). 로그인 직후처럼 방금 맞힌
+// 비밀번호를 쓰면 'passkey'로 패스키 실패 문구를 고른다.
+export function passkeyLoginEnableError(err: unknown, method: 'both' | 'passkey' = 'both'): SecurityError {
+  if (err instanceof PrfUnsupportedError) return { key: 'security.passkeyLogin.prfUnsupported' }
+  if (err instanceof PasswordTooLongError) return { key: 'security.passkeyLogin.passwordTooLong' }
+  if (err instanceof PasskeyLoginStorageError) return { key: 'security.passkeyLogin.storageFailed' }
+  return securityError(err, method)
 }
 
 // passkeyNotSaved는 새 패스키의 등록·시험 확인 요청이 거절돼 백엔드가 그 패스키를 저장하지 않았다고 확실히 알 수

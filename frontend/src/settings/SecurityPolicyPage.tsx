@@ -1,8 +1,10 @@
-// 설정의 보안 정책 페이지(관리자): 기능별 보안 강화 단계, 패스키 공개 주소와 OMV 자동 로그아웃 안내,
-// 사용자 인증 수단 초기화. 정책을 바꾸거나 초기화하기 전에 확인을 요구하면(security_required) 확인한 뒤 다시 시도한다.
+// 설정의 보안 정책 페이지(관리자): 기능별 보안 강화 단계, 패스키 공개 주소와 OMV 자동 로그아웃 안내, 패스키로
+// 로그인의 만료 기간, 사용자 인증 수단 초기화. 정책을 바꾸거나 초기화하기 전에 확인을 요구하면(security_required)
+// 확인한 뒤 다시 시도한다.
 import type { ParseKeys } from 'i18next'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { formatUnit } from '../addons/common/format'
 import {
   ApiError,
   fetchSecurityPolicy,
@@ -10,9 +12,16 @@ import {
   resetSecurityUser,
   saveSecurityPolicy,
 } from '../api/client'
-import type { SecurityPolicy, SecurityPolicyResponse, SecurityUserInfo } from '../api/types.gen'
+import {
+  PasskeyLoginDaysDefault,
+  type SecurityPolicy,
+  type SecurityPolicyResponse,
+  type SecurityUserInfo,
+} from '../api/types.gen'
 import { useAuthStore } from '../auth/store'
+import { useLanguage } from '../i18n'
 import { LEVEL_KEYS, type Level, type SecurityTarget, securityError } from '../security/messages'
+import { PASSKEY_LOGIN_DAYS } from '../security/passkeyLogin'
 import { requestStepUp } from '../security/stepUpDialog'
 import { useDialogs } from '../shell/dialogPresets'
 import { SettingsCard, SettingsNotice, SettingsRow, SettingsSection } from './controls'
@@ -32,6 +41,8 @@ const TARGETS: readonly { id: SecurityTarget; label: ParseKeys; desc: ParseKeys 
 
 const LEVELS: readonly Level[] = ['off', 'password', 'twoFactor']
 
+type LoginDays = (typeof PASSKEY_LOGIN_DAYS)[number]
+
 async function load(signal?: AbortSignal): Promise<Loaded> {
   const [policy, users] = await Promise.all([fetchSecurityPolicy(signal), fetchSecurityUsers(signal)])
   return { status: 'ready', policy, users }
@@ -39,6 +50,7 @@ async function load(signal?: AbortSignal): Promise<Loaded> {
 
 export function SecurityPolicyPage() {
   const { t } = useTranslation()
+  const lang = useLanguage()
   const dialogs = useDialogs()
   const me = useAuthStore((s) => s.user?.username)
   const [state, setState] = useState<LoadState>({ status: 'loading' })
@@ -91,6 +103,10 @@ export function SecurityPolicyPage() {
 
   const setLevel = (current: SecurityPolicy, target: SecurityTarget, level: Level) =>
     void act(() => withStepUp(() => saveSecurityPolicy({ ...current, [target]: level })))
+
+  // 만료 기간만 바꾸고 나머지는 지금 정책 그대로 보낸다(비밀번호를 다시 확인한 세션이어야 한다).
+  const setLoginDays = (current: SecurityPolicy, days: LoginDays) =>
+    void act(() => withStepUp(() => saveSecurityPolicy({ ...current, passkeyLoginDays: days })))
 
   const reset = (username: string) =>
     void act(async () => {
@@ -148,6 +164,26 @@ export function SecurityPolicyPage() {
                 <span className="settings-badge">
                   {data.policy.passkeyRpId ? t('settings.securityPolicy.available') : t('settings.securityPolicy.unavailable')}
                 </span>
+              </SettingsRow>
+            </SettingsCard>
+          </SettingsSection>
+
+          <SettingsSection title={t('settings.securityPolicy.passkeyLogin')}>
+            <SettingsCard>
+              <SettingsRow label={t('settings.securityPolicy.passkeyLoginDays')} description={t('settings.securityPolicy.passkeyLoginDaysDesc')}>
+                <select
+                  className="settings-select"
+                  aria-label={t('settings.securityPolicy.passkeyLoginDays')}
+                  value={data.policy.policy.passkeyLoginDays ?? PasskeyLoginDaysDefault}
+                  disabled={busy}
+                  onChange={(e) => setLoginDays(data.policy.policy, Number(e.target.value) as LoginDays)}
+                >
+                  {PASSKEY_LOGIN_DAYS.map((d) => (
+                    <option key={d} value={d}>
+                      {formatUnit(d, 'day', lang)}
+                    </option>
+                  ))}
+                </select>
               </SettingsRow>
             </SettingsCard>
           </SettingsSection>

@@ -1,12 +1,16 @@
-// 설정의 보안 페이지: 이 세션의 확인 수준과 "지금 확인", 내 인증 수단(패스키, 인증 앱, 복구 코드) 관리.
-// 수단을 바꾸기 전에는 비밀번호와 등록한 수단을 다시 확인해 관리 창(5분)을 연다(security/stepUpDialog.tsx).
+// 설정의 보안 페이지: 이 세션의 확인 수준과 "지금 확인", 내 인증 수단(패스키, 인증 앱, 복구 코드) 관리, 패스키로
+// 로그인하는 브라우저. 수단을 바꾸기 전에는 비밀번호와 등록한 수단을 다시 확인해 관리 창(5분)을 연다
+// (security/stepUpDialog.tsx). 패스키로 로그인의 켜기·해제는 관리 창 없이 한다.
 import type { ParseKeys } from 'i18next'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ApiError, deletePasskey, deleteTOTP, fetchSecurity, regenerateRecoveryCodes } from '../api/client'
-import type { SecurityChangeResponse, SecurityStatus } from '../api/types.gen'
+import { formatUnit } from '../addons/common/format'
+import { ApiError, deletePasskey, deletePasskeyLogin, deleteTOTP, fetchSecurity, regenerateRecoveryCodes } from '../api/client'
+import { PasskeyLoginDaysDefault, type SecurityChangeResponse, type SecurityStatus } from '../api/types.gen'
+import { useAuthStore } from '../auth/store'
 import { useLanguage } from '../i18n'
-import { addPasskeyDialog, setupTOTPDialog, showRecoveryCodes } from '../security/securityDialogs'
+import { forgetPasskeyLogin, loadPasskeyLogins, passkeyLoginFor } from '../security/passkeyLoginStorage'
+import { addPasskeyDialog, enablePasskeyLoginDialog, setupTOTPDialog, showRecoveryCodes } from '../security/securityDialogs'
 import { ASSURANCE_KEYS, LEVEL_KEYS, type SecurityTarget, securityError } from '../security/messages'
 import { requestManage, requestStepUp } from '../security/stepUpDialog'
 import { passkeysSupported } from '../security/webauthn'
@@ -25,17 +29,29 @@ const MANAGE_MARGIN_MS = 15_000
 
 const now = () => Date.now()
 
+// forgetStale은 이 브라우저에 둔 그 사용자의 패스키로 로그인 항목이 서버 목록에 없으면(해제, 만료, 패스키 삭제,
+// 관리자 초기화) 지운다. 만료된 항목도 함께 지운다(서버 목록은 만료된 등록을 빼고 준다).
+function forgetStale(st: SecurityStatus, username: string | undefined) {
+  if (!username) return
+  const entry = loadPasskeyLogins().entries.find((e) => e.username === username)
+  if (entry && !st.passkeyLogins.some((l) => l.id === entry.enrollment)) forgetPasskeyLogin(entry.enrollment)
+}
+
 export function SecurityPage() {
   const { t } = useTranslation()
   const lang = useLanguage()
   const dialogs = useDialogs()
+  const username = useAuthStore((s) => s.user?.username)
   const [state, setState] = useState<LoadState>({ status: 'loading' })
   const [busy, setBusy] = useState(false)
   const [errorKey, setErrorKey] = useState<ParseKeys | null>(null)
   // 관리 창이 닫히는 시각(이 브라우저의 Date.now() 기준 ms)
   const manageUntil = useRef(0)
 
+  // apply는 새 보안 상태를 보인다. 그리기 전에 서버 목록에 없는 이 브라우저의 패스키로 로그인 항목을 지운다
+  // (해제한 이 브라우저의 항목도 여기서 지워진다). 처음 불러올 때도 쓰므로 사용자 이름은 저장소에서 바로 읽는다.
   const apply = (st: SecurityStatus) => {
+    forgetStale(st, useAuthStore.getState().user?.username)
     manageUntil.current = now() + st.manageSeconds * 1000
     setState({ status: 'ready', data: st })
   }
@@ -77,6 +93,21 @@ export function SecurityPage() {
     }
   }
 
+  // runDirect는 관리 창이 필요 없는 작업(패스키로 로그인 켜기·해제) 하나를 한다. 취소하면 task가 null을 돌려준다.
+  const runDirect = async (task: () => Promise<SecurityStatus | null>) => {
+    if (busy) return
+    setErrorKey(null)
+    setBusy(true)
+    try {
+      const st = await task()
+      if (st) apply(st)
+    } catch (err) {
+      setErrorKey(securityError(err).key)
+    } finally {
+      setBusy(false)
+    }
+  }
+
   const confirm = (title: ParseKeys, message: ParseKeys, confirmKey: ParseKeys) =>
     dialogs.confirm({ title: t(title), message: t(message), confirmLabel: t(confirmKey), danger: true })
 
@@ -85,8 +116,24 @@ export function SecurityPage() {
     if (st) apply(st)
   }
 
+  // disablePasskeyLogin은 등록 하나를 해제한다. 이미 없으면(다른 탭에서 해제, 만료) 목록만 다시 받는다.
+  const disablePasskeyLogin = (id: string) =>
+    void runDirect(async () => {
+      if (!(await confirm('settings.security.disablePasskeyLoginTitle', 'settings.security.disablePasskeyLoginMessage', 'settings.security.disable')))
+        return null
+      try {
+        return await deletePasskeyLogin(id)
+      } catch (err) {
+        if (!(err instanceof ApiError) || err.status !== 404) throw err
+        return fetchSecurity()
+      }
+    })
+
   const date = (iso: string) => new Date(iso).toLocaleDateString(lang, { dateStyle: 'medium' })
   const supported = passkeysSupported()
+  // 이 브라우저의 등록 ID. 읽을 때마다 저장소를 보므로 켜기·해제 뒤 다시 그리면 바로 바뀐다.
+  const mine = username ? passkeyLoginFor(username)?.enrollment : undefined
+  const loginDays = data?.policy.passkeyLoginDays ?? PasskeyLoginDaysDefault
 
   return (
     <>
@@ -166,6 +213,56 @@ export function SecurityPage() {
                   }
                 >
                   {t('settings.security.add')}
+                </button>
+              </SettingsRow>
+            </SettingsCard>
+          </SettingsSection>
+
+          <SettingsSection
+            title={t('settings.security.passkeyLogins')}
+            description={t('settings.security.passkeyLoginsDesc', { days: formatUnit(loginDays, 'day', lang) })}
+          >
+            <SettingsCard>
+              {data.passkeyLogins.map((l) => (
+                <SettingsRow
+                  key={l.id}
+                  label={
+                    <span className="selectable">
+                      {data.passkeys.find((p) => p.id === l.passkey)?.name ?? t('settings.security.passkeyLoginUnknown')}
+                    </span>
+                  }
+                  description={[
+                    l.lastUsed
+                      ? t('settings.security.passkeyLoginUsed', { created: date(l.created), used: date(l.lastUsed) })
+                      : t('settings.security.passkeyLoginCreated', { created: date(l.created) }),
+                    t('settings.security.passkeyLoginExpires', { expires: date(l.expiresAt) }),
+                  ].join(' · ')}
+                >
+                  {l.id === mine && <span className="settings-badge">{t('settings.security.thisBrowser')}</span>}
+                  <button type="button" className="addon-button" disabled={busy} onClick={() => disablePasskeyLogin(l.id)}>
+                    {t('settings.security.disable')}
+                  </button>
+                </SettingsRow>
+              ))}
+              <SettingsRow
+                label={t('settings.security.passkeyLoginHere')}
+                description={
+                  data.passkeys.length === 0
+                    ? t('settings.security.passkeyLoginNeedsPasskey')
+                    : mine
+                      ? t('settings.security.passkeyLoginHereOn')
+                      : t('settings.security.passkeyLoginHereOff')
+                }
+              >
+                <button
+                  type="button"
+                  className={mine ? 'addon-button' : 'addon-button primary'}
+                  disabled={busy || !username || !data.passkeysAvailable || !supported || data.passkeys.length === 0}
+                  onClick={() => {
+                    if (username) void runDirect(() => enablePasskeyLoginDialog(dialogs.scope, username, loginDays))
+                  }}
+                >
+                  {mine ? t('settings.security.passkeyLoginReenable') : t('settings.security.passkeyLoginEnable')}
                 </button>
               </SettingsRow>
             </SettingsCard>

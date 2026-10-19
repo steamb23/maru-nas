@@ -1200,10 +1200,19 @@ export interface LoginResponse {
    */
   stepUp?: StepUpInfo;
   /**
-   * PasskeyLoginOffer는 이 사용자가 패스키로 로그인을 켤 수 있다는 뜻이다(공개 주소가 있고 패스키를 등록함).
+   * PasskeyLoginOffer가 있으면 이 사용자가 패스키로 로그인을 켤 수 있다는 뜻이다(공개 주소가 있고 패스키를 등록함).
    * 이 브라우저에 등록이 없으면 로그인 화면이 켜기를 권한다. 로그인 응답에만 넣는다.
    */
-  passkeyLoginOffer?: boolean;
+  passkeyLoginOffer?: PasskeyLoginOffer;
+}
+/**
+ * PasskeyLoginOffer는 로그인 직후 권하는 패스키로 로그인이다.
+ */
+export interface PasskeyLoginOffer {
+  /**
+   * Days는 지금 켜면 쓸 수 있는 기간(일)이다(정책의 PasskeyLoginDays). 권유 문구에 보인다.
+   */
+  days: number /* int */;
 }
 /**
  * StepUpInfo는 로그인 직후 권하는 2차 인증이다.

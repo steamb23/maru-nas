@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { ApiError } from '../api/client'
-import { firstFactor, groupSecret, passkeyNotSaved, qrPath, satisfies, securityError, usableFactors } from './messages'
+import { firstFactor, groupSecret, passkeyLoginEnableError, passkeyNotSaved, qrPath, satisfies, securityError, usableFactors } from './messages'
+import { PasskeyLoginStorageError, PasswordTooLongError, PrfUnsupportedError } from './passkeyLoginFlow'
 
 describe('securityError', () => {
   it('틀린 값은 시도한 수단에 맞는 문구다', () => {
@@ -83,5 +84,21 @@ describe('groupSecret', () => {
   it('4자씩 띄운다', () => {
     expect(groupSecret('ABCDEFGHIJ')).toBe('ABCD EFGH IJ')
     expect(groupSecret('ABCD')).toBe('ABCD')
+  })
+})
+
+describe('passkeyLoginEnableError', () => {
+  it('켜기 단계의 실패를 구분한다', () => {
+    expect(passkeyLoginEnableError(new PrfUnsupportedError()).key).toBe('security.passkeyLogin.prfUnsupported')
+    expect(passkeyLoginEnableError(new PasswordTooLongError()).key).toBe('security.passkeyLogin.passwordTooLong')
+    expect(passkeyLoginEnableError(new PasskeyLoginStorageError()).key).toBe('security.passkeyLogin.storageFailed')
+  })
+
+  it('그 밖에는 확인 실패 문구다', () => {
+    const wrong = new ApiError(400, 'x', 'factor_failed')
+    expect(passkeyLoginEnableError(wrong).key).toBe('security.errors.wrongEither')
+    expect(passkeyLoginEnableError(wrong, 'passkey').key).toBe('security.errors.passkeyFailed')
+    expect(passkeyLoginEnableError(new DOMException('x', 'NotAllowedError')).key).toBe('security.errors.passkeyCanceled')
+    expect(passkeyLoginEnableError(new ApiError(429, 'x', 'rate_limited', 9))).toEqual({ key: 'security.errors.rateLimited', retryAfter: 9 })
   })
 })

@@ -54,18 +54,21 @@ func (h *handler) passkeyLoginInfos(rec security.Record) []api.PasskeyLoginInfo 
 	return out
 }
 
-// passkeyLoginOffer는 로그인 응답의 PasskeyLoginOffer다. 공개 주소가 있고 사용자가 패스키를 등록했으면 true다.
-// 이 브라우저에 등록이 있는지는 브라우저가 본다.
-func (h *handler) passkeyLoginOffer(s auth.Session) bool {
+// passkeyLoginOffer는 로그인 응답의 PasskeyLoginOffer다. 공개 주소가 있고 사용자가 패스키를 등록했으면 지금 만료
+// 기간을 담아 돌려주고, 아니면 nil이다. 이 브라우저에 등록이 있는지는 브라우저가 본다.
+func (h *handler) passkeyLoginOffer(s auth.Session) *api.PasskeyLoginOffer {
 	if h.RP == nil {
-		return false
+		return nil
 	}
 	rec, err := h.Security.GetSecurity(s.Username)
 	if err != nil {
 		log.Printf("security: user=%q: record: %v", s.Username, err)
-		return false
+		return nil
 	}
-	return len(rec.Passkeys) > 0
+	if len(rec.Passkeys) == 0 {
+		return nil
+	}
+	return &api.PasskeyLoginOffer{Days: h.passkeyLoginDays()}
 }
 
 // enrollPasskeyLogin은 이 브라우저의 패스키로 로그인을 켠다. 비밀번호와 그 패스키를 함께 확인한 뒤 서버가 등록 ID와

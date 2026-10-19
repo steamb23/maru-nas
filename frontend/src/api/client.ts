@@ -25,6 +25,7 @@ import type {
   PasskeyLoginEnrollResponse,
   PasskeyLoginFinishRequest,
   PasskeyLoginInfo,
+  PasskeyLoginOffer,
   PasskeyLoginOptionsRequest,
   PasskeyLoginRequest,
   PasskeyLoginUnlockResponse,
@@ -249,7 +250,7 @@ export function isLoginResponse(v: unknown): v is LoginResponse {
         (x): x is StepUpInfo =>
           isObj(x) && isArrayOf(x.methods, (m): m is StepUpInfo['methods'][number] => isOneOf(m, ['passkey', 'totp', 'recovery'] as const)),
       ) &&
-      isOptional(v.passkeyLoginOffer, isBool)
+      isOptional(v.passkeyLoginOffer, (x): x is PasskeyLoginOffer => isObj(x) && isNum(x.days))
     )
   if (v.status === 'challengeRequired') return isChallengeInfo(v.challenge)
   return false

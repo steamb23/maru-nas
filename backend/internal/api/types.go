@@ -814,9 +814,15 @@ type LoginResponse struct {
 	// StepUp이 있으면 로그인을 마친 뒤 2차 인증을 권한다(보안 강화 모드). 세션은 이미 만들어졌으므로
 	// 건너뛰면 일반 세션으로 쓴다. 로그인 응답에만 넣는다(세션 복원 때는 묻지 않는다).
 	StepUp *StepUpInfo `json:"stepUp,omitempty"`
-	// PasskeyLoginOffer는 이 사용자가 패스키로 로그인을 켤 수 있다는 뜻이다(공개 주소가 있고 패스키를 등록함).
+	// PasskeyLoginOffer가 있으면 이 사용자가 패스키로 로그인을 켤 수 있다는 뜻이다(공개 주소가 있고 패스키를 등록함).
 	// 이 브라우저에 등록이 없으면 로그인 화면이 켜기를 권한다. 로그인 응답에만 넣는다.
-	PasskeyLoginOffer bool `json:"passkeyLoginOffer,omitempty"`
+	PasskeyLoginOffer *PasskeyLoginOffer `json:"passkeyLoginOffer,omitempty"`
+}
+
+// PasskeyLoginOffer는 로그인 직후 권하는 패스키로 로그인이다.
+type PasskeyLoginOffer struct {
+	// Days는 지금 켜면 쓸 수 있는 기간(일)이다(정책의 PasskeyLoginDays). 권유 문구에 보인다.
+	Days int `json:"days"`
 }
 
 // StepUpInfo는 로그인 직후 권하는 2차 인증이다.

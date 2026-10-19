@@ -168,9 +168,10 @@ describe('isLoginResponse', () => {
     const session = { username: 'a', admin: false, assurance: 'login' }
     expect(isLoginResponse({ status: 'authenticated', session, stepUp: { methods: ['totp', 'recovery'] } })).toBe(true)
     expect(isLoginResponse({ status: 'authenticated', session, stepUp: { methods: ['sms'] } })).toBe(false)
-    // 패스키로 로그인 권유는 불리언만 받는다.
-    expect(isLoginResponse({ status: 'authenticated', session, passkeyLoginOffer: true })).toBe(true)
-    expect(isLoginResponse({ status: 'authenticated', session, passkeyLoginOffer: 'yes' })).toBe(false)
+    // 패스키로 로그인 권유는 기간(일)이 든 객체만 받는다.
+    expect(isLoginResponse({ status: 'authenticated', session, passkeyLoginOffer: { days: 30 } })).toBe(true)
+    expect(isLoginResponse({ status: 'authenticated', session, passkeyLoginOffer: true })).toBe(false)
+    expect(isLoginResponse({ status: 'authenticated', session, passkeyLoginOffer: { days: '30' } })).toBe(false)
     expect(isLoginResponse({ status: 'authenticated' })).toBe(false)
     expect(isLoginResponse({ status: 'challengeRequired', challenge: { kind: 'totp' } })).toBe(true)
     expect(isLoginResponse({ status: 'challengeRequired', challenge: { kind: 1 } })).toBe(false)
