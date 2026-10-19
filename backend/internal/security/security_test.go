@@ -140,6 +140,74 @@ func TestNormalize(t *testing.T) {
 	}
 }
 
+func TestNormalizeDropsOrphanLogins(t *testing.T) {
+	r := Record{
+		Passkeys:      []Passkey{{ID: "a"}},
+		Handle:        []byte{1},
+		PasskeyLogins: []PasskeyLogin{{ID: "x", Credential: "a"}, {ID: "y", Credential: "gone"}},
+	}
+	if Normalize(&r) || len(r.PasskeyLogins) != 1 || r.PasskeyLogins[0].ID != "x" {
+		t.Errorf("orphan login kept: %+v", r.PasskeyLogins)
+	}
+	// 패스키를 모두 지우면 등록도 모두 없어진다.
+	r.Passkeys = nil
+	if !Normalize(&r) || r.PasskeyLogins != nil {
+		t.Errorf("logins without passkeys kept: %+v", r.PasskeyLogins)
+	}
+}
+
+func TestPasskeyLoginExpiry(t *testing.T) {
+	now := time.Unix(1_000_000, 0)
+	day := 24 * time.Hour
+	l := NewPasskeyLogin("cred", now, 30)
+	if len(l.Share) != ShareBytes || l.Credential != "cred" {
+		t.Fatalf("new login %+v", l)
+	}
+	if id, err := B64.DecodeString(l.ID); err != nil || len(id) != LoginIDBytes {
+		t.Fatalf("id %q: %v", l.ID, err)
+	}
+	if other := NewPasskeyLogin("cred", now, 30); other.ID == l.ID || string(other.Share) == string(l.Share) {
+		t.Error("ids or shares repeat")
+	}
+	// 지금 기간이 같으면 등록할 때 정한 시각이다. 경계 시각부터 만료다.
+	if got := l.Expiry(30); !got.Equal(now.Add(30 * day)) {
+		t.Errorf("expiry %v", got)
+	}
+	if l.Expired(now.Add(30*day-time.Second), 30) || !l.Expired(now.Add(30*day), 30) {
+		t.Error("expiry boundary")
+	}
+	// 기간을 줄이면 기존 등록에도 바로 적용된다.
+	if !l.Expired(now.Add(8*day), 7) {
+		t.Error("shortened period not applied")
+	}
+	// 늘려도 기존 등록은 등록할 때의 시각에 만료된다.
+	if got := l.Expiry(365); !got.Equal(now.Add(30 * day)) {
+		t.Errorf("lengthened period extended an old login: %v", got)
+	}
+	// 만료 시각이 없는 기록(손으로 고친 파일)은 만료로 본다.
+	if !(PasskeyLogin{Created: now}).Expired(now, 30) {
+		t.Error("login without expiry accepted")
+	}
+
+	r := Record{PasskeyLogins: []PasskeyLogin{l, NewPasskeyLogin("cred", now.Add(-31*day), 30)}}
+	if n := r.PruneExpiredLogins(now, 30); n != 1 || len(r.PasskeyLogins) != 1 || r.PasskeyLogins[0].ID != l.ID {
+		t.Errorf("prune removed %d, left %+v", n, r.PasskeyLogins)
+	}
+	if r.PasskeyLogin(l.ID) == nil || !r.DeletePasskeyLogin(l.ID) || r.DeletePasskeyLogin(l.ID) || r.PasskeyLogin(l.ID) != nil {
+		t.Error("lookup or delete")
+	}
+}
+
+func TestCloneLogins(t *testing.T) {
+	r := Record{PasskeyLogins: []PasskeyLogin{{ID: "x", Share: []byte{1, 2}}}}
+	c := r.Clone()
+	c.PasskeyLogins[0].Share[0] = 9
+	c.PasskeyLogins[0].ID = "y"
+	if r.PasskeyLogins[0].Share[0] != 1 || r.PasskeyLogins[0].ID != "x" {
+		t.Errorf("clone shares memory: %+v", r.PasskeyLogins[0])
+	}
+}
+
 func TestEphemeral(t *testing.T) {
 	now := time.Unix(1000, 0)
 	e := NewEphemeral[string](time.Minute)

@@ -18,6 +18,10 @@ func sampleRecord() security.Record {
 		TOTP:     &security.TOTP{Secret: "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ", Created: time.Unix(1000, 0).UTC()},
 		Recovery: []string{"hash-a", "hash-b"},
 		Handle:   []byte{9, 9},
+		PasskeyLogins: []security.PasskeyLogin{{
+			ID: "bG9naW4", Credential: "Y3JlZA", Share: []byte{4, 5, 6},
+			Created: time.Unix(1000, 0).UTC(), ExpiresAt: time.Unix(2000, 0).UTC(),
+		}},
 	}
 }
 
@@ -41,15 +45,19 @@ func TestSecurityRoundTrip(t *testing.T) {
 			}
 			got, err = s.GetSecurity("alice")
 			if err != nil || len(got.Passkeys) != 1 || got.Passkeys[0].Name != "laptop" || got.TOTP == nil ||
-				len(got.Recovery) != 2 || string(got.Passkeys[0].PublicKey) != "\x01\x02\x03" {
+				len(got.Recovery) != 2 || string(got.Passkeys[0].PublicKey) != "\x01\x02\x03" ||
+				len(got.PasskeyLogins) != 1 || string(got.PasskeyLogins[0].Share) != "\x04\x05\x06" ||
+				!got.PasskeyLogins[0].ExpiresAt.Equal(time.Unix(2000, 0)) {
 				t.Fatalf("after update: %+v %v", got, err)
 			}
 			// 받은 값을 고쳐도 저장값은 그대로다.
 			got.Passkeys[0].PublicKey[0] = 7
 			got.TOTP.Secret = "changed"
 			got.Recovery[0] = "changed"
+			got.PasskeyLogins[0].Share[0] = 7
 			again, _ := s.GetSecurity("alice")
-			if again.Passkeys[0].PublicKey[0] != 1 || again.TOTP.Secret == "changed" || again.Recovery[0] == "changed" {
+			if again.Passkeys[0].PublicKey[0] != 1 || again.TOTP.Secret == "changed" || again.Recovery[0] == "changed" ||
+				again.PasskeyLogins[0].Share[0] != 4 {
 				t.Errorf("stored value changed: %+v", again)
 			}
 			// apply가 실패하면 저장하지 않는다.
