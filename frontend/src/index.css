@@ -47,6 +47,8 @@
 /* 로그인 */
 @import './auth/LoginScreen.css';
 @import './auth/easterEgg/EasterEgg.css';
+/* 업그레이드로 다시 시작하는 동안의 화면. 로그인 카드의 클래스를 쓰므로 로그인 뒤에 둔다. */
+@import './upgrade/RestartScreen.css';
 
 /* 보안 강화 모드의 확인 폼과 대화상자. 로그인 카드의 클래스(.login-form) 안에서도 쓰므로 로그인 뒤에 둔다. */
 @import './security/StepUpForm.css';
@@ -75,6 +77,7 @@
 @import './settings/ClawdParade.css';
 @import './settings/ServerPage.css';
 @import './settings/HelperSection.css';
+@import './settings/UpdatePage.css';
 @import './settings/AvatarEditor.css';
 @import './settings/ProfilePage.css';
 @import './settings/TagInput.css';

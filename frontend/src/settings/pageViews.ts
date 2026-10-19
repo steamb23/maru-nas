@@ -11,6 +11,7 @@ import { ScreenPage } from './ScreenPage'
 import { SecurityPage } from './SecurityPage'
 import { SecurityPolicyPage } from './SecurityPolicyPage'
 import { ServerPage } from './ServerPage'
+import { UpdatePage } from './UpdatePage'
 import type { SettingsPageId } from './pages'
 
 export const SETTINGS_PAGE_VIEWS: Record<SettingsPageId, ComponentType<WindowViewProps>> = {
@@ -22,5 +23,6 @@ export const SETTINGS_PAGE_VIEWS: Record<SettingsPageId, ComponentType<WindowVie
   'default-screen': DefaultScreenPage,
   server: ServerPage,
   'security-policy': SecurityPolicyPage,
+  update: UpdatePage,
   about: AboutPage,
 }

@@ -10,6 +10,7 @@ import { enterLogin } from '../shell/screenTransition'
 import { useIdle } from '../shell/useIdle'
 import { formatUnit } from '../addons/common/format'
 import { StepUpForm } from '../security/StepUpForm'
+import { hasUpgradeHint } from '../upgrade/resultHint'
 import { IDLE_DELAY_MS, easterEggEnabled } from './easterEgg/config'
 import { EasterEgg } from './easterEgg/EasterEgg'
 import { type LoginError, loginErrorMessage } from './messages'
@@ -47,6 +48,8 @@ export function LoginScreen() {
   const challenge = useAuthStore((s) => s.challenge)
   const stepUp = useAuthStore((s) => s.stepUp)
   const notice = useAuthStore((s) => s.notice)
+  // 업그레이드로 다시 시작해 새로 고친 화면이면(upgrade/resultHint.ts) 세션 만료 대신 그 안내를 보인다.
+  const [upgraded] = useState(hasUpgradeHint)
 
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -144,10 +147,17 @@ export function LoginScreen() {
           {BRAND_TAGLINE}
         </p>
 
-        {notice === 'expired' && !error && (
+        {upgraded && !error ? (
           <p className="login-notice" role="status">
-            {t('login.sessionExpired')}
+            {t('login.upgraded')}
           </p>
+        ) : (
+          notice === 'expired' &&
+          !error && (
+            <p className="login-notice" role="status">
+              {t('login.sessionExpired')}
+            </p>
+          )
         )}
         {errorText && (
           <p className="login-error" role="alert">

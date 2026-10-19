@@ -1,10 +1,12 @@
 // 데스크톱 셸: 바탕화면 바로가기, 위젯 레이어, 창 레이어, "모든 앱" 화면, 작업표시줄, 컨텍스트 메뉴,
 // 데스크톱 범위 모달.
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useEffectEvent, useLayoutEffect, useRef, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import type { SettingsPageId } from '../settings/pages'
 import { useSettingsNavStore } from '../settings/navStore'
+import { useAuthStore } from '../auth/store'
 import { useShortcutStore } from '../shortcuts/store'
+import { clearUpgradeHint, hasUpgradeHint } from '../upgrade/resultHint'
 import type { Size } from '../windows/geometry'
 import { type WindowState, type WindowStore, stableOrder, useWindowStore } from '../windows/store'
 import { AppDrawer } from './AppDrawer'
@@ -106,6 +108,18 @@ export function Desktop() {
 
   // 로그인하거나 세션을 복원해 처음 그려질 때 내용이 커지며 나타난다.
   useLayoutEffect(() => enterDesktop(rootRef.current), [])
+
+  // 업그레이드로 다시 시작한 뒤 로그인했으면(upgrade/resultHint.ts) 관리자에게 설정의 업데이트 페이지로 결과를 보인다.
+  // 처음 그릴 때 한 번만 본다. 관리자가 아니면 힌트만 지운다.
+  const admin = useAuthStore((s) => s.user?.admin ?? false)
+  const showUpgradeResult = useEffectEvent(() => {
+    if (admin) openSettings('update')
+  })
+  useEffect(() => {
+    if (!hasUpgradeHint()) return
+    clearUpgradeHint()
+    showUpgradeResult()
+  }, [])
 
   return (
     <DesktopModalContext value={modalLayer}>

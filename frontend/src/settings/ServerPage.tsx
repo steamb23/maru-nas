@@ -7,9 +7,8 @@ import { useTranslation } from 'react-i18next'
 import { useCapabilitiesStore } from '../addons/capabilities'
 import { ApiError, fetchCapabilities, fetchServerSettings, saveServerSettings } from '../api/client'
 import type { ServerSettings } from '../api/types.gen'
-import { IconImage } from '../icons/IconImage'
 import { HelperSection } from './HelperSection'
-import { SettingsCard, SettingsNotice, SettingsRow, SettingsSection, Switch } from './controls'
+import { CommandBlock, SettingsCard, SettingsNotice, SettingsRow, SettingsSection, Switch } from './controls'
 import { OVERRIDE_FLAGS, type OverrideKey, SOURCE_LABELS, overridesWith, runtimeLabelKey } from './server'
 
 const HOW_TO_COMMANDS = 'sudoedit /etc/default/onmaru\nsudo systemctl restart onmaru'
@@ -129,10 +128,7 @@ export function ServerPage() {
 
       <SettingsSection title={t('settings.server.howTo')}>
         <p className="settings-section-desc">{t('settings.server.howToDesc')}</p>
-        <div className="server-commands">
-          <pre className="selectable">{HOW_TO_COMMANDS}</pre>
-          <CopyButton text={HOW_TO_COMMANDS} />
-        </div>
+        <CommandBlock text={HOW_TO_COMMANDS} />
         <p className="settings-hint">{t('settings.server.howToInstall')}</p>
       </SettingsSection>
     </>
@@ -252,29 +248,5 @@ function ToggleOverrideRow({
         />
       </div>
     </SettingsRow>
-  )
-}
-
-// CopyButton은 클립보드에 복사한다. 클립보드를 쓸 수 없는 환경(평문 HTTP 등)이면 그리지 않는다(글자는 선택해 복사).
-function CopyButton({ text }: { text: string }) {
-  const { t } = useTranslation()
-  const [copied, setCopied] = useState(false)
-  useEffect(() => {
-    if (!copied) return
-    const id = window.setTimeout(() => setCopied(false), 2000)
-    return () => window.clearTimeout(id)
-  }, [copied])
-  if (!navigator.clipboard) return null
-  const label = copied ? t('settings.server.copied') : t('settings.server.copy')
-  return (
-    <button
-      type="button"
-      className="server-copy"
-      aria-label={label}
-      title={label}
-      onClick={() => navigator.clipboard.writeText(text).then(() => setCopied(true), () => {})}
-    >
-      <IconImage name={copied ? 'object-select-symbolic' : 'edit-copy-symbolic'} size={16} />
-    </button>
   )
 }

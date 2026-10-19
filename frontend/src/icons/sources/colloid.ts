@@ -47,6 +47,7 @@ import networkServer from '@colloid/places/symbolic/network-server-symbolic.svg?
 import avatarDefault from '@colloid/status/symbolic/avatar-default-symbolic.svg?url'
 import channelSecure from '@colloid/status/symbolic/channel-secure-symbolic.svg?url'
 import securityHigh from '@colloid/status/symbolic/security-high-symbolic.svg?url'
+import softwareUpdateAvailable from '@colloid/status/symbolic/software-update-available-symbolic.svg?url'
 import windowNew from '@colloid/status/symbolic/window-new-symbolic.svg?url'
 import type { Icon } from '../types'
 
@@ -81,6 +82,7 @@ export const COLLOID_ICONS = {
   'system-lock-screen-symbolic': { url: systemLockScreen, kind: 'symbolic' },
   'channel-secure-symbolic': { url: channelSecure, kind: 'symbolic' },
   'security-high-symbolic': { url: securityHigh, kind: 'symbolic' },
+  'software-update-available-symbolic': { url: softwareUpdateAvailable, kind: 'symbolic' },
   'preferences-desktop-appearance-symbolic': { url: preferencesDesktopAppearance, kind: 'symbolic' },
   'preferences-system-symbolic': { url: preferencesSystemSymbolic, kind: 'symbolic' },
   'system-users-symbolic': { url: systemUsers, kind: 'symbolic' },

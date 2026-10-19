@@ -1,6 +1,7 @@
-// 설정 페이지가 함께 쓰는 틀과 컨트롤: 절(제목·설명), 묶음 카드, 이름-값 행, 켜기·끄기 스위치.
-import type { ReactNode } from 'react'
+// 설정 페이지가 함께 쓰는 틀과 컨트롤: 절(제목·설명), 묶음 카드, 이름-값 행, 켜기·끄기 스위치, 복사할 수 있는 명령.
+import { type ReactNode, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { IconImage } from '../icons/IconImage'
 
 export function SettingsSection({
   title,
@@ -89,4 +90,39 @@ export function StoreNotice({ status, saveFailed }: { status: 'idle' | 'loading'
   if (status !== 'ready') return <SettingsNotice>{t('settings.common.loading')}</SettingsNotice>
   if (saveFailed) return <SettingsNotice tone="error">{t('settings.common.saveFailed')}</SettingsNotice>
   return null
+}
+
+// CommandBlock은 사용자가 SSH로 실행할 명령이다. 글자를 선택할 수 있고 복사 단추가 있다.
+export function CommandBlock({ text }: { text: string }) {
+  return (
+    <div className="settings-commands">
+      <pre className="selectable">{text}</pre>
+      <CopyButton text={text} />
+    </div>
+  )
+}
+
+// CopyButton은 클립보드에 복사한다. 클립보드를 쓸 수 없는 환경(평문 HTTP 등)이면 그리지 않는다(글자는 선택해 복사).
+// 문구는 서버 페이지에서 처음 쓴 키(settings.server.copy)를 그대로 쓴다(다른 언어 번역이 그 키에 있다).
+export function CopyButton({ text }: { text: string }) {
+  const { t } = useTranslation()
+  const [copied, setCopied] = useState(false)
+  useEffect(() => {
+    if (!copied) return
+    const id = window.setTimeout(() => setCopied(false), 2000)
+    return () => window.clearTimeout(id)
+  }, [copied])
+  if (!navigator.clipboard) return null
+  const label = copied ? t('settings.server.copied') : t('settings.server.copy')
+  return (
+    <button
+      type="button"
+      className="settings-copy"
+      aria-label={label}
+      title={label}
+      onClick={() => navigator.clipboard.writeText(text).then(() => setCopied(true), () => {})}
+    >
+      <IconImage name={copied ? 'object-select-symbolic' : 'edit-copy-symbolic'} size={16} />
+    </button>
+  )
 }

@@ -49,6 +49,8 @@ import type {
   SiteInfo,
   SiteLogin,
   SiteLoginRequest,
+  StartUpgradeCheckRequest,
+  StartUpgradeRequest,
   StepUpInfo,
   SystemInfoPrefs,
   SystemInfoRequest,
@@ -56,11 +58,13 @@ import type {
   TOTPConfirmRequest,
   TOTPInfo,
   TOTPSetupResponse,
+  UpgradeInfo,
   Wallpaper,
   WidgetPlacement,
   WidgetsRequest,
 } from './types.gen'
 import { isArrayOf, isBool, isNum, isObj, isOneOf, isOptional, isStr } from './guards'
+import type * as config from './upgrade.gen'
 
 // BASE_URL은 Vite base 설정값이다. 개발 서버는 '/', 빌드는 './'(문서 URL 기준 상대 경로)다.
 export const API_BASE = `${import.meta.env.BASE_URL}api`
@@ -683,6 +687,117 @@ export async function dropElevation(): Promise<HelperStatus> {
   const data = await (await request('DELETE', '/helper/elevation')).json()
   if (!isHelperStatus(data)) throw new Error('/helper/elevation: unexpected response shape')
   return data
+}
+
+// 대시보드에서 업그레이드(GET·POST /api/upgrade*, 관리자). 상태는 업그레이드 서비스의 상태 파일 그대로다(upgrade.gen.ts).
+
+const UPGRADE_DISABLED_REASONS = ['not-enabled', 'no-helper', 'state-dir'] as const
+
+// isNullable은 값이 없거나(undefined·null) guard를 통과하는지다. Go 포인터 필드는 null로 온다.
+function isNullable<T>(v: unknown, guard: (x: unknown) => x is T): v is T | undefined | null {
+  return v === undefined || v === null || guard(v)
+}
+
+function isLocalizedText(v: unknown): v is config.LocalizedText {
+  return isObj(v) && isStr(v.en) && isStr(v.ko)
+}
+
+function isUpgradeReason(v: unknown): v is config.UpgradeReason {
+  return isObj(v) && isStr(v.id) && isLocalizedText(v.text) && isStr(v.command)
+}
+
+function isUpgradeQuestion(v: unknown): v is config.UpgradeQuestion {
+  return (
+    isObj(v) &&
+    isStr(v.name) &&
+    isOneOf(v.kind, ['input', 'confirm'] as const) &&
+    isLocalizedText(v.title) &&
+    isLocalizedText(v.help) &&
+    isStr(v.default) &&
+    isBool(v.dash) &&
+    isBool(v.emptyOK) &&
+    isNullable(v.error, isLocalizedText)
+  )
+}
+
+function isUpgradePlan(v: unknown): v is config.UpgradePlan {
+  return (
+    isObj(v) &&
+    isStr(v.version) &&
+    isBool(v.web) &&
+    isArrayOf(v.manual, isUpgradeReason) &&
+    isArrayOf(v.questions, isUpgradeQuestion) &&
+    isArrayOf(v.notes, isLocalizedText)
+  )
+}
+
+function isUpgradeCommit(v: unknown): v is config.UpgradeCommit {
+  return isObj(v) && isStr(v.hash) && isStr(v.author) && isStr(v.time) && isStr(v.subject)
+}
+
+function isUpgradeCheck(v: unknown): v is config.UpgradeCheck {
+  return (
+    isObj(v) &&
+    isStr(v.mode) &&
+    isBool(v.upToDate) &&
+    isBool(v.web) &&
+    isArrayOf(v.commits, isUpgradeCommit) &&
+    isArrayOf(v.manual, isUpgradeReason) &&
+    isNullable(v.plan, isUpgradePlan)
+  )
+}
+
+function isUpgradeStatus(v: unknown): v is config.UpgradeStatus {
+  return (
+    isObj(v) &&
+    isStr(v.state) &&
+    isStr(v.updatedAt) &&
+    isNullable(v.check, isUpgradeCheck) &&
+    isNullable(v.apply, (a): a is config.UpgradeApply => isObj(a) && isStr(a.target) && isStr(a.user)) &&
+    isNullable(v.error, (e): e is config.UpgradeError => isObj(e) && isLocalizedText(e.text))
+  )
+}
+
+export function isUpgradeInfo(v: unknown): v is UpgradeInfo {
+  return (
+    isObj(v) &&
+    isBool(v.enabled) &&
+    isOptional(v.disabledReason, (r) => isOneOf(r, UPGRADE_DISABLED_REASONS)) &&
+    isBool(v.pending) &&
+    isBool(v.pendingStalled) &&
+    isBool(v.interrupted) &&
+    isStr(v.version) &&
+    isNullable(v.status, isUpgradeStatus)
+  )
+}
+
+async function upgradeInfo(path: string, res: Promise<unknown>): Promise<UpgradeInfo> {
+  const data = await res
+  if (!isUpgradeInfo(data)) throw new Error(`${path}: unexpected response shape`)
+  return { ...data, status: data.status ?? undefined }
+}
+
+// fetchUpgrade는 대시보드에서 업그레이드의 상태다.
+export function fetchUpgrade(signal?: AbortSignal): Promise<UpgradeInfo> {
+  return upgradeInfo('/upgrade', getJSON('/upgrade', { signal }))
+}
+
+// requestUpgradeCheck는 업그레이드 서비스에 확인을 요청한다(상승이 필요 없다).
+export function requestUpgradeCheck(mode: StartUpgradeCheckRequest['mode']): Promise<UpgradeInfo> {
+  const body: StartUpgradeCheckRequest = { mode }
+  return upgradeInfo('/upgrade/check', postJSON('/upgrade/check', { body }))
+}
+
+// applyUpgrade는 마지막 확인의 대상 커밋으로 업그레이드를 요청한다. 상승하지 않았으면 elevation_required다.
+export function applyUpgrade(target: string, settings: Record<string, string>): Promise<UpgradeInfo> {
+  const body: StartUpgradeRequest = { target, settings }
+  return upgradeInfo('/upgrade/apply', postJSON('/upgrade/apply', { body }))
+}
+
+// fetchHealth는 백엔드가 응답하는지 본다(로그인 필요 없음). 업그레이드로 다시 시작하기를 기다릴 때 쓴다.
+export async function fetchHealth(signal?: AbortSignal): Promise<void> {
+  const data = await getJSON('/health', { signal, authRequest: true })
+  if (!isObj(data) || data.status !== 'ok') throw new Error('/health: unexpected response shape')
 }
 
 // 보안 강화 모드(GET·POST /api/security*, 관리자 정책은 /api/site/security)

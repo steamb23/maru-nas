@@ -1,7 +1,6 @@
 /* 설정의 서버 페이지(ServerPage.tsx). */
 .server-code,
-.server-value,
-.server-commands pre {
+.server-value {
   font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
   font-size: 12px;
 }
@@ -45,46 +44,4 @@
 .settings-input:focus-visible {
   outline: 2px solid color-mix(in srgb, var(--accent) 45%, transparent);
   outline-offset: 1px;
-}
-
-.server-commands {
-  position: relative;
-}
-
-.server-commands pre {
-  margin: 0;
-  padding: 10px 44px 10px 12px;
-  overflow-x: auto;
-  border: 1px solid var(--window-border);
-  border-radius: 8px;
-  background: light-dark(#f3f4f6, #1b1e22);
-  line-height: 1.6;
-}
-
-.server-copy {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border: none;
-  border-radius: 6px;
-  background: none;
-  cursor: pointer;
-  transition: scale var(--press-out) ease;
-}
-
-.server-copy:hover,
-.server-copy:focus-visible {
-  background: var(--hover-bg);
-  outline: none;
-}
-
-.server-copy:active {
-  background: var(--press-bg);
-  scale: var(--press-scale);
-  transition-duration: var(--press-in);
 }

@@ -14,6 +14,7 @@ export type SettingsPageId =
   | 'default-screen'
   | 'server'
   | 'security-policy'
+  | 'update'
   | 'about'
 
 export type SettingsGroupId = 'account' | 'user' | 'admin' | 'info'
@@ -78,6 +79,13 @@ export const SETTINGS_PAGES: readonly SettingsPageDef[] = [
     id: 'security-policy',
     labelKey: 'settings.pages.securityPolicy',
     icon: 'security-high-symbolic',
+    group: 'admin',
+    requires: 'admin',
+  },
+  {
+    id: 'update',
+    labelKey: 'settings.pages.update',
+    icon: 'software-update-available-symbolic',
     group: 'admin',
     requires: 'admin',
   },

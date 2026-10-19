@@ -15,6 +15,9 @@ import { useSessionKeeper } from './auth/useSessionKeeper'
 import { Desktop } from './shell/Desktop'
 import { installNativeGuard } from './shell/nativeGuard'
 import { Wallpaper } from './shell/Wallpaper'
+import { RestartScreen } from './upgrade/RestartScreen'
+import { showsRestartScreen } from './upgrade/watch'
+import { useUpgradeWatch } from './upgrade/watchStore'
 
 const { restore, expire } = useAuthStore.getState()
 
@@ -43,6 +46,13 @@ function Screen() {
   }
 }
 
+// Root는 업그레이드로 다시 시작하는 동안이면 재시작 화면, 아니면 인증 상태의 화면이다. 재시작 화면은 401로 세션이
+// 끝나도 남아 있다가 onmaru가 돌아오면 페이지를 새로 고친다(upgrade/watch.ts).
+function Root() {
+  const restarting = useUpgradeWatch((s) => showsRestartScreen(s.phase))
+  return restarting ? <RestartScreen /> : <Screen />
+}
+
 export default function App() {
   // 데스크톱뿐 아니라 로그인 화면 등 앱 전체에 적용되도록 여기서 건다.
   useEffect(() => installNativeGuard(document), [])
@@ -58,7 +68,7 @@ export default function App() {
   return (
     <>
       <Wallpaper view={wallpaper.view} fallback={wallpaper.fallback} />
-      <Screen />
+      <Root />
     </>
   )
 }

@@ -1,0 +1,147 @@
+/* 설정의 업데이트 페이지(UpdatePage.tsx). */
+.update-value {
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+code.update-value {
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+}
+
+/* 질문 설명(여러 줄)과 검사 오류 */
+.update-help {
+  display: block;
+  margin-top: 2px;
+}
+
+.update-help.error {
+  color: light-dark(#c5352b, #f28b82);
+}
+
+.update-help code {
+  font-size: 11px;
+}
+
+/* 진행 중 문구 앞의 점 */
+.update-progress::before {
+  content: '';
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  vertical-align: 1px;
+}
+
+/* 사유·할 일 목록 */
+.update-reasons {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.update-reasons li + li {
+  margin-top: 4px;
+}
+
+/* 커밋 목록과 실패 로그는 접어 둔다. */
+.update-commits,
+.update-log {
+  margin-top: 10px;
+  font-size: 13px;
+}
+
+.update-commits summary,
+.update-log summary {
+  cursor: pointer;
+  color: var(--text-muted);
+}
+
+.update-commits ul {
+  max-height: 320px;
+  margin: 8px 0 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+  border: 1px solid var(--window-border);
+  border-radius: 8px;
+}
+
+.update-commits li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 10px;
+}
+
+.update-commits li + li {
+  border-top: 1px solid var(--window-border);
+}
+
+.update-commit-meta {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.update-log pre {
+  max-height: 240px;
+  margin: 8px 0 0;
+  padding: 10px 12px;
+  overflow: auto;
+  border: 1px solid var(--window-border);
+  border-radius: 8px;
+  background: light-dark(#f3f4f6, #1b1e22);
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+/* 업그레이드 단계: 지난 단계는 흐리게, 지금 단계는 강조, 멈춘 단계는 경고 색 */
+.update-stages {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+}
+
+.update-stages li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+}
+
+.update-stages li::before {
+  content: '';
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  opacity: 0.6;
+}
+
+.update-stages li.done::before {
+  background: currentColor;
+}
+
+.update-stages li.current {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.update-stages li.current::before {
+  border-color: var(--accent);
+  background: var(--accent);
+  opacity: 1;
+}
+
+.update-stages li.stopped {
+  color: light-dark(#c5352b, #f28b82);
+}

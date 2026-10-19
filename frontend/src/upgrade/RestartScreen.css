@@ -1,0 +1,31 @@
+/* 업그레이드로 다시 시작하는 동안의 화면(RestartScreen.tsx). 로그인 카드(.login-card)의 모양을 쓴다. */
+.restart-spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid color-mix(in srgb, var(--text-muted) 30%, transparent);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: restart-spin 0.9s linear infinite;
+}
+
+@keyframes restart-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 애니메이션을 꺼도 멈춘 원으로 남지 않게 천천히 돈다(진행 중이라는 표시). */
+:root[data-animations='off'] .restart-spinner {
+  animation-duration: 2.7s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .restart-spinner {
+    animation-duration: 2.7s;
+  }
+}
+
+.restart-elapsed {
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}

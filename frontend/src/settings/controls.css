@@ -156,3 +156,48 @@
   white-space: nowrap;
   color: var(--text-muted);
 }
+
+/* 복사할 수 있는 명령(CommandBlock) */
+.settings-commands {
+  position: relative;
+}
+
+.settings-commands pre {
+  margin: 0;
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  font-size: 12px;
+  padding: 10px 44px 10px 12px;
+  overflow-x: auto;
+  border: 1px solid var(--window-border);
+  border-radius: 8px;
+  background: light-dark(#f3f4f6, #1b1e22);
+  line-height: 1.6;
+}
+
+.settings-copy {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  cursor: pointer;
+  transition: scale var(--press-out) ease;
+}
+
+.settings-copy:hover,
+.settings-copy:focus-visible {
+  background: var(--hover-bg);
+  outline: none;
+}
+
+.settings-copy:active {
+  background: var(--press-bg);
+  scale: var(--press-scale);
+  transition-duration: var(--press-in);
+}
