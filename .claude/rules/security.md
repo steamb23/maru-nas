@@ -10,7 +10,7 @@ paths:
 
 # 보안 강화 모드
 
-보안에 민감한 기능(웹 터미널, root 권한 상승)을 확인을 더 거친 세션에서만 쓰게 한다. 막는 것은 세션 탈취(열어 둔 브라우저, 훔친 쿠키)와 비밀번호 유출이고, onmaru 자체가 뚫린 경우는 막지 못한다. 사용자 설명은 `README.md`의 "보안 강화 모드". 로드맵의 "패스키로 비밀번호 없이 로그인"(PRF)은 아직 없다.
+보안에 민감한 기능(웹 터미널, root 권한 상승)을 확인을 더 거친 세션에서만 쓰게 한다. 막는 것은 세션 탈취(열어 둔 브라우저, 훔친 쿠키)와 비밀번호 유출이고, onmaru 자체가 뚫린 경우는 막지 못한다. 사용자 설명은 `README.md`의 "보안 강화 모드". 패스키만으로 로그인하는 기능은 아래 "패스키로 로그인"에 있다.
 
 ## 설계
 
@@ -45,6 +45,26 @@ paths:
 - 확인(`verify`)·관리 확인(`manage`)이 성공하면 OMV 세션도 연장한다(`touchSession`, 활동 신호와 같다). 로그인 직후 단계에서는 활동 신호가 돌지 않기 때문이다. 그 단계에서 세션이 끝나면 프론트의 `expire`가 로그인 화면으로 돌린다
 - 첫 수단은 비밀번호만으로 등록된다(관리 창에 확인할 기존 수단이 없다). 그래서 비밀번호 유출은 수단을 이미 등록한 계정만 막는다(README의 한계)
 - **관리자 초기화**(`DELETE /api/security/users/{name}`): 관리자이면서 `twoFactor` 세션만 한다. 기록을 지우고 그 사용자의 대시보드 세션을 모두 끝낸다(`auth.Store.DeleteUser`, 삭제 훅이 도우미 티켓·터미널을 정리한다). 손상된 기록도 지운다
+
+## 패스키로 로그인
+
+패스키 확인만으로 로그인한다. OMV `Session.login`과 도우미 티켓에는 비밀번호가 필요하고 OMV에는 토큰·SSO가 없으므로, 브라우저가 비밀번호를 암호화해 두었다가 패스키 확인 뒤 풀어 평소처럼 보낸다.
+
+- **분할 키**: 키 = HKDF-SHA256(ikm = PRF 결과 ‖ share, salt = 등록 ID, info `"onmaru passkey login v1"`) → AES-GCM-256(추출 불가, 저장하지 않음). 암호문은 브라우저 localStorage(`onmaru.passkeyLogin`)에만, share(등록마다 서버가 만든 32바이트)는 서버 기록(`Record.PasskeyLogins`)에만 둔다
+  - PRF만으로 키를 만들면 복호화에 서버가 끼지 않는다. 브라우저 프로필 사본과 인증기(+UV)를 가진 쪽이 onmaru 모르게(로그·시도 제한 없이) OMV 비밀번호를 꺼낼 수 있고, 패스키를 지워도 그 사본은 막지 못한다. share는 패스키 서명(UV 필수)을 확인한 뒤에만 내주므로 복호화마다 서버를 거친다
+  - 상태 디렉터리가 새도 share만으로는 풀 수 없고, 브라우저 항목이 새도 share와 PRF가 없으면 풀 수 없다. 동기화 패스키라도 켠 브라우저에서만 된다
+  - PRF 입력(salt)은 등록마다 브라우저가 만들어 항목에 둔다. 확인은 `allowCredentials = [그 자격 증명]`이라 검색 가능한 자격 증명이 아니어도 되고, 사용자 이름 없이 찾는 단계가 없다
+  - AAD = rpId ‖ 사용자 이름 ‖ 자격 증명 ID ‖ 등록 ID. 다른 계정·패스키·등록의 share로 풀 수 없다. 평문은 1KiB까지
+- **등록**(`POST /api/security/passkey-logins`): 비밀번호(`confirmPassword`)와 그 패스키(`checkFactor`, PRF를 함께 요청한 `get()`)를 확인한 뒤 서버가 ID·share를 만들어 응답에만 담는다. 브라우저가 같은 `get()`의 PRF 결과로 암호화해 저장한다. PRF 결과가 없으면 요청을 보내지 않는다. 세션은 `twoFactor`로 오른다
+  - 비밀번호 로그인 직후 로그인 화면이 권한다(`LoginResponse.passkeyLoginOffer`, 로그인 응답에만). 비밀번호는 LoginScreen 상태에만 있다. 보안 페이지에서도 켠다
+  - 해제(`DELETE /api/security/passkey-logins/{id}`)는 관리 창을 요구하지 않는다. 기능을 줄이기만 하고 수단을 지우지 않기 때문이다. 패스키 삭제·관리자 초기화는 그 등록도 지운다(`security.Normalize`)
+- **로그인**(인증 없음, 의식 쿠키 `onmaru_passkey_login`, HttpOnly, SameSite=Strict)
+  1. `POST /api/login/passkey/options {username, enrollment}`: 없는 사용자·등록·읽을 수 없는 기록은 모두 400 `passkey_login_unknown`(`Neutral`), 만료면 400 `passkey_login_expired`(등록 삭제). 유효한 등록 ID가 있어야 상태가 생긴다
+  2. `POST /api/login/passkey {passkey}`: `securityLimiter`(IP·사용자 이름). 그 등록의 자격 증명·서명·UV를 확인하면 `{share}`
+  3. `POST /api/login/passkey/finish {password}`: `h.Limiter`로 센다(브라우저가 보낸 비밀번호라 복호화 결과인지 서버가 알 수 없다). 성공하면 일반 로그인과 같은 마무리를 `twoFactor`로 한다(`completeLogin`. OMV 2차 인증이면 대기 → `verify`). OMV가 400이면 비밀번호를 바꾼 것이므로 등록을 지우고 400 `passkey_login_stale`. 브라우저가 풀지 못하면 `{discard: true}`로 등록을 지운다
+  - 브라우저는 `passkey_login_unknown`·`passkey_login_expired`·`passkey_login_stale`이면 항목을 지운다
+- **만료**: 관리자가 정책의 `passkeyLoginDays`(7·30·90·180·365, 기본 30, 모르는 값은 7)로 정한다. 등록할 때 `ExpiresAt`을 두고, 실제 만료는 `min(ExpiresAt, Created + 지금 기간)`이다(줄이면 기존 등록에도 바로, 늘리면 새 등록부터). 바꾸려면 `password` 이상의 세션이어야 한다. 만료된 등록은 상태 응답에서 빼고, 쓰는 김에 지운다
+- 로그에는 사용자, IP, 패스키 이름, 등록 ID 앞 6자만 남긴다. share·암호문·PRF 결과는 남기지 않는다
 
 ## 저장
 

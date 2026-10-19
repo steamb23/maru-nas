@@ -46,6 +46,7 @@ OMV 8의 모든 버전을 지원한다. OMV 패키지(`packages.openmediavault.o
   - 예외: 이미지 올리기(`PUT /api/preferences/wallpaper-image`, `…/avatar-image`, `PUT /api/site/images/{name}`)는 원시 이미지 본문(`image/png|jpeg|webp`)만 받는다. HTML 폼은 이 형식을 보낼 수 없고 다른 출처의 fetch는 preflight에서 막히므로 같은 보조 장치가 된다. multipart는 받지 않는다
   - 공개 로그인 배경은 대시보드 주소에 닿는 누구나 받을 수 있다(로그인 화면에 보이는 그림이다). 설정 앱이 관리자에게 이 점을 알린다
 - 로그인 상태를 localStorage·sessionStorage에 저장하지 않는다. 앱 시작 시 `/api/session`으로 상태를 복원한다(workbench처럼 탭마다 로그인하지 않게 하기 위함)
+  - 패스키로 로그인의 브라우저 항목(localStorage `onmaru.passkeyLogin`)은 로그인 상태가 아니다. 서버 share와 패스키 PRF가 함께 있어야 풀리는 비밀번호 암호문이며, 있어도 세션은 생기지 않는다(`.claude/rules/security.md`의 "패스키로 로그인")
 - OMV가 중계 호출에 401을 반환하면 해당 대시보드 세션을 지우고 브라우저를 로그인 화면으로 보낸다
 - 로그인 시도 제한: 실패 응답 전 1초 지연, IP·사용자 이름별로 15분 안에 5번째 실패부터 30초에서 두 배씩 최대 15분 잠금(429, `Retry-After`), 한 IP의 동시 시도는 2개까지
   - 사용자 이름별 잠금은 IP와 무관하므로 누구나 남의 계정을 잠글 수 있다. 그래서 인증을 끝까지 마친(2차 인증 포함) 브라우저에 신뢰 기기 쿠키(`onmaru_device`, HttpOnly, SameSite=Strict, 30일, 로그인할 때마다 새 토큰)를 주고, 같은 사용자 이름으로 이 토큰을 보낸 시도는 사용자 이름별 잠금을 건너뛴다. IP별 제한은 그대로 받고, 토큰으로 5번 틀리면 토큰을 폐기한다. 로그아웃해도 지우지 않는다. 토큰은 메모리에만 두므로 백엔드를 재시작하면 모두 사라진다(`auth.Limiter.Trust`)
