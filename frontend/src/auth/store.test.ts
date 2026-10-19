@@ -12,16 +12,18 @@ function setup(
   api: Partial<AuthApi> = {},
   now = () => 1_000_000,
   beforeScreenChange?: (change: ScreenChange) => Promise<void>,
+  shouldOfferPasskeyLogin?: (username: string) => boolean,
 ) {
   const resetWindows = vi.fn()
   const full: AuthApi = {
     fetchSession: vi.fn(async () => admin),
     login: vi.fn(async () => authed(admin)),
     verifyChallenge: vi.fn(async () => authed(admin)),
+    finishPasskeyLogin: vi.fn(async () => authed({ ...admin, assurance: 'twoFactor' })),
     logout: vi.fn(async () => {}),
     ...api,
   }
-  const store = createAuthStore({ api: full, resetWindows, now, beforeScreenChange })
+  const store = createAuthStore({ api: full, resetWindows, now, beforeScreenChange, shouldOfferPasskeyLogin })
   return { store, api: full, resetWindows }
 }
 
@@ -130,6 +132,96 @@ describe('login', () => {
     await store.getState().login('totp', 'pw')
     store.getState().cancelChallenge()
     expect(store.getState()).toMatchObject({ status: 'loggedOut', challenge: null })
+  })
+})
+
+describe('패스키로 로그인', () => {
+  const offered: LoginResponse = { status: 'authenticated', session: user, passkeyLoginOffer: { days: 30 } }
+
+  it('권유를 받고 이 브라우저에서 권할 때만 로그인 화면에 머문다', async () => {
+    const changes: ScreenChange[] = []
+    const should = vi.fn((u: string) => u === 'user')
+    const { store } = setup({ login: async () => offered }, undefined, async (c) => void changes.push(c), should)
+    await store.getState().login('user', 'pw')
+    expect(should).toHaveBeenCalledWith('user')
+    expect(store.getState()).toMatchObject({ status: 'stepUp', user, stepUp: null, passkeyOffer: { days: 30 } })
+    expect(changes).toEqual([])
+    // 켜기는 세션을 twoFactor로 올린다.
+    await store.getState().finishStepUp('twoFactor')
+    expect(store.getState()).toMatchObject({ status: 'loggedIn', passkeyOffer: null, user: { ...user, assurance: 'twoFactor' } })
+    expect(changes).toEqual(['signIn'])
+
+    // 건너뛰면 그대로 들어간다.
+    const skip = setup({ login: async () => offered }, undefined, undefined, () => true).store
+    await skip.getState().login('user', 'pw')
+    await skip.getState().finishStepUp()
+    expect(skip.getState()).toMatchObject({ status: 'loggedIn', passkeyOffer: null, user })
+  })
+
+  it('이 브라우저에서 권하지 않으면(판단 함수가 false이거나 없음) 바로 데스크톱으로 간다', async () => {
+    const no = setup({ login: async () => offered }, undefined, undefined, () => false).store
+    await no.getState().login('user', 'pw')
+    expect(no.getState()).toMatchObject({ status: 'loggedIn', passkeyOffer: null })
+    const none = setup({ login: async () => offered }).store
+    await none.getState().login('user', 'pw')
+    expect(none.getState()).toMatchObject({ status: 'loggedIn', passkeyOffer: null })
+  })
+
+  it('2차 인증 권유와 함께 올 수 있다', async () => {
+    const both: LoginResponse = { ...offered, stepUp: { methods: ['passkey'] } }
+    const { store } = setup({ login: async () => both }, undefined, undefined, () => true)
+    await store.getState().login('user', 'pw')
+    expect(store.getState()).toMatchObject({ status: 'stepUp', stepUp: { methods: ['passkey'] }, passkeyOffer: { days: 30 } })
+    // 2차 인증 수단이 없는 권유는 권유만 남긴다.
+    const empty = setup({ login: async () => ({ ...offered, stepUp: { methods: [] } }) }, undefined, undefined, () => true).store
+    await empty.getState().login('user', 'pw')
+    expect(empty.getState()).toMatchObject({ status: 'stepUp', stepUp: null, passkeyOffer: { days: 30 } })
+  })
+
+  it('OMV 2차 인증 코드를 확인한 뒤에도 권한다', async () => {
+    const { store } = setup({ login: async () => challenge, verifyChallenge: async () => offered }, undefined, undefined, () => true)
+    await store.getState().login('user', 'pw')
+    expect(store.getState().status).toBe('challenge')
+    await store.getState().verify('123456')
+    expect(store.getState()).toMatchObject({ status: 'stepUp', challenge: null, passkeyOffer: { days: 30 } })
+  })
+
+  it('권하는 동안 세션이 끝나거나 로그아웃하면 권유를 지운다', async () => {
+    const late = setup({ login: async () => offered }, undefined, undefined, () => true).store
+    await late.getState().login('user', 'pw')
+    late.getState().expire()
+    expect(late.getState()).toMatchObject({ status: 'loggedOut', notice: 'expired', passkeyOffer: null, user: null })
+
+    const out = setup({ login: async () => offered }, undefined, undefined, () => true).store
+    await out.getState().login('user', 'pw')
+    await out.getState().logout()
+    expect(out.getState()).toMatchObject({ status: 'loggedOut', passkeyOffer: null, user: null })
+  })
+
+  it('풀어 낸 비밀번호로 로그인을 마친다', async () => {
+    const { store, api } = setup()
+    store.setState({ status: 'loggedOut' })
+    await store.getState().completePasskeyLogin('pw')
+    expect(api.finishPasskeyLogin).toHaveBeenCalledWith('pw')
+    expect(store.getState()).toMatchObject({ status: 'loggedIn', user: { ...admin, assurance: 'twoFactor' } })
+  })
+
+  it('OMV 2차 인증 계정은 코드 입력 단계를 거친다', async () => {
+    const { store, api } = setup({ finishPasskeyLogin: async () => challenge })
+    store.setState({ status: 'loggedOut' })
+    await store.getState().completePasskeyLogin('pw')
+    expect(store.getState()).toMatchObject({ status: 'challenge', challenge: { kind: 'totp' } })
+    await store.getState().verify('123456')
+    expect(api.verifyChallenge).toHaveBeenCalledWith('123456')
+    expect(store.getState().status).toBe('loggedIn')
+  })
+
+  it('실패는 그대로 던지고 상태는 바꾸지 않는다', async () => {
+    const err = new ApiError(400, 'x', 'passkey_login_stale')
+    const { store } = setup({ finishPasskeyLogin: async () => Promise.reject(err) })
+    store.setState({ status: 'loggedOut' })
+    await expect(store.getState().completePasskeyLogin('pw')).rejects.toBe(err)
+    expect(store.getState().status).toBe('loggedOut')
   })
 })
 

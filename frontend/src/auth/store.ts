@@ -5,13 +5,16 @@
 // 그래서 새로고침이나 새 탭에서도 다시 로그인하지 않는다.
 import { create } from 'zustand'
 import * as client from '../api/client'
-import type { ChallengeInfo, LoginResponse, SessionInfo, StepUpInfo } from '../api/types.gen'
+import type { ChallengeInfo, LoginResponse, PasskeyLoginOffer, SessionInfo, StepUpInfo } from '../api/types.gen'
+import { isPasskeyLoginOfferDismissed, passkeyLoginFor } from '../security/passkeyLoginStorage'
+import { passkeysSupported } from '../security/webauthn'
 import { leaveScreen } from '../shell/screenTransition'
 import { initialWindowData, useWindowStore } from '../windows/store'
 
 // checking: 세션 확인 중. offline: 백엔드에 연결할 수 없음.
 // loggedOut: 로그인 화면. challenge: 2차 인증 입력 중. loggedIn: 데스크톱.
-// stepUp: 로그인을 마쳤고(세션 있음) 보안 강화 모드의 2차 인증을 권하는 중. 건너뛰면 데스크톱으로 간다.
+// stepUp: 로그인을 마쳤고(세션 있음) 보안 강화 모드의 2차 인증이나 패스키로 로그인 켜기를 권하는 중.
+// 건너뛰면 데스크톱으로 간다.
 export type AuthStatus = 'checking' | 'offline' | 'loggedOut' | 'challenge' | 'stepUp' | 'loggedIn'
 
 // ScreenChange는 로그인 화면과 데스크톱 사이를 오가는 방향이다.
@@ -27,6 +30,8 @@ export interface AuthData {
   challenge: ChallengeInfo | null
   // stepUp은 로그인 직후 권하는 2차 인증이다(status가 stepUp일 때).
   stepUp: StepUpInfo | null
+  // passkeyOffer는 로그인 직후 권하는 패스키로 로그인 켜기다(status가 stepUp일 때). stepUp과 함께 올 수 있다.
+  passkeyOffer: PasskeyLoginOffer | null
   notice: AuthNotice
   // 창 배치의 주인. 다른 사용자가 로그인하면 창을 모두 닫는다.
   windowsOwner: string | null
@@ -40,9 +45,12 @@ export interface AuthActions {
   // login·verify는 실패하면 ApiError 등을 그대로 던진다. 문구는 화면이 정한다(messages.ts).
   login: (username: string, password: string) => Promise<void>
   verify: (response: string) => Promise<void>
+  // completePasskeyLogin은 패스키로 풀어 낸 비밀번호로 로그인을 마친다(일반 로그인과 같은 응답을 받는다).
+  completePasskeyLogin: (password: string) => Promise<void>
   // cancelChallenge는 2차 인증을 그만두고 로그인 화면으로 돌아간다.
   cancelChallenge: () => void
-  // finishStepUp은 로그인 직후의 2차 인증을 마치거나(assurance: 새 보증 수준) 건너뛰고(인자 없음) 데스크톱으로 간다.
+  // finishStepUp은 로그인 직후의 2차 인증·패스키로 로그인 켜기를 마치거나(assurance: 새 보증 수준) 건너뛰고(인자 없음)
+  // 데스크톱으로 간다.
   finishStepUp: (assurance?: SessionInfo['assurance']) => Promise<void>
   logout: () => Promise<void>
   // expire는 세션이 만료됐을 때(다른 요청이 401을 받음) 로그인 화면으로 보낸다. 창 배치는 남긴다.
@@ -58,6 +66,7 @@ export interface AuthApi {
   fetchSession: () => Promise<SessionInfo>
   login: (username: string, password: string) => Promise<LoginResponse>
   verifyChallenge: (response: string) => Promise<LoginResponse>
+  finishPasskeyLogin: (password: string) => Promise<LoginResponse>
   logout: () => Promise<void>
 }
 
@@ -70,6 +79,9 @@ export interface AuthDeps {
   // beforeScreenChange는 화면을 바꾸기 직전에 불리며, 이 Promise가 끝난 뒤 상태를 바꾼다(나가는 화면의 애니메이션).
   // 실패해도 화면은 바꾼다. 없으면 바로 바꾼다. 세션 복원(restore)에서는 부르지 않는다.
   beforeScreenChange?: (change: ScreenChange) => Promise<void>
+  // shouldOfferPasskeyLogin은 서버가 권한 패스키로 로그인 켜기를 이 브라우저에서 권할지다(이 브라우저에 등록이
+  // 없고, 패스키를 쓸 수 있고, "다시 묻지 않기"를 고르지 않음). 없으면 권하지 않는다.
+  shouldOfferPasskeyLogin?: (username: string) => boolean
 }
 
 export const initialAuthData: AuthData = {
@@ -77,12 +89,19 @@ export const initialAuthData: AuthData = {
   user: null,
   challenge: null,
   stepUp: null,
+  passkeyOffer: null,
   notice: null,
   windowsOwner: null,
   expiresAt: null,
 }
 
-export function createAuthStore({ api, resetWindows, now = Date.now, beforeScreenChange }: AuthDeps) {
+export function createAuthStore({
+  api,
+  resetWindows,
+  now = Date.now,
+  beforeScreenChange,
+  shouldOfferPasskeyLogin = () => false,
+}: AuthDeps) {
   return create<AuthStore>()((set, get) => {
     const leave = (change: ScreenChange) =>
       beforeScreenChange ? beforeScreenChange(change).catch(() => {}) : Promise.resolve()
@@ -101,6 +120,7 @@ export function createAuthStore({ api, resetWindows, now = Date.now, beforeScree
         user,
         challenge: null,
         stepUp: null,
+        passkeyOffer: null,
         notice: null,
         windowsOwner: user.username,
         expiresAt: expiresAt(user),
@@ -108,11 +128,16 @@ export function createAuthStore({ api, resetWindows, now = Date.now, beforeScree
     }
 
     const handleLogin = async (res: LoginResponse) => {
-      if (res.status === 'authenticated' && res.session && res.stepUp && res.stepUp.methods.length > 0) {
-        // 세션은 이미 만들어졌다. 로그인 화면에 머물며 2차 인증을 권한다(새로 고침하면 건너뛴 것과 같다).
-        set({ status: 'stepUp', user: res.session, stepUp: res.stepUp, challenge: null, notice: null })
-      } else if (res.status === 'authenticated' && res.session) {
+      if (res.status === 'authenticated' && res.session) {
         const session = res.session
+        const stepUp = res.stepUp && res.stepUp.methods.length > 0 ? res.stepUp : null
+        const offer = res.passkeyLoginOffer && shouldOfferPasskeyLogin(session.username) ? res.passkeyLoginOffer : null
+        if (stepUp || offer) {
+          // 세션은 이미 만들어졌다. 로그인 화면에 머물며 2차 인증·패스키로 로그인 켜기를 권한다(새로 고침하면 건너뛴
+          // 것과 같다).
+          set({ status: 'stepUp', user: session, stepUp, passkeyOffer: offer, challenge: null, notice: null })
+          return
+        }
         await leave('signIn')
         signedIn(session)
       } else if (res.status === 'challengeRequired' && res.challenge)
@@ -135,6 +160,10 @@ export function createAuthStore({ api, resetWindows, now = Date.now, beforeScree
 
       login: async (username, password) => {
         await handleLogin(await api.login(username, password))
+      },
+
+      completePasskeyLogin: async (password) => {
+        await handleLogin(await api.finishPasskeyLogin(password))
       },
 
       verify: async (response) => {
@@ -172,13 +201,23 @@ export function createAuthStore({ api, resetWindows, now = Date.now, beforeScree
         ])
         signingOut = false
         resetWindows()
-        set({ status: 'loggedOut', user: null, challenge: null, stepUp: null, notice: null, windowsOwner: null, expiresAt: null })
+        set({
+          status: 'loggedOut',
+          user: null,
+          challenge: null,
+          stepUp: null,
+          passkeyOffer: null,
+          notice: null,
+          windowsOwner: null,
+          expiresAt: null,
+        })
       },
 
       expire: () => {
-        // 로그인 직후 2차 인증을 권하는 동안 세션이 끝났으면(오래 기다림) 애니메이션 없이 로그인 화면으로 돌린다.
+        // 로그인 직후 2차 인증·패스키로 로그인을 권하는 동안 세션이 끝났으면(오래 기다림) 애니메이션 없이 로그인
+        // 화면으로 돌린다.
         if (get().status === 'stepUp') {
-          set({ status: 'loggedOut', user: null, stepUp: null, notice: 'expired', expiresAt: null })
+          set({ status: 'loggedOut', user: null, stepUp: null, passkeyOffer: null, notice: 'expired', expiresAt: null })
           return
         }
         if (get().status !== 'loggedIn' || signingOut) return
@@ -204,4 +243,5 @@ export const useAuthStore = createAuthStore({
   api: client,
   resetWindows: () => useWindowStore.setState(initialWindowData),
   beforeScreenChange: leaveScreen,
+  shouldOfferPasskeyLogin: (u) => passkeysSupported() && !passkeyLoginFor(u) && !isPasskeyLoginOfferDismissed(u),
 })

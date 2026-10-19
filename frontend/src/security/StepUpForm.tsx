@@ -1,7 +1,8 @@
 // 보안 강화 모드의 확인 폼. 로그인 단계(로그인 카드)와 확인·관리 대화상자(stepUpDialog.tsx)가 함께 쓴다.
 //   - verify: 이 세션을 level 단계로 올린다(password면 비밀번호, twoFactor면 등록한 2차 수단 하나)
 //   - manage: 비밀번호와(등록한 수단이 있으면) 그 수단으로 관리 창(5분)을 연다
-// 계산은 messages.ts, 패스키 창은 webauthn.ts.
+// 로그인 직후 단계는 패스키 확인과 함께 이 브라우저의 패스키로 로그인을 켤 수 있다(passkeyLogin).
+// 계산은 messages.ts, 패스키 창은 webauthn.ts, 패스키로 로그인은 passkeyLoginFlow.ts.
 import type { ReactNode, RefObject } from 'react'
 import { useEffect, useRef, useState } from 'react'
 import type { ParseKeys } from 'i18next'
@@ -9,7 +10,8 @@ import { useTranslation } from 'react-i18next'
 import { manageSecurity, verifySecurity } from '../api/client'
 import type { SecurityStatus, SecurityVerifyRequest } from '../api/types.gen'
 import { formatClock } from '../shell/elevation'
-import { type Factor, type SecurityError, firstFactor, securityError, usableFactors } from './messages'
+import { type Factor, type SecurityError, firstFactor, passkeyLoginEnableError, securityError, usableFactors } from './messages'
+import { PrfUnsupportedError, enablePasskeyLogin } from './passkeyLoginFlow'
 import { getPasskey, passkeysSupported } from './webauthn'
 
 type Variant = 'login' | 'dialog'
@@ -60,9 +62,33 @@ export interface StepUpFormProps {
   cancelLabel: string
   // 첫 입력 상자. 대화상자가 처음 포커스할 곳으로 쓴다.
   inputRef?: RefObject<HTMLInputElement | null>
+  // passkeyLogin이 있으면(로그인 직후의 권유) 패스키 확인에 "다음부터 패스키로 로그인" 확인란(기본 켬)을 둔다.
+  // 켜져 있으면 확인 대신 이 사용자·로그인 비밀번호로 패스키로 로그인을 켠다(켜기도 twoFactor로 올린다).
+  passkeyLogin?: { username: string; password: string }
 }
 
-export function StepUpForm({ variant, mode, level, methods, onDone, onCancel, cancelLabel, inputRef }: StepUpFormProps) {
+// enableOrVerify는 패스키 확인 한 번으로 이 브라우저의 패스키로 로그인을 켜고 새 보안 상태를 돌려준다. 패스키가
+// PRF를 지원하지 않으면 같은 확인 값으로 2차 인증만 마친다(켜지 않는다).
+async function enableOrVerify(username: string, password: string): Promise<SecurityStatus> {
+  try {
+    return (await enablePasskeyLogin({ username, password })).status
+  } catch (err) {
+    if (err instanceof PrfUnsupportedError && err.assertion) return verifySecurity({ method: 'passkey', passkey: err.assertion })
+    throw err
+  }
+}
+
+export function StepUpForm({
+  variant,
+  mode,
+  level,
+  methods,
+  onDone,
+  onCancel,
+  cancelLabel,
+  inputRef,
+  passkeyLogin,
+}: StepUpFormProps) {
   const { t } = useTranslation()
   const c = CLASSES[variant]
   const passkeys = passkeysSupported()
@@ -73,6 +99,7 @@ export function StepUpForm({ variant, mode, level, methods, onDone, onCancel, ca
   const [code, setCode] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<SecurityError | null>(null)
+  const [rememberLogin, setRememberLogin] = useState(true)
   const localRef = useRef<HTMLInputElement>(null)
   const firstRef = inputRef ?? localRef
 
@@ -96,6 +123,8 @@ export function StepUpForm({ variant, mode, level, methods, onDone, onCancel, ca
   }
 
   const codeFactor = factor === 'totp' || factor === 'recovery'
+  // 확인 대신 패스키로 로그인을 켠다(세션 중 확인의 패스키일 때만).
+  const enableLogin = mode === 'verify' && factor === 'passkey' && passkeyLogin !== undefined && rememberLogin
   const ready = !(needPassword && password === '') && !(needFactor && codeFactor && code.trim() === '')
 
   const submit = async () => {
@@ -104,6 +133,10 @@ export function StepUpForm({ variant, mode, level, methods, onDone, onCancel, ca
     setError(null)
     const tried = needPassword && needFactor ? 'both' : needPassword ? 'password' : (factor ?? undefined)
     try {
+      if (enableLogin && passkeyLogin) {
+        onDone(await enableOrVerify(passkeyLogin.username, passkeyLogin.password))
+        return
+      }
       let proof: SecurityVerifyRequest | undefined
       if (needFactor && factor) {
         proof = factor === 'passkey' ? { method: 'passkey', passkey: await getPasskey() } : { method: factor, code: code.trim() }
@@ -114,7 +147,7 @@ export function StepUpForm({ variant, mode, level, methods, onDone, onCancel, ca
       else status = await verifySecurity({ method: 'password', password })
       onDone(status)
     } catch (err) {
-      setError(securityError(err, tried))
+      setError(enableLogin ? passkeyLoginEnableError(err, 'passkey') : securityError(err, tried))
       setCode('')
       if (needPassword) setPassword('')
       setBusy(false)
@@ -177,6 +210,12 @@ export function StepUpForm({ variant, mode, level, methods, onDone, onCancel, ca
       )}
       {needFactor && mode === 'manage' && factor === 'passkey' && (
         <p className={c.hint}>{t('security.stepUp.managePasskeyHint')}</p>
+      )}
+      {mode === 'verify' && factor === 'passkey' && passkeyLogin && (
+        <label className="step-up-check">
+          <input type="checkbox" checked={rememberLogin} disabled={busy} onChange={(e) => setRememberLogin(e.target.checked)} />
+          <span>{t('security.passkeyLogin.remember')}</span>
+        </label>
       )}
       {error && (
         <p className={c.error} role="alert">

@@ -26,8 +26,22 @@
       "omvUnavailable": "OpenMediaVault에 연결할 수 없습니다.",
       "badRequest": "사용자 이름과 비밀번호를 입력하세요.",
       "unauthorized": "로그인되어 있지 않습니다. 다시 로그인하세요.",
+      "passkeyCanceled": "패스키 확인을 취소했거나 시간이 지났습니다.",
+      "passkeyFailed": "패스키를 확인하지 못했습니다.",
+      "passkeyPrf": "이 브라우저나 패스키가 PRF 확장을 지원하지 않아 패스키로 로그인할 수 없습니다. 비밀번호로 로그인하세요.",
+      "passkeyBroken": "저장해 둔 비밀번호를 풀지 못해 이 브라우저의 패스키로 로그인을 해제했습니다. 비밀번호로 로그인한 뒤 다시 켜세요.",
+      "passkeyUnknown": "이 브라우저의 패스키로 로그인이 해제되었습니다. 비밀번호로 로그인하세요.",
+      "passkeyExpired": "패스키로 로그인 기간이 지났습니다. 비밀번호로 로그인한 뒤 다시 켜세요.",
+      "passkeyStale": "비밀번호가 바뀌어 패스키로 로그인할 수 없습니다. 새 비밀번호로 로그인한 뒤 다시 켜세요.",
+      "passkeyUnavailable": "이 서버에서는 패스키로 로그인할 수 없습니다. 비밀번호로 로그인하세요.",
       "httpStatus": "로그인하지 못했습니다 (HTTP {{status}})."
     },
+    "passkeySignIn": "패스키로 로그인 · {{user}}",
+    "passkeyWaiting": "패스키를 기다리는 중…",
+    "passkeyOffer": "다음부터 이 브라우저에서 패스키로 로그인할까요?",
+    "passkeyOfferDesc": "켜면 {{days}} 동안 비밀번호 대신 패스키로 로그인합니다.",
+    "passkeyOfferSkip": "이번에는 건너뛰기",
+    "passkeyOfferNever": "다시 묻지 않기",
     "skipStepUp": "건너뛰기",
     "stepUpPrompt": "일부 기능은 2차 인증이 필요합니다. 지금 확인하거나, 건너뛰고 그 기능을 열 때 확인하세요."
   },
@@ -867,6 +881,7 @@
       "enabling": "패스키를 기다리는 중…",
       "prfUnsupported": "이 패스키는 PRF 확장을 지원하지 않아 패스키로 로그인을 켤 수 없습니다. 2차 인증에는 계속 쓸 수 있습니다.",
       "passwordTooLong": "비밀번호가 너무 길어 패스키로 로그인을 켤 수 없습니다.",
+      "remember": "이 브라우저에서 다음부터 패스키로 로그인",
       "storageFailed": "이 브라우저의 저장소에 쓸 수 없어 켜지 못했습니다. 사생활 보호 창이라면 일반 창에서 다시 시도하세요."
     },
     "passkeys": {

@@ -78,6 +78,8 @@ paths:
   - 여는 함수와 컴포넌트를 다른 파일에 둔다(oxlint `only-export-components`)
 - 로그인 직후 단계는 인증 저장소의 `stepUp` 상태(`finishStepUp`)다. 보안에 민감한 기능은 `security_required`를 받으면 `requestStepUp`으로 확인하고 다시 시도한다(터미널은 닫힘 막대의 확인 단추, 상승은 `ElevationForm`이 같은 비밀번호로 다시 시도)
 - 패스키는 `passkeysSupported()`(보안 컨텍스트 + `PublicKeyCredential`)일 때만 보인다. 개발 서버(평문 HTTP)에서는 TOTP·복구 코드만 시험할 수 있다
+- 패스키로 로그인: 순수 모듈 `passkeyLogin.ts`(항목 형식, 분할 키), 저장 `passkeyLoginStorage.ts`(localStorage), 흐름 `passkeyLoginFlow.ts`(`enablePasskeyLogin`, `unlockPasskeyLogin`). 보안 페이지의 "패스키로 로그인하는 브라우저" 절은 관리 창 없이 해제하고 `enablePasskeyLoginDialog`(내용 `PasskeyLoginSetup.tsx`)로 켜며, 받은 상태마다 서버 목록에 없는 이 브라우저 항목을 지운다. 만료 기간은 보안 정책 페이지가 고른다
+  - 로그인 화면은 활성 항목마다 "패스키로 로그인" 단추를 두고(풀어 낸 비밀번호는 인증 저장소의 `completePasskeyLogin`에만 넘긴다), 비밀번호 로그인 직후 권유는 인증 저장소의 `passkeyOffer`(`shouldOfferPasskeyLogin`: 이 브라우저 항목·"다시 묻지 않기")다. 권유만 오면 `auth/PasskeyOffer.tsx` 카드, 2차 인증 권유와 함께 오면 `StepUpForm`의 확인란(`passkeyLogin`. PRF가 없으면 같은 확인 값으로 `verifySecurity`)이다. 비밀번호는 권유를 마칠 때까지 LoginScreen 상태에만 둔다
 - 인증 앱 QR은 `uqr`의 `encode`로 모듈 배열을 받아 SVG path로 그린다(`qrPath`, innerHTML 없음). 등록 대화상자를 열 때 `import('uqr')`로 받고 vendor 청크에서 뺀다(`vite.config.ts`)
 
 ## 테스트

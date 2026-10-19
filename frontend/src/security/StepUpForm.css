@@ -36,6 +36,22 @@
   overflow-wrap: anywhere;
 }
 
+/* 로그인 직후 패스키 확인의 "다음부터 패스키로 로그인" 확인란 */
+.step-up-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.step-up-check input {
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
 /* 다른 수단으로 바꾸는 글자 단추 */
 .step-up-others {
   display: flex;

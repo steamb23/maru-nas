@@ -26,8 +26,22 @@
       "omvUnavailable": "Cannot connect to OpenMediaVault.",
       "badRequest": "Enter your username and password.",
       "unauthorized": "You are not signed in. Please sign in again.",
+      "passkeyCanceled": "The passkey check was canceled or timed out.",
+      "passkeyFailed": "The passkey could not be verified.",
+      "passkeyPrf": "This browser or passkey does not support the PRF extension, so you cannot sign in with a passkey. Sign in with your password.",
+      "passkeyBroken": "The saved password could not be decrypted, so passkey sign-in was turned off for this browser. Sign in with your password and turn it on again.",
+      "passkeyUnknown": "Passkey sign-in has been turned off for this browser. Sign in with your password.",
+      "passkeyExpired": "Passkey sign-in has expired. Sign in with your password and turn it on again.",
+      "passkeyStale": "Your password has changed, so passkey sign-in no longer works. Sign in with your new password and turn it on again.",
+      "passkeyUnavailable": "Passkey sign-in is not available on this server. Sign in with your password.",
       "httpStatus": "Could not sign in (HTTP {{status}})."
     },
+    "passkeySignIn": "Sign in with passkey · {{user}}",
+    "passkeyWaiting": "Waiting for the passkey…",
+    "passkeyOffer": "Sign in with a passkey on this browser from now on?",
+    "passkeyOfferDesc": "If you turn it on, you sign in with your passkey instead of your password for {{days}}.",
+    "passkeyOfferSkip": "Skip this time",
+    "passkeyOfferNever": "Don't ask again",
     "skipStepUp": "Skip for now",
     "stepUpPrompt": "Some features need a second step. Confirm now, or skip and confirm when you open them."
   },
@@ -867,6 +881,7 @@
       "enabling": "Waiting for the passkey…",
       "prfUnsupported": "This passkey does not support the PRF extension, so passkey sign-in cannot be turned on. You can still use it for two-step verification.",
       "passwordTooLong": "Your password is too long for passkey sign-in.",
+      "remember": "Sign in with a passkey on this browser from now on",
       "storageFailed": "This browser's storage cannot be written, so passkey sign-in was not turned on. If this is a private window, try again in a normal window."
     },
     "passkeys": {

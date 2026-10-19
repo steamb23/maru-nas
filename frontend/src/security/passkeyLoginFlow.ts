@@ -9,7 +9,7 @@ import {
   passkeyLoginOptions,
   passkeyLoginUnlock,
 } from '../api/client'
-import type { SecurityStatus } from '../api/types.gen'
+import type { PasskeyAssertion, SecurityStatus } from '../api/types.gen'
 import {
   MAX_PASSWORD_BYTES,
   type PasskeyLoginEntry,
@@ -25,10 +25,15 @@ import { forgetPasskeyLogin, loadPasskeyLogins, rememberPasskeyLogin } from './p
 import { assertWithPrf, b64urlDecode, b64urlEncode } from './webauthn'
 
 // PrfUnsupportedError는 패스키(인증기·브라우저)가 PRF 결과를 주지 않았다는 뜻이다. 패스키로 로그인을 쓸 수 없다.
+// 켜기(enablePasskeyLogin)에서는 받은 확인 값(assertion)을 담는다. 보내지 않은 세션 challenge의 확인이라, 로그인
+// 직후 단계가 같은 확인으로 2차 인증만 마칠 수 있다(verifySecurity).
 export class PrfUnsupportedError extends Error {
-  constructor() {
+  readonly assertion?: PasskeyAssertion
+
+  constructor(assertion?: PasskeyAssertion) {
     super('passkey: PRF is not supported')
     this.name = 'PrfUnsupportedError'
+    this.assertion = assertion
   }
 }
 
@@ -77,8 +82,8 @@ export async function enablePasskeyLogin({
   const salt = newPrfSalt()
   const opts = await passkeyChallenge('assert')
   const { assertion, prf } = await assertWithPrf(opts, salt)
-  // PRF 결과가 없으면 등록 요청을 보내지 않는다(받은 challenge는 그대로 만료된다).
-  if (!prf) throw new PrfUnsupportedError()
+  // PRF 결과가 없으면 등록 요청을 보내지 않는다(쓰지 않은 확인 값은 오류에 담아 넘긴다).
+  if (!prf) throw new PrfUnsupportedError(assertion)
   const previous = replace ?? loadPasskeyLogins().entries.find((e) => e.username === username)?.enrollment
   const res = await enrollPasskeyLogin({ password, passkey: assertion, replace: previous })
   try {
