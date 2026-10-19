@@ -14,6 +14,11 @@
 // FAKESSH_LISTEN이 있으면 웹 터미널용 가짜 sshd(internal/terminal/sshfake)도 띄운다. 같은 가짜 계정으로
 // 인증하고(공개 키는 가짜 도우미의 가짜 홈에 쓴 authorized_keys로 확인), 장난감 셸만 있다. 호스트 공개 키는
 // FAKESSH_HOST_KEY 경로에 쓰고, FAKESSH_AUTH로 받을 인증 방법을 고른다(예: publickey면 공개 키만 받는 sshd).
+//
+// 가짜 도우미가 있고 ONMARU_DEV_UPGRADE_ROOT·ONMARU_STATE_DIR가 있으면 대시보드에서 업그레이드의 가짜 업그레이드
+// 서비스(internal/upgrade/upgradefake)도 띄운다. onmaru가 그 상태 디렉터리에 남긴 확인 요청과 가짜 도우미가 쓴
+// 적용 요청을 처리해 가짜 루트의 상태 파일에 쓴다. FAKEUPGRADE_SCENARIO로 시나리오(web, manual, latest, check-fail,
+// apply-fail, disabled)를, FAKEUPGRADE_STEP으로 단계 사이 지연(기본 1.5s)을 고른다.
 package main
 
 import (
@@ -27,9 +32,11 @@ import (
 	"path/filepath"
 	"time"
 
+	"onmaru/backend/config"
 	"onmaru/backend/internal/helper/helperfake"
 	"onmaru/backend/internal/omv/omvfake"
 	"onmaru/backend/internal/terminal/sshfake"
+	"onmaru/backend/internal/upgrade/upgradefake"
 )
 
 func main() {
@@ -84,6 +91,21 @@ func main() {
 	}
 	if addr := os.Getenv("FAKESSH_LISTEN"); addr != "" {
 		startFakeSSH(addr, helper)
+	}
+	if root, state := os.Getenv("ONMARU_DEV_UPGRADE_ROOT"), os.Getenv("ONMARU_STATE_DIR"); helper != nil && root != "" && state != "" {
+		u, err := upgradefake.Start(upgradefake.Options{
+			Root:         root,
+			CheckRequest: filepath.Join(state, config.UpgradeCheckRequestName),
+			ApplyDir:     helper.UpgradeDir(),
+			Scenario:     os.Getenv("FAKEUPGRADE_SCENARIO"),
+			Step:         envDuration("FAKEUPGRADE_STEP", 1500*time.Millisecond),
+			Logf:         log.Printf,
+		})
+		if err != nil {
+			log.Fatalf("fake upgrade service: %v", err)
+		}
+		defer u.Close()
+		log.Printf("fake upgrade service under %s (scenario %s)", root, cmp.Or(os.Getenv("FAKEUPGRADE_SCENARIO"), upgradefake.ScenarioWeb))
 	}
 	mux := http.NewServeMux()
 	mux.Handle("/rpc.php", srv)

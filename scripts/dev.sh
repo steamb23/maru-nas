@@ -92,6 +92,9 @@ if [[ $fake == 1 ]]; then
   export FAKESSH_HOST_KEY="$ONMARU_STATE_DIR/ssh_host_ed25519_key.pub"
   export ONMARU_SSH_ADDR="$FAKESSH_LISTEN"
   export ONMARU_SSH_HOST_KEYS="$FAKESSH_HOST_KEY"
+  # 대시보드에서 업그레이드는 가짜 업그레이드 서비스(가짜 OMV 프로세스)가 이 가짜 루트 아래의 설정·상태 파일을 쓴다.
+  # 시나리오는 FAKEUPGRADE_SCENARIO(web, manual, latest, check-fail, apply-fail, disabled)로 고른다.
+  export ONMARU_DEV_UPGRADE_ROOT="${ONMARU_DEV_UPGRADE_ROOT:-$ONMARU_STATE_DIR/upgrade-root}"
 fi
 
 # 이미 떠 있는 서버가 있으면 시작하지 않는다. 일부만 떠서 다른 서버(예: 실제 OMV에 연결된
