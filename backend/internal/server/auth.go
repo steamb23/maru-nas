@@ -55,10 +55,15 @@ func (h *handler) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	done(auth.Success)
+	h.completeLogin(w, r, res, req.Password, ip, auth.AssuranceLogin)
+}
 
+// completeLogin은 OMV 로그인에 성공한 뒤의 마무리다. 도우미 티켓을 받고, OMV 2차 인증이 남았으면 대기를 만들고(verify가
+// 마치면 twoFactor), 아니면 assurance 수준의 세션을 만든다. 패스키로 로그인도 이 함수로 마친다(twoFactor).
+func (h *handler) completeLogin(w http.ResponseWriter, r *http.Request, res omv.LoginResult, password, ip string, assurance auth.Assurance) {
 	// 도우미 티켓은 도우미가 이 비밀번호를 직접 확인해 발급한다. 2차 인증이 남았으면 대기 티켓이다.
 	challenge := res.Status == omv.StatusChallengeRequired
-	ticket := h.openHelper(r.Context(), res.Username, req.Password, challenge)
+	ticket := h.openHelper(r.Context(), res.Username, password, challenge)
 	if challenge {
 		p := h.Sessions.CreatePending(res.Username, res.SessionID, ticket)
 		h.setCookie(w, r, PendingCookie, p.ID, int(auth.PendingTTL/time.Second))
@@ -69,7 +74,7 @@ func (h *handler) login(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	h.startSession(w, r, res, ip, ticket, auth.AssuranceLogin)
+	h.startSession(w, r, res, ip, ticket, assurance)
 }
 
 func (h *handler) verify(w http.ResponseWriter, r *http.Request) {

@@ -134,6 +134,10 @@ type handler struct {
 	challenges      *security.Ephemeral[ceremony]
 	pendingPasskeys *security.Ephemeral[pendingPasskey]
 	totpSetup       *security.Ephemeral[string]
+	// loginCeremonies는 진행 중인 패스키로 로그인(options → 확인), passkeyUnlocks는 확인을 마치고 share를 내준 뒤
+	// 비밀번호를 기다리는 로그인이다. 대시보드 세션이 아직 없으므로 의식 쿠키(PasskeyLoginCookie)에 묶인다.
+	loginCeremonies *security.Ephemeral[loginCeremony]
+	passkeyUnlocks  *security.Ephemeral[passkeyUnlock]
 }
 
 // New는 루트 핸들러를 반환한다. /api/ 밖의 요청은 cfg.Static이 처리한다.
@@ -187,11 +191,14 @@ func New(cfg Config) http.Handler {
 		challenges:      security.NewEphemeral[ceremony](challengeTTL),
 		pendingPasskeys: security.NewEphemeral[pendingPasskey](challengeTTL),
 		totpSetup:       security.NewEphemeral[string](totpSetupTTL),
+		loginCeremonies: security.NewEphemeral[loginCeremony](challengeTTL),
+		passkeyUnlocks:  security.NewEphemeral[passkeyUnlock](passkeyUnlockTTL),
 	}
 	for _, l := range []*auth.Limiter{h.terminalLimiter, h.securityLimiter} {
 		l.Now = cfg.Now
 	}
 	h.challenges.Now, h.pendingPasskeys.Now, h.totpSetup.Now = cfg.Now, cfg.Now, cfg.Now
+	h.loginCeremonies.Now, h.passkeyUnlocks.Now = cfg.Now, cfg.Now
 	h.loadOverrides()
 	h.loadPolicy()
 	if cfg.Helper != nil || cfg.Terminal != nil {
@@ -212,6 +219,9 @@ func New(cfg Config) http.Handler {
 	})
 	mux.HandleFunc("POST /api/login", h.login)
 	mux.HandleFunc("POST /api/login/verify", h.verify)
+	mux.HandleFunc("POST /api/login/passkey/options", h.passkeyLoginOptions)
+	mux.HandleFunc("POST /api/login/passkey", h.passkeyLoginUnlock)
+	mux.HandleFunc("POST /api/login/passkey/finish", h.passkeyLoginFinish)
 	mux.HandleFunc("POST /api/logout", h.logout)
 	// 로그인 화면이 로그인 전에 쓰는 공개 정보. 화면 꾸밈에 쓰는 전역 설정만 담는다.
 	mux.HandleFunc("GET /api/site", h.siteInfo)

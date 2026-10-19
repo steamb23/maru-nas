@@ -193,3 +193,197 @@ func TestPasskeyLoginDaysPolicy(t *testing.T) {
 		t.Fatalf("stored = %+v", got.Security)
 	}
 }
+
+// passkeyLoginOptions는 브라우저 항목(사용자 이름, 등록 ID)으로 패스키로 로그인을 시작한다.
+func (b *browser) passkeyLoginOptions(user, enrollment string) *httptest.ResponseRecorder {
+	b.e.t.Helper()
+	return b.do(http.MethodPost, "/api/login/passkey/options", api.PasskeyLoginOptionsRequest{Username: user, Enrollment: enrollment})
+}
+
+// passkeyLoginUnlock은 options를 받아 pk로 확인한 결과를 보낸다.
+func (b *browser) passkeyLoginUnlock(pk *fakePasskey, user, enrollment string) *httptest.ResponseRecorder {
+	b.e.t.Helper()
+	rec := b.passkeyLoginOptions(user, enrollment)
+	wantStatus(b.e.t, rec, http.StatusOK)
+	return b.do(http.MethodPost, "/api/login/passkey", api.PasskeyLoginRequest{Passkey: pk.get(decode[api.PasskeyOptions](b.e.t, rec))})
+}
+
+func (b *browser) passkeyLoginFinish(password string) *httptest.ResponseRecorder {
+	b.e.t.Helper()
+	return b.do(http.MethodPost, "/api/login/passkey/finish", api.PasskeyLoginFinishRequest{Password: password})
+}
+
+func TestPasskeyLoginFlow(t *testing.T) {
+	e := newEnv(t, envOptions{rp: testRP})
+	b, pk := e.passkeyUser()
+	en := b.mustEnablePasskeyLogin(pk)
+
+	n := e.browser()
+	// 없는 사용자와 없는 등록은 같은 응답이다.
+	unknownUser := wantCode(t, n.passkeyLoginOptions("nobody", en.ID), http.StatusBadRequest, api.ErrPasskeyLoginUnknown)
+	unknownLogin := wantCode(t, n.passkeyLoginOptions("user", "bm9wZQ"), http.StatusBadRequest, api.ErrPasskeyLoginUnknown)
+	if unknownUser != unknownLogin {
+		t.Errorf("unknown responses differ: %+v %+v", unknownUser, unknownLogin)
+	}
+	wantCode(t, n.passkeyLoginOptions("", ""), http.StatusBadRequest, api.ErrPasskeyLoginUnknown)
+	// options 없이는 확인을 받지 않는다.
+	wantCode(t, n.do(http.MethodPost, "/api/login/passkey", api.PasskeyLoginRequest{Passkey: &api.PasskeyAssertion{}}),
+		http.StatusBadRequest, api.ErrChallengeExpired)
+
+	rec := n.passkeyLoginOptions("user", en.ID)
+	wantStatus(t, rec, http.StatusOK)
+	opts := decode[api.PasskeyOptions](t, rec)
+	if opts.RPID != testRP.ID || len(opts.Credentials) != 1 || opts.Credentials[0].ID != b.securityStatus().Passkeys[0].ID {
+		t.Fatalf("options = %+v", opts)
+	}
+	if strings.Contains(rec.Body.String(), en.Share) || n.cookies[PasskeyLoginCookie] == nil {
+		t.Fatalf("options body %s, cookies %v", rec.Body.String(), n.cookies)
+	}
+	assertion := pk.get(opts)
+	rec = n.do(http.MethodPost, "/api/login/passkey", api.PasskeyLoginRequest{Passkey: assertion})
+	wantStatus(t, rec, http.StatusOK)
+	if got := decode[api.PasskeyLoginUnlockResponse](t, rec); got.Share != en.Share {
+		t.Fatalf("share %q, want the enrolled share", got.Share)
+	}
+	// 확인 값과 풀림은 한 번만 쓴다.
+	wantCode(t, n.do(http.MethodPost, "/api/login/passkey", api.PasskeyLoginRequest{Passkey: assertion}), http.StatusBadRequest, api.ErrChallengeExpired)
+
+	rec = n.passkeyLoginFinish("user")
+	wantStatus(t, rec, http.StatusOK)
+	got := decode[api.LoginResponse](t, rec)
+	if got.Status != api.LoginAuthenticated || got.Session.Assurance != api.AssuranceTwoFactor || got.StepUp != nil {
+		t.Fatalf("login = %+v", got)
+	}
+	if n.cookies[PasskeyLoginCookie] != nil || n.cookies[SessionCookie] == nil {
+		t.Fatalf("cookies after login: %v", n.cookies)
+	}
+	if s := decode[api.SessionInfo](t, n.do(http.MethodGet, "/api/session", nil)); s.Username != "user" || s.Assurance != api.AssuranceTwoFactor {
+		t.Fatalf("session = %+v", s)
+	}
+	if st := n.securityStatus(); st.PasskeyLogins[0].LastUsed == "" || st.Passkeys[0].LastUsed == "" {
+		t.Fatalf("last used not recorded: %+v", st)
+	}
+	wantCode(t, n.passkeyLoginFinish("user"), http.StatusBadRequest, api.ErrChallengeExpired)
+
+	// 등록한 패스키가 아니면 share를 주지 않는다.
+	o := e.browser()
+	wantCode(t, o.passkeyLoginUnlock(newFakePasskey(t), "user", en.ID), http.StatusBadRequest, api.ErrFactorFailed)
+	wantCode(t, o.passkeyLoginFinish("user"), http.StatusBadRequest, api.ErrChallengeExpired)
+
+	logs := e.logs.String()
+	for _, secret := range []string{en.Share, en.ID} {
+		if strings.Contains(logs, secret) {
+			t.Errorf("log contains %q:\n%s", secret, logs)
+		}
+	}
+	if !strings.Contains(logs, `security: passkey login: user="user"`) || !strings.Contains(logs, "assurance=twoFactor") {
+		t.Errorf("passkey login not logged:\n%s", logs)
+	}
+}
+
+func TestPasskeyLoginStaleAndDiscard(t *testing.T) {
+	e := newEnv(t, envOptions{rp: testRP})
+	b, pk := e.passkeyUser()
+	first := b.mustEnablePasskeyLogin(pk)
+	second := b.mustEnablePasskeyLogin(pk)
+
+	// 풀어 낸 비밀번호가 맞지 않으면(비밀번호를 바꿈) 그 등록을 지운다.
+	n := e.browser()
+	wantStatus(t, n.passkeyLoginUnlock(pk, "user", first.ID), http.StatusOK)
+	wantCode(t, n.passkeyLoginFinish("old-password"), http.StatusBadRequest, api.ErrPasskeyLoginStale)
+	wantCode(t, n.passkeyLoginOptions("user", first.ID), http.StatusBadRequest, api.ErrPasskeyLoginUnknown)
+	if strings.Contains(e.logs.String(), "old-password") {
+		t.Error("password logged")
+	}
+
+	// 브라우저가 풀지 못하면 그 등록을 지운다. 확인을 마친 뒤에만 할 수 있다.
+	wantStatus(t, n.passkeyLoginOptions("user", second.ID), http.StatusOK)
+	wantCode(t, n.do(http.MethodPost, "/api/login/passkey/finish", api.PasskeyLoginFinishRequest{Discard: true}),
+		http.StatusBadRequest, api.ErrChallengeExpired)
+	wantStatus(t, n.passkeyLoginUnlock(pk, "user", second.ID), http.StatusOK)
+	wantStatus(t, n.do(http.MethodPost, "/api/login/passkey/finish", api.PasskeyLoginFinishRequest{Discard: true}), http.StatusNoContent)
+	if rec, _ := e.security.GetSecurity("user"); len(rec.PasskeyLogins) != 0 {
+		t.Fatalf("logins left: %+v", rec.PasskeyLogins)
+	}
+}
+
+func TestPasskeyLoginExpiresAtLogin(t *testing.T) {
+	e := newEnv(t, envOptions{rp: testRP})
+	b, pk := e.passkeyUser()
+	en := b.mustEnablePasskeyLogin(pk)
+	day := 24 * time.Hour
+
+	// options를 받은 뒤 만료되면 share를 주지 않고 지운다.
+	n := e.browser()
+	e.clk.Add(30*day - time.Second)
+	rec := n.passkeyLoginOptions("user", en.ID)
+	wantStatus(t, rec, http.StatusOK)
+	opts := decode[api.PasskeyOptions](t, rec)
+	e.clk.Add(2 * time.Second)
+	wantCode(t, n.do(http.MethodPost, "/api/login/passkey", api.PasskeyLoginRequest{Passkey: pk.get(opts)}),
+		http.StatusBadRequest, api.ErrPasskeyLoginExpired)
+	wantCode(t, n.passkeyLoginOptions("user", en.ID), http.StatusBadRequest, api.ErrPasskeyLoginUnknown)
+
+	// options에서 만료를 알게 되어도 지운다.
+	b = e.browser()
+	wantStatus(t, b.login("user", "user"), http.StatusOK)
+	en = b.mustEnablePasskeyLogin(pk)
+	e.clk.Add(31 * day)
+	wantCode(t, n.passkeyLoginOptions("user", en.ID), http.StatusBadRequest, api.ErrPasskeyLoginExpired)
+	wantCode(t, n.passkeyLoginOptions("user", en.ID), http.StatusBadRequest, api.ErrPasskeyLoginUnknown)
+	if !strings.Contains(e.logs.String(), "security: passkey login removed (expired)") {
+		t.Errorf("expiry not logged:\n%s", e.logs.String())
+	}
+}
+
+// OMV 2차 인증이 있는 계정은 패스키로 로그인해도 그 단계를 거친다.
+func TestPasskeyLoginOMVChallenge(t *testing.T) {
+	e := newEnv(t, envOptions{rp: testRP})
+	b := e.strongAdmin()
+	wantStatus(t, b.do(http.MethodPost, "/api/security/manage", api.SecurityManageRequest{Password: "totp"}), http.StatusOK)
+	pk := newFakePasskey(t)
+	b.enrollPasskey(pk, "key")
+	rec := b.enablePasskeyLogin(pk, "totp", "")
+	wantStatus(t, rec, http.StatusOK)
+	en := decode[api.PasskeyLoginEnrollResponse](t, rec)
+
+	n := e.browser()
+	wantStatus(t, n.passkeyLoginUnlock(pk, "totp", en.ID), http.StatusOK)
+	rec = n.passkeyLoginFinish("totp")
+	wantStatus(t, rec, http.StatusOK)
+	if got := decode[api.LoginResponse](t, rec); got.Status != api.LoginChallengeRequired || n.cookies[PendingCookie] == nil {
+		t.Fatalf("login = %+v", got)
+	}
+	rec = n.do(http.MethodPost, "/api/login/verify", api.VerifyRequest{Response: "123456"})
+	wantStatus(t, rec, http.StatusOK)
+	if got := decode[api.LoginResponse](t, rec); got.Session == nil || got.Session.Assurance != api.AssuranceTwoFactor {
+		t.Fatalf("verify = %+v", got)
+	}
+}
+
+func TestPasskeyLoginRateLimit(t *testing.T) {
+	e := newEnv(t, envOptions{rp: testRP})
+	b, pk := e.passkeyUser()
+	en := b.mustEnablePasskeyLogin(pk)
+	n := e.browser()
+	forged := func() *httptest.ResponseRecorder {
+		rec := n.passkeyLoginOptions("user", en.ID)
+		wantStatus(t, rec, http.StatusOK)
+		a := pk.get(decode[api.PasskeyOptions](t, rec))
+		a.Signature = security.B64.EncodeToString([]byte("not a signature"))
+		return n.do(http.MethodPost, "/api/login/passkey", api.PasskeyLoginRequest{Passkey: a})
+	}
+	for range 5 {
+		wantCode(t, forged(), http.StatusBadRequest, api.ErrFactorFailed)
+	}
+	wantCode(t, forged(), http.StatusTooManyRequests, api.ErrRateLimited)
+	// 비밀번호 로그인은 따로 센다.
+	wantStatus(t, e.browser().login("user", "user"), http.StatusOK)
+}
+
+func TestPasskeyLoginWithoutOrigin(t *testing.T) {
+	e := newEnv(t, envOptions{})
+	n := e.browser()
+	wantCode(t, n.passkeyLoginOptions("user", "x"), http.StatusConflict, api.ErrPasskeyUnavailable)
+	wantCode(t, n.do(http.MethodPost, "/api/login/passkey", api.PasskeyLoginRequest{}), http.StatusConflict, api.ErrPasskeyUnavailable)
+}
