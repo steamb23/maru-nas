@@ -1,6 +1,7 @@
 // 보안 강화 모드의 확인 폼. 로그인 단계(로그인 카드)와 확인·관리 대화상자(stepUpDialog.tsx)가 함께 쓴다.
 //   - verify: 이 세션을 level 단계로 올린다(password면 비밀번호, twoFactor면 등록한 2차 수단 하나)
-//   - manage: 비밀번호와(등록한 수단이 있으면) 그 수단으로 관리 창(5분)을 연다
+//   - manage: 비밀번호와(등록한 수단이 있으면) 그 수단으로 관리 창(5분)을 연다. 패스키 등록(purpose 'addPasskey')은
+//     등록한 수단 대신 다른 기기에서 만든 기기 추가 코드도 받는다(순서는 messages.ts의 factorChoices)
 // 로그인 직후 단계는 패스키 확인과 함께 이 브라우저의 패스키로 로그인을 켤 수 있다(passkeyLogin).
 // 계산은 messages.ts, 패스키 창은 webauthn.ts, 패스키로 로그인은 passkeyLoginFlow.ts.
 import type { ReactNode, RefObject } from 'react'
@@ -10,7 +11,15 @@ import { useTranslation } from 'react-i18next'
 import { manageSecurity, verifySecurity } from '../api/client'
 import type { SecurityStatus, SecurityVerifyRequest } from '../api/types.gen'
 import { formatClock } from '../shell/elevation'
-import { type Factor, type SecurityError, firstFactor, passkeyLoginEnableError, securityError, usableFactors } from './messages'
+import {
+  type Choice,
+  type Factor,
+  type ManagePurpose,
+  type SecurityError,
+  factorChoices,
+  passkeyLoginEnableError,
+  securityError,
+} from './messages'
 import { PrfUnsupportedError, enablePasskeyLogin } from './passkeyLoginFlow'
 import { getPasskey, passkeysSupported } from './webauthn'
 
@@ -44,10 +53,18 @@ const HINT_KEYS: Record<Factor, ParseKeys> = {
   recovery: 'security.stepUp.recoveryHint',
 }
 
-const SWITCH_KEYS: Record<Factor, ParseKeys> = {
+const SWITCH_KEYS: Record<Choice, ParseKeys> = {
   passkey: 'security.stepUp.switchPasskey',
   totp: 'security.stepUp.switchTotp',
   recovery: 'security.stepUp.switchRecovery',
+  deviceCode: 'security.stepUp.switchDeviceCode',
+}
+
+// 코드를 입력하는 방법의 입력 상자 이름표
+const CODE_LABEL_KEYS: Record<Exclude<Choice, 'passkey'>, ParseKeys> = {
+  totp: 'security.stepUp.code',
+  recovery: 'security.stepUp.recoveryCode',
+  deviceCode: 'security.stepUp.deviceCode',
 }
 
 export interface StepUpFormProps {
@@ -65,6 +82,8 @@ export interface StepUpFormProps {
   // passkeyLogin이 있으면(로그인 직후의 권유) 패스키 확인에 "다음부터 패스키로 로그인" 확인란(기본 켬)을 둔다.
   // 켜져 있으면 확인 대신 이 사용자·로그인 비밀번호로 패스키로 로그인을 켠다(켜기도 twoFactor로 올린다).
   passkeyLogin?: { username: string; password: string }
+  // manage의 목적. 패스키 등록이면 기기 추가 코드도 받고 수단 순서가 다르다.
+  purpose?: ManagePurpose
 }
 
 // enableOrVerify는 패스키 확인 한 번으로 이 브라우저의 패스키로 로그인을 켜고 새 보안 상태를 돌려준다. 패스키가
@@ -88,13 +107,15 @@ export function StepUpForm({
   cancelLabel,
   inputRef,
   passkeyLogin,
+  purpose,
 }: StepUpFormProps) {
   const { t } = useTranslation()
   const c = CLASSES[variant]
   const passkeys = passkeysSupported()
   const needPassword = mode === 'manage' || level === 'password'
   const needFactor = mode === 'manage' ? methods.length > 0 : level === 'twoFactor'
-  const [factor, setFactor] = useState<Factor | null>(() => (needFactor ? firstFactor(methods, passkeys) : null))
+  const choices = needFactor ? factorChoices(methods, passkeys, mode === 'manage' ? purpose : undefined) : []
+  const [factor, setFactor] = useState<Choice | null>(() => choices[0] ?? null)
   const [password, setPassword] = useState('')
   const [code, setCode] = useState('')
   const [busy, setBusy] = useState(false)
@@ -122,7 +143,7 @@ export function StepUpForm({
     )
   }
 
-  const codeFactor = factor === 'totp' || factor === 'recovery'
+  const codeFactor = factor === 'totp' || factor === 'recovery' || factor === 'deviceCode'
   // 확인 대신 패스키로 로그인을 켠다(세션 중 확인의 패스키일 때만).
   const enableLogin = mode === 'verify' && factor === 'passkey' && passkeyLogin !== undefined && rememberLogin
   const ready = !(needPassword && password === '') && !(needFactor && codeFactor && code.trim() === '')
@@ -138,11 +159,13 @@ export function StepUpForm({
         return
       }
       let proof: SecurityVerifyRequest | undefined
+      let deviceCode: string | undefined
       if (needFactor && factor) {
-        proof = factor === 'passkey' ? { method: 'passkey', passkey: await getPasskey() } : { method: factor, code: code.trim() }
+        if (factor === 'deviceCode') deviceCode = code.trim()
+        else proof = factor === 'passkey' ? { method: 'passkey', passkey: await getPasskey() } : { method: factor, code: code.trim() }
       }
       let status: SecurityStatus
-      if (mode === 'manage') status = await manageSecurity({ password, factor: proof })
+      if (mode === 'manage') status = await manageSecurity({ password, factor: proof, deviceCode })
       else if (proof) status = await verifySecurity(proof)
       else status = await verifySecurity({ method: 'password', password })
       onDone(status)
@@ -160,7 +183,7 @@ export function StepUpForm({
       : needPassword
         ? t('security.stepUp.passwordHint')
         : t(HINT_KEYS[factor as Factor])
-  const others = needFactor ? usableFactors(methods, passkeys).filter((f) => f !== factor) : []
+  const others = choices.filter((f) => f !== factor)
   const submitLabel = busy
     ? t('security.stepUp.confirming')
     : factor === 'passkey'
@@ -193,14 +216,14 @@ export function StepUpForm({
       )}
       {needFactor && codeFactor && (
         <label className={c.field}>
-          <span>{t(factor === 'totp' ? 'security.stepUp.code' : 'security.stepUp.recoveryCode')}</span>
+          <span>{t(CODE_LABEL_KEYS[factor])}</span>
           <input
             ref={needPassword ? undefined : firstRef}
             className={c.input}
-            name={factor === 'totp' ? 'code' : 'recovery-code'}
+            name={factor === 'totp' ? 'code' : factor === 'recovery' ? 'recovery-code' : 'device-code'}
             autoComplete={factor === 'totp' ? 'one-time-code' : 'off'}
             inputMode={factor === 'totp' ? 'numeric' : 'text'}
-            autoCapitalize="none"
+            autoCapitalize={factor === 'deviceCode' ? 'characters' : 'none'}
             spellCheck={false}
             value={code}
             disabled={busy}
@@ -211,6 +234,7 @@ export function StepUpForm({
       {needFactor && mode === 'manage' && factor === 'passkey' && (
         <p className={c.hint}>{t('security.stepUp.managePasskeyHint')}</p>
       )}
+      {needFactor && factor === 'deviceCode' && <p className={c.hint}>{t('security.stepUp.deviceCodeHint')}</p>}
       {mode === 'verify' && factor === 'passkey' && passkeyLogin && (
         <label className="step-up-check">
           <input type="checkbox" checked={rememberLogin} disabled={busy} onChange={(e) => setRememberLogin(e.target.checked)} />

@@ -18,7 +18,7 @@ export interface SecurityError {
 
 // securityError는 확인·관리 요청의 실패를 문구 키로 바꾼다. method는 시도한 수단이다(틀렸을 때 문구가 다르다).
 // both는 비밀번호와 2차 수단을 함께 보낸 관리 확인이다(백엔드는 어느 쪽이 틀렸는지 알리지 않는다).
-export function securityError(err: unknown, method?: Factor | 'password' | 'both'): SecurityError {
+export function securityError(err: unknown, method?: Choice | 'password' | 'both'): SecurityError {
   // 패스키 창의 결과(DOMException). 취소·시간 초과는 NotAllowedError로 온다.
   if (typeof DOMException !== 'undefined' && err instanceof DOMException) {
     switch (err.name) {
@@ -92,17 +92,23 @@ export function satisfies(a: Assurance, level: Level): boolean {
   return RANK[a] >= RANK[level]
 }
 
-// firstFactor는 처음 보여 줄 확인 수단이다. 패스키(이 브라우저가 쓸 수 있을 때), 인증 앱, 복구 코드 순이다.
-export function firstFactor(methods: readonly Factor[], passkeys: boolean): Factor | null {
-  if (passkeys && methods.includes('passkey')) return 'passkey'
-  if (methods.includes('totp')) return 'totp'
-  if (methods.includes('recovery')) return 'recovery'
-  return null
-}
+// Choice는 확인 폼에서 고를 수 있는 확인 방법이다. 등록한 2차 수단과, 관리 확인에서만 받는 기기 추가 코드다.
+export type Choice = Factor | 'deviceCode'
 
-// usableFactors는 이 브라우저에서 쓸 수 있는 수단이다(패스키를 쓸 수 없는 브라우저에서는 뺀다).
-export function usableFactors(methods: readonly Factor[], passkeys: boolean): Factor[] {
-  return methods.filter((m) => m !== 'passkey' || passkeys)
+// ManagePurpose는 관리 확인을 여는 목적이다. 패스키 등록은 고를 수 있는 방법과 순서가 다르다.
+export type ManagePurpose = 'addPasskey'
+
+const DEFAULT_ORDER: readonly Choice[] = ['passkey', 'totp', 'recovery']
+// 패스키 등록은 새 기기에서 하는 경우가 많고, 그 기기에는 등록한 패스키가 없기 쉽다.
+const ADD_PASSKEY_ORDER: readonly Choice[] = ['totp', 'deviceCode', 'passkey', 'recovery']
+
+// factorChoices는 확인 폼에서 고를 수 있는 방법을 보여 줄 순서로 돌려준다(첫째를 처음 보인다). 패스키는 이
+// 브라우저가 쓸 수 있을 때만 넣는다. 보통은 패스키, 인증 앱, 복구 코드 순이고, 패스키 등록의 관리 확인은 인증 앱,
+// 기기 추가 코드, 패스키, 복구 코드 순이다. 등록한 수단이 없으면 빈 목록이다.
+export function factorChoices(methods: readonly Factor[], passkeys: boolean, purpose?: ManagePurpose): Choice[] {
+  if (methods.length === 0) return []
+  const order = purpose === 'addPasskey' ? ADD_PASSKEY_ORDER : DEFAULT_ORDER
+  return order.filter((c) => c === 'deviceCode' || (methods.includes(c) && (c !== 'passkey' || passkeys)))
 }
 
 // qrPath는 QR 모듈(true가 검은 칸)을 SVG path 하나로 바꾼다. 한 칸이 1이다.

@@ -53,6 +53,7 @@
 /* 보안 강화 모드의 확인 폼과 대화상자. 로그인 카드의 클래스(.login-form) 안에서도 쓰므로 로그인 뒤에 둔다. */
 @import './security/StepUpForm.css';
 @import './security/RecoveryCodes.css';
+@import './security/DeviceCode.css';
 @import './security/TOTPSetup.css';
 
 /* 애드온: 공통 다음에 애드온별(알파벳순). 공용 클래스의 주인이 쓰는 쪽보다 앞에 온다(containers → services). */

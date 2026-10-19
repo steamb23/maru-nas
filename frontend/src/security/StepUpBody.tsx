@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { type RequiredLevel, fetchSecurity } from '../api/client'
 import type { SecurityStatus } from '../api/types.gen'
-import { type SecurityTarget, satisfies, securityError } from './messages'
+import { type ManagePurpose, type SecurityTarget, satisfies, securityError } from './messages'
 import { StepUpForm } from './StepUpForm'
 
 export interface StepUpRequest {
@@ -14,6 +14,8 @@ export interface StepUpRequest {
   // 등록한 수단이 있으면 2차 인증, 없으면 비밀번호 재확인이다(설정의 "지금 확인").
   level?: RequiredLevel
   target?: SecurityTarget
+  // purpose는 관리 확인을 여는 목적이다(manage만). 패스키 등록이면 기기 추가 코드도 받는다.
+  purpose?: ManagePurpose
 }
 
 export function SecurityDialogTitle({ k }: { k: ParseKeys }) {
@@ -84,6 +86,7 @@ export function StepUpBody({
       onCancel={onCancel}
       cancelLabel={t('dialog.cancel')}
       inputRef={inputRef}
+      purpose={req.purpose}
     />
   )
 }

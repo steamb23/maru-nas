@@ -43,6 +43,13 @@ paths:
   - challenge는 대시보드 세션과 목적(`assert`, `register`)에 묶인 1회용이다(`challenges`, 5분). 사용자 핸들(`Record.Handle`)은 무작위이고 응답의 userHandle이 있으면 같아야 한다. 서명 횟수가 늘지 않으면 기록만 남긴다(동기화 패스키는 늘 0)
   - RP는 `-public-origin`(`ONMARU_PUBLIC_ORIGIN`, `security.ParseOrigin`: `https://호스트[:포트]`, IP 거부)에서 정한다. 비우면 패스키를 숨긴다. 웹에서 덮어쓰지 않는다
 - **관리 창**(`ManageUntil`, 5분): 수단 등록·삭제·복구 코드 다시 만들기 전에 비밀번호와(등록한 수단이 있으면) 그 수단을 함께 확인한다. 없으면 403 `manage_required`. 세션을 빼앗은 쪽이 자기 수단을 등록하지 못하게 한다
+- **기기 추가 코드**(`POST /api/security/device-code`): 동기화되지 않는 패스키(Windows Hello 등)만 등록한 사용자는 새 기기에서 관리 창을 열 수단이 없다(복구 코드는 하나를 써 버린다). 그래서 수단이 있는 기기가 1회용 코드를 만들어 주고, 새 기기의 관리 확인이 등록한 수단 대신 받는다
+  - 관리 창이 열린 세션만(아니면 403 `manage_required`), 수단을 등록한 사용자만(아니면 400) 만든다. 공개 주소(RP)와는 묶지 않는다(화면이 패스키를 쓸 수 없으면 행을 막는다)
+  - 대문자 base32 8자(`XXXX-XXXX`, 40비트, 소문자 `xxxxx-xxxxx`인 복구 코드와 모양이 다르다). SHA-256 해시만 메모리(`deviceCodes`, 사용자 이름 키, 10분)에 두고 평문은 발급 응답에만 담는다. 다시 만들면 이전 코드는 버리고, 관리자 초기화도 지운다
+  - 관리 확인(`SecurityManageRequest.deviceCode`, `Factor`와 함께 보내면 400)에서 비밀번호와 함께 확인한다. 맞을 때만 지운다(`Ephemeral.TakeIf`, 같은 코드를 동시에 두 번 쓰지 못한다). 틀린 값은 지우지 않는다(비밀번호를 가진 쪽이 아무 값이나 보내 정상 사용자의 코드를 없애지 못하게). 실패는 `securityLimiter`·`FailDelay`·400 `factor_failed`
+  - 2차 수단(`Factor*`)이 아니다. `verify`에서 받지 않고 `methods`에도 넣지 않는다. 관리 창만 열고 세션은 `password`까지만 올린다(이 세션에서 수단 소유를 증명하지 않았다). 새 패스키를 등록하면 그때 `twoFactor`가 된다
+  - 이름과 달리 관리 창 전체(수단 삭제, 복구 코드 다시 만들기 포함)를 연다. 복구 코드와 같은 성질이고 코드를 만든 세션이 이미 관리 창을 거쳤으므로 범위를 나누지 않는다
+  - 로그에는 발급·사용·실패의 사용자와 IP만 남긴다
 - 확인(`verify`)·관리 확인(`manage`)이 성공하면 OMV 세션도 연장한다(`touchSession`, 활동 신호와 같다). 로그인 직후 단계에서는 활동 신호가 돌지 않기 때문이다. 그 단계에서 세션이 끝나면 프론트의 `expire`가 로그인 화면으로 돌린다
 - 첫 수단은 비밀번호만으로 등록된다(관리 창에 확인할 기존 수단이 없다). 그래서 비밀번호 유출은 수단을 이미 등록한 계정만 막는다(README의 한계)
 - **관리자 초기화**(`DELETE /api/security/users/{name}`): 관리자이면서 `twoFactor` 세션만 한다. 기록을 지우고 그 사용자의 대시보드 세션을 모두 끝낸다(`auth.Store.DeleteUser`, 삭제 훅이 도우미 티켓·터미널을 정리한다). 손상된 기록도 지운다
@@ -85,6 +92,9 @@ paths:
 
 - `src/security/`: `StepUpForm.tsx`(로그인 카드와 대화상자가 함께 쓰는 확인 폼, `variant`), `stepUpDialog.tsx`(`requestStepUp`, `requestManage`) + 내용 `StepUpBody.tsx`, `securityDialogs.tsx`(패스키·인증 앱 등록, 복구 코드 보기) + 내용 `PasskeyAdd.tsx`·`TOTPSetup.tsx`·`RecoveryCodes.tsx`, 순수 모듈 `messages.ts`(오류 문구, 수단 고르기, QR 경로)·`webauthn.ts`(base64url, 옵션 변환)
   - 여는 함수와 컴포넌트를 다른 파일에 둔다(oxlint `only-export-components`)
+- 관리 확인에서 고를 수 있는 수단과 순서는 `messages.ts`의 `manageChoices`다. 패스키 등록(`requestManage`의 `purpose: 'addPasskey'`, 보안 페이지의 추가 단추)은 인증 앱, 기기 추가 코드, 패스키, 복구 코드 순이다(새 기기에는 그 패스키가 없는 경우가 많다). 그 밖의 관리 확인과 세션 중 확인은 패스키, 인증 앱, 복구 코드 순이고 기기 추가 코드를 보이지 않는다
+  - 기기 추가 코드 입력 아래 안내가 "이 기기에 패스키가 있으면 패스키 사용"을 알린다(인증 앱이 없으면 같은 기기에 패스키를 하나 더 등록할 때도 코드 입력이 먼저 나온다)
+  - 발급은 보안 페이지의 "다른 기기에서 패스키 추가" 행이 관리 창을 연 뒤 코드를 받아 `deviceCodeDialog`(내용 `DeviceCode.tsx`, 남은 시간)로 보인다. 이 브라우저의 패스키 지원과 관계없이 수단이 있고 서버가 패스키를 쓸 수 있으면 켠다
 - 로그인 직후 단계는 인증 저장소의 `stepUp` 상태(`finishStepUp`)다. 보안에 민감한 기능은 `security_required`를 받으면 `requestStepUp`으로 확인하고 다시 시도한다(터미널은 닫힘 막대의 확인 단추, 상승은 `ElevationForm`이 같은 비밀번호로 다시 시도)
 - 패스키는 `passkeysSupported()`(보안 컨텍스트 + `PublicKeyCredential`)일 때만 보인다. 개발 서버(평문 HTTP)에서는 TOTP·복구 코드만 시험할 수 있다
 - 패스키로 로그인: 순수 모듈 `passkeyLogin.ts`(항목 형식, 분할 키, 두 share로 차례로 풀기 `openEntry`·다시 암호화 `resealEntry`), 저장 `passkeyLoginStorage.ts`(localStorage), 흐름 `passkeyLoginFlow.ts`(`enablePasskeyLogin`, `unlockPasskeyLogin`). 보안 페이지의 "패스키로 로그인하는 브라우저" 절은 관리 창 없이 해제하고 `enablePasskeyLoginDialog`(내용 `PasskeyLoginSetup.tsx`)로 켜며, 받은 상태마다 이 브라우저 항목을 서버 목록에 맞춘다(`syncPasskeyLogins`: 목록에 없으면 지우고, 있으면 `expiresAt`을 서버 값으로. 관리자가 기간을 줄인 경우). 만료 기간은 보안 정책 페이지가 고른다
@@ -93,7 +103,7 @@ paths:
 
 ## 테스트
 
-- Go: TOTP는 RFC 6238 SHA-1 벡터, WebAuthn은 테스트 안에서 합성한 인증기(P-256·ed25519·RSA 키로 authData·clientDataJSON·서명을 만든다). 서버 테스트(`security_test.go`, `passkey_test.go`)는 `envOptions{security, rp}`와 omvfake로 정책 가드, 로그인 단계, 터미널·상승 적용, 관리 창, 초기화, 손상된 기록을 시험한다
+- Go: TOTP는 RFC 6238 SHA-1 벡터, WebAuthn은 테스트 안에서 합성한 인증기(P-256·ed25519·RSA 키로 authData·clientDataJSON·서명을 만든다). 서버 테스트(`security_test.go`, `passkey_test.go`)는 `envOptions{security, rp}`와 omvfake로 정책 가드, 로그인 단계, 터미널·상승 적용, 관리 창, 기기 추가 코드, 초기화, 손상된 기록을 시험한다
 - 브라우저: TOTP·화면은 `make dev-fake`, 패스키는 HTTPS 도메인으로 연결한 테스트 VM에서 Playwright 가상 인증기(CDP `WebAuthn.addVirtualAuthenticator`, UV 켬)로 확인한다. 실제 기기 패스키는 사용자가 확인한다
   - 가상 인증기는 `WebAuthn.setUserVerified(false)`로 UV를 끄면 UV=0 응답을 만들지 않고 `get()`이 NotAllowedError로 끝난다(시험 확인의 "다시 확인" 경로). "등록은 UV=1, 확인은 UV=0"인 경우는 Go 테스트(`fakePasskey.noUV`)가 맡고, 화면의 `passkey_uv_unsupported` 안내는 confirm 응답을 `page.route`로 바꿔 확인한다
   - 패스키로 로그인은 가상 인증기를 `hasPrf: true`로 만들어 확인한다. 등록 옵션에 `extensions.prf`가 있어야 그 자격 증명에 PRF가 생긴다(create 결과 `prf.enabled: true`)

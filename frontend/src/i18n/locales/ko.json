@@ -724,6 +724,9 @@
       "noPasskeys": "아직 패스키가 없습니다.",
       "addPasskey": "패스키 추가",
       "add": "추가",
+      "deviceCode": "다른 기기에 패스키 추가",
+      "deviceCodeDesc": "이 기기의 패스키가 없는 새 기기에서 본인 확인에 입력할 코드를 만듭니다. 10분 동안 한 번만 쓸 수 있습니다.",
+      "deviceCodeCreate": "코드 만들기",
       "delete": "제거",
       "deletePasskeyTitle": "패스키 제거",
       "deletePasskeyMessage": "이 패스키로는 더 이상 확인할 수 없습니다.",
@@ -825,7 +828,10 @@
       "recoveryCode": "복구 코드",
       "confirm": "확인",
       "confirming": "확인 중…",
-      "usePasskey": "패스키 사용"
+      "usePasskey": "패스키 사용",
+      "switchDeviceCode": "기기 추가 코드 사용",
+      "deviceCode": "기기 추가 코드",
+      "deviceCodeHint": "패스키가 있는 다른 기기의 설정 → 보안 → 다른 기기에 패스키 추가에서 코드를 만드세요. 이 기기에 패스키가 있으면 패스키 사용을 누르세요."
     },
     "errors": {
       "wrongPassword": "비밀번호가 올바르지 않습니다.",
@@ -864,6 +870,13 @@
       "copy": "복사",
       "copied": "복사함",
       "done": "저장했습니다"
+    },
+    "deviceCode": {
+      "title": "기기 추가 코드",
+      "intro": "새 기기에서 설정 → 보안 → 패스키 추가를 누르고, 본인 확인에서 비밀번호와 이 코드를 입력하세요.",
+      "expires": "{{remaining}} 뒤에 만료됩니다.",
+      "expired": "코드가 만료되었습니다. 필요하면 다시 만드세요.",
+      "done": "닫기"
     },
     "totp": {
       "title": "인증 앱 설정",

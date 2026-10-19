@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { ApiError } from '../api/client'
-import { firstFactor, groupSecret, passkeyLoginEnableError, passkeyNotSaved, qrPath, satisfies, securityError, usableFactors } from './messages'
+import { factorChoices, groupSecret, passkeyLoginEnableError, passkeyNotSaved, qrPath, satisfies, securityError } from './messages'
 import { PasskeyLoginStorageError, PasswordTooLongError, PrfUnsupportedError } from './passkeyLoginFlow'
 
 describe('securityError', () => {
@@ -59,13 +59,22 @@ describe('satisfies', () => {
   })
 })
 
-describe('factors', () => {
+describe('factorChoices', () => {
   it('쓸 수 있는 패스키를 먼저 고른다', () => {
-    expect(firstFactor(['passkey', 'totp', 'recovery'], true)).toBe('passkey')
-    expect(firstFactor(['passkey', 'totp', 'recovery'], false)).toBe('totp')
-    expect(firstFactor(['passkey', 'recovery'], false)).toBe('recovery')
-    expect(firstFactor(['passkey'], false)).toBeNull()
-    expect(usableFactors(['passkey', 'totp'], false)).toEqual(['totp'])
+    expect(factorChoices(['passkey', 'totp', 'recovery'], true)).toEqual(['passkey', 'totp', 'recovery'])
+    expect(factorChoices(['passkey', 'totp', 'recovery'], false)).toEqual(['totp', 'recovery'])
+    expect(factorChoices(['passkey', 'recovery'], false)).toEqual(['recovery'])
+    expect(factorChoices(['passkey'], false)).toEqual([])
+    expect(factorChoices([], true)).toEqual([])
+  })
+
+  it('패스키 등록은 인증 앱, 기기 추가 코드, 패스키, 복구 코드 순이다', () => {
+    expect(factorChoices(['passkey', 'totp', 'recovery'], true, 'addPasskey')).toEqual(['totp', 'deviceCode', 'passkey', 'recovery'])
+    expect(factorChoices(['passkey', 'recovery'], true, 'addPasskey')).toEqual(['deviceCode', 'passkey', 'recovery'])
+    expect(factorChoices(['totp', 'recovery'], true, 'addPasskey')).toEqual(['totp', 'deviceCode', 'recovery'])
+    expect(factorChoices(['passkey', 'recovery'], false, 'addPasskey')).toEqual(['deviceCode', 'recovery'])
+    // 수단이 없으면 비밀번호만 받으므로 코드도 묻지 않는다.
+    expect(factorChoices([], true, 'addPasskey')).toEqual([])
   })
 })
 

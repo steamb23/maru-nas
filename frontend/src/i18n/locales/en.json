@@ -724,6 +724,9 @@
       "noPasskeys": "No passkeys yet.",
       "addPasskey": "Add a passkey",
       "add": "Add",
+      "deviceCode": "Add a passkey on another device",
+      "deviceCodeDesc": "Creates a code to enter when you confirm your identity on a new device that does not have this device’s passkey. It works once within 10 minutes.",
+      "deviceCodeCreate": "Create code",
       "delete": "Remove",
       "deletePasskeyTitle": "Remove passkey",
       "deletePasskeyMessage": "You will not be able to confirm with this passkey anymore.",
@@ -825,7 +828,10 @@
       "recoveryCode": "Recovery code",
       "confirm": "Confirm",
       "confirming": "Checking…",
-      "usePasskey": "Use passkey"
+      "usePasskey": "Use passkey",
+      "switchDeviceCode": "Use a device code",
+      "deviceCode": "Device code",
+      "deviceCodeHint": "Create the code on another device that has your passkey, under Settings → Security → Add a passkey on another device. If this device has your passkey, choose Use a passkey."
     },
     "errors": {
       "wrongPassword": "Incorrect password.",
@@ -864,6 +870,13 @@
       "copy": "Copy",
       "copied": "Copied",
       "done": "I saved them"
+    },
+    "deviceCode": {
+      "title": "Device code",
+      "intro": "On the new device, open Settings → Security → Add a passkey, then enter your password and this code to confirm your identity.",
+      "expires": "Expires in {{remaining}}.",
+      "expired": "This code has expired. Create a new one if you still need it.",
+      "done": "Close"
     },
     "totp": {
       "title": "Set up an authenticator app",

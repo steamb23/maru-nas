@@ -6,6 +6,7 @@ import type {
   AppearanceRequest,
   CapabilitiesResponse,
   ChallengeInfo,
+  DeviceCodeResponse,
   DrawerPrefs,
   DrawerRequest,
   ElevationRequest,
@@ -1039,6 +1040,14 @@ export async function deleteTOTP(): Promise<SecurityChangeResponse> {
 
 export function regenerateRecoveryCodes(): Promise<SecurityChangeResponse> {
   return securityChangeFrom('/security/recovery-codes', postJSON('/security/recovery-codes'))
+}
+
+// createDeviceCode는 기기 추가 코드를 만든다(관리 창 필요). 등록한 패스키가 없는 새 기기의 관리 확인이 등록한 수단
+// 대신 받는다(SecurityManageRequest.deviceCode).
+export async function createDeviceCode(): Promise<DeviceCodeResponse> {
+  const data = await postJSON('/security/device-code')
+  if (!isObj(data) || !isStr(data.code) || !isNum(data.expiresInSeconds)) throw new Error('/security/device-code: unexpected response shape')
+  return { code: data.code, expiresInSeconds: data.expiresInSeconds }
 }
 
 // fetchSecurityUsers는 인증 수단 기록이 있는 사용자 목록이다(관리자).

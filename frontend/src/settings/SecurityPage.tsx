@@ -1,17 +1,31 @@
-// 설정의 보안 페이지: 이 세션의 확인 수준과 "지금 확인", 내 인증 수단(패스키, 인증 앱, 복구 코드) 관리, 패스키로
-// 로그인하는 브라우저. 수단을 바꾸기 전에는 비밀번호와 등록한 수단을 다시 확인해 관리 창(5분)을 연다
+// 설정의 보안 페이지: 이 세션의 확인 수준과 "지금 확인", 내 인증 수단(패스키, 인증 앱, 복구 코드) 관리와 새 기기에
+// 줄 기기 추가 코드, 패스키로 로그인하는 브라우저. 수단을 바꾸기 전에는 비밀번호와 등록한 수단을 다시 확인해 관리 창(5분)을 연다
 // (security/stepUpDialog.tsx). 패스키로 로그인의 켜기·해제는 관리 창 없이 한다.
 import type { ParseKeys } from 'i18next'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { formatUnit } from '../addons/common/format'
-import { ApiError, deletePasskey, deletePasskeyLogin, deleteTOTP, fetchSecurity, regenerateRecoveryCodes } from '../api/client'
+import {
+  ApiError,
+  createDeviceCode,
+  deletePasskey,
+  deletePasskeyLogin,
+  deleteTOTP,
+  fetchSecurity,
+  regenerateRecoveryCodes,
+} from '../api/client'
 import { PasskeyLoginDaysDefault, type SecurityChangeResponse, type SecurityStatus } from '../api/types.gen'
 import { useAuthStore } from '../auth/store'
 import { useLanguage } from '../i18n'
 import { passkeyLoginFor, syncPasskeyLogins } from '../security/passkeyLoginStorage'
-import { addPasskeyDialog, enablePasskeyLoginDialog, setupTOTPDialog, showRecoveryCodes } from '../security/securityDialogs'
-import { ASSURANCE_KEYS, LEVEL_KEYS, type SecurityTarget, securityError } from '../security/messages'
+import {
+  addPasskeyDialog,
+  deviceCodeDialog,
+  enablePasskeyLoginDialog,
+  setupTOTPDialog,
+  showRecoveryCodes,
+} from '../security/securityDialogs'
+import { ASSURANCE_KEYS, LEVEL_KEYS, type ManagePurpose, type SecurityTarget, securityError } from '../security/messages'
 import { requestManage, requestStepUp } from '../security/stepUpDialog'
 import { passkeysSupported } from '../security/webauthn'
 import { useDialogs } from '../shell/dialogPresets'
@@ -60,21 +74,23 @@ export function SecurityPage() {
 
   const data = state.status === 'ready' ? state.data : null
 
-  // ensureManage는 관리 창이 열려 있지 않으면 확인 대화상자로 연다. 열려 있거나 열었으면 true다.
-  const ensureManage = async () => {
+  // ensureManage는 관리 창이 열려 있지 않으면 확인 대화상자로 연다. 열려 있거나 열었으면 true다. purpose는 확인
+  // 대화상자의 수단 순서를 정한다(패스키 등록이면 기기 추가 코드도 받는다).
+  const ensureManage = async (purpose?: ManagePurpose) => {
     if (now() < manageUntil.current - MANAGE_MARGIN_MS) return true
-    const st = await requestManage(dialogs.scope)
+    const st = await requestManage(dialogs.scope, purpose)
     if (st) apply(st)
     return st !== null
   }
 
   // run은 수단을 바꾸는 작업 하나를 한다. 관리 창이 필요하면 먼저 열고, 새 복구 코드가 오면 한 번 보여 준다.
-  const run = async (task: () => Promise<SecurityChangeResponse | null>) => {
+  // 상태를 바꾸지 않는 작업(기기 추가 코드)은 null을 돌려준다.
+  const run = async (task: () => Promise<SecurityChangeResponse | null>, purpose?: ManagePurpose) => {
     if (busy) return
     setErrorKey(null)
     setBusy(true)
     try {
-      if (!(await ensureManage())) return
+      if (!(await ensureManage(purpose))) return
       const res = await task()
       if (!res) return
       apply(res.status)
@@ -201,12 +217,29 @@ export function SecurityPage() {
                   className="addon-button primary"
                   disabled={busy || !data.passkeysAvailable || !supported}
                   onClick={() =>
-                    void run(() =>
-                      addPasskeyDialog(dialogs.scope, t('settings.security.passkeyDefaultName', { n: data.passkeys.length + 1 })),
+                    void run(
+                      () => addPasskeyDialog(dialogs.scope, t('settings.security.passkeyDefaultName', { n: data.passkeys.length + 1 })),
+                      'addPasskey',
                     )
                   }
                 >
                   {t('settings.security.add')}
+                </button>
+              </SettingsRow>
+              {/* 이 기기의 패스키가 없는 새 기기에서 패스키를 등록할 때 쓴다. 이 브라우저의 패스키 지원과는 관계없다. */}
+              <SettingsRow label={t('settings.security.deviceCode')} description={t('settings.security.deviceCodeDesc')}>
+                <button
+                  type="button"
+                  className="addon-button"
+                  disabled={busy || !data.passkeysAvailable || (data.passkeys.length === 0 && !data.totp)}
+                  onClick={() =>
+                    void run(async () => {
+                      await deviceCodeDialog(dialogs.scope, await createDeviceCode())
+                      return null
+                    })
+                  }
+                >
+                  {t('settings.security.deviceCodeCreate')}
                 </button>
               </SettingsRow>
             </SettingsCard>

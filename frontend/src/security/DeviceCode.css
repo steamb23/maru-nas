@@ -1,0 +1,18 @@
+/* 기기 추가 코드 대화상자(DeviceCode.tsx). 다른 기기에서 옮겨 적기 쉽게 코드를 크게, 고정폭으로 가운데에 둔다. */
+
+.device-code {
+  margin: 12px 0 4px;
+  padding: 14px 16px;
+  border: 1px solid var(--window-border);
+  border-radius: 8px;
+  background: var(--hover-bg);
+  text-align: center;
+  font-family: ui-monospace, 'Cascadia Mono', 'DejaVu Sans Mono', Menlo, Consolas, monospace;
+  font-size: 24px;
+  letter-spacing: 0.12em;
+}
+
+.device-code.expired {
+  color: var(--text-muted);
+  text-decoration: line-through;
+}

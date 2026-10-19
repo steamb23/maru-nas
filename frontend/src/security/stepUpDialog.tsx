@@ -4,6 +4,7 @@
 import { createRef } from 'react'
 import type { SecurityStatus } from '../api/types.gen'
 import { type DialogScope, openDialog } from '../shell/dialogs'
+import type { ManagePurpose } from './messages'
 import { SecurityDialogTitle, StepUpBody, type StepUpRequest } from './StepUpBody'
 
 export type { StepUpRequest }
@@ -20,11 +21,12 @@ export function requestStepUp(scope: DialogScope, req: StepUpRequest = {}): Prom
 }
 
 // requestManage는 비밀번호와 등록한 수단을 다시 확인해 관리 창을 연다. 열리면 새 보안 상태, 취소하면 null이다.
-export function requestManage(scope: DialogScope): Promise<SecurityStatus | null> {
+// purpose가 'addPasskey'(패스키 등록)이면 등록한 수단 대신 기기 추가 코드도 받는다.
+export function requestManage(scope: DialogScope, purpose?: ManagePurpose): Promise<SecurityStatus | null> {
   const inputRef = createRef<HTMLInputElement>()
   return openDialog<SecurityStatus>(scope, {
     title: <SecurityDialogTitle k="security.stepUp.manageTitle" />,
     initialFocus: inputRef,
-    render: (ctl) => <StepUpBody mode="manage" req={{}} inputRef={inputRef} onDone={ctl.close} onCancel={ctl.cancel} />,
+    render: (ctl) => <StepUpBody mode="manage" req={{ purpose }} inputRef={inputRef} onDone={ctl.close} onCancel={ctl.cancel} />,
   })
 }
