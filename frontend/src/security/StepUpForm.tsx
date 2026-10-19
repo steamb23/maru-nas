@@ -25,8 +25,9 @@ import { getPasskey, passkeysSupported } from './webauthn'
 
 type Variant = 'login' | 'dialog'
 
-// 로그인 카드에서는 로그인 화면의 모양을, 대화상자에서는 대화상자의 모양을 쓴다.
-const CLASSES: Record<Variant, Record<'form' | 'field' | 'input' | 'primary' | 'secondary' | 'hint' | 'error', string>> = {
+// 로그인 카드에서는 로그인 화면의 모양을, 대화상자에서는 대화상자의 모양을 쓴다. hint는 폼 맨 위 안내, note는
+// 입력 상자 아래 안내다.
+const CLASSES: Record<Variant, Record<'form' | 'field' | 'input' | 'primary' | 'secondary' | 'hint' | 'note' | 'error', string>> = {
   login: {
     form: 'login-form',
     field: 'login-field',
@@ -34,6 +35,7 @@ const CLASSES: Record<Variant, Record<'form' | 'field' | 'input' | 'primary' | '
     primary: 'login-submit',
     secondary: 'login-secondary',
     hint: 'login-hint',
+    note: 'login-hint',
     error: 'login-error',
   },
   dialog: {
@@ -43,6 +45,7 @@ const CLASSES: Record<Variant, Record<'form' | 'field' | 'input' | 'primary' | '
     primary: 'addon-button primary',
     secondary: 'addon-button',
     hint: 'modal-message',
+    note: 'modal-message step-up-note',
     error: 'step-up-error',
   },
 }
@@ -233,9 +236,9 @@ export function StepUpForm({
         </label>
       )}
       {needFactor && mode === 'manage' && factor === 'passkey' && (
-        <p className={c.hint}>{t('security.stepUp.managePasskeyHint')}</p>
+        <p className={c.note}>{t('security.stepUp.managePasskeyHint')}</p>
       )}
-      {needFactor && factor === 'deviceCode' && <p className={c.hint}>{t('security.stepUp.deviceCodeHint')}</p>}
+      {needFactor && factor === 'deviceCode' && <p className={c.note}>{t('security.stepUp.deviceCodeHint')}</p>}
       {mode === 'verify' && factor === 'passkey' && passkeyLogin && (
         <label className="step-up-check">
           <input type="checkbox" checked={rememberLogin} disabled={busy} onChange={(e) => setRememberLogin(e.target.checked)} />

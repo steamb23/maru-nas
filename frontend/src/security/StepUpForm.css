@@ -29,6 +29,13 @@
   outline-offset: 1px;
 }
 
+/* 입력 상자 아래 안내. 입력 상자의 포커스 테두리(바깥 3px)에 붙지 않게 띄우고, 맨 위 안내보다 한 단계 작게 둔다. */
+.step-up-note {
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
 .step-up-error {
   margin: 8px 0 0;
   color: light-dark(#c5352b, #f28b82);
