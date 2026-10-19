@@ -780,7 +780,7 @@
       "unavailable": "Unavailable",
       "passkeyLogin": "Passkey sign-in",
       "passkeyLoginDays": "Expires after",
-      "passkeyLoginDaysDesc": "Counted from the day it is turned on. A shorter period applies right away to browsers that already have it on; a longer one applies only to browsers that turn it on afterwards.",
+      "passkeyLoginDaysDesc": "The period is counted from the day it is turned on in a browser. A shorter period applies right away to browsers that already have it on; a longer one applies only to browsers that turn it on afterwards.",
       "users": "Users’ sign-in methods",
       "usersDesc": "Reset the methods of a user who lost them. Their sessions end, and they can register new methods after signing in again.",
       "noUsers": "No user has registered a method yet.",
