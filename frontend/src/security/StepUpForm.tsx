@@ -60,9 +60,10 @@ const SWITCH_KEYS: Record<Choice, ParseKeys> = {
   deviceCode: 'security.stepUp.switchDeviceCode',
 }
 
-// 코드를 입력하는 방법의 입력 상자 이름표
+// 코드를 입력하는 방법의 입력 상자 이름표. 관리 확인은 위 안내가 수단을 말하지 않으므로 이름표만으로 어떤 코드인지
+// 알 수 있어야 한다.
 const CODE_LABEL_KEYS: Record<Exclude<Choice, 'passkey'>, ParseKeys> = {
-  totp: 'security.stepUp.code',
+  totp: 'security.stepUp.totpCode',
   recovery: 'security.stepUp.recoveryCode',
   deviceCode: 'security.stepUp.deviceCode',
 }

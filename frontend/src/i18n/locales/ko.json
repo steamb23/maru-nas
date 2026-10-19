@@ -824,7 +824,7 @@
       "noMethods": "패스키나 인증 앱이 필요한데 등록한 수단이 없습니다. 설정의 보안 페이지에서 등록하세요.",
       "passkeyUnsupported": "등록한 수단이 패스키뿐인데 이 브라우저에서는 여기서 패스키를 쓸 수 없습니다. 다른 브라우저나 복구 코드를 쓰세요.",
       "password": "비밀번호",
-      "code": "코드",
+      "totpCode": "인증 앱 코드",
       "recoveryCode": "복구 코드",
       "confirm": "확인",
       "confirming": "확인 중…",

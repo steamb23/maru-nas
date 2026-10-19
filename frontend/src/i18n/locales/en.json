@@ -824,7 +824,7 @@
       "noMethods": "This needs a passkey or an authenticator app, and you have not registered one. Add one on the Security page in Settings.",
       "passkeyUnsupported": "Your only method is a passkey, and this browser cannot use passkeys here. Use another browser or a recovery code from Settings.",
       "password": "Password",
-      "code": "Code",
+      "totpCode": "Authenticator app code",
       "recoveryCode": "Recovery code",
       "confirm": "Confirm",
       "confirming": "Checking…",
