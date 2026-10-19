@@ -41,9 +41,9 @@ paths:
 설계는 `.claude/docs/upgrade.md`, 업그레이드 서비스(설치기)는 `.claude/rules/installer.md`의 "업그레이드 서비스".
 
 - onmaru는 업그레이드 서비스의 파일만 다룬다(`internal/upgrade`): root 쪽 설정 파일(`config.UpgradeEnvFile`, 있으면 켜짐, 저장소 경로·계정은 수동 안내에 쓴다), 상태 파일(`config.UpgradeStatusFile`), 설치 기록(`config.InstallRecordFile`, 실행 파일에 커밋이 없을 때 화면이 쓴다)을 O_NOFOLLOW·크기 상한으로 읽고, 확인 요청(`<상태 디렉터리>/upgrade-check.json`)을 같은 디렉터리 임시 파일에서 이름을 바꿔 쓴다. 저장소·git·빌드에는 닿지 않는다(`ProtectHome=yes`)
-  - 상태 파일이 `checking`·`applying`인 채로 `config.UpgradeServiceTimeout`(유닛의 `TimeoutStartSec`)보다 오래되면 중단으로, 확인 요청이 1분 넘게 남아 있으면 멈춤으로 보고, 둘 다 다시 요청할 수 있다. 확인 요청은 30초에 한 번까지(메모리)
+  - 상태 파일이 `checking`·`applying`인 채로 `config.UpgradeServiceTimeout`(유닛의 `TimeoutStartSec`)보다 오래되면 중단으로, 확인 요청이 1분 넘게 남아 있으면 멈춤으로 보고, 둘 다 다시 요청할 수 있다. 같은 방식으로 성공한 확인(`checked`)이 나온 지(`CheckedAt`) 30초(`checkReuse`)가 지나지 않았으면 확인 요청을 쓰지 않고 그 결과를 그대로 돌려준다(`Snapshot.RecentCheck`, 오류나 안내 없음). 실패한 확인은 원인을 고친 뒤 바로 다시 확인할 수 있게 다시 쓰지 않는다
   - 경로 유닛은 `config.InstalledStateDir`(`/var/lib/onmaru`) 안의 확인 요청만 보므로, 상태 디렉터리가 비었거나 그곳이 아니면 확인 요청 경로를 비워 `state-dir`로 끈다(`main.go`의 `upgradePaths`)
-- 라우트(모두 `requireAdmin`): `GET /api/upgrade`(`api.UpgradeInfo`, 상태 파일은 `config.UpgradeStatus` 그대로), `POST /api/upgrade/check`(상승 필요 없음), `POST /api/upgrade/apply`(대상·설정 꼴을 먼저 400으로 거르고, 켜짐·바쁨·끝난 확인과 같은 대상인지 본 뒤 도우미 `upgrade.apply`. 상승하지 않았으면 도우미의 `elevation_required`). 오류 코드 `upgrade_disabled`·`upgrade_busy`·`upgrade_outdated`, 빈도 제한은 `rate_limited`
+- 라우트(모두 `requireAdmin`): `GET /api/upgrade`(`api.UpgradeInfo`, 상태 파일은 `config.UpgradeStatus` 그대로), `POST /api/upgrade/check`(상승 필요 없음), `POST /api/upgrade/apply`(대상·설정 꼴을 먼저 400으로 거르고, 켜짐·바쁨·끝난 확인과 같은 대상인지 본 뒤 도우미 `upgrade.apply`. 상승하지 않았으면 도우미의 `elevation_required`). 오류 코드 `upgrade_disabled`·`upgrade_busy`·`upgrade_outdated`
   - 여기서 하는 검사는 빠른 거절과 안내다. 진행할 수 있는지는 업그레이드 서비스가 저장소·설치 상태로 다시 확인한다
   - 로그에는 사용자·대상·설정 이름만 남기고 설정 값은 남기지 않는다
 - `Config.Upgrade`가 nil이면 빈 경로라 꺼짐(`not-enabled`)이다(테스트가 실제 `/etc/default/onmaru-upgrade`를 읽지 않게). 서버 테스트는 `envOptions{upgrade: true}`가 임시 디렉터리를 쓴다

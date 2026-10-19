@@ -637,7 +637,6 @@
         "busy": "A check or upgrade is already in progress.",
         "disabled": "Upgrading from the dashboard is not available.",
         "outdated": "Things changed after the check. Check again.",
-        "rateLimited": "You can check again in {{seconds}} seconds.",
         "elevationNotAllowed": "This account cannot elevate to root.",
         "helperReauth": "The privileged helper forgot this session. Sign out and sign in again.",
         "helperUnavailable": "The privileged helper is not available.",

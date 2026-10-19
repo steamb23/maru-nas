@@ -62,7 +62,7 @@ func TestReadDisabled(t *testing.T) {
 	if s.Enabled || s.Status != nil || s.Pending || s.Busy() {
 		t.Fatalf("empty root: %+v", s)
 	}
-	if err := f.m.RequestCheck(config.UpgradeModeRemote); !errors.Is(err, ErrDisabled) {
+	if _, err := f.m.RequestCheck(config.UpgradeModeRemote); !errors.Is(err, ErrDisabled) {
 		t.Fatalf("request while disabled: %v", err)
 	}
 	if _, err := os.Stat(f.request()); !errors.Is(err, os.ErrNotExist) {
@@ -143,11 +143,11 @@ func TestInterrupted(t *testing.T) {
 func TestRequestCheck(t *testing.T) {
 	f := newFixture(t)
 	f.enable()
-	if err := f.m.RequestCheck("sideways"); err == nil {
+	if _, err := f.m.RequestCheck("sideways"); err == nil {
 		t.Fatal("unknown mode accepted")
 	}
-	if err := f.m.RequestCheck(config.UpgradeModeLocal); err != nil {
-		t.Fatal(err)
+	if ok, err := f.m.RequestCheck(config.UpgradeModeLocal); !ok || err != nil {
+		t.Fatal(ok, err)
 	}
 	data, err := os.ReadFile(f.request())
 	if err != nil {
@@ -169,7 +169,7 @@ func TestRequestCheck(t *testing.T) {
 	if s := f.m.Read(); !s.Pending || s.PendingStalled || !s.Busy() {
 		t.Fatalf("pending: %+v", s)
 	}
-	if err := f.m.RequestCheck(config.UpgradeModeRemote); !errors.Is(err, ErrBusy) {
+	if _, err := f.m.RequestCheck(config.UpgradeModeRemote); !errors.Is(err, ErrBusy) {
 		t.Fatalf("second request while pending: %v", err)
 	}
 
@@ -178,35 +178,66 @@ func TestRequestCheck(t *testing.T) {
 		t.Fatal(err)
 	}
 	f.status(config.UpgradeStatus{State: config.UpgradeStateChecking, Stage: config.UpgradeStageFetch, UpdatedAt: f.stamp(0)})
-	if err := f.m.RequestCheck(config.UpgradeModeRemote); !errors.Is(err, ErrBusy) {
+	if _, err := f.m.RequestCheck(config.UpgradeModeRemote); !errors.Is(err, ErrBusy) {
 		t.Fatalf("request while checking: %v", err)
 	}
+}
 
-	// 끝난 뒤에도 마지막 요청에서 checkInterval 안에는 받지 않는다.
-	f.status(config.UpgradeStatus{State: config.UpgradeStateChecked, UpdatedAt: f.stamp(0)})
-	f.now = f.now.Add(10 * time.Second)
-	var rl *RateLimitedError
-	if err := f.m.RequestCheck(config.UpgradeModeRemote); !errors.As(err, &rl) || rl.RetryAfter != 20*time.Second {
-		t.Fatalf("rate limit: %v", err)
+func TestRecentCheckReused(t *testing.T) {
+	f := newFixture(t)
+	f.enable()
+	checked := func(mode string, ago time.Duration) config.UpgradeStatus {
+		return config.UpgradeStatus{State: config.UpgradeStateChecked, UpdatedAt: f.stamp(-ago),
+			Check: &config.UpgradeCheck{Mode: mode, CheckedAt: f.stamp(-ago)}}
 	}
-	f.now = f.now.Add(20 * time.Second)
-	if err := f.m.RequestCheck(config.UpgradeModeRemote); err != nil {
-		t.Fatalf("after the interval: %v", err)
+
+	// 같은 방식으로 성공한 확인이 checkReuse 안이면 요청을 쓰지 않는다.
+	f.status(checked(config.UpgradeModeRemote, checkReuse-time.Second))
+	if ok, err := f.m.RequestCheck(config.UpgradeModeRemote); ok || err != nil {
+		t.Fatalf("recent check: %v %v", ok, err)
+	}
+	if _, err := os.Stat(f.request()); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("request written for a recent check: %v", err)
+	}
+
+	for _, c := range []struct {
+		name, mode string
+		st         config.UpgradeStatus
+	}{
+		{"other mode", config.UpgradeModeLocal, checked(config.UpgradeModeRemote, time.Second)},
+		{"old", config.UpgradeModeRemote, checked(config.UpgradeModeRemote, checkReuse)},
+		{"future", config.UpgradeModeRemote, checked(config.UpgradeModeRemote, -time.Minute)},
+		// 실패한 확인은 원인을 고친 뒤 바로 다시 확인할 수 있어야 한다.
+		{"failed", config.UpgradeModeRemote, config.UpgradeStatus{State: config.UpgradeStateCheckFailed, UpdatedAt: f.stamp(-time.Second)}},
+		// 업그레이드에 실패한 뒤에도 확인 결과는 남지만 다시 확인한다.
+		{"apply failed", config.UpgradeModeRemote, func() config.UpgradeStatus {
+			st := checked(config.UpgradeModeRemote, time.Second)
+			st.State = config.UpgradeStateApplyFailed
+			return st
+		}()},
+	} {
+		f.status(c.st)
+		if ok, err := f.m.RequestCheck(c.mode); !ok || err != nil {
+			t.Fatalf("%s: %v %v", c.name, ok, err)
+		}
+		if err := os.Remove(f.request()); err != nil {
+			t.Fatalf("%s: %v", c.name, err)
+		}
 	}
 }
 
 func TestStalledRequestCanBeReplaced(t *testing.T) {
 	f := newFixture(t)
 	f.enable()
-	if err := f.m.RequestCheck(config.UpgradeModeRemote); err != nil {
+	if _, err := f.m.RequestCheck(config.UpgradeModeRemote); err != nil {
 		t.Fatal(err)
 	}
 	f.now = f.now.Add(2 * time.Minute)
 	if s := f.m.Read(); !s.Pending || !s.PendingStalled || s.Busy() {
 		t.Fatalf("stalled: %+v", s)
 	}
-	if err := f.m.RequestCheck(config.UpgradeModeLocal); err != nil {
-		t.Fatalf("replace stalled request: %v", err)
+	if ok, err := f.m.RequestCheck(config.UpgradeModeLocal); !ok || err != nil {
+		t.Fatalf("replace stalled request: %v %v", ok, err)
 	}
 }
 
@@ -215,7 +246,7 @@ func TestNoStateDir(t *testing.T) {
 	if m.CanRequest() {
 		t.Fatal("can request without a state directory")
 	}
-	if err := m.RequestCheck(config.UpgradeModeRemote); !errors.Is(err, ErrDisabled) {
+	if _, err := m.RequestCheck(config.UpgradeModeRemote); !errors.Is(err, ErrDisabled) {
 		t.Fatalf("request without a state directory: %v", err)
 	}
 }

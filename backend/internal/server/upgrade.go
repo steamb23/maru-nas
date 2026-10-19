@@ -4,10 +4,8 @@ import (
 	"errors"
 	"log"
 	"maps"
-	"math"
 	"net/http"
 	"slices"
-	"strconv"
 	"strings"
 
 	"onmaru/backend/config"
@@ -46,6 +44,7 @@ func (h *handler) upgradeState(w http.ResponseWriter, _ *http.Request, _ auth.Se
 }
 
 // upgradeCheck는 확인 요청을 남긴다. 확인은 저장소 코드를 root로 실행하지 않으므로 상승을 요구하지 않는다(.claude/docs/upgrade.md).
+// 최근에 같은 방식으로 성공한 확인이 있으면 요청을 남기지 않고 그 결과를 그대로 돌려준다(upgrade.Snapshot.RecentCheck).
 func (h *handler) upgradeCheck(w http.ResponseWriter, r *http.Request, s auth.Session) {
 	var req api.StartUpgradeCheckRequest
 	if !decodeJSON(w, r, &req) {
@@ -59,27 +58,22 @@ func (h *handler) upgradeCheck(w http.ResponseWriter, r *http.Request, s auth.Se
 		writeError(w, http.StatusConflict, api.ErrUpgradeDisabled, "upgrading from the dashboard is not available: "+info.DisabledReason)
 		return
 	}
-	var rl *upgrade.RateLimitedError
-	switch err := h.Upgrade.RequestCheck(req.Mode); {
+	requested, err := h.Upgrade.RequestCheck(req.Mode)
+	switch {
 	case errors.Is(err, upgrade.ErrDisabled):
 		writeError(w, http.StatusConflict, api.ErrUpgradeDisabled, "upgrading from the dashboard is not available")
 		return
 	case errors.Is(err, upgrade.ErrBusy):
 		writeError(w, http.StatusConflict, api.ErrUpgradeBusy, "an upgrade check or upgrade is in progress")
 		return
-	case errors.As(err, &rl):
-		secs := int(math.Ceil(rl.RetryAfter.Seconds()))
-		w.Header().Set("Retry-After", strconv.Itoa(secs))
-		writeJSON(w, http.StatusTooManyRequests, api.ErrorResponse{
-			Error: "upgrade check requested too often", Code: api.ErrRateLimited, RetryAfterSeconds: secs,
-		})
-		return
 	case err != nil:
 		log.Printf("upgrade check request: %v", err)
 		writeJSON(w, http.StatusInternalServerError, api.ErrorResponse{Error: "cannot write the check request"})
 		return
 	}
-	log.Printf("upgrade check requested: user=%q mode=%s ip=%s", s.Username, req.Mode, clientIP(r))
+	if requested {
+		log.Printf("upgrade check requested: user=%q mode=%s ip=%s", s.Username, req.Mode, clientIP(r))
+	}
 	writeJSON(w, http.StatusOK, h.upgradeInfo(h.Upgrade.Read()))
 }
 

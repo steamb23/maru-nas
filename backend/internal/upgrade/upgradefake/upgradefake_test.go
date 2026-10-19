@@ -49,9 +49,9 @@ func (f *fixture) wait(state string) *config.UpgradeStatus {
 
 func (f *fixture) check(mode string) {
 	f.t.Helper()
-	f.now = f.now.Add(time.Minute) // 빈도 제한을 넘긴다.
-	if err := f.m.RequestCheck(mode); err != nil {
-		f.t.Fatal(err)
+	f.now = f.now.Add(time.Minute) // 최근 확인 결과를 다시 쓰지 않게 한다.
+	if ok, err := f.m.RequestCheck(mode); !ok || err != nil {
+		f.t.Fatal(ok, err)
 	}
 }
 

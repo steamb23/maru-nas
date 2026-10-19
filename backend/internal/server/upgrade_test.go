@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -129,17 +130,33 @@ func TestUpgradeCheck(t *testing.T) {
 		t.Fatalf("check request not logged:\n%s", e.logs.String())
 	}
 
-	// 서비스가 가져간 뒤 끝났어도 바로 다시 요청하면 빈도 제한에 걸린다.
-	if err := os.Remove(filepath.Join(e.upgradeState, config.UpgradeCheckRequestName)); err != nil {
+	// 서비스가 가져가 성공한 뒤 같은 방식으로 바로 다시 요청하면 요청을 쓰지 않고 그 결과를 돌려준다.
+	request := filepath.Join(e.upgradeState, config.UpgradeCheckRequestName)
+	if err := os.Remove(request); err != nil {
 		t.Fatal(err)
 	}
-	e.upgradeStatus(config.UpgradeStatus{State: config.UpgradeStateCheckFailed})
-	rec = b.do(http.MethodPost, "/api/upgrade/check", api.StartUpgradeCheckRequest{Mode: config.UpgradeModeLocal})
-	if got := wantCode(t, rec, http.StatusTooManyRequests, api.ErrRateLimited); got.RetryAfterSeconds != 30 {
-		t.Fatalf("retry after = %d", got.RetryAfterSeconds)
+	now := e.clk.Now().UTC().Format(time.RFC3339)
+	e.upgradeStatus(config.UpgradeStatus{State: config.UpgradeStateChecked,
+		Check: &config.UpgradeCheck{Mode: config.UpgradeModeRemote, CheckedAt: now, UpToDate: true}})
+	logs := e.logs.Len()
+	rec = b.do(http.MethodPost, "/api/upgrade/check", api.StartUpgradeCheckRequest{Mode: config.UpgradeModeRemote})
+	wantStatus(t, rec, http.StatusOK)
+	if info := decode[api.UpgradeInfo](t, rec); info.Pending || info.Status == nil || info.Status.State != config.UpgradeStateChecked {
+		t.Fatalf("reused = %+v", info)
 	}
-	e.clk.Add(30 * time.Second)
-	wantStatus(t, b.do(http.MethodPost, "/api/upgrade/check", api.StartUpgradeCheckRequest{Mode: config.UpgradeModeLocal}), http.StatusOK)
+	if _, err := os.Stat(request); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("request written for a recent check: %v", err)
+	}
+	if strings.Contains(e.logs.String()[logs:], "upgrade check requested") {
+		t.Fatalf("reused check logged as a request:\n%s", e.logs.String())
+	}
+
+	// 다른 방식은 바로 다시 확인한다.
+	rec = b.do(http.MethodPost, "/api/upgrade/check", api.StartUpgradeCheckRequest{Mode: config.UpgradeModeLocal})
+	wantStatus(t, rec, http.StatusOK)
+	if info := decode[api.UpgradeInfo](t, rec); !info.Pending {
+		t.Fatalf("other mode = %+v", info)
+	}
 }
 
 func TestUpgradeCheckWhileRunning(t *testing.T) {

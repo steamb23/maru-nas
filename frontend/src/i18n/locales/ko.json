@@ -637,7 +637,6 @@
         "busy": "이미 확인이나 업그레이드가 진행 중입니다.",
         "disabled": "대시보드에서 업그레이드를 쓸 수 없습니다.",
         "outdated": "확인한 뒤에 상태가 바뀌었습니다. 다시 확인하세요.",
-        "rateLimited": "{{seconds}}초 뒤에 다시 확인할 수 있습니다.",
         "elevationNotAllowed": "이 계정은 root 권한 상승을 할 수 없습니다.",
         "helperReauth": "권한 도우미가 이 세션을 잊었습니다. 로그아웃한 뒤 다시 로그인하세요.",
         "helperUnavailable": "권한 도우미를 쓸 수 없습니다.",

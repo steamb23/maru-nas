@@ -203,8 +203,6 @@ function actionErrorOf(err: unknown): ActionError {
       return { key: 'settings.update.errors.disabled' }
     case 'upgrade_outdated':
       return { key: 'settings.update.errors.outdated' }
-    case 'rate_limited':
-      return { key: 'settings.update.errors.rateLimited', params: { seconds: err.retryAfterSeconds ?? 30 } }
     case 'elevation_not_allowed':
       return { key: 'settings.update.errors.elevationNotAllowed' }
     case 'helper_reauth':

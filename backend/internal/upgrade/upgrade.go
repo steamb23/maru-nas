@@ -23,8 +23,9 @@ const (
 	// pendingStall이 지나도 확인 요청이 남아 있으면 업그레이드 서비스가 가져가지 않는 것으로 본다(경로 유닛은 바로
 	// 서비스를 시작하고, 서비스는 가장 먼저 요청을 지운다).
 	pendingStall = time.Minute
-	// checkInterval은 확인 요청 사이의 최소 간격이다. 확인마다 저장소 소유자의 git fetch와 임시 빌드가 돈다.
-	checkInterval = 30 * time.Second
+	// checkReuse 안에 같은 방식으로 다시 확인을 요청하면 새로 확인하지 않고 성공한 결과를 그대로 쓴다. 확인마다 저장소
+	// 소유자의 git fetch와 임시 빌드가 돈다. 결과가 나온 시각(CheckedAt)부터 센다.
+	checkReuse = 30 * time.Second
 	// 읽는 파일의 크기 상한. 업그레이드 서비스의 상한(installer의 maxRootFile, maxStatusFile, maxRecordFile)과 같다.
 	maxEnvFile    = 64 << 10
 	maxStatusFile = 4 << 20
@@ -88,21 +89,13 @@ var (
 	ErrBusy = errors.New("an upgrade check or upgrade is in progress")
 )
 
-// RateLimitedError는 확인 요청이 너무 잦다는 뜻이다.
-type RateLimitedError struct{ RetryAfter time.Duration }
-
-func (e *RateLimitedError) Error() string {
-	return fmt.Sprintf("upgrade check requested too often, retry after %v", e.RetryAfter)
-}
-
 // Manager는 업그레이드 파일을 읽고 확인 요청을 쓴다. 여러 고루틴에서 써도 된다.
 type Manager struct {
 	paths Paths
 	now   func() time.Time
 
+	// mu는 상태를 읽고 확인 요청을 쓰는 사이에 다른 요청이 끼어들지 않게 한다.
 	mu sync.Mutex
-	// last는 마지막으로 확인을 요청한 시각이다(메모리에만 둔다).
-	last time.Time
 }
 
 // New는 Manager를 만든다. now가 nil이면 time.Now다.
@@ -152,37 +145,46 @@ func (m *Manager) Read() Snapshot {
 	return s
 }
 
+// RecentCheck는 상태 파일의 결과가 mode로 성공한 확인이고, 나온 지 checkReuse가 지나지 않았는지다. 실패한 확인은
+// 원인을 고친 뒤 바로 다시 확인할 수 있게 다시 쓰지 않는다.
+func (s Snapshot) RecentCheck(mode string, now time.Time) bool {
+	if s.Status == nil || s.Status.State != config.UpgradeStateChecked || s.Status.Check == nil || s.Status.Check.Mode != mode {
+		return false
+	}
+	at, err := time.Parse(time.RFC3339, s.Status.Check.CheckedAt)
+	age := now.Sub(at)
+	return err == nil && age >= 0 && age < checkReuse
+}
+
 // RequestCheck는 확인 요청(mode는 config.UpgradeModeRemote 또는 UpgradeModeLocal)을 쓴다. 경로 유닛이 업그레이드
-// 서비스를 실행한다. 꺼져 있으면 ErrDisabled, 바쁘면 ErrBusy, 너무 잦으면 *RateLimitedError다.
-func (m *Manager) RequestCheck(mode string) error {
+// 서비스를 실행한다. 꺼져 있으면 ErrDisabled, 바쁘면 ErrBusy다. 최근에 같은 방식으로 성공한 확인이 있으면
+// (Snapshot.RecentCheck) 요청을 쓰지 않고 false를 돌려준다.
+func (m *Manager) RequestCheck(mode string) (requested bool, err error) {
 	if mode != config.UpgradeModeRemote && mode != config.UpgradeModeLocal {
-		return fmt.Errorf("unknown check mode %q", mode)
+		return false, fmt.Errorf("unknown check mode %q", mode)
 	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if !m.CanRequest() {
-		return ErrDisabled
+		return false, ErrDisabled
 	}
 	s := m.Read()
 	switch {
 	case !s.Enabled:
-		return ErrDisabled
+		return false, ErrDisabled
 	case s.Busy():
-		return ErrBusy
-	}
-	now := m.now()
-	if wait := checkInterval - now.Sub(m.last); !m.last.IsZero() && wait > 0 {
-		return &RateLimitedError{RetryAfter: wait}
+		return false, ErrBusy
+	case s.RecentCheck(mode, m.now()):
+		return false, nil
 	}
 	data, err := json.Marshal(config.UpgradeCheckRequest{Format: config.UpgradeRequestFormat, Mode: mode})
 	if err != nil {
-		return err
+		return false, err
 	}
 	if err := writeAtomic(m.paths.CheckRequest, data); err != nil {
-		return err
+		return false, err
 	}
-	m.last = now
-	return nil
+	return true, nil
 }
 
 // writeAtomic은 같은 디렉터리의 임시 파일에 쓴 뒤 이름을 바꾼다(경로 유닛은 다 쓴 파일만 본다). 업그레이드 서비스는
