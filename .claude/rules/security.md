@@ -63,9 +63,15 @@ paths:
   - 해제(`DELETE /api/security/passkey-logins/{id}`)는 관리 창을 요구하지 않는다. 기능을 줄이기만 하고 수단을 지우지 않기 때문이다. 패스키 삭제·관리자 초기화는 그 등록도 지운다(`security.Normalize`)
 - **로그인**(인증 없음, 의식 쿠키 `onmaru_passkey_login`, HttpOnly, SameSite=Strict)
   1. `POST /api/login/passkey/options {username, enrollment}`: 없는 사용자·등록·읽을 수 없는 기록은 모두 400 `passkey_login_unknown`(`Neutral`), 만료면 400 `passkey_login_expired`(등록 삭제). 유효한 등록 ID가 있어야 상태가 생긴다
-  2. `POST /api/login/passkey {passkey}`: `securityLimiter`(IP·사용자 이름). 그 등록의 자격 증명·서명·UV를 확인하면 `{share}`
+  2. `POST /api/login/passkey {passkey}`: `securityLimiter`(IP·사용자 이름). 그 등록의 자격 증명·서명·UV를 확인하면 `{share, nextShare}`(아래 "회전")
   3. `POST /api/login/passkey/finish {password}`: `h.Limiter`로 센다(브라우저가 보낸 비밀번호라 복호화 결과인지 서버가 알 수 없다). 성공하면 일반 로그인과 같은 마무리를 `twoFactor`로 한다(`completeLogin`. OMV 2차 인증이면 대기 → `verify`). OMV가 400이면 비밀번호를 바꾼 것이므로 등록을 지우고 400 `passkey_login_stale`. 브라우저가 풀지 못하면 `{discard: true}`로 등록을 지운다
   - 브라우저는 `passkey_login_unknown`·`passkey_login_expired`·`passkey_login_stale`이면 항목을 지운다. 1단계 뒤 패스키가 PRF 결과를 주지 않아도 항목을 지운다(그 자격 증명 하나만 허용하므로 다시 해도 풀 수 없다). share를 받기 전이라 서버 등록은 지우지 못하고 만료나 보안 페이지의 해제로 정리된다
+- **회전**: 패스키로 로그인이 성공할 때마다 share를 바꿔, 복사된 브라우저 프로필 사본(옛 share용 암호문)을 다음 정상 로그인 뒤로 쓸 수 없게 한다. 두 단계로 확정한다
+  - 풀림 단계가 지금 share와 함께 다음 share(`PasskeyLogin.NextShare`)를 준다. 대기가 없을 때만 새로 만들어 저장하고, 있으면 그 값을 다시 준다(확정 전에는 바꾸지 않는다)
+  - 브라우저는 지금 share로 풀고, 안 되면 다음 share로 푼다(직전 회전의 확정 응답만 사라진 경우). 풀어 낸 비밀번호를 다음 share로 다시 암호화해 **finish를 보내기 전에** 항목을 바꾸고, finish에 `rotated: true`를 보낸다. 저장하지 못했으면 `rotated: false`
+  - finish에서 OMV가 비밀번호를 받으면(OMV 2차 인증 대기여도) `rotated`일 때 다음 share를 지금 share로 확정하고 대기를 지운다. 그래서 어느 응답이 사라져도 브라우저 항목은 늘 지금 share나 다음 share 중 하나로 풀린다
+  - 두 share 모두로 풀리지 않는 항목은 정상 브라우저에서는 생기지 않으므로 회전 전에 복사된 사본으로 본다. 지금처럼 discard로 서버 등록을 지우고 로그에 사본일 수 있다고 남긴다(정상 브라우저도 다시 켜야 하지만 사본이 나도는 등록을 바로 막는다)
+  - 만료 시각은 회전해도 늘리지 않는다
 - **만료**: 관리자가 정책의 `passkeyLoginDays`(7·30·90·180·365, 기본 30, 모르는 값은 7)로 정한다. 등록할 때 `ExpiresAt`을 두고, 실제 만료는 `min(ExpiresAt, Created + 지금 기간)`이다(줄이면 기존 등록에도 바로, 늘리면 새 등록부터). 바꾸려면 `password` 이상의 세션이어야 한다. 만료된 등록은 상태 응답에서 빼고, 쓰는 김에 지운다
 - 로그에는 사용자, IP, 패스키 이름, 등록 ID 앞 6자만 남긴다. share·암호문·PRF 결과는 남기지 않는다
 
