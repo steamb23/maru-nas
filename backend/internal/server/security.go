@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"slices"
 	"sync"
 	"time"
 
@@ -44,7 +45,14 @@ func validLevel(v string) bool {
 	return v == "" || v == api.SecurityOff || v == api.SecurityPassword || v == api.SecurityTwoFactor
 }
 
-// normalizePolicy는 빈 값을 off로 채운다. 모르는 값(손으로 고친 파일 등)은 가장 엄격한 단계로 본다.
+// passkeyLoginDayChoices는 패스키로 로그인 등록의 만료 기간(일)으로 고를 수 있는 값이다(짧은 순).
+var passkeyLoginDayChoices = []int{7, 30, 90, 180, 365}
+
+// validDays는 만료 기간 값인지다. 0은 기본값이다.
+func validDays(d int) bool { return d == 0 || slices.Contains(passkeyLoginDayChoices, d) }
+
+// normalizePolicy는 빈 값을 off로(만료 기간은 기본값으로) 채운다. 모르는 값(손으로 고친 파일 등)은 가장 엄격한
+// 단계와 가장 짧은 기간으로 본다.
 func normalizePolicy(p api.SecurityPolicy) api.SecurityPolicy {
 	norm := func(v string) string {
 		switch {
@@ -56,8 +64,19 @@ func normalizePolicy(p api.SecurityPolicy) api.SecurityPolicy {
 		log.Printf("site settings: unknown security level %q, using %s", v, api.SecurityTwoFactor)
 		return api.SecurityTwoFactor
 	}
-	return api.SecurityPolicy{Terminal: norm(p.Terminal), Elevation: norm(p.Elevation)}
+	days := p.PasskeyLoginDays
+	switch {
+	case days == 0:
+		days = api.PasskeyLoginDaysDefault
+	case !validDays(days):
+		log.Printf("site settings: unknown passkey login period %d, using %d days", days, passkeyLoginDayChoices[0])
+		days = passkeyLoginDayChoices[0]
+	}
+	return api.SecurityPolicy{Terminal: norm(p.Terminal), Elevation: norm(p.Elevation), PasskeyLoginDays: days}
 }
+
+// passkeyLoginDays는 지금 패스키로 로그인 등록의 만료 기간(일)이다.
+func (h *handler) passkeyLoginDays() int { return h.securityPolicy().PasskeyLoginDays }
 
 // loadPolicy는 시작할 때 저장된 정책을 읽는다. 읽을 수 없으면 모두 꺼진 정책으로 시작한다.
 func (h *handler) loadPolicy() {
@@ -187,6 +206,7 @@ func (h *handler) securityStatus(s auth.Session) (api.SecurityStatus, error) {
 		RecoveryCodes:     len(rec.Recovery),
 		Methods:           h.factorMethods(rec),
 		Policy:            h.securityPolicy(),
+		PasskeyLogins:     h.passkeyLoginInfos(rec),
 	}
 	if left := s.ManageUntil.Sub(h.Now()); left > 0 {
 		st.ManageSeconds = retrySeconds(left)
@@ -462,7 +482,8 @@ func (h *handler) setSecurityPolicy(w http.ResponseWriter, r *http.Request, s au
 	if !decodeJSONLimit(w, r, &req, maxPreferencesBodyBytes) {
 		return
 	}
-	if req.Security == nil || !validLevel(req.Security.Terminal) || !validLevel(req.Security.Elevation) {
+	if req.Security == nil || !validLevel(req.Security.Terminal) || !validLevel(req.Security.Elevation) ||
+		!validDays(req.Security.PasskeyLoginDays) {
 		writeError(w, http.StatusBadRequest, api.ErrBadRequest, "invalid security policy")
 		return
 	}
@@ -474,12 +495,16 @@ func (h *handler) setSecurityPolicy(w http.ResponseWriter, r *http.Request, s au
 			need = max(need, required(pair[0]), required(pair[1]))
 		}
 	}
+	// 만료 기간은 비밀번호를 다시 확인한 세션만 바꾼다(빼앗은 세션이 기간을 늘리지 못하게).
+	if cur.PasskeyLoginDays != next.PasskeyLoginDays {
+		need = max(need, auth.AssurancePassword)
+	}
 	if s.Assurance < need {
 		writeSecurityRequired(w, levelName(need))
 		return
 	}
 	if !h.updateSite(w, func(v *api.SiteSettings) {
-		if next.Terminal == api.SecurityOff && next.Elevation == api.SecurityOff {
+		if next.Terminal == api.SecurityOff && next.Elevation == api.SecurityOff && next.PasskeyLoginDays == api.PasskeyLoginDaysDefault {
 			v.Security = nil
 		} else {
 			p := next
@@ -489,7 +514,8 @@ func (h *handler) setSecurityPolicy(w http.ResponseWriter, r *http.Request, s au
 		return
 	}
 	h.setPolicy(next)
-	log.Printf("security: policy changed: by=%q ip=%s terminal=%s elevation=%s", s.Username, clientIP(r), next.Terminal, next.Elevation)
+	log.Printf("security: policy changed: by=%q ip=%s terminal=%s elevation=%s passkey_login_days=%d", s.Username, clientIP(r),
+		next.Terminal, next.Elevation, next.PasskeyLoginDays)
 	h.enforcePolicy()
 	w.WriteHeader(http.StatusNoContent)
 }

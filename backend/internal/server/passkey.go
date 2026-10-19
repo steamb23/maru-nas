@@ -182,8 +182,16 @@ func (h *handler) verifyPasskey(s auth.Session, pa *api.PasskeyAssertion, now ti
 	if err != nil {
 		return err
 	}
+	return h.checkUserPasskey(s.Username, a, c.challenge, now, nil)
+}
+
+// checkUserPasskey는 username의 패스키로 challenge에 한 서명인지(UV 필수) 확인하고 서명 횟수·사용 시각을 고친다.
+// also가 있으면 확인이 맞은 뒤 같은 기록 갱신 안에서 부른다(오류를 돌려주면 저장하지 않는다). 패스키로 로그인은 이것으로
+// 그 등록의 패스키인지 보고 사용 시각을 함께 고친다.
+func (h *handler) checkUserPasskey(username string, a security.Assertion, challenge []byte, now time.Time,
+	also func(rec *security.Record, pk *security.Passkey) error) error {
 	id := security.B64.EncodeToString(a.CredentialID)
-	return h.Security.UpdateSecurity(s.Username, func(rec *security.Record) error {
+	return h.Security.UpdateSecurity(username, func(rec *security.Record) error {
 		pk := rec.Passkey(id)
 		if pk == nil {
 			return fmt.Errorf("%w: unknown credential", security.ErrVerify)
@@ -191,16 +199,19 @@ func (h *handler) verifyPasskey(s auth.Session, pa *api.PasskeyAssertion, now ti
 		if len(a.UserHandle) > 0 && !bytes.Equal(a.UserHandle, rec.Handle) {
 			return fmt.Errorf("%w: user handle mismatch", security.ErrVerify)
 		}
-		count, err := h.RP.VerifyAssertion(*pk, a, c.challenge)
+		count, err := h.RP.VerifyAssertion(*pk, a, challenge)
 		if err != nil {
 			return withFlags(err, a.AuthenticatorData)
 		}
 		// 서명 횟수가 늘지 않았으면 복제된 인증기일 수 있다. 횟수를 세지 않는 인증기(동기화 패스키는 늘 0)도 있어
 		// 거절하지 않고 기록만 남긴다.
 		if (count != 0 || pk.SignCount != 0) && count <= pk.SignCount {
-			log.Printf("security: passkey sign count did not increase: user=%q passkey=%q (%d -> %d)", s.Username, pk.Name, pk.SignCount, count)
+			log.Printf("security: passkey sign count did not increase: user=%q passkey=%q (%d -> %d)", username, pk.Name, pk.SignCount, count)
 		}
 		pk.SignCount, pk.LastUsed = count, now
+		if also != nil {
+			return also(rec, pk)
+		}
 		return nil
 	})
 }

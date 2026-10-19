@@ -1199,6 +1199,11 @@ export interface LoginResponse {
    * 건너뛰면 일반 세션으로 쓴다. 로그인 응답에만 넣는다(세션 복원 때는 묻지 않는다).
    */
   stepUp?: StepUpInfo;
+  /**
+   * PasskeyLoginOffer는 이 사용자가 패스키로 로그인을 켤 수 있다는 뜻이다(공개 주소가 있고 패스키를 등록함).
+   * 이 브라우저에 등록이 없으면 로그인 화면이 켜기를 권한다. 로그인 응답에만 넣는다.
+   */
+  passkeyLoginOffer?: boolean;
 }
 /**
  * StepUpInfo는 로그인 직후 권하는 2차 인증이다.
@@ -1360,6 +1365,19 @@ export const ErrPasskeyUVUnsupported = "passkey_uv_unsupported";
  * ErrSecurityUnavailable은 수단 기록을 읽을 수 없다는 뜻이다(손상된 파일 등). 관리자가 초기화해야 한다.
  */
 export const ErrSecurityUnavailable = "security_unavailable";
+/**
+ * ErrPasskeyLoginUnknown은 패스키로 로그인 등록이 없다는 뜻이다(없는 사용자, 해제했거나 패스키를 지운 등록). 브라우저
+ * 항목을 지운다.
+ */
+export const ErrPasskeyLoginUnknown = "passkey_login_unknown";
+/**
+ * ErrPasskeyLoginExpired는 패스키로 로그인 등록의 기간이 끝나 지웠다는 뜻이다. 비밀번호로 로그인한 뒤 다시 켠다.
+ */
+export const ErrPasskeyLoginExpired = "passkey_login_expired";
+/**
+ * ErrPasskeyLoginStale은 풀어 낸 비밀번호로 로그인하지 못해(비밀번호를 바꿈) 그 등록을 지웠다는 뜻이다.
+ */
+export const ErrPasskeyLoginStale = "passkey_login_stale";
 /**
  * ErrUpgradeDisabled는 대시보드에서 업그레이드가 꺼져 있다는 뜻이다(UpgradeInfo.DisabledReason).
  */
@@ -1564,7 +1582,16 @@ export const FactorPasskey = "passkey";
 export interface SecurityPolicy {
   terminal?: 'off' | 'password' | 'twoFactor';
   elevation?: 'off' | 'password' | 'twoFactor';
+  /**
+   * PasskeyLoginDays는 패스키로 로그인 등록의 만료 기간(일)이다. 없으면 PasskeyLoginDaysDefault다. 바꾸려면
+   * 비밀번호를 다시 확인한 세션이어야 한다. 줄이면 기존 등록에도 바로 적용되고, 늘리면 새 등록부터 적용된다.
+   */
+  passkeyLoginDays?: 7 | 30 | 90 | 180 | 365;
 }
+/**
+ * PasskeyLoginDaysDefault는 패스키로 로그인 등록의 기본 만료 기간(일)이다.
+ */
+export const PasskeyLoginDaysDefault = 30;
 /**
  * SecurityPolicyRequest는 PUT /api/site/security의 본문이다. 정책 전체를 바꾼다. 바꾸는 기능마다 이전·새 단계 중
  * 높은 쪽을 이 세션이 거쳤어야 한다(아니면 403 security_required).
@@ -1607,6 +1634,23 @@ export interface PasskeyInfo {
   backupEligible?: boolean;
 }
 /**
+ * PasskeyLoginInfo는 패스키로 로그인 등록 하나(브라우저 하나와 패스키 하나의 짝)다. 키 조각은 넣지 않는다.
+ */
+export interface PasskeyLoginInfo {
+  id: string;
+  /**
+   * Passkey는 이 등록에 쓰는 패스키의 ID(PasskeyInfo.ID)다.
+   */
+  passkey: string;
+  /**
+   * Created, ExpiresAt, LastUsed는 RFC 3339 시각이다. ExpiresAt은 지금 만료 기간을 적용한 값이다. 쓴 적이 없으면
+   * LastUsed가 없다.
+   */
+  created: string;
+  expiresAt: string;
+  lastUsed?: string;
+}
+/**
  * TOTPInfo는 등록한 인증 앱(TOTP)이다.
  */
 export interface TOTPInfo {
@@ -1636,6 +1680,10 @@ export interface SecurityStatus {
    */
   methods: Array<'passkey' | 'totp' | 'recovery'>;
   policy: SecurityPolicy;
+  /**
+   * PasskeyLogins는 만료되지 않은 패스키로 로그인 등록이다.
+   */
+  passkeyLogins: PasskeyLoginInfo[];
 }
 /**
  * SecurityVerifyRequest는 POST /api/security/verify의 본문이다. 맞으면 이 세션의 보증 수준을 올린다
@@ -1749,6 +1797,60 @@ export interface PasskeyRegisterRequest {
  */
 export interface PasskeyConfirmRequest {
   passkey?: PasskeyAssertion;
+}
+/**
+ * PasskeyLoginEnrollRequest는 POST /api/security/passkey-logins의 본문이다. 비밀번호와 그 패스키(PRF를 함께 요청한
+ * 확인)를 확인하면 이 브라우저의 패스키로 로그인을 켠다. 암호문은 브라우저에만 두므로 보내지 않는다.
+ */
+export interface PasskeyLoginEnrollRequest {
+  password: string;
+  passkey?: PasskeyAssertion;
+  /**
+   * Replace는 이 브라우저가 전에 쓰던 등록 ID다. 있으면 함께 지운다(다시 켤 때).
+   */
+  replace?: string;
+}
+/**
+ * PasskeyLoginEnrollResponse는 POST /api/security/passkey-logins의 응답이다. Share는 서버 쪽 키 조각(base64url)이며
+ * 브라우저가 PRF 결과와 함께 키를 만드는 데만 쓴다(저장하지 않는다).
+ */
+export interface PasskeyLoginEnrollResponse {
+  id: string;
+  share: string;
+  /**
+   * ExpiresAt은 RFC 3339 만료 시각이다.
+   */
+  expiresAt: string;
+  status: SecurityStatus;
+}
+/**
+ * PasskeyLoginOptionsRequest는 POST /api/login/passkey/options의 본문이다(인증 없음). 브라우저 항목의 사용자 이름과
+ * 등록 ID를 보내면 그 패스키 하나만 허용하는 확인 옵션(PasskeyOptions)을 준다.
+ */
+export interface PasskeyLoginOptionsRequest {
+  username: string;
+  enrollment: string;
+}
+/**
+ * PasskeyLoginRequest는 POST /api/login/passkey의 본문이다(인증 없음). 확인이 맞으면 PasskeyLoginUnlockResponse를 준다.
+ */
+export interface PasskeyLoginRequest {
+  passkey?: PasskeyAssertion;
+}
+/**
+ * PasskeyLoginUnlockResponse는 POST /api/login/passkey의 응답이다. Share로 키를 만들어 비밀번호를 풀고
+ * POST /api/login/passkey/finish로 보낸다.
+ */
+export interface PasskeyLoginUnlockResponse {
+  share: string;
+}
+/**
+ * PasskeyLoginFinishRequest는 POST /api/login/passkey/finish의 본문이다. 풀어 낸 비밀번호로 로그인하며 응답은
+ * LoginResponse다. 풀지 못했으면 Discard로 그 등록을 지운다(204).
+ */
+export interface PasskeyLoginFinishRequest {
+  password?: string;
+  discard?: boolean;
 }
 /**
  * TOTPSetupResponse는 POST /api/security/totp/setup의 응답이다. 비밀 키는 확인(POST /api/security/totp)할 때까지

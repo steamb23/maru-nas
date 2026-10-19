@@ -73,6 +73,8 @@ type env struct {
 	// upgradeRoot, upgradeState는 envOptions.upgrade일 때 대시보드에서 업그레이드의 가짜 루트(설정·상태 파일)와 상태
 	// 디렉터리(확인 요청)다.
 	upgradeRoot, upgradeState string
+	// security는 수단 기록 저장소다(envOptions.security, 없으면 메모리).
+	security security.Store
 }
 
 type envOptions struct {
@@ -133,6 +135,9 @@ func newEnv(t *testing.T, o envOptions) *env {
 	}
 
 	store := auth.NewStore()
+	if o.security == nil {
+		o.security = prefs.NewMemoryStore()
+	}
 	store.Now = clk.Now
 	lim := auth.NewLimiter()
 	lim.Now = clk.Now
@@ -219,7 +224,7 @@ func newEnv(t *testing.T, o envOptions) *env {
 		Now:               clk.Now,
 	})
 	return &env{t: t, h: h, fake: fake, omvTS: ts, clk: clk, store: store, logs: logs, helper: fakeHelper,
-		sshd: sshd, terminal: manager, upgradeRoot: upgradeRoot, upgradeState: upgradeState}
+		sshd: sshd, terminal: manager, upgradeRoot: upgradeRoot, upgradeState: upgradeState, security: o.security}
 }
 
 // browser는 쿠키를 보관하는 간이 브라우저다.

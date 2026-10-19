@@ -173,7 +173,9 @@ func (h *handler) startSession(w http.ResponseWriter, r *http.Request, res omv.L
 	h.Plugins.Refresh()
 	log.Printf("login ok: user=%q ip=%s admin=%t helper=%t assurance=%s", s.Username, ip, s.Admin, s.HelperTicket != "", assuranceName(s.Assurance))
 	info := h.sessionInfo(s)
-	writeJSON(w, http.StatusOK, api.LoginResponse{Status: api.LoginAuthenticated, Session: &info, StepUp: h.stepUpOffer(s)})
+	writeJSON(w, http.StatusOK, api.LoginResponse{
+		Status: api.LoginAuthenticated, Session: &info, StepUp: h.stepUpOffer(s), PasskeyLoginOffer: h.passkeyLoginOffer(s),
+	})
 }
 
 // applyState는 Probe로 읽은 timeout을 세션에 반영한다. 읽지 못했으면 이전 값을 둔다.

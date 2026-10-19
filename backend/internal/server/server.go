@@ -239,6 +239,8 @@ func New(cfg Config) http.Handler {
 	mux.HandleFunc("POST /api/security/totp", h.requireSession(h.confirmTOTP))
 	mux.HandleFunc("DELETE /api/security/totp", h.requireSession(h.deleteTOTP))
 	mux.HandleFunc("POST /api/security/recovery-codes", h.requireSession(h.regenerateRecovery))
+	mux.HandleFunc("POST /api/security/passkey-logins", h.requireSession(h.enrollPasskeyLogin))
+	mux.HandleFunc("DELETE /api/security/passkey-logins/{id}", h.requireSession(h.deletePasskeyLogin))
 	mux.HandleFunc("GET /api/security/users", h.requireAdmin(h.securityUsers))
 	mux.HandleFunc("DELETE /api/security/users/{name}", h.requireAdmin(h.resetSecurityUser))
 	mux.HandleFunc("GET /api/upgrade", h.requireAdmin(h.upgradeState))
