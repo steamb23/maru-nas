@@ -96,7 +96,7 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 개발 서버 환경 변수와 워크트리:
 
 - 포트: `ONMARU_LISTEN`(백엔드), `FAKEOMV_LISTEN`(가짜 OMV), `FAKESSH_LISTEN`(가짜 sshd), `DEV_PORT`(Vite). 상태 디렉터리는 `ONMARU_STATE_DIR`
-- `make dev-fake` 전용: `FAKEOMV_TIMEOUT=1m`(세션 timeout, 분 단위), `FAKEOMV_VERSION=8.3`(옛 OMV 응답, `omvfake.Version`), `FAKESSH_AUTH=publickey`(가짜 sshd가 받는 인증 방법), `FAKEUPGRADE_SCENARIO=manual`(가짜 업그레이드 서비스의 시나리오: web, manual, latest, check-fail, apply-fail, disabled)
+- `make dev-fake` 전용: `FAKEOMV_TIMEOUT=1m`(세션 timeout, 분 단위), `FAKEOMV_VERSION=8.3`(옛 OMV 응답, `omvfake.Version`), `FAKESSH_AUTH=publickey`(가짜 sshd가 받는 인증 방법), `FAKEUPGRADE_SCENARIO=manual`(가짜 업그레이드 서비스의 시나리오: web, manual, latest, check-fail, apply-fail, disabled), `FAKEUPGRADE_STEP=20s`(가짜 업그레이드 서비스의 단계 사이 지연, 기본 1.5s)
 - 웹 터미널 허용은 설정 앱이나 `ONMARU_TERMINAL=true`로 켠다
 - git 워크트리에서 실행하면 주 체크아웃의 `frontend/.env.local`(워크트리에 있으면 그 값이 우선)과 `.dev-state`를 쓴다. 주 체크아웃에서 `make dev BRANCH=<브랜치>`(`make dev-fake`도 같다)로 그 브랜치가 체크아웃된 워크트리의 코드를 실행할 수 있다(실행은 부른 쪽의 `scripts/dev.sh`)
 
