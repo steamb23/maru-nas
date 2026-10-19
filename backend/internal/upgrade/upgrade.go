@@ -1,4 +1,4 @@
-// Package upgrade는 대시보드에서 업그레이드(ROADMAP.md)의 onmaru 쪽 파일을 다룬다. 업그레이드 서비스가 쓰는 상태
+// Package upgrade는 대시보드에서 업그레이드(.claude/docs/upgrade.md)의 onmaru 쪽 파일을 다룬다. 업그레이드 서비스가 쓰는 상태
 // 파일과 root 쪽 설정 파일을 읽고, 확인 요청을 onmaru의 상태 디렉터리에 쓴다. 적용 요청은 권한 도우미의
 // upgrade.apply가 쓰므로 여기에 없다. 형식은 backend/config(upgrade.go, upgrade_request.go)에 있다.
 package upgrade

@@ -16,7 +16,7 @@ import (
 	"onmaru/backend/internal/upgrade"
 )
 
-// 대시보드에서 업그레이드(ROADMAP.md). onmaru는 업그레이드 서비스의 상태 파일을 읽고 확인 요청을 상태 디렉터리에 쓰며,
+// 대시보드에서 업그레이드(.claude/docs/upgrade.md). onmaru는 업그레이드 서비스의 상태 파일을 읽고 확인 요청을 상태 디렉터리에 쓰며,
 // 업그레이드(적용)는 권한 도우미의 root 연산 upgrade.apply로 요청한다. 진행할 수 있는지는 업그레이드 서비스가 저장소와
 // 설치 상태로 다시 확인하므로, 여기서 하는 검사는 빠른 거절과 안내를 위한 것이다.
 
@@ -45,7 +45,7 @@ func (h *handler) upgradeState(w http.ResponseWriter, _ *http.Request, _ auth.Se
 	writeJSON(w, http.StatusOK, h.upgradeInfo(h.Upgrade.Read()))
 }
 
-// upgradeCheck는 확인 요청을 남긴다. 확인은 저장소 코드를 root로 실행하지 않으므로 상승을 요구하지 않는다(ROADMAP.md).
+// upgradeCheck는 확인 요청을 남긴다. 확인은 저장소 코드를 root로 실행하지 않으므로 상승을 요구하지 않는다(.claude/docs/upgrade.md).
 func (h *handler) upgradeCheck(w http.ResponseWriter, r *http.Request, s auth.Session) {
 	var req api.StartUpgradeCheckRequest
 	if !decodeJSON(w, r, &req) {

@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-// 대시보드에서 업그레이드의 요청과 상태(ROADMAP.md). onmaru가 확인 요청을, 도우미의 upgrade.apply가 적용 요청을 쓰고,
+// 대시보드에서 업그레이드의 요청과 상태(.claude/docs/upgrade.md). onmaru가 확인 요청을, 도우미의 upgrade.apply가 적용 요청을 쓰고,
 // 업그레이드 서비스(설치기의 --upgrade-service)가 둘을 읽어 처리한 뒤 진행과 결과를 상태 파일에 쓴다.
 
 // UpgradeRequestFormat은 확인·적용 요청의 형식 번호다. 필드를 빼거나 뜻을 바꾸면 올린다.

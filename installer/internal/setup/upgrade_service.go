@@ -19,8 +19,8 @@ import (
 
 // 업그레이드 서비스(--upgrade-service). onmaru-upgrade.path가 확인 요청(onmaru의 상태 디렉터리) 또는 적용 요청(도우미의
 // upgrade.apply)을 보면 onmaru-upgrade.service가 root 소유 설치기 복사본으로 이것을 실행한다. 한 번에 요청 하나를
-// 처리하고(적용이 먼저), 진행과 결과는 상태 파일(config.UpgradeStatusFile)에 쓴다. 설계는 ROADMAP.md의 "대시보드에서
-// 업그레이드", 명령 실행·파일 처리는 upgrade_exec.go에 있다.
+// 처리하고(적용이 먼저), 진행과 결과는 상태 파일(config.UpgradeStatusFile)에 쓴다. 설계는 .claude/docs/upgrade.md,
+// 명령 실행·파일 처리는 upgrade_exec.go에 있다.
 //
 //   - 확인: 저장소 상태를 보고(원격이면 git fetch 뒤 추적 브랜치, 로컬이면 HEAD) 대상 커밋을 정한 뒤, 대상 커밋의 설치기만
 //     소유자로 임시 빌드해 --upgrade-plan을 실행한다. 저장소 코드는 root로 실행하지 않는다

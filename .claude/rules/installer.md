@@ -46,7 +46,7 @@ paths:
 
 ## 업그레이드 계획(--upgrade-plan)
 
-대시보드에서 업그레이드(`ROADMAP.md`)는 대상 커밋의 설치기를 저장소 소유자 계정으로 임시 빌드해 `--upgrade-plan`을 실행하고, 그 JSON(`config.UpgradePlan`)으로 물을 설정과 수동 재설치 여부를 정한다. 형식은 `backend/config/upgrade.go`에 있다.
+대시보드에서 업그레이드(`.claude/docs/upgrade.md`)는 대상 커밋의 설치기를 저장소 소유자 계정으로 임시 빌드해 `--upgrade-plan`을 실행하고, 그 JSON(`config.UpgradePlan`)으로 물을 설정과 수동 재설치 여부를 정한다. 형식은 `backend/config/upgrade.go`에 있다.
 
 - 읽기만 한다. 파일을 쓰지 않고, 실행하는 명령은 `node --version`(`System.Output`)뿐이다. `resolveMode` 전에 분기하므로 설치 방식 안내·일부 설치 경고를 찍지 않고 아무것도 묻지 않는다
 - 표준 출력에는 JSON만 쓰고 경고는 오류 출력에 쓴다(`install.sh`의 안내도 오류 출력이다). 계획을 냈으면 수동 사유가 있어도 0, 만들지 못하면 1
@@ -57,7 +57,7 @@ paths:
 
 ## 업그레이드 서비스(--web-upgrade, --upgrade-service)
 
-설계는 `ROADMAP.md`의 "대시보드에서 업그레이드", 사용자 설명은 `README.md`의 "대시보드에서 업그레이드". 경로·형식은 `backend/config`(`upgrade.go`, `upgrade_request.go`)에 있다.
+설계는 `.claude/docs/upgrade.md`, 사용자 설명은 `README.md`의 "대시보드에서 업그레이드". 경로·형식은 `backend/config`(`upgrade.go`, `upgrade_request.go`)에 있다.
 
 - 설정: `--web-upgrade`(`FlagToggle`, 도우미를 설치할 때만)와 `--build-path`(묻지 않는 `FlagValue`). 켜면 `stepWebUpgrade`가 설치기 복사본(`/usr/local/lib/onmaru/onmaru-install`, `bin/onmaru-install`에서), `/etc/default/onmaru-upgrade`(저장소 경로·빌드 계정·빌드 PATH), `onmaru-upgrade.service`·`.path`를 쓰고, 도우미 유닛에 `RuntimeDirectory=onmaru-upgrade`가 들어간다. 끄거나 도우미를 지우면(제거 포함) `removeWebUpgrade`가 경로 유닛을 끄고 이것들과 남은 요청·상태 파일을 지운다. 돌고 있는 업그레이드 서비스는 멈추지 않는다
   - 값: 설정 파일이 있으면 켜짐이다. 이 설정이 없던 버전의 설치는 꺼진 것으로 읽어 묻지 않는다. 새 설치의 기본값은 저장소 소유자가 일반 사용자일 때 켜짐이고, root 소유 저장소에서는 켤 수 없다(`Validate`). 소유자는 `System.FileOwner(c.RepoDir)`로 읽는다

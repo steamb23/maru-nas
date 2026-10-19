@@ -38,7 +38,7 @@ paths:
 
 ## 대시보드에서 업그레이드
 
-설계는 `ROADMAP.md`, 업그레이드 서비스(설치기)는 `.claude/rules/installer.md`의 "업그레이드 서비스".
+설계는 `.claude/docs/upgrade.md`, 업그레이드 서비스(설치기)는 `.claude/rules/installer.md`의 "업그레이드 서비스".
 
 - onmaru는 업그레이드 서비스의 파일만 다룬다(`internal/upgrade`): root 쪽 설정 파일(`config.UpgradeEnvFile`, 있으면 켜짐, 저장소 경로·계정은 수동 안내에 쓴다), 상태 파일(`config.UpgradeStatusFile`), 설치 기록(`config.InstallRecordFile`, 실행 파일에 커밋이 없을 때 화면이 쓴다)을 O_NOFOLLOW·크기 상한으로 읽고, 확인 요청(`<상태 디렉터리>/upgrade-check.json`)을 같은 디렉터리 임시 파일에서 이름을 바꿔 쓴다. 저장소·git·빌드에는 닿지 않는다(`ProtectHome=yes`)
   - 상태 파일이 `checking`·`applying`인 채로 `config.UpgradeServiceTimeout`(유닛의 `TimeoutStartSec`)보다 오래되면 중단으로, 확인 요청이 1분 넘게 남아 있으면 멈춤으로 보고, 둘 다 다시 요청할 수 있다. 확인 요청은 30초에 한 번까지(메모리)
