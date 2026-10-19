@@ -1247,6 +1247,9 @@ type UpgradeInfo struct {
 	// Version, Revision은 지금 실행 중인 onmaru의 버전과 커밋이다(Revision은 모르면 없다).
 	Version  string `json:"version"`
 	Revision string `json:"revision,omitempty"`
+	// Installed는 설치기가 남긴 설치 기록이다(/var/lib/onmaru-upgrade/installed.json). 없거나 읽을 수 없으면 null이다.
+	// 실행 파일에 커밋이 없을 때(go run) 화면이 이 기록의 커밋을 보인다.
+	Installed *config.InstallRecord `json:"installed"`
 	// Status는 업그레이드 서비스의 상태 파일이다. 없거나 읽을 수 없으면 null이다.
 	Status *config.UpgradeStatus `json:"status"`
 }

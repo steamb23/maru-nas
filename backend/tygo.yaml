@@ -1,9 +1,10 @@
 packages:
   - path: "onmaru/backend/internal/api"
     output_path: "../frontend/src/api/types.gen.ts"
-    # 업그레이드 상태(UpgradeInfo.status)는 backend/config의 형식을 그대로 넘긴다(아래 upgrade.gen.ts).
+    # 업그레이드 상태(UpgradeInfo.status)와 설치 기록(installed)은 backend/config의 형식을 그대로 넘긴다(아래 upgrade.gen.ts).
     type_mappings:
       config.UpgradeStatus: "config.UpgradeStatus"
+      config.InstallRecord: "config.InstallRecord"
     frontmatter: |
       // 원본: backend/internal/api
       // `make types`로 다시 생성한다.

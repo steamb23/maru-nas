@@ -16,6 +16,7 @@ import { useLanguage } from '../i18n'
 import { useDialogs } from '../shell/dialogPresets'
 import { requestElevation } from '../shell/elevationDialog'
 import { useUpgradeWatch } from '../upgrade/watchStore'
+import { shortRevision } from './about/about'
 import { CommandBlock, SettingsCard, SettingsNotice, SettingsRow, SettingsSection, Switch } from './controls'
 import {
   APPLY_STAGES,
@@ -25,12 +26,13 @@ import {
   describe,
   helpLines,
   initialAnswers,
+  installedVersion,
   manualCommands,
   pickText,
   settingsFor,
-  shortHash,
   type StageName,
   stageName,
+  versionLabel,
 } from './update'
 
 // 진행 중일 때 상태를 다시 받는 간격.
@@ -217,12 +219,12 @@ function actionErrorOf(err: unknown): ActionError {
 
 function VersionSection({ info }: { info: UpgradeInfo }) {
   const { t } = useTranslation()
+  const { version, revision } = installedVersion(info)
   return (
     <SettingsSection title={t('settings.update.current')}>
       <SettingsCard>
         <SettingsRow label={t('settings.update.version')}>
-          <code className="update-value selectable">{info.version}</code>
-          {info.revision && <code className="update-value selectable">{shortHash(info.revision)}</code>}
+          <code className="update-value selectable">{versionLabel(version, revision)}</code>
         </SettingsRow>
       </SettingsCard>
     </SettingsSection>
@@ -368,8 +370,9 @@ function TargetSection({ check }: { check: UpgradeCheck }) {
     <SettingsSection title={t('settings.update.newVersion')}>
       <SettingsCard>
         <SettingsRow label={t('settings.update.version')}>
-          <code className="update-value selectable">{plan?.version || t('settings.update.unknown')}</code>
-          <code className="update-value selectable">{shortHash(check.target)}</code>
+          <code className="update-value selectable">
+            {versionLabel(plan?.version || t('settings.update.unknown'), check.target)}
+          </code>
         </SettingsRow>
         <SettingsRow label={t('settings.update.source')}>
           <span className="update-value">
@@ -391,7 +394,8 @@ function TargetSection({ check }: { check: UpgradeCheck }) {
               <li key={c.hash}>
                 <span className="update-commit-subject selectable">{c.subject}</span>
                 <span className="update-commit-meta">
-                  <code className="selectable">{shortHash(c.hash)}</code> · {c.author} · {formatDateTime(c.time, lang)}
+                  <code className="selectable">{shortRevision(c.hash)}</code> · {c.author} ·{' '}
+                  {formatDateTime(c.time, lang)}
                 </span>
               </li>
             ))}
@@ -584,7 +588,11 @@ function ApplyResult({ info }: { info: UpgradeInfo }) {
   if (state.apply === 'applied') {
     const notes = st.check?.plan?.notes ?? []
     return (
-      <SettingsSection title={t('settings.update.applied', { version: st.apply?.version || t('settings.update.unknown') })}>
+      <SettingsSection
+        title={t('settings.update.applied', {
+          version: versionLabel(st.apply?.version || t('settings.update.unknown'), st.apply?.target),
+        })}
+      >
         {st.apply?.finishedAt && (
           <p className="settings-hint">
             {t('settings.update.appliedAt', { user: st.apply.user, time: formatDateTime(st.apply.finishedAt, lang) })}

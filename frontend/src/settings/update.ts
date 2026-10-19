@@ -4,6 +4,7 @@
 // 꺼짐·요청 대기·중단 여부만 더해 준다. 설치기 문구(사유, 질문, 할 일, 오류)는 영어·한국어 두 가지뿐이다.
 import type { UpgradeInfo } from '../api/types.gen'
 import type { LocalizedText, UpgradeCheck, UpgradeQuestion } from '../api/upgrade.gen'
+import { shortRevision } from './about/about'
 
 // pickText는 설치기 문구를 화면 언어로 고른다. 한국어 화면이면 ko, 그 밖의 언어는 en이다(비었으면 다른 쪽).
 export function pickText(text: LocalizedText | null | undefined, lang: string): string {
@@ -85,9 +86,19 @@ export function applyStep(stage: string | null | undefined): number {
   return APPLY_STAGES.indexOf(stage as (typeof APPLY_STAGES)[number])
 }
 
-// shortHash는 커밋 해시의 앞 7글자다.
-export function shortHash(hash: string | undefined): string {
-  return (hash ?? '').slice(0, 7)
+// versionLabel은 버전과 커밋을 "0.4.0 (2222222)"처럼 쓴다(커밋은 늘 괄호 안, 앞 7글자). 커밋이 없으면 버전만,
+// 버전이 없으면 괄호 안의 커밋만이다.
+export function versionLabel(version: string | undefined, revision: string | undefined): string {
+  const rev = revision ? `(${shortRevision(revision)})` : ''
+  return [version ?? '', rev].filter((s) => s !== '').join(' ')
+}
+
+// installedVersion은 지금 설치된(실행 중인) 버전과 커밋이다. 실행 파일에 커밋이 없으면(go run 등) 같은 버전의 설치
+// 기록에서 커밋을 가져온다.
+export function installedVersion(info: UpgradeInfo): { version: string; revision: string | undefined } {
+  const rec = info.installed
+  const revision = info.revision || (rec && rec.version === info.version ? rec.revision : undefined)
+  return { version: info.version, revision: revision || undefined }
 }
 
 // 설정 값의 상한(backend/config의 MaxUpgradeSettingValue).

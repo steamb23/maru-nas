@@ -767,6 +767,7 @@ export function isUpgradeInfo(v: unknown): v is UpgradeInfo {
     isBool(v.pendingStalled) &&
     isBool(v.interrupted) &&
     isStr(v.version) &&
+    isNullable(v.installed, (r): r is config.InstallRecord => isObj(r) && isStr(r.version) && isStr(r.revision)) &&
     isNullable(v.status, isUpgradeStatus)
   )
 }
@@ -774,7 +775,7 @@ export function isUpgradeInfo(v: unknown): v is UpgradeInfo {
 async function upgradeInfo(path: string, res: Promise<unknown>): Promise<UpgradeInfo> {
   const data = await res
   if (!isUpgradeInfo(data)) throw new Error(`${path}: unexpected response shape`)
-  return { ...data, status: data.status ?? undefined }
+  return { ...data, installed: data.installed ?? undefined, status: data.status ?? undefined }
 }
 
 // fetchUpgrade는 대시보드에서 업그레이드의 상태다.

@@ -116,6 +116,9 @@ func Start(o Options) (*Service, error) {
 	if err := os.Remove(s.path(config.UpgradeStatusFile)); err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return nil, err
 	}
+	if err := s.writeRecord(config.Version); err != nil {
+		return nil, err
+	}
 	go s.loop()
 	return s, nil
 }
@@ -206,6 +209,21 @@ func (s *Service) write() error {
 		return err
 	}
 	return os.Rename(tmp, path)
+}
+
+// writeRecord는 설치기처럼 설치 기록을 쓴다(지금 가짜 커밋과 version).
+func (s *Service) writeRecord(version string) error {
+	rec := s.record()
+	rec.Version = version
+	data, err := json.MarshalIndent(rec, "", "  ")
+	if err != nil {
+		return err
+	}
+	path := s.path(config.InstallRecordFile)
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
+	}
+	return os.WriteFile(path, append(data, '\n'), 0o644)
 }
 
 func (s *Service) fail(state string, en, ko, log string) error {
@@ -410,6 +428,9 @@ func (s *Service) apply(data []byte) error {
 		return err
 	}
 	s.revision = req.Target
+	if err := s.writeRecord(chk.Plan.Version); err != nil {
+		return err
+	}
 	s.status.State, s.status.Stage = config.UpgradeStateApplied, ""
 	s.status.Apply.FinishedAt, s.status.Apply.Version = s.stamp(), chk.Plan.Version
 	s.o.Logf("fake upgrade: applied %s (onmaru is not restarted in the fake service)", chk.Plan.Version)

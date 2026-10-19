@@ -25,9 +25,10 @@ const (
 	pendingStall = time.Minute
 	// checkInterval은 확인 요청 사이의 최소 간격이다. 확인마다 저장소 소유자의 git fetch와 임시 빌드가 돈다.
 	checkInterval = 30 * time.Second
-	// 읽는 파일의 크기 상한. 업그레이드 서비스의 상한(installer의 maxRootFile, maxStatusFile)과 같다.
+	// 읽는 파일의 크기 상한. 업그레이드 서비스의 상한(installer의 maxRootFile, maxStatusFile, maxRecordFile)과 같다.
 	maxEnvFile    = 64 << 10
 	maxStatusFile = 4 << 20
+	maxRecordFile = 64 << 10
 )
 
 // Paths는 다루는 파일의 경로다.
@@ -36,6 +37,8 @@ type Paths struct {
 	EnvFile string
 	// StatusFile은 업그레이드 서비스의 상태 파일(config.UpgradeStatusFile)이다.
 	StatusFile string
+	// RecordFile은 설치기가 설치할 때마다 쓰는 설치 기록(config.InstallRecordFile)이다.
+	RecordFile string
 	// CheckRequest는 확인 요청 파일(<상태 디렉터리>/config.UpgradeCheckRequestName)이다. 비우면 확인을 요청할 수 없다.
 	CheckRequest string
 }
@@ -43,7 +46,7 @@ type Paths struct {
 // NewPaths는 설치된 경로다. root는 경로 앞에 붙이는 가짜 루트(개발 서버, 비우면 실제 경로)이고, stateDir는 onmaru의
 // 상태 디렉터리다(비우면 확인 요청을 쓸 곳이 없다).
 func NewPaths(root, stateDir string) Paths {
-	p := Paths{EnvFile: root + config.UpgradeEnvFile, StatusFile: root + config.UpgradeStatusFile}
+	p := Paths{EnvFile: root + config.UpgradeEnvFile, StatusFile: root + config.UpgradeStatusFile, RecordFile: root + config.InstallRecordFile}
 	if stateDir != "" {
 		p.CheckRequest = filepath.Join(stateDir, config.UpgradeCheckRequestName)
 	}
@@ -58,6 +61,9 @@ type Snapshot struct {
 	Repo, User string
 	// Status는 상태 파일이다. 없거나, 읽을 수 없거나, 모르는 형식이면 nil이다.
 	Status *config.UpgradeStatus
+	// Installed는 설치 기록이다. 대시보드에서 업그레이드가 꺼져 있어도 설치기가 쓴다. 없거나, 읽을 수 없거나, 모르는
+	// 형식이면 nil이다.
+	Installed *config.InstallRecord
 	// Pending은 확인 요청을 업그레이드 서비스가 아직 가져가지 않았다는 뜻이다. PendingStalled는 pendingStall보다
 	// 오래 남아 있다는 뜻이다(경로 유닛이 돌지 않거나 상태 디렉터리가 경로 유닛이 보는 곳이 아니다).
 	Pending, PendingStalled bool
@@ -125,6 +131,12 @@ func (m *Manager) Read() Snapshot {
 		var st config.UpgradeStatus
 		if json.Unmarshal(data, &st) == nil && st.Format == config.UpgradeStatusFormat {
 			s.Status = &st
+		}
+	}
+	if data, err := readNoFollow(m.paths.RecordFile, maxRecordFile); err == nil {
+		var rec config.InstallRecord
+		if json.Unmarshal(data, &rec) == nil && rec.Format == config.InstallRecordFormat {
+			s.Installed = &rec
 		}
 	}
 	if s.Running() {

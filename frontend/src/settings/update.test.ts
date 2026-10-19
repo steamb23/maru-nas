@@ -6,11 +6,13 @@ import {
   applyStep,
   describe,
   initialAnswers,
+  installedVersion,
   manualCommands,
   pickText,
   settingsFor,
   stageName,
   validSettingValue,
+  versionLabel,
 } from './update'
 
 const REV_A = 'a'.repeat(40)
@@ -176,6 +178,26 @@ group('questions', () => {
     expect(validSettingValue('é')).toBe(false)
     expect(validSettingValue('x'.repeat(512))).toBe(true)
     expect(validSettingValue('x'.repeat(513))).toBe(false)
+  })
+})
+
+group('versionLabel', () => {
+  it('puts the short revision in parentheses', () => {
+    expect(versionLabel('0.4.0', REV_B)).toBe('0.4.0 (bbbbbbb)')
+    expect(versionLabel('0.4.0', undefined)).toBe('0.4.0')
+    expect(versionLabel(undefined, REV_B)).toBe('(bbbbbbb)')
+    expect(versionLabel('', '')).toBe('')
+  })
+
+  it('takes the installed revision from the install record when the binary has none', () => {
+    const record = { format: 1, version: '0.3.1', revision: REV_B, revisionTime: '', modified: false, installedAt: '' }
+    expect(installedVersion(info(null))).toEqual({ version: '0.3.1', revision: REV_A })
+    expect(installedVersion(info(null, { revision: undefined, installed: record }))).toEqual({ version: '0.3.1', revision: REV_B })
+    // 다른 버전의 기록(아직 다시 시작하지 않음 등)은 쓰지 않는다.
+    expect(installedVersion(info(null, { revision: undefined, installed: { ...record, version: '0.4.0' } }))).toEqual({
+      version: '0.3.1',
+      revision: undefined,
+    })
   })
 })
 

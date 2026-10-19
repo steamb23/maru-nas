@@ -1835,6 +1835,11 @@ export interface UpgradeInfo {
   version: string;
   revision?: string;
   /**
+   * Installed는 설치기가 남긴 설치 기록이다(/var/lib/onmaru-upgrade/installed.json). 없거나 읽을 수 없으면 null이다.
+   * 실행 파일에 커밋이 없을 때(go run) 화면이 이 기록의 커밋을 보인다.
+   */
+  installed?: config.InstallRecord;
+  /**
    * Status는 업그레이드 서비스의 상태 파일이다. 없거나 읽을 수 없으면 null이다.
    */
   status?: config.UpgradeStatus;

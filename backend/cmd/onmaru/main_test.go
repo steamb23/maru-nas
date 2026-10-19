@@ -12,7 +12,7 @@ import (
 )
 
 func TestUpgradePaths(t *testing.T) {
-	installed := upgrade.Paths{EnvFile: config.UpgradeEnvFile, StatusFile: config.UpgradeStatusFile}
+	installed := upgrade.Paths{EnvFile: config.UpgradeEnvFile, StatusFile: config.UpgradeStatusFile, RecordFile: config.InstallRecordFile}
 	withRequest := installed
 	withRequest.CheckRequest = "/var/lib/onmaru/upgrade-check.json"
 	cases := []struct {
@@ -26,7 +26,8 @@ func TestUpgradePaths(t *testing.T) {
 		{want: installed},
 		// 개발 서버는 가짜 루트 아래를 읽고 지금 상태 디렉터리에 쓴다.
 		{devRoot: "/tmp/dev", stateDir: "/tmp/state", want: upgrade.Paths{EnvFile: "/tmp/dev" + config.UpgradeEnvFile,
-			StatusFile: "/tmp/dev" + config.UpgradeStatusFile, CheckRequest: "/tmp/state/upgrade-check.json"}},
+			StatusFile: "/tmp/dev" + config.UpgradeStatusFile, RecordFile: "/tmp/dev" + config.InstallRecordFile,
+			CheckRequest: "/tmp/state/upgrade-check.json"}},
 	}
 	for _, c := range cases {
 		if got := upgradePaths(c.devRoot, c.stateDir); got != c.want {

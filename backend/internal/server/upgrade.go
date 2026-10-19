@@ -28,7 +28,7 @@ func (h *handler) upgradeInfo(s upgrade.Snapshot) api.UpgradeInfo {
 	info := api.UpgradeInfo{
 		Enabled: true, Repo: s.Repo, User: s.User,
 		Pending: s.Pending, PendingStalled: s.PendingStalled, Interrupted: s.Interrupted,
-		Version: h.about.Version, Revision: h.about.Revision, Status: s.Status,
+		Version: h.about.Version, Revision: h.about.Revision, Installed: s.Installed, Status: s.Status,
 	}
 	switch {
 	case !s.Enabled:

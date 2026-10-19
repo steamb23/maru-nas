@@ -82,6 +82,17 @@ func TestReadEnvAndStatus(t *testing.T) {
 	if s.Status == nil || s.Status.State != config.UpgradeStateChecked || s.Status.Check.Target == "" || s.Running() || s.Busy() {
 		t.Fatalf("status: %+v", s.Status)
 	}
+	if s.Installed != nil {
+		t.Fatalf("install record without a file: %+v", s.Installed)
+	}
+	f.put(config.InstallRecordFile, `{"format": 1, "version": "0.3.1", "revision": "0123456789abcdef0123456789abcdef01234567"}`)
+	if s := f.m.Read(); s.Installed == nil || s.Installed.Version != "0.3.1" || s.Installed.Revision == "" {
+		t.Fatalf("install record: %+v", s.Installed)
+	}
+	f.put(config.InstallRecordFile, `{"format": 9, "version": "9.9.9"}`)
+	if s := f.m.Read(); s.Installed != nil {
+		t.Fatalf("unknown install record format read: %+v", s.Installed)
+	}
 }
 
 func TestReadIgnoresUnknownStatus(t *testing.T) {
