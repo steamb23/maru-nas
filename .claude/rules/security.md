@@ -64,11 +64,11 @@ paths:
 - **로그인**(인증 없음, 의식 쿠키 `onmaru_passkey_login`, HttpOnly, SameSite=Strict)
   1. `POST /api/login/passkey/options {username, enrollment}`: 없는 사용자·등록·읽을 수 없는 기록은 모두 400 `passkey_login_unknown`(`Neutral`), 만료면 400 `passkey_login_expired`(등록 삭제). 유효한 등록 ID가 있어야 상태가 생긴다
   2. `POST /api/login/passkey {passkey}`: `securityLimiter`(IP·사용자 이름). 그 등록의 자격 증명·서명·UV를 확인하면 `{share, nextShare}`(아래 "회전")
-  3. `POST /api/login/passkey/finish {password}`: `h.Limiter`로 센다(브라우저가 보낸 비밀번호라 복호화 결과인지 서버가 알 수 없다). 성공하면 일반 로그인과 같은 마무리를 `twoFactor`로 한다(`completeLogin`. OMV 2차 인증이면 대기 → `verify`). OMV가 400이면 비밀번호를 바꾼 것이므로 등록을 지우고 400 `passkey_login_stale`. 브라우저가 풀지 못하면 `{discard: true}`로 등록을 지운다
+  3. `POST /api/login/passkey/finish {password, rotated}`: `h.Limiter`로 센다(브라우저가 보낸 비밀번호라 복호화 결과인지 서버가 알 수 없다). 성공하면 일반 로그인과 같은 마무리를 `twoFactor`로 한다(`completeLogin`. OMV 2차 인증이면 대기 → `verify`). OMV가 400이면 비밀번호를 바꾼 것이므로 등록을 지우고 400 `passkey_login_stale`. 브라우저가 풀지 못하면 `{discard: true}`로 등록을 지운다
   - 브라우저는 `passkey_login_unknown`·`passkey_login_expired`·`passkey_login_stale`이면 항목을 지운다. 1단계 뒤 패스키가 PRF 결과를 주지 않아도 항목을 지운다(그 자격 증명 하나만 허용하므로 다시 해도 풀 수 없다). share를 받기 전이라 서버 등록은 지우지 못하고 만료나 보안 페이지의 해제로 정리된다
 - **회전**: 패스키로 로그인이 성공할 때마다 share를 바꿔, 복사된 브라우저 프로필 사본(옛 share용 암호문)을 다음 정상 로그인 뒤로 쓸 수 없게 한다. 두 단계로 확정한다
   - 풀림 단계가 지금 share와 함께 다음 share(`PasskeyLogin.NextShare`)를 준다. 대기가 없을 때만 새로 만들어 저장하고, 있으면 그 값을 다시 준다(확정 전에는 바꾸지 않는다)
-  - 브라우저는 지금 share로 풀고, 안 되면 다음 share로 푼다(직전 회전의 확정 응답만 사라진 경우). 풀어 낸 비밀번호를 다음 share로 다시 암호화해 **finish를 보내기 전에** 항목을 바꾸고, finish에 `rotated: true`를 보낸다. 저장하지 못했으면 `rotated: false`
+  - 브라우저는 지금 share로 풀고, 안 되면 다음 share로 푼다(직전 회전의 확정 응답만 사라진 경우). 풀어 낸 비밀번호를 다음 share로 다시 암호화해(새 IV) **finish를 보내기 전에** 항목을 바꾸고, finish에 `rotated: true`를 보낸다. 저장하지 못했으면 `rotated: false`(`unlockPasskeyLogin`이 `{ password, rotated }`를 돌려준다). 서버 기록은 `PasskeyLogin.PrepareRotation`·`Rotate`로 고치고, 로그에는 `rotated=`만 남긴다
   - finish에서 OMV가 비밀번호를 받으면(OMV 2차 인증 대기여도) `rotated`일 때 다음 share를 지금 share로 확정하고 대기를 지운다. 그래서 어느 응답이 사라져도 브라우저 항목은 늘 지금 share나 다음 share 중 하나로 풀린다
   - 두 share 모두로 풀리지 않는 항목은 정상 브라우저에서는 생기지 않으므로 회전 전에 복사된 사본으로 본다. 지금처럼 discard로 서버 등록을 지우고 로그에 사본일 수 있다고 남긴다(정상 브라우저도 다시 켜야 하지만 사본이 나도는 등록을 바로 막는다)
   - 만료 시각은 회전해도 늘리지 않는다
@@ -87,7 +87,7 @@ paths:
   - 여는 함수와 컴포넌트를 다른 파일에 둔다(oxlint `only-export-components`)
 - 로그인 직후 단계는 인증 저장소의 `stepUp` 상태(`finishStepUp`)다. 보안에 민감한 기능은 `security_required`를 받으면 `requestStepUp`으로 확인하고 다시 시도한다(터미널은 닫힘 막대의 확인 단추, 상승은 `ElevationForm`이 같은 비밀번호로 다시 시도)
 - 패스키는 `passkeysSupported()`(보안 컨텍스트 + `PublicKeyCredential`)일 때만 보인다. 개발 서버(평문 HTTP)에서는 TOTP·복구 코드만 시험할 수 있다
-- 패스키로 로그인: 순수 모듈 `passkeyLogin.ts`(항목 형식, 분할 키), 저장 `passkeyLoginStorage.ts`(localStorage), 흐름 `passkeyLoginFlow.ts`(`enablePasskeyLogin`, `unlockPasskeyLogin`). 보안 페이지의 "패스키로 로그인하는 브라우저" 절은 관리 창 없이 해제하고 `enablePasskeyLoginDialog`(내용 `PasskeyLoginSetup.tsx`)로 켜며, 받은 상태마다 이 브라우저 항목을 서버 목록에 맞춘다(`syncPasskeyLogins`: 목록에 없으면 지우고, 있으면 `expiresAt`을 서버 값으로. 관리자가 기간을 줄인 경우). 만료 기간은 보안 정책 페이지가 고른다
+- 패스키로 로그인: 순수 모듈 `passkeyLogin.ts`(항목 형식, 분할 키, 두 share로 차례로 풀기 `openEntry`·다시 암호화 `resealEntry`), 저장 `passkeyLoginStorage.ts`(localStorage), 흐름 `passkeyLoginFlow.ts`(`enablePasskeyLogin`, `unlockPasskeyLogin`). 보안 페이지의 "패스키로 로그인하는 브라우저" 절은 관리 창 없이 해제하고 `enablePasskeyLoginDialog`(내용 `PasskeyLoginSetup.tsx`)로 켜며, 받은 상태마다 이 브라우저 항목을 서버 목록에 맞춘다(`syncPasskeyLogins`: 목록에 없으면 지우고, 있으면 `expiresAt`을 서버 값으로. 관리자가 기간을 줄인 경우). 만료 기간은 보안 정책 페이지가 고른다
   - 로그인 화면은 활성 항목마다 "패스키로 로그인" 단추를 두고(풀어 낸 비밀번호는 인증 저장소의 `completePasskeyLogin`에만 넘긴다), 비밀번호 로그인 직후 권유는 인증 저장소의 `passkeyOffer`(`shouldOfferPasskeyLogin`: 이 브라우저 항목·"다시 묻지 않기")다. 권유만 오면 `auth/PasskeyOffer.tsx` 카드, 2차 인증 권유와 함께 오면 `StepUpForm`의 확인란(`passkeyLogin`. PRF가 없으면 같은 확인 값으로 `verifySecurity`)이다. 비밀번호는 권유를 마칠 때까지 LoginScreen 상태에만 둔다
 - 인증 앱 QR은 `uqr`의 `encode`로 모듈 배열을 받아 SVG path로 그린다(`qrPath`, innerHTML 없음). 등록 대화상자를 열 때 `import('uqr')`로 받고 vendor 청크에서 뺀다(`vite.config.ts`)
 
