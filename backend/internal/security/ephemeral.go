@@ -64,6 +64,20 @@ func (e *Ephemeral[T]) Take(key string) (T, bool) {
 	return en.v, true
 }
 
+// TakeIf는 key의 값이 ok를 만족할 때만 꺼내 지운다. 확인과 지우기를 한 잠금 안에서 하므로 같은 값을 동시에
+// 두 번 쓸 수 없다. 없거나 만료됐거나 ok가 false면 값을 그대로 두고 false다.
+func (e *Ephemeral[T]) TakeIf(key string, ok func(T) bool) (T, bool) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	var zero T
+	en, found := e.m[key]
+	if !found || !e.Now().Before(en.expires) || !ok(en.v) {
+		return zero, false
+	}
+	delete(e.m, key)
+	return en.v, true
+}
+
 // Peek은 key의 값을 지우지 않고 본다.
 func (e *Ephemeral[T]) Peek(key string) (T, bool) {
 	e.mu.Lock()

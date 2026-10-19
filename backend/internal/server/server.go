@@ -134,6 +134,8 @@ type handler struct {
 	challenges      *security.Ephemeral[ceremony]
 	pendingPasskeys *security.Ephemeral[pendingPasskey]
 	totpSetup       *security.Ephemeral[string]
+	// deviceCodes는 기기 추가 코드의 해시다. 다른 기기의 세션이 쓰므로 사용자 이름에 묶인다(security_manage.go).
+	deviceCodes *security.Ephemeral[string]
 	// loginCeremonies는 진행 중인 패스키로 로그인(options → 확인), passkeyUnlocks는 확인을 마치고 share를 내준 뒤
 	// 비밀번호를 기다리는 로그인이다. 대시보드 세션이 아직 없으므로 의식 쿠키(PasskeyLoginCookie)에 묶인다.
 	loginCeremonies *security.Ephemeral[loginCeremony]
@@ -191,13 +193,14 @@ func New(cfg Config) http.Handler {
 		challenges:      security.NewEphemeral[ceremony](challengeTTL),
 		pendingPasskeys: security.NewEphemeral[pendingPasskey](challengeTTL),
 		totpSetup:       security.NewEphemeral[string](totpSetupTTL),
+		deviceCodes:     security.NewEphemeral[string](deviceCodeTTL),
 		loginCeremonies: security.NewEphemeral[loginCeremony](challengeTTL),
 		passkeyUnlocks:  security.NewEphemeral[passkeyUnlock](passkeyUnlockTTL),
 	}
 	for _, l := range []*auth.Limiter{h.terminalLimiter, h.securityLimiter} {
 		l.Now = cfg.Now
 	}
-	h.challenges.Now, h.pendingPasskeys.Now, h.totpSetup.Now = cfg.Now, cfg.Now, cfg.Now
+	h.challenges.Now, h.pendingPasskeys.Now, h.totpSetup.Now, h.deviceCodes.Now = cfg.Now, cfg.Now, cfg.Now, cfg.Now
 	h.loginCeremonies.Now, h.passkeyUnlocks.Now = cfg.Now, cfg.Now
 	h.loadOverrides()
 	h.loadPolicy()
@@ -249,6 +252,7 @@ func New(cfg Config) http.Handler {
 	mux.HandleFunc("POST /api/security/totp", h.requireSession(h.confirmTOTP))
 	mux.HandleFunc("DELETE /api/security/totp", h.requireSession(h.deleteTOTP))
 	mux.HandleFunc("POST /api/security/recovery-codes", h.requireSession(h.regenerateRecovery))
+	mux.HandleFunc("POST /api/security/device-code", h.requireSession(h.createDeviceCode))
 	mux.HandleFunc("POST /api/security/passkey-logins", h.requireSession(h.enrollPasskeyLogin))
 	mux.HandleFunc("DELETE /api/security/passkey-logins/{id}", h.requireSession(h.deletePasskeyLogin))
 	mux.HandleFunc("GET /api/security/users", h.requireAdmin(h.securityUsers))

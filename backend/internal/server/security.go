@@ -295,10 +295,16 @@ func (h *handler) verifySecurity(w http.ResponseWriter, r *http.Request, s auth.
 }
 
 // manageSecurity는 비밀번호와(등록한 수단이 있으면) 그 수단을 다시 확인해 이 세션에 관리 창을 연다. 세션을 빼앗은
-// 쪽이 자기 수단을 등록하거나 남의 수단을 지우지 못하게 한다.
+// 쪽이 자기 수단을 등록하거나 남의 수단을 지우지 못하게 한다. 등록한 수단 대신 다른 기기에서 만든 기기 추가 코드를
+// 받을 수 있다(security_manage.go의 createDeviceCode). 이때는 이 세션에서 수단을 확인한 것이 아니므로 보증 수준을
+// password까지만 올린다.
 func (h *handler) manageSecurity(w http.ResponseWriter, r *http.Request, s auth.Session) {
 	var req api.SecurityManageRequest
 	if !decodeJSONLimit(w, r, &req, maxSecurityBodyBytes) {
+		return
+	}
+	if req.Factor != nil && req.DeviceCode != "" {
+		writeError(w, http.StatusBadRequest, api.ErrBadRequest, "send either a factor or a device code")
 		return
 	}
 	rec, err := h.Security.GetSecurity(s.Username)
@@ -307,7 +313,8 @@ func (h *handler) manageSecurity(w http.ResponseWriter, r *http.Request, s auth.
 		return
 	}
 	needFactor := rec.HasMethods()
-	if needFactor && (req.Factor == nil || req.Factor.Method == api.FactorPassword) {
+	useCode := needFactor && req.DeviceCode != ""
+	if needFactor && !useCode && (req.Factor == nil || req.Factor.Method == api.FactorPassword) {
 		writeError(w, http.StatusBadRequest, api.ErrBadRequest, "a registered factor is required")
 		return
 	}
@@ -315,7 +322,12 @@ func (h *handler) manageSecurity(w http.ResponseWriter, r *http.Request, s auth.
 		return
 	}
 	level := auth.AssurancePassword
-	if needFactor {
+	switch {
+	case useCode:
+		if !h.checkDeviceCode(w, r, s, req.DeviceCode) {
+			return
+		}
+	case needFactor:
 		if !h.checkFactor(w, r, s, *req.Factor) {
 			return
 		}
@@ -562,6 +574,8 @@ func (h *handler) resetSecurityUser(w http.ResponseWriter, r *http.Request, s au
 		writeError(w, http.StatusNotFound, "", "not found")
 		return
 	}
+	// 초기화 전에 만든 기기 추가 코드로 다시 등록한 수단을 관리하지 못하게 지운다.
+	h.deviceCodes.Delete(name)
 	n := h.Sessions.DeleteUser(name)
 	log.Printf("security: methods reset: user=%q by=%q ip=%s sessions_ended=%d", name, s.Username, clientIP(r), n)
 	w.WriteHeader(http.StatusNoContent)

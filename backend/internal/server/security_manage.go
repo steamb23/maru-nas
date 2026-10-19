@@ -11,10 +11,14 @@ import (
 	"onmaru/backend/internal/security"
 )
 
-// 인증 수단 관리(관리 창 필요): TOTP 설정·삭제, 복구 코드 다시 만들기. 패스키는 passkey.go.
+// 인증 수단 관리(관리 창 필요): TOTP 설정·삭제, 복구 코드 다시 만들기, 기기 추가 코드. 패스키는 passkey.go.
 
-// totpSetupTTL은 설정 중인 TOTP 비밀을 기다리는 시간이다.
-const totpSetupTTL = 10 * time.Minute
+const (
+	// totpSetupTTL은 설정 중인 TOTP 비밀을 기다리는 시간이다.
+	totpSetupTTL = 10 * time.Minute
+	// deviceCodeTTL은 기기 추가 코드를 쓸 수 있는 시간이다.
+	deviceCodeTTL = 10 * time.Minute
+)
 
 // addFirstMethod는 rec에 첫 수단을 넣기 직전에 부른다. 첫 수단이면 복구 코드를 새로 만들어 평문을 돌려준다
 // (한 번만 보여 준다). 이미 수단이 있으면 아무것도 하지 않는다.
@@ -156,4 +160,49 @@ func (h *handler) regenerateRecovery(w http.ResponseWriter, r *http.Request, s a
 	}
 	log.Printf("security: recovery codes regenerated: user=%q ip=%s", s.Username, clientIP(r))
 	h.writeSecurityChange(w, s, codes)
+}
+
+// createDeviceCode는 기기 추가 코드를 만든다. 등록한 패스키가 없는 새 기기의 관리 확인이 등록한 수단 대신 받는다.
+// 사용자마다 하나이고 다시 만들면 이전 코드는 버린다. 평문은 이 응답에만 담고 해시만 메모리에 둔다.
+func (h *handler) createDeviceCode(w http.ResponseWriter, r *http.Request, s auth.Session) {
+	if !requireJSON(w, r) || !h.requireManage(w, s) {
+		return
+	}
+	rec, err := h.Security.GetSecurity(s.Username)
+	if err != nil {
+		writeSecurityUnavailable(w, s, err)
+		return
+	}
+	// 수단이 없으면 새 기기의 관리 확인도 비밀번호만 받으므로 코드가 필요 없다.
+	if !rec.HasMethods() {
+		writeError(w, http.StatusBadRequest, api.ErrBadRequest, "register a passkey or an authenticator app first")
+		return
+	}
+	code, hash := security.NewDeviceCode()
+	h.deviceCodes.Put(s.Username, hash)
+	log.Printf("security: device code issued: user=%q ip=%s", s.Username, clientIP(r))
+	writeJSON(w, http.StatusOK, api.DeviceCodeResponse{Code: code, ExpiresInSeconds: int(deviceCodeTTL / time.Second)})
+}
+
+// checkDeviceCode는 관리 확인에서 등록한 수단 대신 받은 기기 추가 코드를 확인한다. 맞을 때만 코드를 지운다
+// (비밀번호를 가진 쪽이 틀린 값을 보내 정상 사용자의 코드를 없애지 못하게). 실패하면 응답을 쓰고 false다.
+func (h *handler) checkDeviceCode(w http.ResponseWriter, r *http.Request, s auth.Session, code string) bool {
+	ip := clientIP(r)
+	done, wait := h.securityLimiter.Begin(ip, s.Username, "")
+	if done == nil {
+		log.Printf("security: verify rate limited: user=%q ip=%s", s.Username, ip)
+		writeRateLimited(w, wait)
+		return false
+	}
+	match := func(hash string) bool { return security.MatchDeviceCode(hash, code) }
+	if _, ok := h.deviceCodes.TakeIf(s.Username, match); !ok {
+		done(auth.Failure)
+		log.Printf("security: device code failed: user=%q ip=%s", s.Username, ip)
+		sleep(r.Context(), h.FailDelay)
+		writeError(w, http.StatusBadRequest, api.ErrFactorFailed, "verification failed")
+		return false
+	}
+	done(auth.Success)
+	log.Printf("security: device code used: user=%q ip=%s", s.Username, ip)
+	return true
 }

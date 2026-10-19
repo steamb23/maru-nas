@@ -1146,6 +1146,19 @@ type SecurityManageRequest struct {
 	Password string `json:"password"`
 	// Factor는 등록한 2차 수단의 확인이다. 수단이 없으면 비운다.
 	Factor *SecurityVerifyRequest `json:"factor,omitempty"`
+	// DeviceCode는 등록한 수단 대신 받는 기기 추가 코드다(POST /api/security/device-code). Factor와 함께 보내지
+	// 않는다. 맞으면 관리 창을 열되 보증 수준은 password까지만 올린다.
+	DeviceCode string `json:"deviceCode,omitempty"`
+}
+
+// DeviceCodeResponse는 POST /api/security/device-code의 응답이다. 수단이 있는 기기가 만들어, 그 패스키가 없는
+// 새 기기의 관리 확인(SecurityManageRequest.DeviceCode)에 입력하게 한다. 사용자마다 하나이고 다시 만들면 이전
+// 코드는 쓸 수 없다.
+type DeviceCodeResponse struct {
+	// Code는 한 번만 쓸 수 있는 코드(XXXX-XXXX)다. 이 응답에만 담긴다.
+	Code string `json:"code"`
+	// ExpiresInSeconds는 코드를 쓸 수 있는 남은 초다.
+	ExpiresInSeconds int `json:"expiresInSeconds"`
 }
 
 // 패스키 challenge의 목적. PasskeyChallengeRequest.Purpose에 들어간다.

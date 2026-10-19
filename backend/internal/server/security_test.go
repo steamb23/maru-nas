@@ -230,6 +230,95 @@ func TestSecurityTOTPEnrollAndVerify(t *testing.T) {
 	wantCode(t, q.do(http.MethodDelete, "/api/security/totp", nil), http.StatusForbidden, api.ErrManageRequired)
 }
 
+// issueDeviceCode는 b(관리 창이 열린 세션)로 기기 추가 코드를 만든다.
+func (b *browser) issueDeviceCode() api.DeviceCodeResponse {
+	b.e.t.Helper()
+	rec := b.do(http.MethodPost, "/api/security/device-code", struct{}{})
+	wantStatus(b.e.t, rec, http.StatusOK)
+	return decode[api.DeviceCodeResponse](b.e.t, rec)
+}
+
+func (b *browser) manage(req api.SecurityManageRequest) *httptest.ResponseRecorder {
+	b.e.t.Helper()
+	return b.do(http.MethodPost, "/api/security/manage", req)
+}
+
+func TestSecurityDeviceCode(t *testing.T) {
+	// 관리 창과 코드가 닫힐 때까지 OMV 세션이 만료되지 않게 timeout을 늘린다.
+	e := newEnv(t, envOptions{omvTimeout: time.Hour})
+	old := e.browser()
+	wantStatus(t, old.login("user", "user"), http.StatusOK)
+
+	// 관리 창이 열린 세션만, 수단을 등록한 사용자만 만든다.
+	wantCode(t, old.do(http.MethodPost, "/api/security/device-code", struct{}{}), http.StatusForbidden, api.ErrManageRequired)
+	wantStatus(t, old.manage(api.SecurityManageRequest{Password: "user"}), http.StatusOK)
+	wantCode(t, old.do(http.MethodPost, "/api/security/device-code", struct{}{}), http.StatusBadRequest, api.ErrBadRequest)
+	old.enrollTOTP("user")
+	first := old.issueDeviceCode()
+	if len(first.Code) != 9 || first.Code[4] != '-' || first.ExpiresInSeconds != int(deviceCodeTTL/time.Second) {
+		t.Fatalf("device code = %+v", first)
+	}
+	// 다시 만들면 이전 코드는 쓸 수 없다.
+	code := old.issueDeviceCode().Code
+
+	nb := e.browser()
+	wantStatus(t, nb.login("user", "user"), http.StatusOK)
+	wantCode(t, nb.manage(api.SecurityManageRequest{Password: "user", DeviceCode: first.Code}), http.StatusBadRequest, api.ErrFactorFailed)
+	wantCode(t, nb.manage(api.SecurityManageRequest{
+		Password: "user", DeviceCode: code, Factor: &api.SecurityVerifyRequest{Method: api.FactorTOTP, Code: "000000"},
+	}), http.StatusBadRequest, api.ErrBadRequest)
+	// 비밀번호가 틀리면 코드를 보지 않고, 틀린 코드는 맞는 코드를 지우지 않는다.
+	wantCode(t, nb.manage(api.SecurityManageRequest{Password: "wrong", DeviceCode: code}), http.StatusBadRequest, api.ErrFactorFailed)
+	wantCode(t, nb.manage(api.SecurityManageRequest{Password: "user", DeviceCode: "AAAA-AAAA"}), http.StatusBadRequest, api.ErrFactorFailed)
+	// 새 기기는 비밀번호와 코드로 관리 창을 연다. 이 세션에서 수단을 확인한 것은 아니므로 password까지만 오른다.
+	rec := nb.manage(api.SecurityManageRequest{Password: "user", DeviceCode: strings.ToLower(code)})
+	wantStatus(t, rec, http.StatusOK)
+	if st := decode[api.SecurityStatus](t, rec); st.ManageSeconds != int(manageWindow/time.Second) || st.Assurance != api.AssurancePassword ||
+		slices.Contains(st.Methods, "deviceCode") {
+		t.Fatalf("manage with device code = %+v", st)
+	}
+
+	// 코드는 한 번만 쓴다.
+	again := e.browser()
+	wantStatus(t, again.login("user", "user"), http.StatusOK)
+	wantCode(t, again.manage(api.SecurityManageRequest{Password: "user", DeviceCode: code}), http.StatusBadRequest, api.ErrFactorFailed)
+	// 2차 수단이 아니므로 세션 중 확인에는 쓸 수 없다.
+	wantCode(t, again.do(http.MethodPost, "/api/security/verify", map[string]string{"method": "deviceCode", "code": code}),
+		http.StatusBadRequest, api.ErrBadRequest)
+	// 10분이 지나면 쓸 수 없다.
+	late := old.issueDeviceCode()
+	e.clk.Add(deviceCodeTTL)
+	wantCode(t, again.manage(api.SecurityManageRequest{Password: "user", DeviceCode: late.Code}), http.StatusBadRequest, api.ErrFactorFailed)
+
+	logs := e.logs.String()
+	for _, c := range []string{first.Code, code, late.Code} {
+		if strings.Contains(logs, c) || strings.Contains(logs, strings.ReplaceAll(c, "-", "")) {
+			t.Errorf("device code %s logged:\n%s", c, logs)
+		}
+	}
+	for _, want := range []string{`security: device code issued: user="user"`, `security: device code used: user="user"`, `security: device code failed: user="user"`} {
+		if !strings.Contains(logs, want) {
+			t.Errorf("missing log %q:\n%s", want, logs)
+		}
+	}
+}
+
+func TestSecurityDeviceCodeClearedByReset(t *testing.T) {
+	e := newEnv(t, envOptions{omvTimeout: time.Hour})
+	u := e.browser()
+	wantStatus(t, u.login("user", "user"), http.StatusOK)
+	u.enrollTOTP("user")
+	code := u.issueDeviceCode().Code
+	wantStatus(t, e.strongAdmin().do(http.MethodDelete, "/api/security/users/user", nil), http.StatusNoContent)
+
+	// 초기화 뒤 다시 등록해도 초기화 전에 만든 코드는 쓸 수 없다.
+	wantStatus(t, u.login("user", "user"), http.StatusOK)
+	u.enrollTOTP("user")
+	nb := e.browser()
+	wantStatus(t, nb.login("user", "user"), http.StatusOK)
+	wantCode(t, nb.manage(api.SecurityManageRequest{Password: "user", DeviceCode: code}), http.StatusBadRequest, api.ErrFactorFailed)
+}
+
 func TestSecurityDeleteLastMethodClearsRecovery(t *testing.T) {
 	e := newEnv(t, envOptions{})
 	b := e.browser()

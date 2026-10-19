@@ -131,6 +131,27 @@ func TestRecoveryCodes(t *testing.T) {
 	}
 }
 
+func TestDeviceCode(t *testing.T) {
+	code, hash := NewDeviceCode()
+	if len(code) != 9 || code[4] != '-' || code != strings.ToUpper(code) {
+		t.Fatalf("code %q", code)
+	}
+	if other, _ := NewDeviceCode(); other == code {
+		t.Errorf("same code twice: %q", code)
+	}
+	// 소문자·공백·하이픈 없이 입력해도 맞는다.
+	for _, in := range []string{code, strings.ToLower(code), strings.ReplaceAll(code, "-", ""), strings.ReplaceAll(code, "-", " ")} {
+		if !MatchDeviceCode(hash, in) {
+			t.Errorf("%q rejected", in)
+		}
+	}
+	for _, bad := range []string{"", code[:4], code + "A", "AAAA-AAAA"} {
+		if MatchDeviceCode(hash, bad) {
+			t.Errorf("%q accepted", bad)
+		}
+	}
+}
+
 func TestNormalize(t *testing.T) {
 	r := Record{Recovery: []string{"h"}, Handle: []byte{1}, Passkeys: []Passkey{}}
 	if !Normalize(&r) || r.Recovery != nil || r.Handle != nil || r.Passkeys != nil {
@@ -255,10 +276,26 @@ func TestEphemeral(t *testing.T) {
 	if _, ok := e.Take("a"); ok {
 		t.Error("taken twice")
 	}
+	// TakeIf는 조건이 맞을 때만 꺼내 지운다.
+	e.Put("c", "3")
+	if _, ok := e.TakeIf("c", func(v string) bool { return v == "x" }); ok {
+		t.Error("taken although the condition failed")
+	}
+	if v, ok := e.TakeIf("c", func(v string) bool { return v == "3" }); !ok || v != "3" {
+		t.Fatalf("take if %q %v", v, ok)
+	}
+	if _, ok := e.Peek("c"); ok {
+		t.Error("value left after take if")
+	}
 	e.Put("b", "2")
 	now = now.Add(time.Minute)
 	if _, ok := e.Take("b"); ok {
 		t.Error("expired value taken")
+	}
+	e.Put("d", "4")
+	now = now.Add(time.Minute)
+	if _, ok := e.TakeIf("d", func(string) bool { return true }); ok {
+		t.Error("expired value taken by take if")
 	}
 	for i := range maxEphemeral + 5 {
 		e.Put(string(rune('a'+i%26))+strings.Repeat("x", i), "v")
