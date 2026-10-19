@@ -5,13 +5,8 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
-)
 
-// /etc/default/onmaru-upgrade(config.UpgradeEnvFile)의 키. 업그레이드 서비스(--upgrade-service)만 읽는다.
-const (
-	envUpgradeRepo = "ONMARU_UPGRADE_REPO"
-	envUpgradeUser = "ONMARU_UPGRADE_USER"
-	envUpgradePath = "ONMARU_UPGRADE_PATH"
+	"onmaru/backend/config"
 )
 
 // buildTools는 대시보드에서 업그레이드의 확인·빌드에 필요한 명령이다. 기본 빌드 PATH는 이 명령을 찾은 디렉터리다.
@@ -34,13 +29,13 @@ var settingWebUpgrade = &Setting{
 		{
 			File:    UpgradeEnv,
 			Comment: "Repository to build from (the checkout install.sh ran from).",
-			Key:     envUpgradeRepo,
+			Key:     config.EnvUpgradeRepo,
 			Value:   func(c *Context) string { return c.RepoDir },
 		},
 		{
 			File:    UpgradeEnv,
 			Comment: "Account that runs git and the build: the repository owner, never root.",
-			Key:     envUpgradeUser,
+			Key:     config.EnvUpgradeUser,
 			Value: func(c *Context) string {
 				_, owner := repoOwner(c)
 				return owner
@@ -114,7 +109,7 @@ var settingBuildPath = &Setting{
 	Env: []EnvLine{{
 		File:    UpgradeEnv,
 		Comment: "PATH for git, Go, Node.js and make when building as that account.",
-		Key:     envUpgradePath,
+		Key:     config.EnvUpgradePath,
 	}},
 	When:    func(v Values) bool { return v.Get(nameWebUpgrade) == "yes" },
 	Default: defaultBuildPath,
@@ -122,7 +117,7 @@ var settingBuildPath = &Setting{
 		if c.Opts.Action == ActionInstall {
 			return "", false
 		}
-		v := c.Installed.UpgradeEnv.Value(envUpgradePath)
+		v := c.Installed.UpgradeEnv.Value(config.EnvUpgradePath)
 		return v, v != ""
 	},
 	Validate: func(c *Context, v string) error {

@@ -11,7 +11,7 @@ After=network-online.target
 Type=oneshot
 ExecStart={{.UpgradeInstallerDst}} --upgrade-service
 # Builds take minutes (npm ci, frontend, Go).
-TimeoutStartSec=2h
+TimeoutStartSec={{.UpgradeTimeout}}
 Nice=10
 PrivateTmp=yes
 NoNewPrivileges=yes

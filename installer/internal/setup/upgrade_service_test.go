@@ -170,7 +170,7 @@ func newServiceFixture(t *testing.T) *serviceFixture {
 	if err != nil {
 		t.Fatal(err)
 	}
-	f.put(config.UpgradeEnvFile, envUpgradeRepo+"="+f.work+"\n"+envUpgradeUser+"="+u.Username+"\n"+envUpgradePath+"="+f.path+"\n", 0o644)
+	f.put(config.UpgradeEnvFile, config.EnvUpgradeRepo+"="+f.work+"\n"+config.EnvUpgradeUser+"="+u.Username+"\n"+config.EnvUpgradePath+"="+f.path+"\n", 0o644)
 	f.record(f.revA, "0.9.0")
 	return f
 }
@@ -317,7 +317,7 @@ func TestUpgradeServiceRemote(t *testing.T) {
 	// 설정 파일과 적용 요청은 4KiB를 넘을 수 있다(긴 빌드 PATH, 설정 32개 × 값 512바이트).
 	u, _ := user.Current()
 	long := f.path + ":" + strings.TrimSuffix(strings.Repeat("/nonexistent/"+strings.Repeat("d", 90)+":", 30), ":")
-	f.put(config.UpgradeEnvFile, "# "+strings.Repeat("comment ", 250)+"\n"+envUpgradeRepo+"="+f.work+"\n"+envUpgradeUser+"="+u.Username+"\n"+envUpgradePath+"="+long+"\n", 0o644)
+	f.put(config.UpgradeEnvFile, "# "+strings.Repeat("comment ", 250)+"\n"+config.EnvUpgradeRepo+"="+f.work+"\n"+config.EnvUpgradeUser+"="+u.Username+"\n"+config.EnvUpgradePath+"="+long+"\n", 0o644)
 	settings := map[string]string{"public-origin": "https://desk.example.lan"}
 	data, _ := json.Marshal(config.UpgradeApplyRequest{Format: config.UpgradeRequestFormat, Target: f.revB, Settings: settings,
 		User: "bob", RequestedAt: "2026-10-19T01:00:00Z" + strings.Repeat(" ", 20<<10)})
@@ -456,12 +456,12 @@ func TestUpgradeServiceCheckReasons(t *testing.T) {
 		t.Fatal(err)
 	}
 	u, _ := user.Current()
-	f.put(config.UpgradeEnvFile, envUpgradeRepo+"="+link+"\n"+envUpgradeUser+"="+u.Username+"\n"+envUpgradePath+"="+f.path+"\n", 0o644)
+	f.put(config.UpgradeEnvFile, config.EnvUpgradeRepo+"="+link+"\n"+config.EnvUpgradeUser+"="+u.Username+"\n"+config.EnvUpgradePath+"="+f.path+"\n", 0o644)
 	if chk := check(config.UpgradeModeLocal); !slices.Equal(reasonIDs(chk.Manual), []string{config.UpgradeReasonRepository}) {
 		t.Errorf("symlinked repository %+v", chk.Manual)
 	}
 	// 빌드 PATH에 도구가 없다.
-	f.put(config.UpgradeEnvFile, envUpgradeRepo+"="+f.work+"\n"+envUpgradeUser+"="+u.Username+"\n"+envUpgradePath+"=/nonexistent\n", 0o644)
+	f.put(config.UpgradeEnvFile, config.EnvUpgradeRepo+"="+f.work+"\n"+config.EnvUpgradeUser+"="+u.Username+"\n"+config.EnvUpgradePath+"=/nonexistent\n", 0o644)
 	if chk := check(config.UpgradeModeLocal); !slices.Equal(reasonIDs(chk.Manual), []string{config.UpgradeReasonTools}) ||
 		!strings.Contains(chk.Manual[0].Text.En, "git, go, npm, make") {
 		t.Errorf("tools %+v", chk.Manual)

@@ -60,15 +60,15 @@ type upgradeConfig struct {
 // parseUpgradeConfig는 설정 파일을 읽고 검사한다.
 func parseUpgradeConfig(data []byte) (upgradeConfig, error) {
 	env := ParseEnv(data)
-	cfg := upgradeConfig{Repo: env.Value(envUpgradeRepo), User: env.Value(envUpgradeUser), Path: env.Value(envUpgradePath)}
+	cfg := upgradeConfig{Repo: env.Value(config.EnvUpgradeRepo), User: env.Value(config.EnvUpgradeUser), Path: env.Value(config.EnvUpgradePath)}
 	switch {
 	case !filepath.IsAbs(cfg.Repo) || filepath.Clean(cfg.Repo) != cfg.Repo:
-		return cfg, errors.New(envUpgradeRepo + " must be an absolute path")
+		return cfg, errors.New(config.EnvUpgradeRepo + " must be an absolute path")
 	case !userNameRE.MatchString(cfg.User) || len(cfg.User) > 32:
-		return cfg, errors.New(envUpgradeUser + " is not a valid user name")
+		return cfg, errors.New(config.EnvUpgradeUser + " is not a valid user name")
 	}
 	if err := checkBuildPath(cfg.Path); err != nil {
-		return cfg, fmt.Errorf("%s: %w", envUpgradePath, err)
+		return cfg, fmt.Errorf("%s: %w", config.EnvUpgradePath, err)
 	}
 	return cfg, nil
 }

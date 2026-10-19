@@ -25,6 +25,8 @@ type Helper interface {
 	// SSHAuthorize, SSHRevoke는 웹 터미널이 쓰는 짧은 수명의 SSH 키를 사용자의 authorized_keys에 넣고 지운다.
 	SSHAuthorize(ctx context.Context, ticket, publicKey string) error
 	SSHRevoke(ctx context.Context, ticket, publicKey string) error
+	// UpgradeApply는 대시보드에서 업그레이드의 적용 요청을 업그레이드 서비스에 넘긴다(root 연산, 상승한 티켓).
+	UpgradeApply(ctx context.Context, ticket, target string, settings map[string]string) error
 }
 
 const (
@@ -155,6 +157,10 @@ func (h *handler) writeHelperError(w http.ResponseWriter, s auth.Session, err er
 		writeError(w, http.StatusForbidden, api.ErrElevationNotAllowed, "this account cannot elevate")
 	case proto.CodeElevationRequired:
 		writeError(w, http.StatusForbidden, api.ErrElevationRequired, "elevation required")
+	case proto.CodeUpgradeDisabled:
+		writeError(w, http.StatusConflict, api.ErrUpgradeDisabled, "upgrading from the dashboard is not enabled in the privileged helper")
+	case proto.CodeBadRequest:
+		writeError(w, http.StatusBadRequest, api.ErrBadRequest, "the privileged helper rejected the request")
 	default:
 		log.Printf("helper: user=%q: %s", s.Username, pe.Code)
 		writeError(w, http.StatusServiceUnavailable, api.ErrHelperUnavailable, "privileged helper failed")

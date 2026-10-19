@@ -3,7 +3,9 @@ package setup
 import (
 	"bytes"
 	"embed"
+	"fmt"
 	"text/template"
+	"time"
 
 	"onmaru/backend/config"
 )
@@ -27,7 +29,7 @@ type unitData struct {
 	HelperName, HelperSocket, HelperEnvFile, HelperBinDst string
 
 	UpgradeName, UpgradeInstallerDst, UpgradeEnvFile, UpgradeCheckRequest, UpgradeApplyRequest string
-	UpgradeRequestDirName                                                                      string
+	UpgradeRequestDirName, UpgradeTimeout                                                      string
 }
 
 func (c *Context) unitData() unitData {
@@ -52,7 +54,19 @@ func (c *Context) unitData() unitData {
 		UpgradeCheckRequest:   upgradeCheckRequest,
 		UpgradeApplyRequest:   upgradeApplyRequest,
 		UpgradeRequestDirName: upgradeRequestDirName,
+		UpgradeTimeout:        systemdSpan(config.UpgradeServiceTimeout),
 	}
+}
+
+// systemdSpan은 유닛의 시간 값(TimeoutStartSec= 등)이다. 시·분으로 나누어떨어지면 그 단위로 쓴다.
+func systemdSpan(d time.Duration) string {
+	switch {
+	case d%time.Hour == 0:
+		return fmt.Sprintf("%dh", d/time.Hour)
+	case d%time.Minute == 0:
+		return fmt.Sprintf("%dmin", d/time.Minute)
+	}
+	return fmt.Sprintf("%ds", (d+time.Second-1)/time.Second)
 }
 
 // renderUnit은 유닛 템플릿(templates/<name>.tmpl)을 채운다.

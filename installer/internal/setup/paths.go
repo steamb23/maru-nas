@@ -8,7 +8,7 @@ const (
 	binDst      = "/usr/local/bin/onmaru"
 	unitFile    = "/etc/systemd/system/onmaru.service"
 	envFile     = "/etc/default/onmaru"
-	stateDir    = "/var/lib/onmaru"
+	stateDir    = config.InstalledStateDir
 	runtimeDir  = "/run/onmaru"
 	// socketPath는 Unix 소켓 수신 주소다. 소켓 디렉터리는 systemd RuntimeDirectory=가 만들고
 	// ProtectSystem=strict에서도 쓸 수 있는 곳이어야 하므로 이 경로만 받는다.

@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
@@ -30,6 +31,7 @@ import (
 	"onmaru/backend/internal/security"
 	"onmaru/backend/internal/server"
 	"onmaru/backend/internal/terminal"
+	"onmaru/backend/internal/upgrade"
 	"onmaru/backend/internal/web"
 )
 
@@ -148,6 +150,8 @@ func main() {
 		{flag: "public-origin", env: config.EnvPublicOrigin, value: *publicOrigin, emptyIsSet: true},
 	})
 
+	upgrades := upgrade.New(upgradePaths(os.Getenv(envDevUpgradeRoot), *stateDir), nil)
+
 	var helper server.Helper
 	if *helperSocket != "" {
 		hc := client.New(*helperSocket)
@@ -185,6 +189,7 @@ func main() {
 				Logf:     log.Printf,
 			}),
 			TerminalEnabled: *terminalEnabled,
+			Upgrade:         upgrades,
 			Security:        store,
 			RP:              rp,
 			Hostname:        hostname,
@@ -301,4 +306,23 @@ func runtimeSettings(explicit map[string]bool, lookup func(string) (string, bool
 		out = append(out, api.RuntimeSetting{Flag: e.flag, Env: e.env, Value: e.value, Source: source})
 	}
 	return out
+}
+
+// envDevUpgradeRoot는 개발 서버(make dev-fake) 전용 환경 변수다. 대시보드에서 업그레이드의 root 쪽 설정 파일과 상태
+// 파일 경로 앞에 붙는 가짜 루트이며, 가짜 업그레이드 서비스(cmd/fakeomv)가 그 아래에 쓴다. 운영에서 바꿀 이유가 없는
+// 경로이므로 플래그로 두지 않는다(가동 설정 목록에도 넣지 않는다).
+const envDevUpgradeRoot = "ONMARU_DEV_UPGRADE_ROOT"
+
+// upgradePaths는 대시보드에서 업그레이드의 파일 경로다. 업그레이드 서비스의 경로 유닛은 설치한 상태 디렉터리
+// (config.InstalledStateDir) 안의 확인 요청만 지켜보므로, 상태 디렉터리가 그곳이 아니면 확인 요청을 쓰지 않는다
+// (업데이트 페이지는 state-dir로 꺼진다). 개발용 가짜 루트가 있으면 지금 상태 디렉터리에 쓴다.
+func upgradePaths(devRoot, stateDir string) upgrade.Paths {
+	if devRoot != "" {
+		log.Printf("upgrade: dev root %s (%s)", devRoot, envDevUpgradeRoot)
+		return upgrade.NewPaths(devRoot, stateDir)
+	}
+	if stateDir != "" && filepath.Clean(stateDir) != config.InstalledStateDir {
+		stateDir = ""
+	}
+	return upgrade.NewPaths("", stateDir)
 }

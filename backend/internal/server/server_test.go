@@ -25,6 +25,7 @@ import (
 	"onmaru/backend/internal/security"
 	"onmaru/backend/internal/terminal"
 	"onmaru/backend/internal/terminal/sshfake"
+	"onmaru/backend/internal/upgrade"
 )
 
 type fakeSource struct {
@@ -69,6 +70,9 @@ type env struct {
 	// sshd, terminal은 envOptions.terminal일 때 띄운 가짜 sshd와 웹 터미널 접속이다.
 	sshd     *sshfake.Server
 	terminal *terminal.Manager
+	// upgradeRoot, upgradeState는 envOptions.upgrade일 때 대시보드에서 업그레이드의 가짜 루트(설정·상태 파일)와 상태
+	// 디렉터리(확인 요청)다.
+	upgradeRoot, upgradeState string
 }
 
 type envOptions struct {
@@ -104,6 +108,8 @@ type envOptions struct {
 	// security, rp는 Config의 Security, RP다(보안 강화 모드).
 	security security.Store
 	rp       *security.RP
+	// upgrade면 대시보드에서 업그레이드의 파일을 임시 디렉터리에 둔다(env.upgradeRoot, upgradeState).
+	upgrade bool
 }
 
 func newEnv(t *testing.T, o envOptions) *env {
@@ -180,6 +186,13 @@ func newEnv(t *testing.T, o envOptions) *env {
 			SSHDConfig: filepath.Join(dir, "sshd_config")})
 	}
 
+	var upgrades *upgrade.Manager
+	var upgradeRoot, upgradeState string
+	if o.upgrade {
+		upgradeRoot, upgradeState = t.TempDir(), t.TempDir()
+		upgrades = upgrade.New(upgrade.NewPaths(upgradeRoot, upgradeState), clk.Now)
+	}
+
 	h := New(Config{
 		System:            o.system,
 		Static:            static,
@@ -198,6 +211,7 @@ func newEnv(t *testing.T, o envOptions) *env {
 		Helper:            helper,
 		Terminal:          manager,
 		TerminalEnabled:   o.terminal && !o.terminalOff,
+		Upgrade:           upgrades,
 		Security:          o.security,
 		RP:                o.rp,
 		CheckInterval:     o.interval,
@@ -205,7 +219,7 @@ func newEnv(t *testing.T, o envOptions) *env {
 		Now:               clk.Now,
 	})
 	return &env{t: t, h: h, fake: fake, omvTS: ts, clk: clk, store: store, logs: logs, helper: fakeHelper,
-		sshd: sshd, terminal: manager}
+		sshd: sshd, terminal: manager, upgradeRoot: upgradeRoot, upgradeState: upgradeState}
 }
 
 // browser는 쿠키를 보관하는 간이 브라우저다.

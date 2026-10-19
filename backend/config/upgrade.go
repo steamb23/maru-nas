@@ -23,6 +23,9 @@ const (
 	UpgradeRequestDir = "/run/onmaru-upgrade"
 	// UpgradeApplyRequestName은 UpgradeRequestDir 안의 적용 요청 파일 이름이다.
 	UpgradeApplyRequestName = "apply.json"
+	// InstalledStateDir는 설치한 onmaru의 상태 디렉터리(유닛의 StateDirectory=onmaru)다. 경로 유닛은 이 안의 확인
+	// 요청만 지켜보므로, 상태 디렉터리를 옮긴 onmaru는 대시보드에서 업그레이드를 쓸 수 없다.
+	InstalledStateDir = "/var/lib/onmaru"
 )
 
 // InstallRecordFormat은 InstallRecord의 형식 번호다. 필드를 빼거나 뜻을 바꾸면 올린다.

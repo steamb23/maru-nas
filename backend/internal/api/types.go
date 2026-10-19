@@ -2,7 +2,11 @@
 // 이 패키지에서 tygo로 TypeScript 타입을 생성한다(tygo.yaml 참고).
 package api
 
-import "encoding/json"
+import (
+	"encoding/json"
+
+	"onmaru/backend/config"
+)
 
 // HealthResponse는 GET /api/health의 응답이다.
 type HealthResponse struct {
@@ -893,13 +897,19 @@ const (
 	ErrPasskeyUVUnsupported = "passkey_uv_unsupported"
 	// ErrSecurityUnavailable은 수단 기록을 읽을 수 없다는 뜻이다(손상된 파일 등). 관리자가 초기화해야 한다.
 	ErrSecurityUnavailable = "security_unavailable"
+	// ErrUpgradeDisabled는 대시보드에서 업그레이드가 꺼져 있다는 뜻이다(UpgradeInfo.DisabledReason).
+	ErrUpgradeDisabled = "upgrade_disabled"
+	// ErrUpgradeBusy는 확인 요청이 남아 있거나 확인·업그레이드가 진행 중이라는 뜻이다.
+	ErrUpgradeBusy = "upgrade_busy"
+	// ErrUpgradeOutdated는 그 커밋으로 업그레이드할 수 있다고 끝난 확인이 없다는 뜻이다(다시 확인해야 한다).
+	ErrUpgradeOutdated = "upgrade_outdated"
 )
 
 // ErrorResponse는 2xx가 아닌 상태 코드와 함께 반환된다.
 type ErrorResponse struct {
 	Error string `json:"error"`
 	// Code는 화면에서 분기할 때 쓰는 오류 종류다. 없을 수 있다.
-	Code string `json:"code,omitempty" tstype:"'invalid_credentials' | 'rate_limited' | 'challenge_failed' | 'challenge_expired' | 'omv_unavailable' | 'unauthorized' | 'bad_request' | 'rpc_forbidden' | 'admin_required' | 'plugin_missing' | 'omv_error' | 'action_busy' | 'action_failed' | 'action_timeout' | 'config_dirty' | 'image_too_large' | 'unsupported_image' | 'profile_readonly' | 'helper_unavailable' | 'helper_reauth' | 'elevation_failed' | 'elevation_not_allowed' | 'elevation_required' | 'terminal_disabled' | 'security_required' | 'factor_failed' | 'manage_required' | 'passkey_unavailable' | 'passkey_uv_unsupported' | 'security_unavailable'"`
+	Code string `json:"code,omitempty" tstype:"'invalid_credentials' | 'rate_limited' | 'challenge_failed' | 'challenge_expired' | 'omv_unavailable' | 'unauthorized' | 'bad_request' | 'rpc_forbidden' | 'admin_required' | 'plugin_missing' | 'omv_error' | 'action_busy' | 'action_failed' | 'action_timeout' | 'config_dirty' | 'image_too_large' | 'unsupported_image' | 'profile_readonly' | 'helper_unavailable' | 'helper_reauth' | 'elevation_failed' | 'elevation_not_allowed' | 'elevation_required' | 'terminal_disabled' | 'security_required' | 'factor_failed' | 'manage_required' | 'passkey_unavailable' | 'passkey_uv_unsupported' | 'security_unavailable' | 'upgrade_disabled' | 'upgrade_busy' | 'upgrade_outdated'"`
 	// RetryAfterSeconds는 rate_limited일 때 다시 시도할 수 있기까지 남은 초다.
 	RetryAfterSeconds int `json:"retryAfterSeconds,omitempty"`
 	// Required는 security_required일 때 거쳐야 하는 단계다.
@@ -1205,4 +1215,52 @@ type SecurityUserInfo struct {
 	RecoveryCodes int    `json:"recoveryCodes"`
 	// Unreadable은 기록을 읽을 수 없다는 뜻이다(손상된 파일). 초기화하면 지운다.
 	Unreadable bool `json:"unreadable,omitempty"`
+}
+
+// 대시보드에서 업그레이드를 쓸 수 없는 이유(UpgradeInfo.DisabledReason).
+const (
+	// UpgradeNotEnabled: 설치기가 대시보드에서 업그레이드를 켜지 않았다(/etc/default/onmaru-upgrade가 없다).
+	UpgradeNotEnabled = "not-enabled"
+	// UpgradeNoHelper: 권한 도우미를 설정하지 않았다(-helper-socket). 업그레이드는 도우미의 root 연산으로 요청한다.
+	UpgradeNoHelper = "no-helper"
+	// UpgradeStateDir: 상태 디렉터리가 없거나 설치한 위치(/var/lib/onmaru)가 아니다. 업그레이드 서비스의 경로 유닛은
+	// 그 안의 확인 요청만 지켜본다.
+	UpgradeStateDir = "state-dir"
+)
+
+// UpgradeInfo는 GET /api/upgrade(관리자)의 응답이다. 설정 앱의 업데이트 페이지가 보여 준다.
+// Status는 업그레이드 서비스가 쓴 상태 파일 그대로이고 형식은 backend/config(upgrade_request.go)에 있다.
+type UpgradeInfo struct {
+	// Enabled는 대시보드에서 업그레이드를 쓸 수 있다는 뜻이다. 아니면 DisabledReason에 이유가 있다.
+	Enabled        bool   `json:"enabled"`
+	DisabledReason string `json:"disabledReason,omitempty" tstype:"'not-enabled' | 'no-helper' | 'state-dir'"`
+	// Repo, User는 업그레이드할 저장소와 저장소 소유자(빌드 계정)다. 수동 재설치 안내에 쓴다. 모르면 없다.
+	Repo string `json:"repo,omitempty"`
+	User string `json:"user,omitempty"`
+	// Pending은 확인 요청을 업그레이드 서비스가 아직 가져가지 않았다는 뜻이다. PendingStalled는 1분 넘게 남아 있다는
+	// 뜻이다(경로 유닛 onmaru-upgrade.path가 돌지 않는다).
+	Pending        bool `json:"pending"`
+	PendingStalled bool `json:"pendingStalled"`
+	// Interrupted는 상태 파일이 확인·업그레이드 중인 채로 업그레이드 서비스의 시간 상한(2시간)보다 오래 바뀌지 않았다는
+	// 뜻이다. 서비스가 중단됐으므로 다시 확인할 수 있다.
+	Interrupted bool `json:"interrupted"`
+	// Version, Revision은 지금 실행 중인 onmaru의 버전과 커밋이다(Revision은 모르면 없다).
+	Version  string `json:"version"`
+	Revision string `json:"revision,omitempty"`
+	// Status는 업그레이드 서비스의 상태 파일이다. 없거나 읽을 수 없으면 null이다.
+	Status *config.UpgradeStatus `json:"status"`
+}
+
+// StartUpgradeCheckRequest는 POST /api/upgrade/check의 본문이다.
+type StartUpgradeCheckRequest struct {
+	// Mode는 확인 방식이다. remote는 git fetch 뒤 추적 브랜치, local은 지금 체크아웃(HEAD)을 대상으로 삼는다.
+	Mode string `json:"mode" tstype:"'remote' | 'local'"`
+}
+
+// StartUpgradeRequest는 POST /api/upgrade/apply의 본문이다. root 권한 상승이 필요하다.
+type StartUpgradeRequest struct {
+	// Target은 확인이 정한 대상 커밋(40자리 16진수)이다.
+	Target string `json:"target"`
+	// Settings는 업그레이드 계획이 물은 설정의 이름과 값이다(confirm은 yes/no).
+	Settings map[string]string `json:"settings"`
 }

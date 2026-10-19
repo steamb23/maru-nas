@@ -190,6 +190,12 @@ func (c *Client) SSHRevoke(ctx context.Context, ticket, publicKey string) error 
 	return c.run(ctx, ticket, proto.ScopeUser, proto.ActionSSHRevoke, proto.SSHKeyParams{PublicKey: publicKey}, nil)
 }
 
+// UpgradeApply는 대시보드에서 업그레이드의 적용 요청(대상 커밋, 설정 이름·값)을 업그레이드 서비스에 넘긴다(root 권한,
+// 상승한 티켓). 진행할 수 있는지는 업그레이드 서비스가 확인하고 결과는 상태 파일에 쓴다.
+func (c *Client) UpgradeApply(ctx context.Context, ticket, target string, settings map[string]string) error {
+	return c.run(ctx, ticket, proto.ScopeRoot, proto.ActionUpgradeApply, proto.UpgradeApplyParams{Target: target, Settings: settings}, nil)
+}
+
 // Body는 도우미가 보내는 파일 내용이다. 다 읽었거나 그만 읽을 때 Close한다.
 // 도우미가 Size보다 적게 보내고 끊으면 io.ErrUnexpectedEOF다.
 type Body struct {

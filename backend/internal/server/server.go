@@ -19,6 +19,7 @@ import (
 	"onmaru/backend/internal/prefs"
 	"onmaru/backend/internal/security"
 	"onmaru/backend/internal/terminal"
+	"onmaru/backend/internal/upgrade"
 )
 
 // SystemSource는 시스템 통계를 제공한다. *sysinfo.Reader가 구현한다.
@@ -94,6 +95,8 @@ type Config struct {
 	Terminal *terminal.Manager
 	// TerminalEnabled는 -terminal이다. 설정의 서버 페이지에서 덮어쓴 값이 있으면 그 값이 우선한다.
 	TerminalEnabled bool
+	// Upgrade는 대시보드에서 업그레이드의 파일(상태 파일, 설정 파일, 확인 요청)이다. nil이면 꺼진 것으로 본다.
+	Upgrade *upgrade.Manager
 	// Security는 보안 강화 모드의 수단 기록 저장소다. nil이면 메모리에 둔다.
 	Security security.Store
 	// RP는 패스키의 신뢰 당사자(-public-origin)다. nil이면 패스키를 쓸 수 없다(TOTP·복구 코드만 쓴다).
@@ -171,6 +174,10 @@ func New(cfg Config) http.Handler {
 	if cfg.Security == nil {
 		cfg.Security = prefs.NewMemoryStore()
 	}
+	if cfg.Upgrade == nil {
+		// 경로가 비어 있으면 설정 파일이 없는 것으로 읽혀 꺼짐(not-enabled)이다.
+		cfg.Upgrade = upgrade.New(upgrade.Paths{}, cfg.Now)
+	}
 	h := &handler{
 		Config:          cfg,
 		actions:         newInflight(),
@@ -234,6 +241,9 @@ func New(cfg Config) http.Handler {
 	mux.HandleFunc("POST /api/security/recovery-codes", h.requireSession(h.regenerateRecovery))
 	mux.HandleFunc("GET /api/security/users", h.requireAdmin(h.securityUsers))
 	mux.HandleFunc("DELETE /api/security/users/{name}", h.requireAdmin(h.resetSecurityUser))
+	mux.HandleFunc("GET /api/upgrade", h.requireAdmin(h.upgradeState))
+	mux.HandleFunc("POST /api/upgrade/check", h.requireAdmin(h.upgradeCheck))
+	mux.HandleFunc("POST /api/upgrade/apply", h.requireAdmin(h.upgradeApply))
 	mux.HandleFunc("GET /api/addons/{id}", h.requireSession(h.addonData))
 	mux.HandleFunc("POST /api/addons/{id}/actions/{action}", h.requireSession(h.addonAction))
 	mux.HandleFunc("POST /api/rpc", h.requireSession(h.rpc))

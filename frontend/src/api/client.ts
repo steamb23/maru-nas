@@ -98,6 +98,9 @@ const ERROR_CODES: readonly ErrorCode[] = [
   'passkey_unavailable',
   'passkey_uv_unsupported',
   'security_unavailable',
+  'upgrade_disabled',
+  'upgrade_busy',
+  'upgrade_outdated',
 ]
 
 export type RequiredLevel = NonNullable<ErrorResponse['required']>
