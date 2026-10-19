@@ -54,7 +54,8 @@ export function requestOptions(opts: PasskeyOptions, prfSalt?: Uint8Array<ArrayB
 }
 
 // creationOptions는 등록 옵션이다. 증명은 받지 않고(none), 사용자 확인은 필수다. 같은 기기에 다시 등록하지 않게
-// 이미 등록한 자격 증명을 알린다.
+// 이미 등록한 자격 증명을 알린다. PRF 확장을 함께 요청한다(패스키로 로그인). 보안 키의 CTAP2 hmac-secret은 만들 때
+// 요청해야 그 자격 증명에 생기고, 요청하지 않고 만든 패스키는 나중에 확인할 때 PRF 결과를 주지 않는다.
 export function creationOptions(opts: PasskeyOptions): PublicKeyCredentialCreationOptions {
   if (!opts.user || !opts.rpName || !opts.algorithms) throw new Error('passkey: not registration options')
   return {
@@ -66,6 +67,7 @@ export function creationOptions(opts: PasskeyOptions): PublicKeyCredentialCreati
     excludeCredentials: descriptors(opts),
     authenticatorSelection: { residentKey: 'preferred', userVerification: 'required' },
     attestation: 'none',
+    extensions: { prf: {} },
   }
 }
 

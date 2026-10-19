@@ -12,7 +12,7 @@ import { useIdle } from '../shell/useIdle'
 import { formatUnit } from '../addons/common/format'
 import type { SessionInfo } from '../api/types.gen'
 import { type PasskeyLoginEntry, isPasskeyLoginGone } from '../security/passkeyLogin'
-import { PasskeyLoginBrokenError, forgetOnError, unlockPasskeyLogin } from '../security/passkeyLoginFlow'
+import { PasskeyLoginBrokenError, PrfUnsupportedError, forgetOnError, unlockPasskeyLogin } from '../security/passkeyLoginFlow'
 import { activePasskeyLogins } from '../security/passkeyLoginStorage'
 import { StepUpForm } from '../security/StepUpForm'
 import { passkeysSupported } from '../security/webauthn'
@@ -162,8 +162,9 @@ export function LoginScreen() {
       },
       (err) => {
         setEntries(passkeyEntries())
-        // 그 등록을 더 쓸 수 없으면(해제, 만료, 비밀번호 변경, 풀지 못함) 비밀번호로 로그인하게 한다.
-        if (isPasskeyLoginGone(err) || err instanceof PasskeyLoginBrokenError) {
+        // 그 등록을 더 쓸 수 없으면(해제, 만료, 비밀번호 변경, 풀지 못함, PRF 결과 없음) 항목이 지워졌으므로 비밀번호로
+        // 로그인하게 한다.
+        if (isPasskeyLoginGone(err) || err instanceof PasskeyLoginBrokenError || err instanceof PrfUnsupportedError) {
           setUsername(entry.username)
           setPassword('')
           passwordRef.current?.focus()

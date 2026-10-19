@@ -3,6 +3,7 @@
 //
 // 항목은 로그인 상태가 아니다. 서버 share와 패스키 PRF가 함께 있어야 풀리는 비밀번호 암호문이다. 저장소에 접근할 수
 // 없으면(사생활 보호 모드 등) 빈 값으로 동작하고, 저장하지 못했으면 false를 돌려준다.
+import type { PasskeyLoginInfo } from '../api/types.gen'
 import {
   type PasskeyLoginEntry,
   type PasskeyLoginStore,
@@ -10,8 +11,10 @@ import {
   addDismissed,
   emptyStore,
   parseStore,
+  removeDismissed,
   removeEntry,
   serializeStore,
+  syncEntries,
   upsertEntry,
 } from './passkeyLogin'
 
@@ -46,10 +49,23 @@ export function passkeyLoginFor(username: string, now = Date.now()): PasskeyLogi
   return activePasskeyLogins(now).find((e) => e.username === username)
 }
 
-// rememberPasskeyLogin은 항목을 넣는다(같은 사용자의 항목은 바꾼다).
+// rememberPasskeyLogin은 항목을 넣는다(같은 사용자의 항목은 바꾼다). 켰으므로 그 사용자를 "다시 묻지 않기"에서 뺀다.
 export function rememberPasskeyLogin(entry: PasskeyLoginEntry): boolean {
   const store = loadPasskeyLogins()
-  return savePasskeyLogins({ ...store, entries: upsertEntry(store.entries, entry) })
+  return savePasskeyLogins({
+    ...store,
+    entries: upsertEntry(store.entries, entry),
+    dismissed: removeDismissed(store.dismissed, entry.username),
+  })
+}
+
+// syncPasskeyLogins는 보안 상태의 등록 목록(passkeyLogins)에 맞춰 그 사용자의 항목을 지우거나 만료 시각을 맞춘다
+// (passkeyLogin.ts의 syncEntries). 바꿀 것이 없으면 쓰지 않는다.
+export function syncPasskeyLogins(username: string, logins: readonly PasskeyLoginInfo[]): boolean {
+  const store = loadPasskeyLogins()
+  const entries = syncEntries(store.entries, username, logins)
+  if (!entries) return true
+  return savePasskeyLogins({ ...store, entries })
 }
 
 // forgetPasskeyLogin은 사용자 이름 또는 등록 ID가 같은 항목을 지운다.

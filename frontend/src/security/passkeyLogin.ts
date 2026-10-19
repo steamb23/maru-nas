@@ -2,7 +2,7 @@
 // 설계는 .claude/rules/security.md의 "패스키로 로그인". 키 = HKDF-SHA256(PRF 결과 ‖ share, salt = 등록 ID)이고,
 // 암호문은 브라우저 항목에만, share는 서버 기록에만 있다. 저장은 passkeyLoginStorage.ts, 흐름은 passkeyLoginFlow.ts.
 import { ApiError, type ErrorCode } from '../api/client'
-import type { SecurityPolicy } from '../api/types.gen'
+import type { PasskeyLoginInfo, SecurityPolicy } from '../api/types.gen'
 import { b64urlDecode, b64urlEncode } from './webauthn'
 
 // PASSKEY_LOGIN_DAYS는 관리자가 고를 수 있는 등록 만료 기간(일)이다(SecurityPolicy.passkeyLoginDays).
@@ -132,9 +132,31 @@ export function activeEntries(entries: readonly PasskeyLoginEntry[], now: number
   return entries.filter((e) => e.expiresAt > now)
 }
 
+// syncEntries는 서버 목록(이 사용자의 등록, 만료된 것은 빠져 있다)에 맞춰 그 사용자의 항목을 고친다. 목록에 없으면
+// 지우고(해제, 만료, 패스키 삭제, 관리자 초기화), 있으면 만료 시각을 서버 값으로 맞춘다(관리자가 기간을 줄였을 때).
+// 다른 사용자의 항목은 그대로 둔다. 바꿀 것이 없으면 null이다(저장하지 않아도 된다).
+export function syncEntries(
+  entries: readonly PasskeyLoginEntry[],
+  username: string,
+  logins: readonly Pick<PasskeyLoginInfo, 'id' | 'expiresAt'>[],
+): PasskeyLoginEntry[] | null {
+  const entry = entries.find((e) => e.username === username)
+  if (!entry) return null
+  const info = logins.find((l) => l.id === entry.enrollment)
+  if (!info) return removeEntry(entries, entry.enrollment)
+  const expiresAt = Date.parse(info.expiresAt)
+  if (!Number.isFinite(expiresAt) || expiresAt === entry.expiresAt) return null
+  return entries.map((e) => (e === entry ? { ...e, expiresAt } : e))
+}
+
 // addDismissed는 "다시 묻지 않기"에 사용자 이름을 맨 앞에 넣는다(중복 없음, MAX_DISMISSED개까지).
 export function addDismissed(dismissed: readonly string[], username: string): string[] {
   return [username, ...dismissed.filter((u) => u !== username)].slice(0, MAX_DISMISSED)
+}
+
+// removeDismissed는 "다시 묻지 않기"에서 사용자 이름을 뺀다. 그 사용자가 패스키로 로그인을 켜면 부른다.
+export function removeDismissed(dismissed: readonly string[], username: string): string[] {
+  return dismissed.filter((u) => u !== username)
 }
 
 const GONE_CODES: readonly ErrorCode[] = ['passkey_login_unknown', 'passkey_login_expired', 'passkey_login_stale']

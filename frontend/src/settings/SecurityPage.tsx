@@ -9,7 +9,7 @@ import { ApiError, deletePasskey, deletePasskeyLogin, deleteTOTP, fetchSecurity,
 import { PasskeyLoginDaysDefault, type SecurityChangeResponse, type SecurityStatus } from '../api/types.gen'
 import { useAuthStore } from '../auth/store'
 import { useLanguage } from '../i18n'
-import { forgetPasskeyLogin, loadPasskeyLogins, passkeyLoginFor } from '../security/passkeyLoginStorage'
+import { passkeyLoginFor, syncPasskeyLogins } from '../security/passkeyLoginStorage'
 import { addPasskeyDialog, enablePasskeyLoginDialog, setupTOTPDialog, showRecoveryCodes } from '../security/securityDialogs'
 import { ASSURANCE_KEYS, LEVEL_KEYS, type SecurityTarget, securityError } from '../security/messages'
 import { requestManage, requestStepUp } from '../security/stepUpDialog'
@@ -29,14 +29,6 @@ const MANAGE_MARGIN_MS = 15_000
 
 const now = () => Date.now()
 
-// forgetStale은 이 브라우저에 둔 그 사용자의 패스키로 로그인 항목이 서버 목록에 없으면(해제, 만료, 패스키 삭제,
-// 관리자 초기화) 지운다. 만료된 항목도 함께 지운다(서버 목록은 만료된 등록을 빼고 준다).
-function forgetStale(st: SecurityStatus, username: string | undefined) {
-  if (!username) return
-  const entry = loadPasskeyLogins().entries.find((e) => e.username === username)
-  if (entry && !st.passkeyLogins.some((l) => l.id === entry.enrollment)) forgetPasskeyLogin(entry.enrollment)
-}
-
 export function SecurityPage() {
   const { t } = useTranslation()
   const lang = useLanguage()
@@ -48,10 +40,12 @@ export function SecurityPage() {
   // 관리 창이 닫히는 시각(이 브라우저의 Date.now() 기준 ms)
   const manageUntil = useRef(0)
 
-  // apply는 새 보안 상태를 보인다. 그리기 전에 서버 목록에 없는 이 브라우저의 패스키로 로그인 항목을 지운다
-  // (해제한 이 브라우저의 항목도 여기서 지워진다). 처음 불러올 때도 쓰므로 사용자 이름은 저장소에서 바로 읽는다.
+  // apply는 새 보안 상태를 보인다. 그리기 전에 이 브라우저의 패스키로 로그인 항목을 서버 목록에 맞춘다. 목록에 없으면
+  // (해제, 만료, 패스키 삭제, 관리자 초기화) 지우고, 있으면 만료 시각을 서버 값으로 맞춘다(관리자가 기간을 줄였을 때).
+  // 처음 불러올 때도 쓰므로 사용자 이름은 저장소에서 바로 읽는다.
   const apply = (st: SecurityStatus) => {
-    forgetStale(st, useAuthStore.getState().user?.username)
+    const current = useAuthStore.getState().user?.username
+    if (current) syncPasskeyLogins(current, st.passkeyLogins)
     manageUntil.current = now() + st.manageSeconds * 1000
     setState({ status: 'ready', data: st })
   }

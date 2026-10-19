@@ -117,7 +117,8 @@ export function forgetOnError(err: unknown, entry: PasskeyLoginEntry): boolean {
 }
 
 // unlockPasskeyLogin은 항목의 패스키로 확인해 share를 받고 비밀번호를 풀어 돌려준다. 로그인을 마치는
-// finishPasskeyLogin은 부르지 않는다. 사용자가 취소하면 DOMException(NotAllowedError)을 그대로 던진다.
+// finishPasskeyLogin은 부르지 않는다. 사용자가 취소하면 DOMException(NotAllowedError)을 그대로 던진다. 패스키가
+// PRF 결과를 주지 않으면 항목을 지우고 PrfUnsupportedError를 던진다.
 export async function unlockPasskeyLogin(entry: PasskeyLoginEntry): Promise<string> {
   let share: string
   let prf: ArrayBuffer | null
@@ -125,8 +126,12 @@ export async function unlockPasskeyLogin(entry: PasskeyLoginEntry): Promise<stri
     const opts = await passkeyLoginOptions(entry.username, entry.enrollment)
     const res = await assertWithPrf(opts, b64urlDecode(entry.salt))
     prf = res.prf
-    // 서버의 확인 상태는 그대로 만료된다. 풀기 전이라 등록을 지우지 않는다.
-    if (!prf) throw new PrfUnsupportedError()
+    if (!prf) {
+      // 항목은 이 자격 증명 하나만 허용하므로 다시 해도 풀 수 없다. 브라우저 항목만 지운다. 서버 등록은 share를 받기
+      // 전이라 지울 수 없고(로그인 단계 쿠키가 없다), 만료나 보안 페이지의 해제로 정리된다. 서버의 확인 상태는 그대로 만료된다.
+      forgetPasskeyLogin(entry.enrollment)
+      throw new PrfUnsupportedError()
+    }
     share = (await passkeyLoginUnlock(res.assertion)).share
   } catch (err) {
     forgetOnError(err, entry)

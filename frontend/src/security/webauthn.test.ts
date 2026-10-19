@@ -70,6 +70,8 @@ describe('creationOptions', () => {
     expect(o.attestation).toBe('none')
     expect(o.authenticatorSelection?.userVerification).toBe('required')
     expect(o.excludeCredentials).toHaveLength(1)
+    // 보안 키의 hmac-secret은 만들 때 요청해야 생기므로 등록할 때 PRF를 요청한다(입력 없이).
+    expect(o.extensions).toEqual({ prf: {} })
   })
 
   it('등록 옵션이 아니면 예외를 던진다', () => {

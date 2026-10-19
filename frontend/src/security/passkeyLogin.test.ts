@@ -17,9 +17,11 @@ import {
   openPassword,
   parseStore,
   passwordBytes,
+  removeDismissed,
   removeEntry,
   sealPassword,
   serializeStore,
+  syncEntries,
   upsertEntry,
 } from './passkeyLogin'
 import { b64urlEncode } from './webauthn'
@@ -222,6 +224,45 @@ describe('항목 목록', () => {
   it('addDismissed는 중복 없이 앞에 넣는다', () => {
     expect(addDismissed(['a', 'b'], 'b')).toEqual(['b', 'a'])
     expect(addDismissed([], 'a')).toEqual(['a'])
+  })
+
+  it('removeDismissed는 그 사용자만 뺀다', () => {
+    expect(removeDismissed(['a', 'b', 'c'], 'b')).toEqual(['a', 'c'])
+    expect(removeDismissed(['a'], 'nobody')).toEqual(['a'])
+    expect(removeDismissed([], 'a')).toEqual([])
+  })
+})
+
+describe('syncEntries', () => {
+  const at = (ms: number) => new Date(ms).toISOString().replace(/\.\d{3}Z$/, 'Z')
+  const EXPIRES = 2_000_000_000_000
+
+  it('서버 목록에 있으면 만료 시각을 서버 값으로 맞춘다', () => {
+    const a = entry('alice', { expiresAt: EXPIRES })
+    const b = entry('bob', { expiresAt: EXPIRES })
+    const shorter = EXPIRES - 23 * 24 * 3600 * 1000
+    const next = syncEntries([b, a], 'alice', [{ id: a.enrollment, expiresAt: at(shorter) }])
+    expect(next).toEqual([b, { ...a, expiresAt: shorter }])
+    // 다른 사용자의 항목은 그대로다.
+    expect(next?.[0]).toBe(b)
+  })
+
+  it('서버 목록에 없으면 그 사용자의 항목만 지운다', () => {
+    const a = entry('alice')
+    const b = entry('bob')
+    expect(syncEntries([a, b], 'alice', [])).toEqual([b])
+    expect(syncEntries([a, b], 'alice', [{ id: b.enrollment, expiresAt: at(EXPIRES) }])).toEqual([b])
+  })
+
+  it('바꿀 것이 없으면 null이다', () => {
+    const a = entry('alice', { expiresAt: EXPIRES })
+    const b = entry('bob')
+    // 같은 만료 시각
+    expect(syncEntries([a, b], 'alice', [{ id: a.enrollment, expiresAt: at(EXPIRES) }])).toBeNull()
+    // 그 사용자의 항목이 없음
+    expect(syncEntries([b], 'alice', [])).toBeNull()
+    // 읽을 수 없는 서버 값
+    expect(syncEntries([a], 'alice', [{ id: a.enrollment, expiresAt: 'soon' }])).toBeNull()
   })
 })
 
