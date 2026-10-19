@@ -39,7 +39,7 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
   - Docker는 쓰지 않는다(호스트 `/proc`, `/sys`, 네트워크를 직접 봐야 하므로)
   - 설치는 루트의 `install.sh`(영어·한국어 안내)가 한다. `install.sh`는 Go 설치기(`installer/` → `bin/onmaru-install`, huh TUI)를 빌드해 실행하는 부트스트랩이고, 설치기가 systemd 유닛과 `/etc/default/onmaru`를 직접 만든다. 리버스 프록시는 설정하지 않는다. Claude는 작성만 하고 실행은 사용자가 한다(확인은 Go 테스트와 `--dry-run`)
     - 흐름(1단계 빌드 → sudo 2단계), 설치 방식(새 설치, `--reinstall`, 업그레이드), 설정·단계를 더하는 절차는 `.claude/rules/installer.md`, 사용자 설명은 `README.md`의 "설치 스크립트"·"업그레이드"
-    - 대시보드에서 업그레이드(`--web-upgrade`, 설계는 `ROADMAP.md`): 설치기가 root 소유 복사본과 `onmaru-upgrade.service`·`.path`를 설치한다. 그 서비스(설치기의 `--upgrade-service`)가 저장소 소유자 권한으로 git·빌드를 하고 새 설치기를 root로 실행한다. onmaru는 확인 요청과 상태 파일만, 도우미는 적용 요청(`upgrade.apply`)만 다룬다. 상세는 `.claude/rules/installer.md`의 "업그레이드 서비스"
+    - 대시보드에서 업그레이드(`--web-upgrade`, 설계는 `ROADMAP.md`): 설치기가 root 소유 복사본과 `onmaru-upgrade.service`·`.path`를 설치한다. 그 서비스(설치기의 `--upgrade-service`)가 저장소 소유자 권한으로 git·빌드를 하고 새 설치기를 root로 실행한다. onmaru는 확인 요청과 상태 파일만(설정 앱의 업데이트 페이지, `/api/upgrade*`), 도우미는 적용 요청(`upgrade.apply`)만 다룬다. 상세는 `.claude/rules/installer.md`의 "업그레이드 서비스", onmaru 쪽은 `.claude/rules/backend.md`의 "대시보드에서 업그레이드"
   - 사용자 대상 설치·설정·프록시 안내는 `README.md`에 둔다. 플래그를 추가·변경하면 `README.md`의 설정 표와 설치기 레지스트리도 함께 고친다
 - **백엔드는 얇은 API 서버**다. 역할은 (1) 현황 읽기: `/proc`·`/sys` 직접 읽기, root가 필요한 정보는 OMV RPC, (2) 설정 변경 요청을 OMV `rpc.php`로 전달, (3) 대시보드 설정(사용자별 위젯 배치·바로가기·화면 설정, 관리자의 전역 설정, 배경 이미지) 저장, 세 가지뿐이다. OMV RPC로 할 수 없는 권한 작업은 (4) 권한 도우미에 맡긴다. (5) 웹 터미널은 같은 호스트의 sshd에 SSH 클라이언트로 붙어 셸을 중계한다
   - (3)은 상태 디렉터리(`-state-dir`, `internal/prefs`)에 대시보드 자신의 상태만 두며 OMV 설정·시스템 파일을 쓰지 않는다. 내용은 `.claude/rules/backend.md`
@@ -96,7 +96,7 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 개발 서버 환경 변수와 워크트리:
 
 - 포트: `ONMARU_LISTEN`(백엔드), `FAKEOMV_LISTEN`(가짜 OMV), `FAKESSH_LISTEN`(가짜 sshd), `DEV_PORT`(Vite). 상태 디렉터리는 `ONMARU_STATE_DIR`
-- `make dev-fake` 전용: `FAKEOMV_TIMEOUT=1m`(세션 timeout, 분 단위), `FAKEOMV_VERSION=8.3`(옛 OMV 응답, `omvfake.Version`), `FAKESSH_AUTH=publickey`(가짜 sshd가 받는 인증 방법)
+- `make dev-fake` 전용: `FAKEOMV_TIMEOUT=1m`(세션 timeout, 분 단위), `FAKEOMV_VERSION=8.3`(옛 OMV 응답, `omvfake.Version`), `FAKESSH_AUTH=publickey`(가짜 sshd가 받는 인증 방법), `FAKEUPGRADE_SCENARIO=manual`(가짜 업그레이드 서비스의 시나리오: web, manual, latest, check-fail, apply-fail, disabled)
 - 웹 터미널 허용은 설정 앱이나 `ONMARU_TERMINAL=true`로 켠다
 - git 워크트리에서 실행하면 주 체크아웃의 `frontend/.env.local`(워크트리에 있으면 그 값이 우선)과 `.dev-state`를 쓴다. 주 체크아웃에서 `make dev BRANCH=<브랜치>`(`make dev-fake`도 같다)로 그 브랜치가 체크아웃된 워크트리의 코드를 실행할 수 있다(실행은 부른 쪽의 `scripts/dev.sh`)
 

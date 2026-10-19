@@ -62,6 +62,7 @@ paths:
 - 설정: `--web-upgrade`(`FlagToggle`, 도우미를 설치할 때만)와 `--build-path`(묻지 않는 `FlagValue`). 켜면 `stepWebUpgrade`가 설치기 복사본(`/usr/local/lib/onmaru/onmaru-install`, `bin/onmaru-install`에서), `/etc/default/onmaru-upgrade`(저장소 경로·빌드 계정·빌드 PATH), `onmaru-upgrade.service`·`.path`를 쓰고, 도우미 유닛에 `RuntimeDirectory=onmaru-upgrade`가 들어간다. 끄거나 도우미를 지우면(제거 포함) `removeWebUpgrade`가 경로 유닛을 끄고 이것들과 남은 요청·상태 파일을 지운다. 돌고 있는 업그레이드 서비스는 멈추지 않는다
   - 값: 설정 파일이 있으면 켜짐이다. 이 설정이 없던 버전의 설치는 꺼진 것으로 읽어 묻지 않는다. 새 설치의 기본값은 저장소 소유자가 일반 사용자일 때 켜짐이고, root 소유 저장소에서는 켤 수 없다(`Validate`). 소유자는 `System.FileOwner(c.RepoDir)`로 읽는다
   - 빌드 PATH: sudo가 PATH를 바꾸므로 1단계(`ActionInstall`)는 기존 값을 읽지 않고 `System.Which`로 git·go·node·npm·make를 찾은 디렉터리 + `/usr/local/bin:/usr/bin:/bin`을 `Registry.fill`로 채워 2단계에 넘긴다. 2단계를 직접 실행하면(대시보드 업그레이드 포함) 기존 값을 쓴다
+  - 설정 파일 키(`config.EnvUpgrade*`)와 서비스 시간 상한(`config.UpgradeServiceTimeout`, 유닛의 `TimeoutStartSec`로 렌더), 설치한 상태 디렉터리(`config.InstalledStateDir`)는 onmaru도 쓰므로 `backend/config`에 둔다
   - 경로 유닛은 바뀌었을 때만 다시 시작한다. 업그레이드 서비스 유닛은 어떤 단계도 시작·재시작하지 않는다(그 서비스 안에서 설치기가 돈다)
 - `--upgrade-service`(root, 다른 옵션 없음): 저장소 밖의 복사본으로 돌므로 `c.RepoDir`를 쓰지 않고 저장소·계정·PATH는 설정 파일에서만 정한다. 요청 하나를 처리한다(적용이 먼저)
   - 요청은 내용과 상관없이 먼저 읽고 지운다(`PathExists=`가 다시 실행하지 않게). onmaru가 쓰는 확인 요청은 `O_NOFOLLOW`·4KiB, root가 쓰는 설정 파일·적용 요청은 64KiB까지 읽는다. 설정 파일이 없으면 요청만 지우고 상태 파일을 만들지 않는다

@@ -110,15 +110,12 @@ OMV SSH 설정의 추가 옵션에 `AuthenticationMethods publickey,keyboard-int
      - 도우미 root 연산 `upgrade.apply`, 제거 처리
      - README의 업그레이드 설명과 위협 모델
      - 시험 VM에서 확인: 켜기·끄기(파일, 경로 유닛, 도우미 유닛의 요청 디렉터리, 끈 뒤 `upgrade_disabled`), onmaru 사용자가 쓴 확인 요청, 저장소 소유자로 강등한 원격 확인(fetch, 계획), 도우미 `upgrade.apply`로 적용(fast-forward, GitHub에서 서브모듈, 빌드 결과 확인, 새 설치기의 root 설치와 onmaru 재시작)까지. 컴파일(go·npm·make)은 미리 빌드한 실행 파일을 복사하는 shim으로 대신했다
-  3. 업데이트 페이지:
-     - 백엔드 API(상태 읽기, 확인 요청, 적용)
-       - 켜져 있는지는 `config.UpgradeEnvFile`(`/etc/default/onmaru-upgrade`, 0644)이 있는지로 안다
-       - 확인 요청은 상태 디렉터리의 `config.UpgradeCheckRequestName`에 `config.UpgradeCheckRequest`를 원자적으로 쓴다. 경로 유닛은 `/var/lib/onmaru/upgrade-check.json`을 지켜보므로 `ONMARU_STATE_DIR`로 상태 디렉터리를 옮긴 설치는 지원하지 않는다. 확인마다 저장소 소유자의 `git fetch`와 임시 빌드가 돌므로 요청 빈도를 제한한다
-       - 적용은 `requireAdmin`과 root 권한 상승 뒤 도우미 클라이언트의 `upgrade.apply`(대상 커밋, 설정)로 한다. `upgrade_disabled` 등 새 오류 코드를 `api.Err*`로 바꾼다
-       - 상태 파일의 `checking`·`applying`이 유닛의 `TimeoutStartSec`(2시간)보다 오래되었으면 중단된 실행으로 본다(서비스가 죽으면 상태를 고치지 못한다)
-     - 설정 앱의 관리자 페이지(버전, 커밋, 설정 입력, 수동 안내, 진행 상황). 질문의 `Dash` 설정은 `-`를 빈 값으로 보내도 된다(서비스가 바꾼다)
-     - 다시 시작 대기와 로그인 뒤 결과 표시
-     - `make dev-fake`의 가짜 업그레이드 서비스(가짜 도우미의 `UpgradeDir()`에 적용 요청이 쌓인다)
+  3. 업데이트 페이지(완료. 백엔드는 `.claude/rules/backend.md`의 "대시보드에서 업그레이드", 화면은 `.claude/rules/frontend-shell.md`의 "설정 앱"):
+     - 백엔드 API(`GET /api/upgrade`, `POST /api/upgrade/check`, `POST /api/upgrade/apply`)와 파일 처리(`internal/upgrade`): 켜짐 여부, 상태 파일, 가져가지 않은 확인 요청, 중단된 실행(서비스 시간 상한 초과), 확인 요청 빈도 제한(30초), 도우미 `upgrade.apply` 요청
+     - 설정 앱의 업데이트 페이지(관리자): 확인 두 가지, 새 버전·커밋·새 설정 입력·업그레이드 뒤 할 일, 수동 재설치 안내와 명령 복사, root 권한 상승 뒤 업그레이드, 진행 단계와 결과
+     - 다시 시작 대기(앱 전체 감시와 재시작 화면, 돌아오면 새로 고침)와 로그인 뒤 결과(로그인 화면 안내, 관리자 로그인 때 업데이트 페이지 열기)
+     - `make dev-fake`의 가짜 업그레이드 서비스(`FAKEUPGRADE_SCENARIO`)
+     - 시험 VM에서 실제 재시작까지 확인하는 일이 남아 있다
   4. 나중에:
      - 되돌리기(이전 실행 파일 보관, 상태 형식 호환 확인)
      - 원격 확인에서 새 릴리스 태그 따라가기(태그를 체크아웃한 설치를 원격으로 올리기)

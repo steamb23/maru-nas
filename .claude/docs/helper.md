@@ -89,7 +89,8 @@
 - worker는 꼴만 검사하고 요청 디렉터리(`config.UpgradeRequestDir`, `/run/onmaru-upgrade`)에 `apply.json`(0600)을 쓴다. 점으로 시작하는 임시 파일에 쓴 뒤 이름을 바꾸므로 경로 유닛은 다 쓴 요청만 본다. 처리하지 않은 요청은 새 요청으로 바꾼다. 상태 파일은 읽지 않는다. 마지막 확인과 같은 대상인지, 저장소 상태, 설정 값은 업그레이드 서비스가 모두 다시 확인한다
 - 요청 디렉터리는 대시보드에서 업그레이드를 켠 도우미 유닛의 `RuntimeDirectory=onmaru-upgrade`(0700, Preserve)다. 없으면 `upgrade_disabled`다. `ProtectSystem=strict`에서도 RuntimeDirectory는 쓸 수 있으므로 `ReadWritePaths`는 더하지 않았다
 - 감사 로그에는 대상 커밋과 설정 이름만 남긴다(값은 남기지 않는다)
-- 테스트와 가짜 도우미는 `worker.Config.UpgradeDir`로 디렉터리를 바꾼다(가짜 도우미는 Root 아래 `run/onmaru-upgrade`)
+- onmaru는 `client.Client.UpgradeApply`로 부른다(`POST /api/upgrade/apply`가 꼴을 먼저 검사한다). `upgrade_disabled`는 409, `bad_request`는 400으로 바꾼다
+- 테스트와 가짜 도우미는 `worker.Config.UpgradeDir`로 디렉터리를 바꾼다(가짜 도우미는 Root 아래 `run/onmaru-upgrade`. `make dev-fake`의 가짜 업그레이드 서비스가 이 디렉터리의 요청을 처리한다)
 
 ## systemd
 
