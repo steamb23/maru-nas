@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { PasskeyOptions } from '../api/types.gen'
-import { assertionJSON, b64urlDecode, b64urlEncode, creationOptions, registrationJSON, requestOptions } from './webauthn'
+import { assertionJSON, b64urlDecode, b64urlEncode, creationOptions, prfResult, registrationJSON, requestOptions } from './webauthn'
 
 const bytes = (...b: number[]) => new Uint8Array(b).buffer
 
@@ -34,6 +34,25 @@ describe('requestOptions', () => {
     expect(o.userVerification).toBe('required')
     expect(o.allowCredentials).toHaveLength(1)
     expect(o.allowCredentials?.[0].transports).toEqual(['internal'])
+    expect(o.extensions).toBeUndefined()
+  })
+
+  it('PRF 입력이 있으면 확장으로 요청한다', () => {
+    const salt = new Uint8Array([5, 6, 7])
+    const o = requestOptions(assertOpts, salt)
+    expect(o.extensions?.prf?.eval?.first).toBe(salt)
+    expect(o.userVerification).toBe('required')
+  })
+})
+
+describe('prfResult', () => {
+  it('PRF 첫 결과를 ArrayBuffer로 꺼내고 없으면 null이다', () => {
+    expect(prfResult({})).toBeNull()
+    expect(prfResult({ prf: { enabled: false } })).toBeNull()
+    const buf = bytes(1, 2, 3)
+    expect(prfResult({ prf: { results: { first: buf } } })).toBe(buf)
+    const view = new Uint8Array([9, 1, 2, 3, 9]).subarray(1, 4)
+    expect(Array.from(new Uint8Array(prfResult({ prf: { results: { first: view } } }) ?? new ArrayBuffer(0)))).toEqual([1, 2, 3])
   })
 })
 

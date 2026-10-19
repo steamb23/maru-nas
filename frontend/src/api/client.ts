@@ -21,6 +21,13 @@ import type {
   PasskeyConfirmRequest,
   PasskeyDescriptor,
   PasskeyInfo,
+  PasskeyLoginEnrollRequest,
+  PasskeyLoginEnrollResponse,
+  PasskeyLoginFinishRequest,
+  PasskeyLoginInfo,
+  PasskeyLoginOptionsRequest,
+  PasskeyLoginRequest,
+  PasskeyLoginUnlockResponse,
   PasskeyOptions,
   PasskeyRegisterRequest,
   PasskeyRegistration,
@@ -102,6 +109,9 @@ const ERROR_CODES: readonly ErrorCode[] = [
   'passkey_unavailable',
   'passkey_uv_unsupported',
   'security_unavailable',
+  'passkey_login_unknown',
+  'passkey_login_expired',
+  'passkey_login_stale',
   'upgrade_disabled',
   'upgrade_busy',
   'upgrade_outdated',
@@ -238,7 +248,8 @@ export function isLoginResponse(v: unknown): v is LoginResponse {
         v.stepUp,
         (x): x is StepUpInfo =>
           isObj(x) && isArrayOf(x.methods, (m): m is StepUpInfo['methods'][number] => isOneOf(m, ['passkey', 'totp', 'recovery'] as const)),
-      )
+      ) &&
+      isOptional(v.passkeyLoginOffer, isBool)
     )
   if (v.status === 'challengeRequired') return isChallengeInfo(v.challenge)
   return false
@@ -807,8 +818,14 @@ const ASSURANCES = ['login', 'password', 'twoFactor'] as const
 const LEVELS = ['off', 'password', 'twoFactor'] as const
 const FACTORS = ['passkey', 'totp', 'recovery'] as const
 
+// passkeyLoginDays는 숫자인지만 본다. 백엔드가 모르는 값을 정해진 값으로 바꿔 보낸다.
 function isSecurityPolicy(v: unknown): v is SecurityPolicy {
-  return isObj(v) && isOptional(v.terminal, (x) => isOneOf(x, LEVELS)) && isOptional(v.elevation, (x) => isOneOf(x, LEVELS))
+  return (
+    isObj(v) &&
+    isOptional(v.terminal, (x) => isOneOf(x, LEVELS)) &&
+    isOptional(v.elevation, (x) => isOneOf(x, LEVELS)) &&
+    isOptional(v.passkeyLoginDays, (x): x is SecurityPolicy['passkeyLoginDays'] => isNum(x))
+  )
 }
 
 function isPasskeyInfo(v: unknown): v is PasskeyInfo {
@@ -822,6 +839,17 @@ function isPasskeyInfo(v: unknown): v is PasskeyInfo {
   )
 }
 
+function isPasskeyLoginInfo(v: unknown): v is PasskeyLoginInfo {
+  return (
+    isObj(v) &&
+    isStr(v.id) &&
+    isStr(v.passkey) &&
+    isStr(v.created) &&
+    isStr(v.expiresAt) &&
+    isOptional(v.lastUsed, isStr)
+  )
+}
+
 export function isSecurityStatus(v: unknown): v is SecurityStatus {
   return (
     isObj(v) &&
@@ -832,7 +860,8 @@ export function isSecurityStatus(v: unknown): v is SecurityStatus {
     isOptional(v.totp, (x): x is TOTPInfo => isObj(x) && isStr(x.created)) &&
     isNum(v.recoveryCodes) &&
     isArrayOf(v.methods, (x): x is SecurityStatus['methods'][number] => isOneOf(x, FACTORS)) &&
-    isSecurityPolicy(v.policy)
+    isSecurityPolicy(v.policy) &&
+    isArrayOf(v.passkeyLogins, isPasskeyLoginInfo)
   )
 }
 
@@ -874,6 +903,19 @@ function isSecurityPolicyResponse(v: unknown): v is SecurityPolicyResponse {
     isSecurityPolicy(v.policy) &&
     isOptional(v.autoLogoutMinutes, isNum) &&
     isOptional(v.passkeyRpId, isStr)
+  )
+}
+
+// isPasskeyLoginEnrollResponse는 만료 시각을 읽을 수 있는지도 본다(브라우저 항목의 만료로 쓴다).
+function isPasskeyLoginEnrollResponse(v: unknown): v is PasskeyLoginEnrollResponse {
+  return (
+    isObj(v) &&
+    isStr(v.id) &&
+    v.id !== '' &&
+    isStr(v.share) &&
+    isStr(v.expiresAt) &&
+    Number.isFinite(Date.parse(v.expiresAt)) &&
+    isSecurityStatus(v.status)
   )
 }
 
@@ -929,6 +971,52 @@ export function confirmPasskey(passkey: PasskeyAssertion): Promise<SecurityChang
 export async function deletePasskey(id: string): Promise<SecurityChangeResponse> {
   const path = `/security/passkeys/${encodeURIComponent(id)}`
   return securityChangeFrom(path, (await request('DELETE', path)).json())
+}
+
+// 패스키로 로그인(.claude/rules/security.md). 비밀번호 암호문은 브라우저에만 있고, 서버는 키 조각(share)만 준다.
+
+// enrollPasskeyLogin은 비밀번호와 그 패스키(PRF를 함께 요청한 확인)를 보내 이 브라우저의 패스키로 로그인을 켠다.
+// 응답의 share는 키를 만드는 데만 쓰고 저장하지 않는다. 세션은 twoFactor로 오른다.
+export async function enrollPasskeyLogin(req: PasskeyLoginEnrollRequest): Promise<PasskeyLoginEnrollResponse> {
+  const data = await postJSON('/security/passkey-logins', { body: req })
+  if (!isPasskeyLoginEnrollResponse(data)) throw new Error('/security/passkey-logins: unexpected response shape')
+  return data
+}
+
+// deletePasskeyLogin은 패스키로 로그인 등록 하나를 해제한다(관리 창은 필요 없다).
+export async function deletePasskeyLogin(id: string): Promise<SecurityStatus> {
+  const path = `/security/passkey-logins/${encodeURIComponent(id)}`
+  return securityStatusFrom(path, (await request('DELETE', path)).json())
+}
+
+// passkeyLoginOptions는 로그인 화면에서 브라우저 항목의 등록으로 확인 옵션(그 패스키 하나만 허용)을 받는다.
+// 로그인 단계 쿠키를 연다. 없는 등록은 passkey_login_unknown, 만료는 passkey_login_expired다.
+export async function passkeyLoginOptions(username: string, enrollment: string): Promise<PasskeyOptions> {
+  const body: PasskeyLoginOptionsRequest = { username, enrollment }
+  const data = await postJSON('/login/passkey/options', { body, authRequest: true })
+  if (!isPasskeyOptions(data)) throw new Error('/login/passkey/options: unexpected response shape')
+  return data
+}
+
+// passkeyLoginUnlock은 패스키 확인을 보내고, 맞으면 비밀번호를 풀 키 조각(share, base64url)을 받는다.
+export async function passkeyLoginUnlock(passkey: PasskeyAssertion): Promise<PasskeyLoginUnlockResponse> {
+  const body: PasskeyLoginRequest = { passkey }
+  const data = await postJSON('/login/passkey', { body, authRequest: true })
+  if (!isObj(data) || !isStr(data.share)) throw new Error('/login/passkey: unexpected response shape')
+  return { share: data.share }
+}
+
+// finishPasskeyLogin은 풀어 낸 비밀번호로 로그인을 마친다. 응답은 일반 로그인과 같다(twoFactor 세션).
+// 비밀번호가 바뀌었으면 백엔드가 등록을 지우고 passkey_login_stale을 준다.
+export function finishPasskeyLogin(password: string): Promise<LoginResponse> {
+  const body: PasskeyLoginFinishRequest = { password }
+  return loginRequest('/login/passkey/finish', body)
+}
+
+// discardPasskeyLogin은 브라우저가 풀지 못한 등록을 서버에서 지우게 한다(204). passkeyLoginUnlock 뒤에만 쓸 수 있다.
+export async function discardPasskeyLogin(): Promise<void> {
+  const body: PasskeyLoginFinishRequest = { discard: true }
+  await request('POST', '/login/passkey/finish', { body, authRequest: true })
 }
 
 export async function setupTOTP(): Promise<TOTPSetupResponse> {

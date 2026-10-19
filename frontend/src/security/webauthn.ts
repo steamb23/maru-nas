@@ -40,14 +40,16 @@ function descriptors(opts: PasskeyOptions): PublicKeyCredentialDescriptor[] {
   }))
 }
 
-// requestOptions는 확인 옵션이다. 사용자 확인(UV)은 필수다(백엔드도 UV 플래그를 확인한다).
-export function requestOptions(opts: PasskeyOptions): PublicKeyCredentialRequestOptions {
+// requestOptions는 확인 옵션이다. 사용자 확인(UV)은 필수다(백엔드도 UV 플래그를 확인한다). prfSalt가 있으면
+// PRF 확장으로 그 입력의 결과를 함께 요청한다(패스키로 로그인).
+export function requestOptions(opts: PasskeyOptions, prfSalt?: Uint8Array<ArrayBuffer>): PublicKeyCredentialRequestOptions {
   return {
     challenge: b64urlDecode(opts.challenge),
     rpId: opts.rpId,
     timeout: opts.timeoutMs,
     allowCredentials: descriptors(opts),
     userVerification: 'required',
+    ...(prfSalt && { extensions: { prf: { eval: { first: prfSalt } } } }),
   }
 }
 
@@ -119,6 +121,24 @@ export async function assertWith(opts: PasskeyOptions): Promise<PasskeyAssertion
   const cred = await navigator.credentials.get({ publicKey: requestOptions(opts) })
   if (!(cred instanceof PublicKeyCredential)) throw new Error('passkey: no credential')
   return assertionJSON(cred as unknown as AssertionLike)
+}
+
+// prfResult는 확장 결과에서 PRF 첫 결과를 꺼낸다. 인증기·브라우저가 PRF를 지원하지 않으면 null이다.
+export function prfResult(ext: AuthenticationExtensionsClientOutputs): ArrayBuffer | null {
+  const first = ext.prf?.results?.first
+  if (!first) return null
+  if (ArrayBuffer.isView(first)) return first.buffer.slice(first.byteOffset, first.byteOffset + first.byteLength)
+  return first
+}
+
+// assertWithPrf는 assertWith에 PRF 요청(salt)을 더한 것이다. PRF 결과가 없으면 prf가 null이고, 그때는 쓰지 않는다.
+export async function assertWithPrf(
+  opts: PasskeyOptions,
+  salt: Uint8Array<ArrayBuffer>,
+): Promise<{ assertion: PasskeyAssertion; prf: ArrayBuffer | null }> {
+  const cred = await navigator.credentials.get({ publicKey: requestOptions(opts, salt) })
+  if (!(cred instanceof PublicKeyCredential)) throw new Error('passkey: no credential')
+  return { assertion: assertionJSON(cred as unknown as AssertionLike), prf: prfResult(cred.getClientExtensionResults()) }
 }
 
 // getPasskey는 확인 challenge를 받아 패스키로 서명한다.

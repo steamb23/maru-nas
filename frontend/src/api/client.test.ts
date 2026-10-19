@@ -1,17 +1,24 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   ApiError,
+  deletePasskeyLogin,
+  discardPasskeyLogin,
+  enrollPasskeyLogin,
   fetchAddon,
   fetchCapabilities,
   fetchPreferences,
   fetchSession,
   fetchSystem,
+  finishPasskeyLogin,
   hasAddonSources,
   isCapabilitiesResponse,
   isLoginResponse,
   isPreferences,
+  isSecurityStatus,
   login,
   logout,
+  passkeyLoginOptions,
+  passkeyLoginUnlock,
   runAddonAction,
   saveDrawer,
   saveShortcuts,
@@ -161,6 +168,9 @@ describe('isLoginResponse', () => {
     const session = { username: 'a', admin: false, assurance: 'login' }
     expect(isLoginResponse({ status: 'authenticated', session, stepUp: { methods: ['totp', 'recovery'] } })).toBe(true)
     expect(isLoginResponse({ status: 'authenticated', session, stepUp: { methods: ['sms'] } })).toBe(false)
+    // 패스키로 로그인 권유는 불리언만 받는다.
+    expect(isLoginResponse({ status: 'authenticated', session, passkeyLoginOffer: true })).toBe(true)
+    expect(isLoginResponse({ status: 'authenticated', session, passkeyLoginOffer: 'yes' })).toBe(false)
     expect(isLoginResponse({ status: 'authenticated' })).toBe(false)
     expect(isLoginResponse({ status: 'challengeRequired', challenge: { kind: 'totp' } })).toBe(true)
     expect(isLoginResponse({ status: 'challengeRequired', challenge: { kind: 1 } })).toBe(false)
@@ -341,5 +351,112 @@ describe('runAddonAction', () => {
   it('실패하면 오류 코드를 담은 ApiError를 던진다', async () => {
     stubFetch(Response.json({ error: 'pending changes', code: 'config_dirty' }, { status: 409 }))
     await expect(runAddonAction('services', 'disable', 'ssh')).rejects.toMatchObject({ status: 409, code: 'config_dirty' })
+  })
+})
+
+// 모두 합성한 값이다.
+const securityStatus = {
+  assurance: 'login',
+  manageSeconds: 0,
+  passkeysAvailable: true,
+  passkeys: [{ id: 'cred1', name: 'Laptop', created: '2026-01-01T00:00:00Z' }],
+  recoveryCodes: 10,
+  methods: ['passkey', 'recovery'],
+  policy: { terminal: 'twoFactor', passkeyLoginDays: 30 },
+  passkeyLogins: [{ id: 'login1', passkey: 'cred1', created: '2026-01-01T00:00:00Z', expiresAt: '2026-01-31T00:00:00Z' }],
+}
+
+describe('isSecurityStatus', () => {
+  it('패스키로 로그인 등록과 만료 기간을 받는다', () => {
+    expect(isSecurityStatus(securityStatus)).toBe(true)
+    expect(isSecurityStatus({ ...securityStatus, passkeyLogins: [] })).toBe(true)
+    expect(isSecurityStatus({ ...securityStatus, policy: {} })).toBe(true)
+    const used = { ...securityStatus.passkeyLogins[0], lastUsed: '2026-01-02T00:00:00Z' }
+    expect(isSecurityStatus({ ...securityStatus, passkeyLogins: [used] })).toBe(true)
+  })
+
+  it.each([
+    ['passkeyLogins 없음', { ...securityStatus, passkeyLogins: undefined }],
+    ['passkeyLogins가 null', { ...securityStatus, passkeyLogins: null }],
+    ['등록의 패스키 없음', { ...securityStatus, passkeyLogins: [{ id: 'l', created: 'x', expiresAt: 'y' }] }],
+    ['등록의 만료가 숫자', { ...securityStatus, passkeyLogins: [{ id: 'l', passkey: 'c', created: 'x', expiresAt: 1 }] }],
+    ['lastUsed가 숫자', { ...securityStatus, passkeyLogins: [{ ...securityStatus.passkeyLogins[0], lastUsed: 1 }] }],
+    ['만료 기간이 문자열', { ...securityStatus, policy: { passkeyLoginDays: '30' } }],
+  ])('%s는 거부한다', (_name, v) => {
+    expect(isSecurityStatus(v)).toBe(false)
+  })
+})
+
+describe('패스키로 로그인', () => {
+  const assertion = { id: 'cred1', clientDataJSON: 'Ag', authenticatorData: 'Aw', signature: 'BA' }
+
+  it('enrollPasskeyLogin은 응답의 상태와 만료 시각을 검사한다', async () => {
+    const ok = { id: 'login1', share: 'c2hhcmU', expiresAt: '2026-01-31T00:00:00Z', status: securityStatus }
+    const fn = stubFetch(Response.json(ok))
+    await expect(enrollPasskeyLogin({ password: 'pw', passkey: assertion, replace: 'old' })).resolves.toEqual(ok)
+    const [url, init] = fn.mock.calls[0]
+    expect(url).toMatch(/\/api\/security\/passkey-logins$/)
+    expect(init?.method).toBe('POST')
+    expect(JSON.parse(String(init?.body))).toEqual({ password: 'pw', passkey: assertion, replace: 'old' })
+    stubFetch(Response.json({ ...ok, expiresAt: 'later' }))
+    await expect(enrollPasskeyLogin({ password: 'pw', passkey: assertion })).rejects.toThrow(/unexpected response shape/)
+    stubFetch(Response.json({ ...ok, status: { ...securityStatus, passkeyLogins: undefined } }))
+    await expect(enrollPasskeyLogin({ password: 'pw', passkey: assertion })).rejects.toThrow(/unexpected response shape/)
+  })
+
+  it('deletePasskeyLogin은 등록 ID를 경로에 넣고 보안 상태를 받는다', async () => {
+    const fn = stubFetch(Response.json(securityStatus))
+    await expect(deletePasskeyLogin('a/b')).resolves.toEqual(securityStatus)
+    const [url, init] = fn.mock.calls[0]
+    expect(url).toMatch(/\/api\/security\/passkey-logins\/a%2Fb$/)
+    expect(init?.method).toBe('DELETE')
+  })
+
+  it('로그인 단계 요청은 401에 처리 함수를 부르지 않고 오류 코드를 담는다', async () => {
+    const handler = vi.fn()
+    const off = setUnauthorizedHandler(handler)
+    stubFetch(Response.json({ error: 'x', code: 'passkey_login_unknown' }, { status: 400 }))
+    await expect(passkeyLoginOptions('alice', 'login1')).rejects.toMatchObject({ status: 400, code: 'passkey_login_unknown' })
+    stubFetch(Response.json({ error: 'x', code: 'passkey_login_expired' }, { status: 400 }))
+    await expect(passkeyLoginOptions('alice', 'login1')).rejects.toMatchObject({ code: 'passkey_login_expired' })
+    stubFetch(Response.json({ error: 'x', code: 'passkey_login_stale' }, { status: 400 }))
+    await expect(finishPasskeyLogin('pw')).rejects.toMatchObject({ code: 'passkey_login_stale' })
+    stubFetch(unauthorized())
+    await expect(passkeyLoginUnlock(assertion)).rejects.toMatchObject({ status: 401 })
+    expect(handler).not.toHaveBeenCalled()
+    off()
+  })
+
+  it('passkeyLoginOptions는 사용자 이름과 등록 ID를 보내고 옵션을 받는다', async () => {
+    const opts = { challenge: 'AAEC', rpId: 'desk.example.lan', timeoutMs: 120000, credentials: [{ id: 'cred1' }] }
+    const fn = stubFetch(Response.json(opts))
+    await expect(passkeyLoginOptions('alice', 'login1')).resolves.toEqual(opts)
+    const [url, init] = fn.mock.calls[0]
+    expect(url).toMatch(/\/api\/login\/passkey\/options$/)
+    expect(JSON.parse(String(init?.body))).toEqual({ username: 'alice', enrollment: 'login1' })
+  })
+
+  it('passkeyLoginUnlock은 share만 꺼낸다', async () => {
+    const fn = stubFetch(Response.json({ share: 'c2hhcmU', other: 1 }))
+    await expect(passkeyLoginUnlock(assertion)).resolves.toEqual({ share: 'c2hhcmU' })
+    expect(fn.mock.calls[0][0]).toMatch(/\/api\/login\/passkey$/)
+    expect(JSON.parse(String(fn.mock.calls[0][1]?.body))).toEqual({ passkey: assertion })
+    stubFetch(Response.json({ share: 1 }))
+    await expect(passkeyLoginUnlock(assertion)).rejects.toThrow(/unexpected response shape/)
+  })
+
+  it('finishPasskeyLogin은 비밀번호로 로그인 응답을 받는다', async () => {
+    const res = { status: 'authenticated', session: { username: 'alice', admin: false, assurance: 'twoFactor' } }
+    const fn = stubFetch(Response.json(res))
+    await expect(finishPasskeyLogin('pw')).resolves.toEqual(res)
+    expect(fn.mock.calls[0][0]).toMatch(/\/api\/login\/passkey\/finish$/)
+    expect(JSON.parse(String(fn.mock.calls[0][1]?.body))).toEqual({ password: 'pw' })
+  })
+
+  it('discardPasskeyLogin은 discard를 보내고 204를 받는다', async () => {
+    const fn = stubFetch(new Response(null, { status: 204 }))
+    await expect(discardPasskeyLogin()).resolves.toBeUndefined()
+    expect(fn.mock.calls[0][0]).toMatch(/\/api\/login\/passkey\/finish$/)
+    expect(JSON.parse(String(fn.mock.calls[0][1]?.body))).toEqual({ discard: true })
   })
 })
