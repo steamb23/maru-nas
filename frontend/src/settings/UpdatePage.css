@@ -34,6 +34,11 @@ code.update-value {
   vertical-align: 1px;
 }
 
+/* 목록·안내 뒤에 이어지는 문단 */
+.update-follow {
+  margin-top: 12px;
+}
+
 /* 사유·할 일 목록 */
 .update-reasons {
   margin: 0;

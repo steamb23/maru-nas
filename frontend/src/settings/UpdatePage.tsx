@@ -414,7 +414,7 @@ function ManualSection({ info, check }: { info: UpgradeInfo; check: UpgradeCheck
           </li>
         ))}
       </ul>
-      <p className="settings-section-desc">
+      <p className="settings-section-desc update-follow">
         {info.user ? t('settings.update.manualHowUser', { user: info.user }) : t('settings.update.manualHow')}
       </p>
       <CommandBlock text={manualCommands(info.repo, check.command)} />
@@ -526,7 +526,6 @@ function QuestionRow({
           {t(err === 'required' ? 'settings.update.answerRequired' : 'settings.update.answerInvalid')}
         </span>
       )}
-      {q.dash && <span className="update-help">{t('settings.update.dashHint')}</span>}
     </>
   )
   return (
@@ -593,7 +592,7 @@ function ApplyResult({ info }: { info: UpgradeInfo }) {
         )}
         {notes.length > 0 && (
           <>
-            <p className="settings-section-desc">{t('settings.update.notesAfter')}</p>
+            <p className="settings-section-desc update-follow">{t('settings.update.notesAfter')}</p>
             <ul className="update-reasons">
               {notes.map((n, i) => (
                 <li key={i} className="selectable">

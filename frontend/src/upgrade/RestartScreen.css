@@ -25,7 +25,10 @@
   }
 }
 
-.restart-elapsed {
+.restart-message {
   text-align: center;
+}
+
+.restart-elapsed {
   font-variant-numeric: tabular-nums;
 }

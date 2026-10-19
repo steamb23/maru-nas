@@ -27,10 +27,10 @@ export function RestartScreen() {
           {t('restart.title')}
         </h1>
         <div className="restart-spinner" aria-hidden="true" />
-        <p className="login-hint" role="status">
+        <p className="login-hint restart-message" role="status">
           {phase === 'down' ? t('restart.waiting') : t('restart.installing')}
         </p>
-        <p className="login-hint restart-elapsed">{t('restart.elapsed', { time: formatClock((now - shownAt) / 1000) })}</p>
+        <p className="login-hint restart-message restart-elapsed">{t('restart.elapsed', { time: formatClock((now - shownAt) / 1000) })}</p>
         {stuck && (
           <p className="login-error selectable" role="alert">
             {t('restart.stuck')}

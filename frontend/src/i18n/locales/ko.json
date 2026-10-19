@@ -4,7 +4,7 @@
   },
   "login": {
     "sessionExpired": "세션이 만료되었습니다. 다시 로그인하세요.",
-    "upgraded": "온마루를 업그레이드하는 동안 로그아웃되었습니다. 다시 로그인하면 업데이트 페이지에서 결과를 볼 수 있습니다.",
+    "upgraded": "업그레이드하는 동안 로그아웃되었습니다. 다시 로그인하면 결과를 볼 수 있습니다.",
     "twoFactorRedirect": "이 계정의 2차 인증은 OpenMediaVault 화면에서 진행해야 합니다.",
     "twoFactorPrompt": "2차 인증 코드를 입력하세요.",
     "code": "인증 코드",
@@ -613,7 +613,6 @@
       "reasonInvalid": "지금 값을 새 버전이 받지 않음",
       "answerRequired": "값을 입력하세요.",
       "answerInvalid": "공백 없는 영문·숫자·기호(ASCII)로 512자까지 입력하세요.",
-      "dashHint": "끄려면 -를 입력하세요.",
       "answerAll": "설정에 모두 답하세요.",
       "notes": "업그레이드한 뒤",
       "notesAfter": "이번 업그레이드 뒤에 할 일:",

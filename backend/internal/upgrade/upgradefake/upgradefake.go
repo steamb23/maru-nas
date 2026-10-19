@@ -339,10 +339,10 @@ func (s *Service) plan() *config.UpgradePlan {
 		Questions: []config.UpgradeQuestion{
 			{
 				Name: "public-origin", Kind: config.UpgradeQuestionInput, Dash: true, EmptyOK: true, Reason: config.UpgradeQuestionNew,
-				Title: config.LocalizedText{En: "Public HTTPS address for passkeys (fake)", Ko: "패스키에 쓸 공개 HTTPS 주소(가짜)"},
+				Title: config.LocalizedText{En: "Public dashboard address for passkeys (- to turn off, fake)", Ko: "패스키에 쓸 대시보드 공개 주소(끄려면 -, 가짜)"},
 				Help: config.LocalizedText{
-					En: "The address browsers use to reach the dashboard, such as https://nas.example.com/.\nEnter - to turn passkeys off.",
-					Ko: "브라우저가 대시보드에 접속하는 주소입니다(예: https://nas.example.com/).\n-를 입력하면 패스키를 끕니다."},
+					En: "Passkeys need the public HTTPS address browsers use for the dashboard, e.g. https://desk.example.lan\nEnter - to turn passkeys off.",
+					Ko: "패스키에는 브라우저가 대시보드에 접속하는 공개 HTTPS 주소가 필요합니다. 예: https://desk.example.lan\n-를 입력하면 패스키를 끕니다."},
 			},
 			{
 				Name: "smart-refresh-at", Kind: config.UpgradeQuestionInput, Default: "00:00", Reason: config.UpgradeQuestionInvalid,

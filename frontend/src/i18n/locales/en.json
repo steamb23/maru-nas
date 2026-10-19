@@ -4,7 +4,7 @@
   },
   "login": {
     "sessionExpired": "Your session has expired. Please sign in again.",
-    "upgraded": "You were signed out while Onmaru was upgrading. Sign in again to see the result on the Update page.",
+    "upgraded": "You were signed out during an upgrade. Sign in again to see the result.",
     "twoFactorRedirect": "Two-factor authentication for this account must be completed in OpenMediaVault.",
     "twoFactorPrompt": "Enter your two-factor authentication code.",
     "code": "Authentication code",
@@ -613,7 +613,6 @@
       "reasonInvalid": "the current value is not accepted by the new version",
       "answerRequired": "Enter a value.",
       "answerInvalid": "Use printable ASCII without spaces (up to 512 characters).",
-      "dashHint": "Enter - to leave it off.",
       "answerAll": "Answer every setting first.",
       "notes": "After upgrading",
       "notesAfter": "Things to do after this upgrade:",
