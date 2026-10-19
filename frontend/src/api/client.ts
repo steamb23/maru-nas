@@ -999,18 +999,20 @@ export async function passkeyLoginOptions(username: string, enrollment: string):
   return data
 }
 
-// passkeyLoginUnlock은 패스키 확인을 보내고, 맞으면 비밀번호를 풀 키 조각(share, base64url)을 받는다.
+// passkeyLoginUnlock은 패스키 확인을 보내고, 맞으면 비밀번호를 풀 키 조각(share)과 회전할 다음 조각(nextShare)을 받는다
+// (둘 다 base64url).
 export async function passkeyLoginUnlock(passkey: PasskeyAssertion): Promise<PasskeyLoginUnlockResponse> {
   const body: PasskeyLoginRequest = { passkey }
   const data = await postJSON('/login/passkey', { body, authRequest: true })
-  if (!isObj(data) || !isStr(data.share)) throw new Error('/login/passkey: unexpected response shape')
-  return { share: data.share }
+  if (!isObj(data) || !isStr(data.share) || !isStr(data.nextShare)) throw new Error('/login/passkey: unexpected response shape')
+  return { share: data.share, nextShare: data.nextShare }
 }
 
-// finishPasskeyLogin은 풀어 낸 비밀번호로 로그인을 마친다. 응답은 일반 로그인과 같다(twoFactor 세션).
-// 비밀번호가 바뀌었으면 백엔드가 등록을 지우고 passkey_login_stale을 준다.
-export function finishPasskeyLogin(password: string): Promise<LoginResponse> {
-  const body: PasskeyLoginFinishRequest = { password }
+// finishPasskeyLogin은 풀어 낸 비밀번호로 로그인을 마친다. 응답은 일반 로그인과 같다(twoFactor 세션). rotated는 항목을
+// 다음 조각용으로 바꿔 저장했는지이며, 그러면 백엔드가 회전을 확정한다. 비밀번호가 바뀌었으면 백엔드가 등록을 지우고
+// passkey_login_stale을 준다.
+export function finishPasskeyLogin(password: string, rotated: boolean): Promise<LoginResponse> {
+  const body: PasskeyLoginFinishRequest = { password, rotated }
   return loginRequest('/login/passkey/finish', body)
 }
 

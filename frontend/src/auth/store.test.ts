@@ -198,18 +198,26 @@ describe('패스키로 로그인', () => {
     expect(out.getState()).toMatchObject({ status: 'loggedOut', passkeyOffer: null, user: null })
   })
 
-  it('풀어 낸 비밀번호로 로그인을 마친다', async () => {
+  it('풀어 낸 비밀번호와 회전 여부로 로그인을 마친다', async () => {
     const { store, api } = setup()
     store.setState({ status: 'loggedOut' })
-    await store.getState().completePasskeyLogin('pw')
-    expect(api.finishPasskeyLogin).toHaveBeenCalledWith('pw')
+    await store.getState().completePasskeyLogin('pw', true)
+    expect(api.finishPasskeyLogin).toHaveBeenCalledWith('pw', true)
     expect(store.getState()).toMatchObject({ status: 'loggedIn', user: { ...admin, assurance: 'twoFactor' } })
+  })
+
+  it('항목을 바꾸지 못했으면 rotated 없이 보낸다', async () => {
+    const { store, api } = setup()
+    store.setState({ status: 'loggedOut' })
+    await store.getState().completePasskeyLogin('pw', false)
+    expect(api.finishPasskeyLogin).toHaveBeenCalledWith('pw', false)
+    expect(store.getState().status).toBe('loggedIn')
   })
 
   it('OMV 2차 인증 계정은 코드 입력 단계를 거친다', async () => {
     const { store, api } = setup({ finishPasskeyLogin: async () => challenge })
     store.setState({ status: 'loggedOut' })
-    await store.getState().completePasskeyLogin('pw')
+    await store.getState().completePasskeyLogin('pw', true)
     expect(store.getState()).toMatchObject({ status: 'challenge', challenge: { kind: 'totp' } })
     await store.getState().verify('123456')
     expect(api.verifyChallenge).toHaveBeenCalledWith('123456')
@@ -220,7 +228,7 @@ describe('패스키로 로그인', () => {
     const err = new ApiError(400, 'x', 'passkey_login_stale')
     const { store } = setup({ finishPasskeyLogin: async () => Promise.reject(err) })
     store.setState({ status: 'loggedOut' })
-    await expect(store.getState().completePasskeyLogin('pw')).rejects.toBe(err)
+    await expect(store.getState().completePasskeyLogin('pw', true)).rejects.toBe(err)
     expect(store.getState().status).toBe('loggedOut')
   })
 })

@@ -14,11 +14,13 @@ import {
   entryAad,
   isPasskeyLoginGone,
   newPrfSalt,
+  openEntry,
   openPassword,
   parseStore,
   passwordBytes,
   removeDismissed,
   removeEntry,
+  resealEntry,
   sealPassword,
   serializeStore,
   syncEntries,
@@ -130,6 +132,62 @@ describe('암호', () => {
     const a = newPrfSalt()
     expect(a.byteLength).toBe(PRF_SALT_BYTES)
     expect(b64urlEncode(a)).not.toBe(b64urlEncode(newPrfSalt()))
+  })
+})
+
+describe('회전', () => {
+  // sealedEntry는 share로 암호화한 alice의 항목이다.
+  async function sealedEntry(prf: ArrayBuffer, share: Uint8Array, password = 'pw'): Promise<PasskeyLoginEntry> {
+    const key = await deriveKey(prf, share, ENROLLMENT)
+    const sealed = await sealPassword(key, entryAad(RP, 'alice', CREDENTIAL, ENROLLMENT), password)
+    return entry('alice', { enrollment: ENROLLMENT, ...sealed })
+  }
+
+  it('지금 share로 풀린다', async () => {
+    const { prf, share } = keyMaterial()
+    const e = await sealedEntry(prf, share, '비밀번호')
+    await expect(openEntry(prf, e, [b64urlEncode(share), b64urlEncode(random(32))])).resolves.toBe('비밀번호')
+  })
+
+  it('지금 share로 안 되면 다음 share로 풀린다(확정 응답이 사라진 항목)', async () => {
+    const { prf, share: next } = keyMaterial()
+    const e = await sealedEntry(prf, next)
+    await expect(openEntry(prf, e, [b64urlEncode(random(32)), b64urlEncode(next)])).resolves.toBe('pw')
+  })
+
+  it('두 share 모두로 풀리지 않으면 null이다(회전 전의 사본)', async () => {
+    const { prf, share } = keyMaterial()
+    const e = await sealedEntry(prf, share)
+    await expect(openEntry(prf, e, [b64urlEncode(random(32)), b64urlEncode(random(32))])).resolves.toBeNull()
+    await expect(openEntry(prf, e, [])).resolves.toBeNull()
+    // PRF 결과가 다르면 맞는 share여도 풀리지 않는다.
+    await expect(openEntry(random(32).buffer, e, [b64urlEncode(share)])).resolves.toBeNull()
+  })
+
+  it('형식이나 길이가 틀린 share는 건너뛴다', async () => {
+    const { prf, share } = keyMaterial()
+    const e = await sealedEntry(prf, share)
+    const good = b64urlEncode(share)
+    await expect(openEntry(prf, e, [good, 'not base64!'])).resolves.toBe('pw')
+    await expect(openEntry(prf, e, ['not base64!', good])).resolves.toBe('pw')
+    await expect(openEntry(prf, e, [b64urlEncode(random(31)), good])).resolves.toBe('pw')
+  })
+
+  it('resealEntry는 다음 share로 새 IV를 써서 다시 암호화하고 나머지는 그대로 둔다', async () => {
+    const { prf, share } = keyMaterial()
+    const next = b64urlEncode(random(32))
+    const e = await sealedEntry(prf, share, 'pässwörd')
+    const r = await resealEntry(prf, e, next, 'pässwörd')
+    expect(r.iv).not.toBe(e.iv)
+    expect(r.data).not.toBe(e.data)
+    const { iv: _iv, data: _data, ...rest } = r
+    const { iv: _eiv, data: _edata, ...was } = e
+    expect(rest).toEqual(was)
+    // 다음 share로만 풀리고, 확정 뒤의 풀림(지금 share = 그 다음 share)에서도 풀린다.
+    await expect(openEntry(prf, r, [next])).resolves.toBe('pässwörd')
+    await expect(openEntry(prf, r, [b64urlEncode(share)])).resolves.toBeNull()
+    await expect(openEntry(prf, r, [b64urlEncode(share), next])).resolves.toBe('pässwörd')
+    await expect(resealEntry(prf, e, 'not base64!', 'pw')).rejects.toThrow()
   })
 })
 

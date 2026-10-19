@@ -1,6 +1,7 @@
 // 패스키로 로그인의 순수 부분(DOM·localStorage 없음): 브라우저 항목 형식, 저장 형식 검사, 분할 키 암호.
 // 설계는 .claude/rules/security.md의 "패스키로 로그인". 키 = HKDF-SHA256(PRF 결과 ‖ share, salt = 등록 ID)이고,
-// 암호문은 브라우저 항목에만, share는 서버 기록에만 있다. 저장은 passkeyLoginStorage.ts, 흐름은 passkeyLoginFlow.ts.
+// 암호문은 브라우저 항목에만, share는 서버 기록에만 있다. share는 로그인할 때마다 회전한다(openEntry, resealEntry).
+// 저장은 passkeyLoginStorage.ts, 흐름은 passkeyLoginFlow.ts.
 import { ApiError, type ErrorCode } from '../api/client'
 import type { PasskeyLoginInfo, SecurityPolicy } from '../api/types.gen'
 import { b64urlDecode, b64urlEncode } from './webauthn'
@@ -232,4 +233,33 @@ export async function openPassword(key: CryptoKey, aad: Uint8Array<ArrayBuffer>,
   } finally {
     plain.fill(0)
   }
+}
+
+// openEntry는 항목을 shares(base64url)로 차례로 풀어 본다. 풀림 단계는 지금 share, 다음 share 순으로 넘긴다. 다음
+// share로만 풀리는 항목은 직전 회전에서 항목은 바꿨지만 확정 응답이 사라진 경우다. 모두로 풀리지 않으면 null이다
+// (정상 브라우저에서는 생기지 않으므로 회전 전에 복사된 사본으로 본다). 형식·길이가 틀린 share는 풀리지 않는 것으로 친다.
+export async function openEntry(prf: ArrayBuffer, entry: PasskeyLoginEntry, shares: readonly string[]): Promise<string | null> {
+  const aad = entryAad(entry.rpId, entry.username, entry.credential, entry.enrollment)
+  for (const share of shares) {
+    try {
+      const key = await deriveKey(prf, b64urlDecode(share), entry.enrollment)
+      return await openPassword(key, aad, entry.iv, entry.data)
+    } catch {
+      // 이 share로는 풀리지 않는다. 다음 것을 시도한다.
+    }
+  }
+  return null
+}
+
+// resealEntry는 풀어 낸 비밀번호를 share(base64url, 다음 share)로 다시 암호화한 항목이다. IV는 새로 만들고 나머지(PRF
+// 입력, 만료 시각 등)는 그대로 둔다.
+export async function resealEntry(
+  prf: ArrayBuffer,
+  entry: PasskeyLoginEntry,
+  share: string,
+  password: string,
+): Promise<PasskeyLoginEntry> {
+  const key = await deriveKey(prf, b64urlDecode(share), entry.enrollment)
+  const sealed = await sealPassword(key, entryAad(entry.rpId, entry.username, entry.credential, entry.enrollment), password)
+  return { ...entryOf(entry), iv: sealed.iv, data: sealed.data }
 }

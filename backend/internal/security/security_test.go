@@ -1,8 +1,10 @@
 package security
 
 import (
+	"bytes"
 	"errors"
 	"net/url"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -199,12 +201,43 @@ func TestPasskeyLoginExpiry(t *testing.T) {
 }
 
 func TestCloneLogins(t *testing.T) {
-	r := Record{PasskeyLogins: []PasskeyLogin{{ID: "x", Share: []byte{1, 2}}}}
+	r := Record{PasskeyLogins: []PasskeyLogin{{ID: "x", Share: []byte{1, 2}, NextShare: []byte{3, 4}}}}
 	c := r.Clone()
 	c.PasskeyLogins[0].Share[0] = 9
+	c.PasskeyLogins[0].NextShare[0] = 9
 	c.PasskeyLogins[0].ID = "y"
-	if r.PasskeyLogins[0].Share[0] != 1 || r.PasskeyLogins[0].ID != "x" {
-		t.Errorf("clone shares memory: %+v", r.PasskeyLogins[0])
+	if l := r.PasskeyLogins[0]; l.Share[0] != 1 || l.NextShare[0] != 3 || l.ID != "x" {
+		t.Errorf("clone shares memory: %+v", l)
+	}
+	// 기다리는 조각이 없으면 복사본에도 없다.
+	if c := (Record{PasskeyLogins: []PasskeyLogin{{ID: "x"}}}).Clone(); c.PasskeyLogins[0].NextShare != nil {
+		t.Errorf("clone made a next share: %+v", c.PasskeyLogins[0])
+	}
+}
+
+func TestPasskeyLoginRotation(t *testing.T) {
+	now := time.Unix(1000, 0)
+	l := NewPasskeyLogin("cred", now, 30)
+	first, expires := slices.Clone(l.Share), l.ExpiresAt
+	if l.NextShare != nil || l.Rotate() || !bytes.Equal(l.Share, first) {
+		t.Fatalf("rotated without a pending share: %+v", l)
+	}
+	// 기다리는 조각은 확정할 때까지 그대로다.
+	l.PrepareRotation()
+	next := slices.Clone(l.NextShare)
+	if len(next) != ShareBytes || bytes.Equal(next, first) {
+		t.Fatalf("next share = %x", next)
+	}
+	l.PrepareRotation()
+	if !bytes.Equal(l.NextShare, next) {
+		t.Fatal("pending share changed before rotation")
+	}
+	if !l.Rotate() || !bytes.Equal(l.Share, next) || l.NextShare != nil || !l.ExpiresAt.Equal(expires) {
+		t.Fatalf("after rotate: %+v", l)
+	}
+	l.PrepareRotation()
+	if bytes.Equal(l.NextShare, next) || len(l.NextShare) != ShareBytes {
+		t.Fatalf("next share reused after rotation: %x", l.NextShare)
 	}
 }
 

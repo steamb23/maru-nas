@@ -15,8 +15,9 @@ import (
 )
 
 // 패스키로 로그인의 로그인 단계(인증 없음). 브라우저 항목의 사용자 이름·등록 ID로 그 패스키 하나만 허용하는 확인을
-// 받고(options), 서명이 맞으면 share를 주고(unlock), 브라우저가 풀어 낸 비밀번호로 OMV에 로그인한다(finish).
-// 단계 사이는 의식 쿠키로 잇는다. 등록·해제는 passkey_login.go.
+// 받고(options), 서명이 맞으면 share와 다음 share를 주고(unlock), 브라우저가 풀어 낸 비밀번호로 OMV에 로그인한다(finish).
+// 브라우저가 항목을 다음 share용으로 바꿨으면 finish가 회전을 확정한다. 단계 사이는 의식 쿠키로 잇는다. 등록·해제는
+// passkey_login.go.
 
 const (
 	// PasskeyLoginCookie는 패스키로 로그인 단계를 잇는 쿠키 이름이다(options부터 finish까지).
@@ -117,8 +118,9 @@ func (h *handler) passkeyLoginOptions(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// passkeyLoginUnlock은 options의 확인으로 만든 패스키 서명(UV 필수)인지 보고, 맞으면 그 등록의 share를 준다. 실패는
-// 2차 수단과 같은 제한(securityLimiter, IP·사용자 이름)으로 센다.
+// passkeyLoginUnlock은 options의 확인으로 만든 패스키 서명(UV 필수)인지 보고, 맞으면 그 등록의 share와 다음 share를
+// 준다. 다음 share는 기다리는 것이 없을 때만 새로 만든다(확정 전에는 같은 값). 실패는 2차 수단과 같은
+// 제한(securityLimiter, IP·사용자 이름)으로 센다.
 func (h *handler) passkeyLoginUnlock(w http.ResponseWriter, r *http.Request) {
 	var req api.PasskeyLoginRequest
 	if !decodeJSONLimit(w, r, &req, maxSecurityBodyBytes) {
@@ -148,7 +150,7 @@ func (h *handler) passkeyLoginUnlock(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	now, days := h.Now(), h.passkeyLoginDays()
-	var share []byte
+	var share, next []byte
 	err = security.ErrVerify
 	if security.B64.EncodeToString(a.CredentialID) == c.credential {
 		err = h.checkUserPasskey(c.username, a, c.challenge, now, func(rec *security.Record, pk *security.Passkey) error {
@@ -159,7 +161,8 @@ func (h *handler) passkeyLoginUnlock(w http.ResponseWriter, r *http.Request) {
 			case l.Expired(now, days):
 				return errPasskeyLoginExpired
 			}
-			share = bytes.Clone(l.Share)
+			l.PrepareRotation()
+			share, next = bytes.Clone(l.Share), bytes.Clone(l.NextShare)
 			return nil
 		})
 	}
@@ -193,12 +196,16 @@ func (h *handler) passkeyLoginUnlock(w http.ResponseWriter, r *http.Request) {
 	h.passkeyUnlocks.Put(id, passkeyUnlock{username: c.username, enrollment: c.enrollment})
 	h.setCookie(w, r, PasskeyLoginCookie, id, int(passkeyUnlockTTL/time.Second))
 	log.Printf("security: passkey login verified: user=%q ip=%s login=%s", c.username, ip, loginTag(c.enrollment))
-	writeJSON(w, http.StatusOK, api.PasskeyLoginUnlockResponse{Share: security.B64.EncodeToString(share)})
+	writeJSON(w, http.StatusOK, api.PasskeyLoginUnlockResponse{
+		Share:     security.B64.EncodeToString(share),
+		NextShare: security.B64.EncodeToString(next),
+	})
 }
 
 // passkeyLoginFinish는 브라우저가 풀어 낸 비밀번호로 OMV에 로그인하고 twoFactor 세션을 만든다. 이 비밀번호는 브라우저가
-// 보낸 값이라 복호화 결과인지 알 수 없으므로 일반 로그인과 같은 제한(h.Limiter)으로 센다. OMV가 비밀번호를 받지 않으면
-// 비밀번호를 바꾼 것이므로 그 등록을 지운다. Discard면 브라우저가 풀지 못한 등록을 지운다.
+// 보낸 값이라 복호화 결과인지 알 수 없으므로 일반 로그인과 같은 제한(h.Limiter)으로 센다. OMV가 비밀번호를 받으면(2차 인증
+// 대기여도) Rotated일 때 다음 share를 확정한다. 받지 않으면 비밀번호를 바꾼 것이므로 확정하지 않고 그 등록을 지운다.
+// Discard면 브라우저가 두 share 모두로 풀지 못한 등록을 지운다.
 func (h *handler) passkeyLoginFinish(w http.ResponseWriter, r *http.Request) {
 	var req api.PasskeyLoginFinishRequest
 	if !decodeJSON(w, r, &req) {
@@ -212,7 +219,8 @@ func (h *handler) passkeyLoginFinish(w http.ResponseWriter, r *http.Request) {
 	}
 	ip := clientIP(r)
 	if req.Discard {
-		h.dropPasskeyLogin(u.username, u.enrollment, "browser could not decrypt", ip)
+		// 정상 브라우저의 항목은 늘 지금 share나 다음 share로 풀리므로, 둘 다 안 되면 회전 전에 복사된 사본으로 본다.
+		h.dropPasskeyLogin(u.username, u.enrollment, "browser could not decrypt with either share, possibly a copy made before rotation", ip)
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
@@ -240,14 +248,18 @@ func (h *handler) passkeyLoginFinish(w http.ResponseWriter, r *http.Request) {
 	}
 	done(auth.Success)
 	now := h.Now()
+	rotated := false
 	if err := h.Security.UpdateSecurity(u.username, func(rec *security.Record) error {
 		if l := rec.PasskeyLogin(u.enrollment); l != nil {
 			l.LastUsed = now
+			// 브라우저 항목이 이미 다음 share용이므로 확정한다. 저장하지 못한 브라우저(Rotated 아님)는 지금 share를 그대로 쓴다.
+			rotated = req.Rotated && l.Rotate()
 		}
 		return nil
 	}); err != nil {
+		rotated = false
 		log.Printf("security: user=%q: record: %v", u.username, err)
 	}
-	log.Printf("security: passkey login: user=%q ip=%s login=%s", u.username, ip, loginTag(u.enrollment))
+	log.Printf("security: passkey login: user=%q ip=%s login=%s rotated=%t", u.username, ip, loginTag(u.enrollment), rotated)
 	h.completeLogin(w, r, res, req.Password, ip, auth.AssuranceTwoFactor)
 }

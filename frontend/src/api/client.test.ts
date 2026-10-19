@@ -421,7 +421,7 @@ describe('패스키로 로그인', () => {
     stubFetch(Response.json({ error: 'x', code: 'passkey_login_expired' }, { status: 400 }))
     await expect(passkeyLoginOptions('alice', 'login1')).rejects.toMatchObject({ code: 'passkey_login_expired' })
     stubFetch(Response.json({ error: 'x', code: 'passkey_login_stale' }, { status: 400 }))
-    await expect(finishPasskeyLogin('pw')).rejects.toMatchObject({ code: 'passkey_login_stale' })
+    await expect(finishPasskeyLogin('pw', true)).rejects.toMatchObject({ code: 'passkey_login_stale' })
     stubFetch(unauthorized())
     await expect(passkeyLoginUnlock(assertion)).rejects.toMatchObject({ status: 401 })
     expect(handler).not.toHaveBeenCalled()
@@ -437,21 +437,26 @@ describe('패스키로 로그인', () => {
     expect(JSON.parse(String(init?.body))).toEqual({ username: 'alice', enrollment: 'login1' })
   })
 
-  it('passkeyLoginUnlock은 share만 꺼낸다', async () => {
-    const fn = stubFetch(Response.json({ share: 'c2hhcmU', other: 1 }))
-    await expect(passkeyLoginUnlock(assertion)).resolves.toEqual({ share: 'c2hhcmU' })
+  it('passkeyLoginUnlock은 share와 nextShare만 꺼낸다', async () => {
+    const fn = stubFetch(Response.json({ share: 'c2hhcmU', nextShare: 'bmV4dA', other: 1 }))
+    await expect(passkeyLoginUnlock(assertion)).resolves.toEqual({ share: 'c2hhcmU', nextShare: 'bmV4dA' })
     expect(fn.mock.calls[0][0]).toMatch(/\/api\/login\/passkey$/)
     expect(JSON.parse(String(fn.mock.calls[0][1]?.body))).toEqual({ passkey: assertion })
-    stubFetch(Response.json({ share: 1 }))
-    await expect(passkeyLoginUnlock(assertion)).rejects.toThrow(/unexpected response shape/)
+    for (const bad of [{ share: 1, nextShare: 'bmV4dA' }, { share: 'c2hhcmU' }, { share: 'c2hhcmU', nextShare: null }]) {
+      stubFetch(Response.json(bad))
+      await expect(passkeyLoginUnlock(assertion)).rejects.toThrow(/unexpected response shape/)
+    }
   })
 
-  it('finishPasskeyLogin은 비밀번호로 로그인 응답을 받는다', async () => {
+  it('finishPasskeyLogin은 비밀번호와 회전 여부를 보내고 로그인 응답을 받는다', async () => {
     const res = { status: 'authenticated', session: { username: 'alice', admin: false, assurance: 'twoFactor' } }
     const fn = stubFetch(Response.json(res))
-    await expect(finishPasskeyLogin('pw')).resolves.toEqual(res)
+    await expect(finishPasskeyLogin('pw', true)).resolves.toEqual(res)
     expect(fn.mock.calls[0][0]).toMatch(/\/api\/login\/passkey\/finish$/)
-    expect(JSON.parse(String(fn.mock.calls[0][1]?.body))).toEqual({ password: 'pw' })
+    expect(JSON.parse(String(fn.mock.calls[0][1]?.body))).toEqual({ password: 'pw', rotated: true })
+    const again = stubFetch(Response.json(res))
+    await finishPasskeyLogin('pw', false)
+    expect(JSON.parse(String(again.mock.calls[0][1]?.body))).toEqual({ password: 'pw', rotated: false })
   })
 
   it('discardPasskeyLogin은 discard를 보내고 204를 받는다', async () => {

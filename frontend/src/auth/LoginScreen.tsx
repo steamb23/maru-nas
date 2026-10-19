@@ -152,9 +152,9 @@ export function LoginScreen() {
     setUnlocking(entry.enrollment)
     void run(
       async () => {
-        const saved = await unlockPasskeyLogin(entry)
+        const { password: saved, rotated } = await unlockPasskeyLogin(entry)
         try {
-          await completePasskeyLogin(saved)
+          await completePasskeyLogin(saved, rotated)
         } catch (err) {
           forgetOnError(err, entry)
           throw err

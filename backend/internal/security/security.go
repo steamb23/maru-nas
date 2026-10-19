@@ -56,8 +56,11 @@ type PasskeyLogin struct {
 	// Credential은 이 등록에 쓰는 패스키의 ID(Passkey.ID)다.
 	Credential string `json:"credential"`
 	// Share는 서버 쪽 키 조각(ShareBytes 바이트)이다. 패스키 서명을 확인한 뒤에만 브라우저에 준다. JSON에서는 base64다.
-	Share   []byte    `json:"share"`
-	Created time.Time `json:"created"`
+	Share []byte `json:"share"`
+	// NextShare는 회전을 기다리는 다음 키 조각이다. 풀림 단계가 Share와 함께 주고, 브라우저가 이것으로 다시 암호화했다고
+	// 알린 로그인이 성공하면 Share로 확정한다(Rotate). 확정 전에는 바꾸지 않는다(PrepareRotation).
+	NextShare []byte    `json:"nextShare,omitempty"`
+	Created   time.Time `json:"created"`
 	// ExpiresAt은 등록할 때의 만료 기간으로 정한 만료 시각이다. 실제 만료는 Expiry가 지금 기간과 함께 정한다.
 	ExpiresAt time.Time `json:"expiresAt"`
 	LastUsed  time.Time `json:"lastUsed,omitzero"`
@@ -74,15 +77,37 @@ const (
 func NewPasskeyLogin(credential string, now time.Time, days int) PasskeyLogin {
 	id := make([]byte, LoginIDBytes)
 	rand.Read(id)
-	share := make([]byte, ShareBytes)
-	rand.Read(share)
 	return PasskeyLogin{
 		ID:         B64.EncodeToString(id),
 		Credential: credential,
-		Share:      share,
+		Share:      newShare(),
 		Created:    now,
 		ExpiresAt:  now.Add(time.Duration(days) * 24 * time.Hour),
 	}
+}
+
+func newShare() []byte {
+	share := make([]byte, ShareBytes)
+	rand.Read(share)
+	return share
+}
+
+// PrepareRotation은 다음 키 조각(NextShare)이 없으면 새로 만든다. 있으면 그대로 둔다(확정 전에는 바꾸지 않으므로,
+// 확정 응답만 사라진 브라우저 항목도 그 값으로 풀린다).
+func (l *PasskeyLogin) PrepareRotation() {
+	if len(l.NextShare) == 0 {
+		l.NextShare = newShare()
+	}
+}
+
+// Rotate는 다음 키 조각을 지금 키 조각으로 확정하고 대기를 지운다. 기다리는 조각이 없으면 아무것도 하지 않고 false다.
+// 만료 시각은 늘리지 않는다.
+func (l *PasskeyLogin) Rotate() bool {
+	if len(l.NextShare) == 0 {
+		return false
+	}
+	l.Share, l.NextShare = l.NextShare, nil
+	return true
 }
 
 // Expiry는 지금 만료 기간(days일)을 적용한 만료 시각이다. 등록할 때 정한 시각과 Created + days일 중 이른 쪽이므로,
@@ -130,6 +155,7 @@ func (r Record) Clone() Record {
 		ls := make([]PasskeyLogin, len(r.PasskeyLogins))
 		for i, l := range r.PasskeyLogins {
 			l.Share = bytes.Clone(l.Share)
+			l.NextShare = bytes.Clone(l.NextShare)
 			ls[i] = l
 		}
 		r.PasskeyLogins = ls

@@ -45,8 +45,9 @@ export interface AuthActions {
   // login·verify는 실패하면 ApiError 등을 그대로 던진다. 문구는 화면이 정한다(messages.ts).
   login: (username: string, password: string) => Promise<void>
   verify: (response: string) => Promise<void>
-  // completePasskeyLogin은 패스키로 풀어 낸 비밀번호로 로그인을 마친다(일반 로그인과 같은 응답을 받는다).
-  completePasskeyLogin: (password: string) => Promise<void>
+  // completePasskeyLogin은 패스키로 풀어 낸 비밀번호로 로그인을 마친다(일반 로그인과 같은 응답을 받는다). rotated는
+  // 브라우저 항목을 다음 키 조각용으로 바꿔 저장했는지다(unlockPasskeyLogin의 결과).
+  completePasskeyLogin: (password: string, rotated: boolean) => Promise<void>
   // cancelChallenge는 2차 인증을 그만두고 로그인 화면으로 돌아간다.
   cancelChallenge: () => void
   // finishStepUp은 로그인 직후의 2차 인증·패스키로 로그인 켜기를 마치거나(assurance: 새 보증 수준) 건너뛰고(인자 없음)
@@ -66,7 +67,7 @@ export interface AuthApi {
   fetchSession: () => Promise<SessionInfo>
   login: (username: string, password: string) => Promise<LoginResponse>
   verifyChallenge: (response: string) => Promise<LoginResponse>
-  finishPasskeyLogin: (password: string) => Promise<LoginResponse>
+  finishPasskeyLogin: (password: string, rotated: boolean) => Promise<LoginResponse>
   logout: () => Promise<void>
 }
 
@@ -162,8 +163,8 @@ export function createAuthStore({
         await handleLogin(await api.login(username, password))
       },
 
-      completePasskeyLogin: async (password) => {
-        await handleLogin(await api.finishPasskeyLogin(password))
+      completePasskeyLogin: async (password, rotated) => {
+        await handleLogin(await api.finishPasskeyLogin(password, rotated))
       },
 
       verify: async (response) => {

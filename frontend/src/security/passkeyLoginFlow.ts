@@ -9,7 +9,7 @@ import {
   passkeyLoginOptions,
   passkeyLoginUnlock,
 } from '../api/client'
-import type { PasskeyAssertion, SecurityStatus } from '../api/types.gen'
+import type { PasskeyAssertion, PasskeyLoginUnlockResponse, SecurityStatus } from '../api/types.gen'
 import {
   MAX_PASSWORD_BYTES,
   type PasskeyLoginEntry,
@@ -17,8 +17,9 @@ import {
   entryAad,
   isPasskeyLoginGone,
   newPrfSalt,
-  openPassword,
+  openEntry,
   passwordBytes,
+  resealEntry,
   sealPassword,
 } from './passkeyLogin'
 import { forgetPasskeyLogin, loadPasskeyLogins, rememberPasskeyLogin } from './passkeyLoginStorage'
@@ -116,11 +117,19 @@ export function forgetOnError(err: unknown, entry: PasskeyLoginEntry): boolean {
   return true
 }
 
-// unlockPasskeyLogin은 항목의 패스키로 확인해 share를 받고 비밀번호를 풀어 돌려준다. 로그인을 마치는
-// finishPasskeyLogin은 부르지 않는다. 사용자가 취소하면 DOMException(NotAllowedError)을 그대로 던진다. 패스키가
-// PRF 결과를 주지 않으면 항목을 지우고 PrfUnsupportedError를 던진다.
-export async function unlockPasskeyLogin(entry: PasskeyLoginEntry): Promise<string> {
-  let share: string
+// UnlockedPasskeyLogin은 풀어 낸 비밀번호와, 항목을 다음 share용으로 바꿔 저장했는지(finish의 rotated)다.
+export interface UnlockedPasskeyLogin {
+  password: string
+  rotated: boolean
+}
+
+// unlockPasskeyLogin은 항목의 패스키로 확인해 share와 다음 share를 받고 비밀번호를 풀어 돌려준다. 지금 share로 풀고,
+// 안 되면 다음 share로 푼다. 풀었으면 같은 PRF 결과와 다음 share로 다시 암호화해 finish를 보내기 전에 항목을 바꾼다
+// (회전, .claude/rules/security.md). 로그인을 마치는 finishPasskeyLogin은 부르지 않는다. 사용자가 취소하면
+// DOMException(NotAllowedError)을 그대로 던진다. 패스키가 PRF 결과를 주지 않으면 항목을 지우고 PrfUnsupportedError를
+// 던진다. 두 share 모두로 풀리지 않으면 서버 등록과 항목을 지우고 PasskeyLoginBrokenError를 던진다.
+export async function unlockPasskeyLogin(entry: PasskeyLoginEntry): Promise<UnlockedPasskeyLogin> {
+  let shares: PasskeyLoginUnlockResponse
   let prf: ArrayBuffer | null
   try {
     const opts = await passkeyLoginOptions(entry.username, entry.enrollment)
@@ -132,19 +141,25 @@ export async function unlockPasskeyLogin(entry: PasskeyLoginEntry): Promise<stri
       forgetPasskeyLogin(entry.enrollment)
       throw new PrfUnsupportedError()
     }
-    share = (await passkeyLoginUnlock(res.assertion)).share
+    shares = await passkeyLoginUnlock(res.assertion)
   } catch (err) {
     forgetOnError(err, entry)
     throw err
   }
-  try {
-    const key = await deriveKey(prf, b64urlDecode(share), entry.enrollment)
-    const aad = entryAad(entry.rpId, entry.username, entry.credential, entry.enrollment)
-    return await openPassword(key, aad, entry.iv, entry.data)
-  } catch {
-    // share를 받은 뒤에만 서버 등록을 지울 수 있다(로그인 단계 쿠키).
+  const password = await openEntry(prf, entry, [shares.share, shares.nextShare])
+  if (password === null) {
+    // 정상 브라우저의 항목은 늘 둘 중 하나로 풀리므로 회전 전에 복사된 사본으로 본다. share를 받은 뒤에만 서버 등록을
+    // 지울 수 있다(로그인 단계 쿠키).
     await discardPasskeyLogin().catch(() => undefined)
     forgetPasskeyLogin(entry.enrollment)
     throw new PasskeyLoginBrokenError()
   }
+  // 다시 암호화하거나 저장하지 못해도 로그인은 막지 않는다(rotated: false면 서버가 지금 share를 그대로 둔다).
+  let rotated = false
+  try {
+    rotated = rememberPasskeyLogin(await resealEntry(prf, entry, shares.nextShare, password))
+  } catch {
+    rotated = false
+  }
+  return { password, rotated }
 }

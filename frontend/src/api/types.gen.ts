@@ -1847,11 +1847,16 @@ export interface PasskeyLoginRequest {
   passkey?: PasskeyAssertion;
 }
 /**
- * PasskeyLoginUnlockResponse는 POST /api/login/passkey의 응답이다. Share로 키를 만들어 비밀번호를 풀고
- * POST /api/login/passkey/finish로 보낸다.
+ * PasskeyLoginUnlockResponse는 POST /api/login/passkey의 응답이다. Share로 키를 만들어 비밀번호를 풀고(안 되면
+ * NextShare로 푼다) POST /api/login/passkey/finish로 보낸다. 둘 다 base64url 키 조각이다.
  */
 export interface PasskeyLoginUnlockResponse {
   share: string;
+  /**
+   * NextShare는 회전을 기다리는 다음 키 조각이다. 브라우저는 풀어 낸 비밀번호를 이것으로 다시 암호화해 항목을 바꾼다.
+   * 확정(finish의 Rotated)할 때까지 같은 값을 준다.
+   */
+  nextShare: string;
 }
 /**
  * PasskeyLoginFinishRequest는 POST /api/login/passkey/finish의 본문이다. 풀어 낸 비밀번호로 로그인하며 응답은
@@ -1859,6 +1864,11 @@ export interface PasskeyLoginUnlockResponse {
  */
 export interface PasskeyLoginFinishRequest {
   password?: string;
+  /**
+   * Rotated는 브라우저가 항목을 NextShare용으로 바꿔 저장했다는 뜻이다. OMV가 비밀번호를 받으면 NextShare를 Share로
+   * 확정한다.
+   */
+  rotated?: boolean;
   discard?: boolean;
 }
 /**

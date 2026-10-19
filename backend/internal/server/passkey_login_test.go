@@ -1,6 +1,7 @@
 package server
 
 import (
+	"encoding/base64"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -213,9 +214,38 @@ func (b *browser) passkeyLoginUnlock(pk *fakePasskey, user, enrollment string) *
 	return b.do(http.MethodPost, "/api/login/passkey", api.PasskeyLoginRequest{Passkey: pk.get(decode[api.PasskeyOptions](b.e.t, rec))})
 }
 
+// mustPasskeyLoginUnlock은 options부터 확인까지 보내고 풀림 응답(share, 다음 share)을 돌려준다.
+func (b *browser) mustPasskeyLoginUnlock(pk *fakePasskey, user, enrollment string) api.PasskeyLoginUnlockResponse {
+	b.e.t.Helper()
+	rec := b.passkeyLoginUnlock(pk, user, enrollment)
+	wantStatus(b.e.t, rec, http.StatusOK)
+	return decode[api.PasskeyLoginUnlockResponse](b.e.t, rec)
+}
+
+// passkeyLoginFinish는 항목을 다음 share용으로 바꾸지 못한 브라우저의 finish다(rotated 없음).
 func (b *browser) passkeyLoginFinish(password string) *httptest.ResponseRecorder {
 	b.e.t.Helper()
 	return b.do(http.MethodPost, "/api/login/passkey/finish", api.PasskeyLoginFinishRequest{Password: password})
+}
+
+// passkeyLoginRotate는 항목을 다음 share용으로 바꿔 저장한 브라우저의 finish다.
+func (b *browser) passkeyLoginRotate(password string) *httptest.ResponseRecorder {
+	b.e.t.Helper()
+	return b.do(http.MethodPost, "/api/login/passkey/finish", api.PasskeyLoginFinishRequest{Password: password, Rotated: true})
+}
+
+// storedPasskeyLogin은 저장된 user의 등록 id다. 없으면 테스트를 멈춘다.
+func (e *env) storedPasskeyLogin(user, id string) security.PasskeyLogin {
+	e.t.Helper()
+	rec, err := e.security.GetSecurity(user)
+	if err != nil {
+		e.t.Fatal(err)
+	}
+	l := rec.PasskeyLogin(id)
+	if l == nil {
+		e.t.Fatalf("passkey login %s of %s is gone", id, user)
+	}
+	return *l
 }
 
 func TestPasskeyLoginFlow(t *testing.T) {
@@ -286,19 +316,89 @@ func TestPasskeyLoginFlow(t *testing.T) {
 	}
 }
 
+func TestPasskeyLoginRotation(t *testing.T) {
+	e := newEnv(t, envOptions{rp: testRP})
+	b, pk := e.passkeyUser()
+	en := b.mustEnablePasskeyLogin(pk)
+	b64 := security.B64.EncodeToString
+	if l := e.storedPasskeyLogin("user", en.ID); l.NextShare != nil {
+		t.Fatalf("next share before any login: %+v", l)
+	}
+
+	// finish 없이 두 번 풀어도 다음 share는 같다(확정 전에는 바꾸지 않는다).
+	n := e.browser()
+	first := n.mustPasskeyLoginUnlock(pk, "user", en.ID)
+	if first.Share != en.Share || first.NextShare == "" || first.NextShare == first.Share {
+		t.Fatalf("unlock = %+v, enrolled share %q", first, en.Share)
+	}
+	if next, err := security.B64.DecodeString(first.NextShare); err != nil || len(next) != security.ShareBytes {
+		t.Fatalf("next share %q: %v", first.NextShare, err)
+	}
+	if again := n.mustPasskeyLoginUnlock(pk, "user", en.ID); again != first {
+		t.Fatalf("second unlock = %+v, want %+v", again, first)
+	}
+	if l := e.storedPasskeyLogin("user", en.ID); b64(l.Share) != en.Share || b64(l.NextShare) != first.NextShare {
+		t.Fatalf("stored after unlock: share %q next %q", b64(l.Share), b64(l.NextShare))
+	}
+
+	// 항목을 바꾸지 못한 브라우저(rotated 없음)의 로그인은 확정하지 않는다.
+	wantStatus(t, n.passkeyLoginFinish("user"), http.StatusOK)
+	if l := e.storedPasskeyLogin("user", en.ID); b64(l.Share) != en.Share || b64(l.NextShare) != first.NextShare {
+		t.Fatalf("confirmed without rotated: share %q next %q", b64(l.Share), b64(l.NextShare))
+	}
+
+	// rotated면 다음 share를 지금 share로 확정하고 대기를 지운다. 만료 시각은 그대로다.
+	o := e.browser()
+	if got := o.mustPasskeyLoginUnlock(pk, "user", en.ID); got != first {
+		t.Fatalf("unlock after unrotated login = %+v, want %+v", got, first)
+	}
+	wantStatus(t, o.passkeyLoginRotate("user"), http.StatusOK)
+	l := e.storedPasskeyLogin("user", en.ID)
+	if b64(l.Share) != first.NextShare || l.NextShare != nil {
+		t.Fatalf("stored after rotation: share %q next %q", b64(l.Share), b64(l.NextShare))
+	}
+	if st := o.securityStatus(); len(st.PasskeyLogins) != 1 || st.PasskeyLogins[0].ExpiresAt != en.ExpiresAt {
+		t.Fatalf("status after rotation = %+v, enrolled expiry %s", st.PasskeyLogins, en.ExpiresAt)
+	}
+
+	// 다음 풀림은 확정한 share와 새 다음 share를 준다.
+	after := e.browser().mustPasskeyLoginUnlock(pk, "user", en.ID)
+	if after.Share != first.NextShare || after.NextShare == "" || after.NextShare == first.NextShare ||
+		after.NextShare == en.Share || after.NextShare == after.Share {
+		t.Fatalf("unlock after rotation = %+v (previous next %q, enrolled %q)", after, first.NextShare, en.Share)
+	}
+
+	// 로그에는 회전 여부만 남기고 share 값은 남기지 않는다(base64url, 기록 파일의 base64 모두).
+	logs := e.logs.String()
+	for _, v := range []string{en.Share, first.NextShare, after.NextShare} {
+		raw, _ := security.B64.DecodeString(v)
+		for _, enc := range []string{v, base64.StdEncoding.EncodeToString(raw)} {
+			if strings.Contains(logs, enc) {
+				t.Errorf("log contains a share %q:\n%s", enc, logs)
+			}
+		}
+	}
+	if !strings.Contains(logs, "rotated=false") || !strings.Contains(logs, "rotated=true") {
+		t.Errorf("rotation not logged:\n%s", logs)
+	}
+}
+
 func TestPasskeyLoginStaleAndDiscard(t *testing.T) {
 	e := newEnv(t, envOptions{rp: testRP})
 	b, pk := e.passkeyUser()
 	first := b.mustEnablePasskeyLogin(pk)
 	second := b.mustEnablePasskeyLogin(pk)
 
-	// 풀어 낸 비밀번호가 맞지 않으면(비밀번호를 바꿈) 그 등록을 지운다.
+	// 풀어 낸 비밀번호가 맞지 않으면(비밀번호를 바꿈) 항목을 바꿨어도(rotated) 확정하지 않고 그 등록을 지운다.
 	n := e.browser()
 	wantStatus(t, n.passkeyLoginUnlock(pk, "user", first.ID), http.StatusOK)
-	wantCode(t, n.passkeyLoginFinish("old-password"), http.StatusBadRequest, api.ErrPasskeyLoginStale)
+	wantCode(t, n.passkeyLoginRotate("old-password"), http.StatusBadRequest, api.ErrPasskeyLoginStale)
 	wantCode(t, n.passkeyLoginOptions("user", first.ID), http.StatusBadRequest, api.ErrPasskeyLoginUnknown)
-	if strings.Contains(e.logs.String(), "old-password") {
-		t.Error("password logged")
+	if rec, _ := e.security.GetSecurity("user"); rec.PasskeyLogin(first.ID) != nil || len(rec.PasskeyLogins) != 1 {
+		t.Fatalf("stale login kept: %+v", rec.PasskeyLogins)
+	}
+	if strings.Contains(e.logs.String(), "old-password") || strings.Contains(e.logs.String(), "rotated=true") {
+		t.Errorf("password or rotation logged:\n%s", e.logs.String())
 	}
 
 	// 브라우저가 풀지 못하면 그 등록을 지운다. 확인을 마친 뒤에만 할 수 있다.
@@ -309,6 +409,10 @@ func TestPasskeyLoginStaleAndDiscard(t *testing.T) {
 	wantStatus(t, n.do(http.MethodPost, "/api/login/passkey/finish", api.PasskeyLoginFinishRequest{Discard: true}), http.StatusNoContent)
 	if rec, _ := e.security.GetSecurity("user"); len(rec.PasskeyLogins) != 0 {
 		t.Fatalf("logins left: %+v", rec.PasskeyLogins)
+	}
+	// 두 share 모두로 풀리지 않는 항목은 회전 전에 복사된 사본일 수 있다고 남긴다.
+	if logs := e.logs.String(); !strings.Contains(logs, "could not decrypt with either share, possibly a copy made before rotation") {
+		t.Errorf("discard not logged:\n%s", logs)
 	}
 }
 
@@ -353,11 +457,15 @@ func TestPasskeyLoginOMVChallenge(t *testing.T) {
 	en := decode[api.PasskeyLoginEnrollResponse](t, rec)
 
 	n := e.browser()
-	wantStatus(t, n.passkeyLoginUnlock(pk, "totp", en.ID), http.StatusOK)
-	rec = n.passkeyLoginFinish("totp")
+	unlocked := n.mustPasskeyLoginUnlock(pk, "totp", en.ID)
+	rec = n.passkeyLoginRotate("totp")
 	wantStatus(t, rec, http.StatusOK)
 	if got := decode[api.LoginResponse](t, rec); got.Status != api.LoginChallengeRequired || n.cookies[PendingCookie] == nil {
 		t.Fatalf("login = %+v", got)
+	}
+	// OMV가 비밀번호를 받았으므로 2차 인증을 마치기 전이라도 회전을 확정한다.
+	if l := e.storedPasskeyLogin("totp", en.ID); security.B64.EncodeToString(l.Share) != unlocked.NextShare || l.NextShare != nil {
+		t.Fatalf("not rotated at finish: %+v", l)
 	}
 	rec = n.do(http.MethodPost, "/api/login/verify", api.VerifyRequest{Response: "123456"})
 	wantStatus(t, rec, http.StatusOK)
