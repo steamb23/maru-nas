@@ -9,7 +9,8 @@ import type { WidgetAddonId } from '../widgets/catalog'
 import { type AddonId, MANIFESTS } from './manifests.gen'
 import type { AddonManifest } from './types'
 
-export type UnavailableReason = NonNullable<AddonCapability['reason']>
+// helper_missing은 백엔드 애드온 capability가 아니라 프런트가 정하는 사유다(권한 도우미가 필요한 셸 앱).
+export type UnavailableReason = NonNullable<AddonCapability['reason']> | 'helper_missing'
 
 export interface AppAccess {
   // 바로가기와 "모든 앱"에 보일지. 관리자 전용 앱은 일반 사용자에게 숨긴다(저장한 바로가기 목록에는 남는다).
@@ -22,16 +23,19 @@ const OPEN: AppAccess = { visible: true, notice: null }
 
 const HIDDEN: AppAccess = { visible: false, notice: null }
 
+const HELPER_MISSING: AppAccess = { visible: true, notice: 'helper_missing' }
+
 // appAccess는 capability로 앱 아이콘(바로가기, "모든 앱")과 창 내용을 어떻게 그릴지 정한다.
 // 관리자 전용(admin_required)은 아이콘을 숨기고, 플러그인 없음(plugin_missing)은 아이콘을 두고
 // 창 안에 안내한다. 이미 열린 창이면 두 경우 모두 창 안에 안내한다.
 // 링크 앱은 주소가 설정되어 있을 때만 보인다. capability를 받기 전에는 열 주소를 모르므로
 // "받기 전에는 모두 보인다"의 예외로 숨긴다. 웹 터미널도 관리자가 허용했을 때만 보이므로 같은 예외다.
-// 파일 탐색기는 권한 도우미가 없으면 쓸 수 없으므로 숨긴다(받기 전에는 보인다).
+// 파일 탐색기는 권한 도우미가 없으면 쓸 수 없지만, 앱이 있다는 것과 못 쓰는 이유를 알 수 있게
+// 아이콘을 두고 창 안에 안내한다(helper_missing).
 export function appAccess(caps: CapabilitiesResponse | null, id: AppId): AppAccess {
   if (isLinkApp(id)) return linkConfigured(id, caps) ? OPEN : HIDDEN
   if (id === 'terminal') return caps?.terminal ? OPEN : HIDDEN
-  if (id === 'files') return caps && !caps.helper ? HIDDEN : OPEN
+  if (id === 'files') return caps && !caps.helper ? HELPER_MISSING : OPEN
   return isAddonApp(id) ? addonAccess(caps, id) : OPEN
 }
 

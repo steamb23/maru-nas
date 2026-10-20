@@ -374,7 +374,9 @@
   "addons": {
     "pluginMissing": "This app needs an OpenMediaVault plugin that is not installed.",
     "adminRequired": "Only administrators can use this app.",
-    "requiredPlugins": "Required plugins: {{plugins}}"
+    "requiredPlugins": "Required plugins: {{plugins}}",
+    "helperMissing": "This app can't be used because the privileged helper isn't set up.",
+    "helperMissingDetail": "This app works with files using the signed-in user's permissions through the privileged helper. It becomes available once an administrator installs the privileged helper with the install script."
   },
   "widgets": {
     "label": "Widgets",

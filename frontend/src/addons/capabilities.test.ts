@@ -31,7 +31,7 @@ describe('appAccess', () => {
 
   it('파일 탐색기는 권한 도우미가 있을 때만 보인다(받기 전에는 보인다)', () => {
     expect(appAccess(null, 'files')).toEqual({ visible: true, notice: null })
-    expect(appAccess(caps([]), 'files')).toEqual({ visible: false, notice: null })
+    expect(appAccess(caps([]), 'files')).toEqual({ visible: true, notice: 'helper_missing' })
     expect(appAccess({ ...caps([]), helper: true }, 'files')).toEqual({ visible: true, notice: null })
   })
 

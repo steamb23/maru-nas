@@ -9,16 +9,13 @@ interface Props {
   compact?: boolean
 }
 
-// AddonUnavailable은 애드온을 쓸 수 없을 때 창·위젯 보기 대신 보여 주는 안내다.
+// AddonUnavailable은 애드온·셸 앱을 쓸 수 없을 때 창·위젯 보기 대신 보여 주는 안내다.
 export function AddonUnavailable({ reason, plugins, compact = false }: Props) {
   const { t } = useTranslation()
-  const message = compact
-    ? reason === 'admin_required'
-      ? t('widgets.adminRequired')
-      : t('widgets.pluginMissing')
-    : reason === 'admin_required'
-      ? t('addons.adminRequired')
-      : t('addons.pluginMissing')
+  let message: string
+  if (reason === 'admin_required') message = compact ? t('widgets.adminRequired') : t('addons.adminRequired')
+  else if (reason === 'helper_missing') message = t('addons.helperMissing')
+  else message = compact ? t('widgets.pluginMissing') : t('addons.pluginMissing')
   return (
     <div className={compact ? 'placeholder compact' : 'placeholder'}>
       <div className="addon-unavailable" role="status">
@@ -26,6 +23,7 @@ export function AddonUnavailable({ reason, plugins, compact = false }: Props) {
         {reason === 'plugin_missing' && plugins.length > 0 && (
           <p className="selectable">{t('addons.requiredPlugins', { plugins: plugins.join(', ') })}</p>
         )}
+        {reason === 'helper_missing' && !compact && <p>{t('addons.helperMissingDetail')}</p>}
       </div>
     </div>
   )
