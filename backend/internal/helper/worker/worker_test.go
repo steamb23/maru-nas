@@ -236,7 +236,7 @@ func TestIdentity(t *testing.T) {
 	e := newEnv(t)
 	var id proto.Identity
 	e.ok(&id, proto.ScopeUser, proto.ActionID, nil, nil)
-	if id.UID != os.Getuid() || id.GID != os.Getgid() || len(id.Groups) == 0 || id.Groups[0].ID != os.Getgid() {
+	if id.UID != os.Getuid() || id.GID != os.Getgid() || len(id.Groups) == 0 || id.Groups[0].ID != os.Getgid() || id.Home != e.home {
 		t.Fatalf("identity = %+v", id)
 	}
 }

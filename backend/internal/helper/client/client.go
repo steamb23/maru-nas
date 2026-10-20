@@ -160,6 +160,63 @@ func (c *Client) Stat(ctx context.Context, ticket, path string) (proto.Entry, er
 	return e, err
 }
 
+// StatMany는 폴더 dir 바로 안의 이름 여러 개(proto.MaxStatMany개까지)의 정보다(사용자 권한). 읽지 못한
+// 항목은 Code만 있다.
+func (c *Client) StatMany(ctx context.Context, ticket, dir string, names []string) (proto.StatManyResult, error) {
+	var res proto.StatManyResult
+	err := c.run(ctx, ticket, proto.ScopeUser, proto.ActionStatMany, proto.StatManyParams{Dir: dir, Names: names}, &res)
+	return res, err
+}
+
+// Info는 파일 하나의 정보와 소유자·그룹 이름, ACL 유무, 내 권한이다(사용자 권한).
+func (c *Client) Info(ctx context.Context, ticket, path string) (proto.InfoResult, error) {
+	var res proto.InfoResult
+	err := c.run(ctx, ticket, proto.ScopeUser, proto.ActionInfo, proto.PathParams{Path: path}, &res)
+	return res, err
+}
+
+// Names는 폴더의 이름과 종류를 디렉터리 순서대로 받는다(사용자 권한). 항목마다 lstat 하지 않으므로 크기·시각은
+// 없다. 이름 목록은 응답 머리가 아니라 그 뒤 본문으로 온다.
+func (c *Client) Names(ctx context.Context, ticket, path string) (proto.NamesResult, []proto.NameEntry, error) {
+	params, err := marshal(proto.PathParams{Path: path})
+	if err != nil {
+		return proto.NamesResult{}, nil, err
+	}
+	ctx, cancel := context.WithTimeout(ctx, opTimeout)
+	defer cancel()
+	conn, err := c.dial(ctx)
+	if err != nil {
+		return proto.NamesResult{}, nil, err
+	}
+	defer conn.Close()
+	stop := context.AfterFunc(ctx, func() { conn.Close() })
+	defer stop()
+	req := proto.Request{V: proto.Version, Op: proto.OpRun, Ticket: ticket, Scope: proto.ScopeUser, Action: proto.ActionNames, Params: params}
+	if err := proto.WriteRequest(conn, req); err != nil {
+		return proto.NamesResult{}, nil, fmt.Errorf("%w: %v", ErrUnavailable, err)
+	}
+	resp, err := proto.ReadResponse(conn)
+	if err != nil {
+		return proto.NamesResult{}, nil, fmt.Errorf("%w: %v", ErrUnavailable, err)
+	}
+	var res proto.NamesResult
+	if err := resp.Decode(&res); err != nil {
+		return proto.NamesResult{}, nil, err
+	}
+	if resp.Size < 0 || resp.Size > proto.MaxNamesBytes {
+		return proto.NamesResult{}, nil, fmt.Errorf("%w: names body of %d bytes", ErrUnavailable, resp.Size)
+	}
+	body := make([]byte, resp.Size)
+	if _, err := io.ReadFull(conn, body); err != nil {
+		return proto.NamesResult{}, nil, fmt.Errorf("%w: %v", ErrUnavailable, err)
+	}
+	list, err := proto.ParseNames(body, res.Count)
+	if err != nil {
+		return proto.NamesResult{}, nil, fmt.Errorf("%w: %v", ErrUnavailable, err)
+	}
+	return res, list, nil
+}
+
 // Mkdir는 폴더를 만든다(사용자 권한).
 func (c *Client) Mkdir(ctx context.Context, ticket, path string) (proto.Entry, error) {
 	var e proto.Entry

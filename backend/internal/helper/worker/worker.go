@@ -156,13 +156,19 @@ func Serve(job Job, conn net.Conn, cfg Config) error {
 	var err error
 	switch job.Action {
 	case proto.ActionID:
-		err = reply(c, identity)
+		err = reply(c, func() (any, error) { return identity(job) })
 	case proto.ActionList:
 		err = withPath(job, c, func(p proto.PathParams) (any, error) { return list(job, cfg, p) })
 	case proto.ActionStat:
 		err = withPath(job, c, func(p proto.PathParams) (any, error) { return stat(job, cfg, p) })
 	case proto.ActionMkdir:
 		err = withPath(job, c, func(p proto.PathParams) (any, error) { return mkdir(job, cfg, p) })
+	case proto.ActionNames:
+		err = names(job, cfg, c)
+	case proto.ActionStatMany:
+		err = reply(c, func() (any, error) { return statMany(job, cfg) })
+	case proto.ActionInfo:
+		err = withPath(job, c, func(p proto.PathParams) (any, error) { return info(job, cfg, p) })
 	case proto.ActionRead:
 		err = read(job, cfg, c)
 	case proto.ActionWrite:
@@ -210,10 +216,14 @@ func respond(conn net.Conn, cfg Config, resp proto.Response) {
 	idleConn{conn: conn, timeout: cfg.IdleTimeout}.respond(resp)
 }
 
-// identity는 worker가 실제로 가진 uid·gid·보조 그룹이다.
-func identity() (any, error) {
+// identity는 worker가 실제로 가진 uid·gid·보조 그룹과, 티켓 사용자의 홈 디렉터리(파일 연산의 기준으로 쓸 수
+// 있을 때)다.
+func identity(job Job) (any, error) {
 	uid, gid := os.Getuid(), os.Getgid()
 	id := proto.Identity{UID: uid, GID: gid, User: strconv.Itoa(uid)}
+	if job.Scope == proto.ScopeUser && usableBase(job.Home) {
+		id.Home = job.Home
+	}
 	if u, err := user.LookupId(strconv.Itoa(uid)); err == nil {
 		id.User = u.Username
 	}

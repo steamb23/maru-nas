@@ -216,7 +216,7 @@ func (s *spawner) Spawn(_ context.Context, cred *daemon.Credential, job worker.J
 	if job.Action == proto.ActionID {
 		id := proto.Identity{User: "root", Groups: []proto.Group{{ID: 0, Name: "root"}}}
 		if cred != nil {
-			id = proto.Identity{UID: cred.UID, GID: cred.GID, User: job.User}
+			id = proto.Identity{UID: cred.UID, GID: cred.GID, User: job.User, Home: job.Home}
 			for _, g := range cred.Groups {
 				id.Groups = append(id.Groups, proto.Group{ID: g, Name: s.acc.groupName(g)})
 			}

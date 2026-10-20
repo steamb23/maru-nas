@@ -234,7 +234,7 @@ func read(job Job, cfg Config, c idleConn) error {
 		if _, err := f.Seek(off, io.SeekStart); err != nil {
 			return err
 		}
-		res = proto.ReadResult{FileSize: size, ModTime: st.ModTime().Unix()}
+		res = proto.ReadResult{FileSize: size, ModTime: st.ModTime().Unix(), ModTimeNs: st.ModTime().UnixNano()}
 		return nil
 	}()
 	if r != nil {
@@ -415,7 +415,8 @@ func remove(job Job, cfg Config, c idleConn) error {
 // entryOf는 Lstat 결과를 Entry로 바꾼다.
 func entryOf(name string, info fs.FileInfo) proto.Entry {
 	m := info.Mode()
-	e := proto.Entry{Name: name, Size: info.Size(), ModTime: info.ModTime().Unix(), Mode: uint32(m.Perm())}
+	mt := info.ModTime()
+	e := proto.Entry{Name: name, Size: info.Size(), ModTime: mt.Unix(), ModTimeNs: mt.UnixNano(), Mode: uint32(m.Perm())}
 	if m&fs.ModeSetuid != 0 {
 		e.Mode |= 0o4000
 	}

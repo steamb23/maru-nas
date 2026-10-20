@@ -145,6 +145,51 @@ func TestFileOps(t *testing.T) {
 	}
 }
 
+func TestBrowseOps(t *testing.T) {
+	c, fake := start(t)
+	ctx := context.Background()
+	res, err := c.Open(ctx, "user", "user", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tk := res.Ticket
+	home := fake.Home("user")
+	for _, n := range []string{"b.txt", "a.txt"} {
+		if _, err := c.Write(ctx, tk, home+"/"+n, false, strings.NewReader("hi"), 2); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := c.Mkdir(ctx, tk, home+"/사진"); err != nil {
+		t.Fatal(err)
+	}
+	nr, list, err := c.Names(ctx, tk, home)
+	if err != nil || nr.Count != 3 || len(list) != 3 || !nr.Writable || nr.DirModTimeNs == 0 {
+		t.Fatalf("names: %+v %v %v", nr, list, err)
+	}
+	types := map[string]byte{}
+	for _, e := range list {
+		types[e.Name] = e.Type
+	}
+	if types["a.txt"] != proto.NameFile || types["사진"] != proto.NameDir {
+		t.Fatalf("types = %v", types)
+	}
+	if _, _, err := c.Names(ctx, tk, home+"/a.txt"); proto.CodeOf(err) != proto.CodeNotDir {
+		t.Fatalf("names of a file: %v", err)
+	}
+	sm, err := c.StatMany(ctx, tk, home, []string{"a.txt", "gone", "사진"})
+	if err != nil || len(sm.Items) != 3 || sm.Items[0].Size != 2 || sm.Items[1].Code != proto.CodeNotFound || sm.Items[2].Type != proto.TypeDir {
+		t.Fatalf("statmany: %+v %v", sm, err)
+	}
+	info, err := c.Info(ctx, tk, home+"/a.txt")
+	if err != nil || info.Name != "a.txt" || info.Access == nil || !info.Access.Read {
+		t.Fatalf("info: %+v %v", info, err)
+	}
+	id, err := c.Identity(ctx, tk, proto.ScopeUser)
+	if err != nil || id.Home != home {
+		t.Fatalf("identity home: %+v %v", id, err)
+	}
+}
+
 func TestUnavailable(t *testing.T) {
 	c := New(filepath.Join(t.TempDir(), "missing.sock"))
 	if _, err := c.Status(context.Background(), "x"); !errors.Is(err, ErrUnavailable) {

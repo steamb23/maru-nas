@@ -34,6 +34,8 @@ type Identity struct {
 	GID    int     `json:"gid"`
 	User   string  `json:"user"`
 	Groups []Group `json:"groups"`
+	// Home은 티켓 사용자의 홈 디렉터리다. 파일 연산의 기준으로 쓸 수 없는 홈(/, 빈 값)이면 비운다.
+	Home string `json:"home,omitempty"`
 }
 
 // 항목 종류(Entry.Type)
@@ -53,6 +55,8 @@ type Entry struct {
 	Mode uint32 `json:"mode"`
 	// ModTime은 수정 시각(Unix 초)이다.
 	ModTime int64 `json:"modTime"`
+	// ModTimeNs는 수정 시각(Unix 나노초)이다. 같은 초 안의 변경을 가려낼 때 쓴다.
+	ModTimeNs int64 `json:"modTimeNs"`
 	// Target은 심볼릭 링크가 가리키는 경로(그대로)다.
 	Target string `json:"target,omitempty"`
 	// LinkType은 심볼릭 링크를 허용 범위 안에서 따라간 대상의 종류다. 깨졌거나 범위 밖이면 빈 값이다.
@@ -81,8 +85,9 @@ type ReadParams struct {
 // ReadResult는 fs.read의 결과다. 응답 머리의 Size만큼 내용이 뒤따른다.
 type ReadResult struct {
 	// FileSize는 파일 전체 크기다.
-	FileSize int64 `json:"fileSize"`
-	ModTime  int64 `json:"modTime"`
+	FileSize  int64 `json:"fileSize"`
+	ModTime   int64 `json:"modTime"`
+	ModTimeNs int64 `json:"modTimeNs"`
 }
 
 // WriteParams는 fs.write의 인자다. 요청 머리의 Size만큼 내용이 뒤따른다.
@@ -102,6 +107,57 @@ type RenameParams struct {
 type RemoveParams struct {
 	Path      string `json:"path"`
 	Recursive bool   `json:"recursive,omitempty"`
+}
+
+// NamesResult는 fs.names의 결과다. 응답 머리의 Size만큼 이름 목록(EncodeName 형식)이 뒤따른다.
+type NamesResult struct {
+	// Count는 본문에 담은 항목 수다.
+	Count int `json:"count"`
+	// Truncated는 항목이 MaxNames·MaxNamesBytes를 넘어 일부만 담았는지다.
+	Truncated bool `json:"truncated"`
+	// DirModTimeNs는 폴더 자신의 수정 시각(Unix 나노초)이다. 항목이 더해지거나 빠지면 바뀐다.
+	DirModTimeNs int64 `json:"dirModTimeNs"`
+	// Writable은 이 사용자가 폴더 안에 파일을 만들 수 있는지(faccessat W_OK|X_OK)다.
+	Writable bool `json:"writable"`
+}
+
+// StatManyParams는 fs.statmany의 인자다. Names는 Dir 바로 안의 이름(경로 구분자 없음)이다.
+type StatManyParams struct {
+	Dir   string   `json:"dir"`
+	Names []string `json:"names"`
+}
+
+// StatItem은 fs.statmany의 항목 하나다. 읽지 못했으면 Code만 있다(읽는 사이에 지워졌으면 not_found).
+type StatItem struct {
+	Entry
+	Code string `json:"code,omitempty"`
+	// Locked는 폴더(심볼릭 링크 아님)인데 이 사용자가 들어가 목록을 볼 수 없는지(R_OK|X_OK)다.
+	Locked bool `json:"locked,omitempty"`
+}
+
+// StatManyResult는 fs.statmany의 결과다. Items는 Names와 같은 순서다.
+type StatManyResult struct {
+	Items []StatItem `json:"items"`
+}
+
+// Access는 이 사용자가 파일을 읽고 쓸 수 있는지(faccessat)다. 폴더는 들어가 목록을 볼 수 있는지, 안에
+// 파일을 만들 수 있는지다.
+type Access struct {
+	Read  bool `json:"read"`
+	Write bool `json:"write"`
+}
+
+// InfoResult는 fs.info의 결과다. 심볼릭 링크는 ACL·Access를 읽지 않는다(faccessat이 링크를 따라가므로).
+type InfoResult struct {
+	Entry
+	UID int `json:"uid"`
+	GID int `json:"gid"`
+	// Owner와 Group은 /etc/passwd·/etc/group에서 찾은 이름이다. 없으면 빈 값이다.
+	Owner string `json:"owner,omitempty"`
+	Group string `json:"group,omitempty"`
+	// ACL은 POSIX ACL(접근 또는 기본)이 있는지다. 확인하지 못했으면 nil이다.
+	ACL    *bool   `json:"acl,omitempty"`
+	Access *Access `json:"access,omitempty"`
 }
 
 // UpgradeApplyParams는 upgrade.apply의 인자다. 꼴은 config.ValidUpgradeTarget·ValidUpgradeSetting으로 검사하고,

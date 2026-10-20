@@ -572,6 +572,18 @@ func TestRunFileOps(t *testing.T) {
 	res := e.open("alice", false)
 	params := func(v any) json.RawMessage { b, _ := json.Marshal(v); return b }
 
+	// 정보 읽기 연산은 감사 로그에 남기지 않는다(아래 쓰기 줄이 나올 때 앞의 줄은 이미 남았을 것이다).
+	for _, action := range []string{proto.ActionNames, proto.ActionStat, proto.ActionInfo, proto.ActionList} {
+		if resp, _ := e.call(proto.Request{Op: proto.OpRun, Ticket: res.Ticket, Scope: proto.ScopeUser, Action: action,
+			Params: params(proto.PathParams{Path: home})}, nil); !resp.OK {
+			t.Fatalf("%s: %q", action, resp.Code)
+		}
+	}
+	if resp, _ := e.call(proto.Request{Op: proto.OpRun, Ticket: res.Ticket, Scope: proto.ScopeUser, Action: proto.ActionStatMany,
+		Params: params(proto.StatManyParams{Dir: home, Names: []string{"missing"}})}, nil); !resp.OK {
+		t.Fatalf("statmany: %q", resp.Code)
+	}
+
 	resp, _ := e.call(proto.Request{Op: proto.OpRun, Ticket: res.Ticket, Scope: proto.ScopeUser, Action: proto.ActionWrite,
 		Params: params(proto.WriteParams{Path: home + "/a.txt"})}, []byte("hello"))
 	if !resp.OK {
@@ -588,6 +600,11 @@ func TestRunFileOps(t *testing.T) {
 	e.logs.wait(t, `action=fs.read result=ok`)
 	if logs := e.logs.text(); strings.Contains(logs, `action=fs.read path=`) {
 		t.Fatalf("read path logged:\n%s", logs)
+	}
+	for _, action := range []string{"fs.names", "fs.stat", "fs.statmany", "fs.info", "fs.list result=ok"} {
+		if logs := e.logs.text(); strings.Contains(logs, "action="+action) {
+			t.Fatalf("%s logged:\n%s", action, logs)
+		}
 	}
 }
 

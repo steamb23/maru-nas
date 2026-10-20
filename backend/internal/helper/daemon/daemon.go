@@ -489,8 +489,18 @@ var writeActions = map[string]bool{
 	proto.ActionWrite: true, proto.ActionMkdir: true, proto.ActionRename: true, proto.ActionRemove: true,
 }
 
+// quietActions는 감사 로그에 남기지 않는 정보 읽기 연산이다. 파일 탐색기가 폴더를 열고 스크롤할 때마다
+// 여러 번 부르므로 남기면 저널이 이 줄로 덮인다. 내려받기(fs.read)와 쓰기 연산은 남긴다.
+var quietActions = map[string]bool{
+	proto.ActionList: true, proto.ActionStat: true, proto.ActionNames: true, proto.ActionStatMany: true, proto.ActionInfo: true,
+}
+
 // audit은 연산 결과를 남긴다. root 범위와 쓰기 연산은 언제나, 읽기 연산은 연산과 결과만 남긴다.
+// 정보 읽기 연산(quietActions)은 남기지 않는다.
 func (s *Server) audit(user string, req proto.Request, code string) {
+	if req.Scope == proto.ScopeUser && quietActions[req.Action] {
+		return
+	}
 	result := "ok"
 	if code != "" {
 		result = code

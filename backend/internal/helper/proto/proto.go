@@ -63,6 +63,12 @@ const (
 	ActionMkdir  = "fs.mkdir"
 	ActionRename = "fs.rename"
 	ActionRemove = "fs.remove"
+	// ActionNames는 폴더의 이름과 종류만 읽는다(항목마다 lstat 하지 않음). 이름은 응답 본문으로 보낸다.
+	ActionNames = "fs.names"
+	// ActionStatMany는 한 폴더 안의 이름 여러 개를 lstat한다.
+	ActionStatMany = "fs.statmany"
+	// ActionInfo는 파일 하나의 소유자·그룹·ACL 유무·내 권한을 함께 읽는다(파일 탐색기의 정보 패널).
+	ActionInfo = "fs.info"
 	// ActionSSHAuthorize는 ~/.ssh/authorized_keys에 onmaru가 접속할 때만 쓰는 짧은 수명의 키 줄을 넣는다.
 	ActionSSHAuthorize = "ssh.authorize"
 	// ActionSSHRevoke는 그 키 줄(과 만료된 onmaru 키 줄)을 지운다.
@@ -75,7 +81,7 @@ const (
 // Actions는 범위마다 실행할 수 있는 연산이다. root 연산은 여기에 타입 있는 함수로만 더한다.
 var Actions = map[string][]string{
 	ScopeUser: {ActionID, ActionList, ActionStat, ActionRead, ActionWrite, ActionMkdir, ActionRename, ActionRemove,
-		ActionSSHAuthorize, ActionSSHRevoke},
+		ActionNames, ActionStatMany, ActionInfo, ActionSSHAuthorize, ActionSSHRevoke},
 	ScopeRoot: {ActionID, ActionUpgradeApply},
 }
 

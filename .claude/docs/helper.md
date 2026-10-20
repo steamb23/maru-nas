@@ -38,7 +38,7 @@
 - 요청 머리는 모르는 필드를 거부한다. 비밀번호와 티켓이 들어 있으므로 요청을 로그에 남기지 않는다
 - 티켓 관리: `session.open`(사용자, 비밀번호, pending), `session.activate`, `session.close`, `session.reset`, `session.status`, `session.elevate`(비밀번호), `session.drop`
 - 연산: `run`(티켓, 범위 `user`|`root`, 연산, 인자, `size`). 연산 목록은 `proto.Actions`
-  - 사용자 범위: `id`, `fs.list`, `fs.stat`, `fs.read`(offset·length, 응답 뒤 스트림), `fs.write`(요청 뒤 스트림, 같은 폴더 임시 파일에 받은 뒤 이름 바꾸기), `fs.mkdir`, `fs.rename`, `fs.remove`(`recursive`), `ssh.authorize`·`ssh.revoke`(웹 터미널의 임시 SSH 키, 아래 "임시 SSH 키")
+  - 사용자 범위: `id`(티켓 사용자의 홈 `home`도 준다), `fs.list`, `fs.stat`, `fs.read`(offset·length, 응답 뒤 스트림), `fs.write`(요청 뒤 스트림, 같은 폴더 임시 파일에 받은 뒤 이름 바꾸기), `fs.mkdir`, `fs.rename`, `fs.remove`(`recursive`), 파일 탐색기의 `fs.names`·`fs.statmany`·`fs.info`(아래 "파일 탐색기 연산"), `ssh.authorize`·`ssh.revoke`(웹 터미널의 임시 SSH 키, 아래 "임시 SSH 키")
   - root 범위: `id`, `upgrade.apply`(대시보드에서 업그레이드의 적용 요청, 아래 "대시보드에서 업그레이드")
 - 오류는 코드만 준다(`proto.Code*`). 경로·사용자 이름 같은 세부는 도우미 로그에만 남긴다. onmaru는 코드를 HTTP 오류 코드(`api.Err*`)로 바꾼다
 
@@ -56,7 +56,7 @@
 - 부모(root)는 머리를 읽고 티켓·범위·연산 허용·상승을 확인한 뒤, `/proc/self/exe worker`를 `SysProcAttr{Credential, Setsid, Pdeathsig: SIGKILL}`, 빈 환경 변수, cwd `/`로 실행한다. 작업(`worker.Job`: 범위, 연산, 인자, 본문 크기, 사용자 이름·홈)은 stdin, 연결은 `ExtraFiles`(fd 3)로 넘긴다. 부모는 사용자 데이터를 읽거나 쓰지 않는다
 - 사용자 범위는 사용자 uid·기본 gid·보조 그룹(`os/user`, 로컬 파일)으로 강등한다. root 범위도 도우미의 보조 그룹은 넘기지 않는다. worker는 시작할 때 범위와 실제 uid가 맞는지 다시 확인한다(사용자 범위가 root로 돌면 거절)
 - 결과 코드는 종료 코드(0 성공, 2 연산 실패 + stderr `code=<코드>`, 그 밖은 실행 오류)로 부모에 알려 감사 로그에 쓴다
-- 감사 로그(journal)는 비밀번호 확인 결과, 모든 root 연산, 쓰기 연산의 경로, 읽기 연산의 연산·결과를 남긴다. 읽기 연산도 한 줄씩 남기므로, 파일 탐색기를 붙일 때 목록·정보(`fs.list`, `fs.stat`) 기록은 빼고 내려받기(`fs.read`)와 쓰기 연산만 남긴다(`ROADMAP.md`의 파일 탐색기)
+- 감사 로그(journal)는 비밀번호 확인 결과, 모든 root 연산, 쓰기 연산의 경로, 내려받기(`fs.read`)의 연산·결과를 남긴다. 정보 읽기 연산(`fs.list`, `fs.stat`, `fs.names`, `fs.statmany`, `fs.info`, `daemon.quietActions`)은 파일 탐색기가 폴더를 열고 스크롤할 때마다 부르므로 남기지 않는다
 - 시간 제한: 목록·정보 30초(부모), 스트림 6시간(부모) + 60초 무진행(worker의 연결 마감 시각)
 - 동시 실행: 전체 16개, 사용자당 4개. 연결은 동시 64개
 
@@ -68,9 +68,25 @@
 - 공유 폴더 단위로 보이는 일은 onmaru의 파일 API(파일 탐색기)가 한다. OMV의 공유 폴더 RPC(`ShareMgmt.*`)는 모두 관리자 전용이라 일반 사용자 세션으로는 목록을 받을 수 없으므로, 관리자 세션이 받은 목록을 전역 설정(`site.json`)에 스냅숏으로 둔다. 스냅숏은 처음 보이는 폴더의 이름표일 뿐이고 도우미는 믿지 않는다(범위는 위 기준이 정한다). OMV 공유 폴더 권한(Privileges)은 SMB 같은 서비스에만 적용되므로 따르지 않는다(`ROADMAP.md`의 파일 탐색기)
 - 루트 파일시스템의 공유 폴더(openmediavault-sharerootfs, 예: `/kvm`)는 기준 밖이다. 파일 탐색기에서 열려면 root가 정하는 추가 기준 경로 설정을 도우미에 더한다. onmaru가 보낸 경로는 믿지 않으므로 도우미 쪽 설정이어야 하고, 설치기가 묻고(설정 레지스트리에 설정 하나로 더한다) 유닛 템플릿의 `ReadWritePaths`에도 더한다(`ProtectSystem=strict`라 없으면 읽기 전용이다). `/`는 받지 않는다. mergerfs 풀(`/srv/mergerfs/<이름>`)은 이미 기준 안이다
 - 기준 디렉터리 자체는 지우거나 옮기거나 덮어쓸 수 없다. 이름 바꾸기는 같은 기준 안에서만 하고 대상이 있으면 `exists`다
-- 읽기는 일반 파일만(`O_NONBLOCK`으로 열어 FIFO에서 멈추지 않음). 목록은 1만 개까지(`truncated`). umask는 0002(OMV Samba의 create mask 0664 / directory mask 0775)
+- 읽기는 일반 파일만(`O_NONBLOCK`으로 열어 FIFO에서 멈추지 않음). `fs.list`는 1만 개까지(`truncated`). umask는 0002(OMV Samba의 create mask 0664 / directory mask 0775)
+- `os.Root`는 중간 폴더를 읽기(`O_RDONLY|O_DIRECTORY`)로 열며 따라가므로, 경로 중간에 들어가기(x)만 되고 목록(r)은 볼 수 없는 폴더가 있으면 그 아래는 다룰 수 없다(`permission_denied`). 파일 탐색기는 목록을 볼 수 있는 폴더 안만 연다
 - 덮어쓰기는 새 inode로 바꾸므로 소유자는 올린 사용자가 되고 ACL은 폴더의 기본 ACL을 따른다. rwx 권한 비트는 되도록 유지하고(소유자일 때만 바뀐다) setuid·setgid·sticky는 옮기지 않는다. 덮어쓰지 않을 때는 하드 링크로 같은 이름이 없는지 원자적으로 확인하고, 하드 링크를 못 쓰는 파일시스템이면 다시 확인한 뒤 이름을 바꾼다
 - 올리기가 실패하면 worker가 임시 파일(`.onmaru-upload-<난수>.part`)을 지운다. 시간 초과로 worker가 강제 종료되면(SIGKILL) 지우지 못하고 남는다. 이 접두사의 이름으로는 올릴 수 없다
+
+## 파일 탐색기 연산(fs.names, fs.statmany, fs.info)
+
+1만 개가 넘는 폴더도 다루기 위해 이름을 먼저 읽고, 정보는 보이는 범위만 읽는다(`ROADMAP.md`의 파일 탐색기). 정렬·캐시·보이는 범위 계산은 onmaru(`internal/files`)가 한다.
+
+- `fs.names`(`{path}`): 이름과 종류만 읽는다. `os.Root`로 연 폴더의 `ReadDir`는 `d_type`을 알아도 항목마다 `lstatat`을 하므로(Go `os/file_unix.go`의 `newUnixDirent`) getdents(`syscall.ReadDirent`)를 직접 읽고 `linux_dirent64`를 파싱한다(`parseDirents`). `.`·`..`·`d_ino` 0은 뺀다
+  - 결과 머리는 `NamesResult{count, truncated, dirModTimeNs, writable}`이고 이름 목록은 머리 뒤 본문(항목마다 종류 1바이트 `d`/`f`/`l`/`o`/`?` + 이름 + NUL, `proto.AppendName`·`ParseNames`)이다. 응답 머리(8MiB)에 넣지 않는다
+  - 상한은 `proto.MaxNames`(30만 개)와 본문 `MaxNamesBytes`(32MiB)이고 넘으면 그 앞까지(디렉터리 순서)와 `truncated`다
+  - 종류를 주지 않는 파일시스템(`DT_UNKNOWN`)의 항목만 `Lstat`하고, 15초(`unknownTypeBudget`)가 지나면 나머지는 `?`로 둔다(연산 시간 제한 30초 안에 끝나게). 읽는 사이 지워진 항목은 뺀다
+  - `dirModTimeNs`는 폴더 자신의 수정 시각(나노초, 항목이 더해지거나 빠지면 바뀐다), `writable`은 그 폴더에 `faccessat(W_OK|X_OK)`다
+- `fs.statmany`(`{dir, names[]}`): 한 폴더 바로 안의 이름 `proto.MaxStatMany`(512)개까지 `Lstat`한다. 이름은 `proto.ValidName`(빈 이름·`.`·`..`·`/`·NUL·255바이트 초과 거부)으로 검사하므로 그 폴더 밖을 가리킬 수 없다. 폴더를 `OpenRoot`로 한 번 열어 이름마다 경로를 다시 따라가지 않는다. 읽지 못한 항목은 그 항목만 `code`(지워졌으면 `not_found`)이고, 폴더(심볼릭 링크 아님)는 `O_PATH`로 연 폴더 fd 기준 `faccessat(R_OK|X_OK)`이 실패하면 `locked`다. 심볼릭 링크 대상은 기준 Root로 따라간다(`fillLink`)
+- `fs.info`(`{path}`): `Entry`와 uid·gid, `/etc/passwd`·`/etc/group`에서 찾은 소유자·그룹 이름(없으면 빈 값), ACL 유무(`acl`), 내 권한(`access{read, write}`, 폴더는 R|X·W|X). 부모 폴더를 `O_PATH|O_DIRECTORY`로 열고 그 fd 기준으로 `faccessat`, `/proc/self/fd/<fd>/<이름>`에 `lgetxattr`(`system.posix_acl_access`·`posix_acl_default`, stdlib에 래퍼가 없어 `SYS_LGETXATTR`를 직접 부름)을 한다. 확인하지 못하면 `acl`을 비운다
+  - **심볼릭 링크는 권한·ACL을 보지 않는다.** `faccessat`은 마지막 구성 요소를 따라가고(`AT_SYMLINK_NOFOLLOW`는 faccessat2가 필요하다) 기준 밖 대상의 정보가 샐 수 있기 때문이다. `fs.statmany`의 `locked`도 `Lstat`이 폴더라고 한 항목만 본다(그 사이 링크로 바뀌는 경쟁은 참·거짓 하나만 새므로 받아들인다)
+- 쓰는 시스템 호출(`getdents64`, `faccessat`, `newfstatat`, `lgetxattr`)은 유닛의 `SystemCallFilter=@system-service`(`@file-system` 포함)에 들어 있어 유닛은 바꾸지 않았다
+- 셋 다 일반 연산(30초)이고 감사 로그에 남기지 않는다. onmaru 쪽은 `client.Client.Names`(머리 뒤 본문을 읽는 별도 연결)·`StatMany`·`Info`
 
 ## 임시 SSH 키(ssh.authorize, ssh.revoke)
 
