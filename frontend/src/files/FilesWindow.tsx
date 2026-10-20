@@ -351,6 +351,12 @@ export function FilesWindow({ active }: WindowViewProps) {
           <span>{t('files.nav.fallback')}</span>
         </p>
       )}
+      {rootsState.status === 'ready' && !fallback && shares.length === 0 && roots.length > 0 && (
+        <p className="files-nav-note">
+          <IconImage name="dialog-information-symbolic" size={14} />
+          <span>{t('files.nav.noShares')}</span>
+        </p>
+      )}
       {rootsState.status === 'ready' && roots.length === 0 && <p className="files-nav-note">{t('files.nav.none')}</p>}
     </>
   )

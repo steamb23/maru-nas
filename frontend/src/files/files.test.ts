@@ -61,8 +61,10 @@ describe('경로', () => {
     expect(baseName('/srv/d1/a.txt')).toBe('a.txt')
     expect(dirName('/srv/d1/a.txt')).toBe('/srv/d1')
     expect(dirName('/srv')).toBe('/')
-    expect(locationLabel(roots, '/srv/d1/media/movies/x.mkv')).toBe('영화')
-    expect(locationLabel(roots, '/srv/d1/media/a/x.mkv')).toBe('미디어 / a')
+    expect(locationLabel(roots, '/srv/d1/media/movies/x.mkv', '홈 폴더')).toBe('영화')
+    expect(locationLabel(roots, '/srv/d1/media/a/x.mkv', '홈 폴더')).toBe('미디어 / a')
+    expect(locationLabel(roots, '/home/alice/x.txt', '홈 폴더')).toBe('홈 폴더')
+    expect(locationLabel(roots, '/home/alice/docs/x.txt', '홈 폴더')).toBe('홈 폴더 / docs')
   })
 
   it('올릴 수 없는 이름을 거른다', () => {

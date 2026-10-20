@@ -82,12 +82,13 @@ export function dirName(path: string): string {
 }
 
 // locationLabel은 정보 패널의 "위치"다: 뿌리 이름과 그 아래 폴더를 " / "로 잇는다.
-export function locationLabel(roots: readonly Root[], filePath: string): string {
+// 홈 폴더 뿌리는 경로 표시줄처럼 계정 이름 대신 homeName(화면 문구)으로 보인다.
+export function locationLabel(roots: readonly Root[], filePath: string, homeName: string): string {
   const dir = dirName(filePath)
   const root = findRoot(roots, dir)
   if (!root) return dir
   return crumbs(root, dir)
-    .map((c) => c.name)
+    .map((c, i) => (i === 0 && root.kind === 'home' ? homeName : c.name))
     .join(' / ')
 }
 

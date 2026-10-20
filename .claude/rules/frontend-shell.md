@@ -45,6 +45,7 @@ paths:
 - 바탕화면에는 사용자가 고른 바로가기만 놓는다(`DesktopShortcuts`). 모든 앱은 작업표시줄 왼쪽 끝 버튼으로 여는 "모든 앱" 화면(`AppDrawer`)에 있다. 화면 용어는 "바로가기"(붙여 씀)와 "모든 앱", 코드 이름은 `shortcut`과 `AppDrawer`다
 - 앱은 창 앱(`addon`, `placeholder`, 셸이 직접 그리는 `shell`)과 링크 앱(`link`, 창 없이 브라우저 탭으로 연다)이다(`windows/apps.ts`). 셸 앱의 보기 컴포넌트는 `shell/shellViews.ts`에 두어 node 테스트 대상인 `apps.ts`가 컴포넌트를 import하지 않게 한다. 창 저장소는 `WindowAppId`만 받으므로, 앱을 여는 곳(서랍 타일·바로가기·메뉴 "열기")은 `shell/launchApp.ts`의 `launchApp`을 부른다
   - 창 앱은 앱마다 창 하나이고, 다시 열면 그 창을 복원해 앞으로 가져온다(저장소의 `open`). `multiInstance` 앱(지금은 파일 탐색기와 웹 터미널)만 열 때마다(바로가기·서랍 클릭, "열기") 새 창을 연다. 열린 창을 앞으로 가져오는 것은 작업표시줄 버튼이 한다
+  - 바로가기는 한 번 눌러 연다. 습관대로 두 번 누르면 `multiInstance` 앱이 창 두 개를 열므로 연속 누르기의 둘째 click부터(`detail` 2 이상)는 무시한다(`DesktopShortcuts`의 `onClick`)
   - 창 id는 늘 `win-<n>`이고 앱 id와 같지 않다. 앱 id로 창 하나를 찾는 코드는 `multiInstance` 앱에서 틀리므로, 새로 만들면 여러 창을 전제로 한다
   - 창마다 같은 앱 안의 번호(`WindowState.instance`)를 열 때 받는다(그 앱의 열린 창이 쓰지 않는 가장 작은 수, 닫으면 다시 씀). 둘째 창부터 제목에 붙이며(`windows/title.ts`의 `windowTitle`, 문구 `window.numberedTitle`), 제목을 그리는 곳(제목 표시줄, 작업표시줄 버튼·툴팁·퇴장 버튼, "더 보기" 메뉴의 `windowTitleLabel`)은 모두 이 함수를 쓴다. `windows[]` 순서로 번호를 매기지 않는다(작업표시줄에서 순서를 바꾸면 제목이 바뀐다)
   - 링크 앱(지금은 OMV 워크벤치)은 `openLink`가 `window.open(주소, 탭 이름)`으로 이름 붙은 탭 하나를 다시 쓴다. 이름 조회가 되도록 `noopener`를 주지 않으며, 팝업 차단을 피하려고 입력 처리기 안에서 동기로 부른다. 주소 계산은 `windows/links.ts`(끝에 OMV 첫 화면 `#/`를 붙여, 다시 열 때 새로 고침 없이 이동한다)

@@ -142,6 +142,7 @@
       "disks": "Disks",
       "unreachable": "This shared folder is on the root file system and can't be opened yet.",
       "fallback": "The shared folder list hasn't been loaded yet, so disks are shown instead. They change to shared folder names once an administrator signs in.",
+      "noShares": "OMV has no shared folders. They appear here after an administrator creates one and signs in to the dashboard again.",
       "none": "There are no folders you can view."
     },
     "toolbar": {

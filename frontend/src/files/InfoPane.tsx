@@ -105,7 +105,7 @@ export function InfoPane({ path, roots, admin, onClose }: Props) {
             <dt>{t('files.info.modified')}</dt>
             <dd>{formatDateTime(new Date(info.modTime).toISOString(), lang)}</dd>
             <dt>{t('files.info.location')}</dt>
-            <dd className="selectable">{locationLabel(roots, path)}</dd>
+            <dd className="selectable">{locationLabel(roots, path, t('files.nav.home'))}</dd>
             {info.target !== undefined && (
               <>
                 <dt>{t('files.info.target')}</dt>

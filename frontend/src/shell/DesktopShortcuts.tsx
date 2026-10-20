@@ -300,9 +300,12 @@ export function DesktopShortcuts({ bounds, listRef, ref }: Props) {
 
   // 끌기·길게 누르기 뒤의 click은 무시하지만 키보드(Enter·Space, detail 0)로 누른 것은 늘 연다.
   // 끈 버튼이 놓는 순간 DOM에서 옮겨지면 브라우저가 click을 보내지 않으므로 표시는 여기서 늘 지운다.
+  // 한 번 눌러 여는 아이콘을 습관대로 두 번 누르면 창을 여러 개 여는 앱(multiInstance)이 창 두 개를 열므로
+  // 연속 누르기의 둘째 click부터(detail 2 이상)는 무시한다.
   const onClick = (id: AppId, e: MouseEvent) => {
     const suppressed = suppressClick.current
     suppressClick.current = false
+    if (e.detail > 1) return
     if (!suppressed || e.detail === 0) open(id)
   }
 

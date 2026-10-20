@@ -14,7 +14,7 @@ paths:
 ## 접근과 범위
 
 - 접근은 파일 시스템 권한만 따른다. OMV 공유 폴더 권한(Privileges)은 따라 하지 않는다. 관리자도 자기 계정의 권한으로 보며, root로 둘러보는 기능은 만들지 않는다
-- 보이는 폴더(`handler.roots`): 홈(도우미 `id`의 `home`, 세션별로 `files.Cache`에 기억) + 공유 폴더 스냅숏 + 디스크. 디스크는 스냅숏이 없을 때(`SharesUpdatedAt` 빈 값, 대체) 모두에게, 관리자가 "디스크 최상위 보기"(`SiteFiles.ShowDisks`)를 켜면 관리자에게 보인다
+- 보이는 폴더(`handler.roots`): 홈(도우미 `id`의 `home`, 세션별로 `files.Cache`에 기억) + 공유 폴더 스냅숏 + 디스크. 디스크는 스냅숏이 없을 때(`SharesUpdatedAt` 빈 값, 대체) 모두에게, 관리자가 "디스크 최상위 보기"(`SiteFiles.ShowDisks`)를 켜면 관리자에게 보인다. 스냅숏이 있는데 공유 폴더가 없으면(OMV에 공유 폴더가 없음) 디스크도 보이지 않으므로 사이드바가 그 사정을 안내한다(`files.nav.noShares`)
 - `/api/files/*`는 보이는 폴더 밖 경로를 도우미에 보내기 전에 403 `outside_roots`로 거른다(`allowedPath`). 실제 범위는 도우미가 기준 디렉터리로 다시 정한다. `/srv/` 아래가 아닌 공유 폴더(sharerootfs)는 `reachable: false`이고 열 수 없다(도우미 추가 기준 경로는 로드맵)
 - **공유 폴더 스냅숏**: `ShareMgmt.enumerateSharedFolders`는 관리자 전용이라 관리자 세션이 받아 `site.json`의 `files.shares`에 둔다. `startSession`이 관리자이고 도우미가 있으면 뒤에서(10초, 로그인 응답을 기다리게 하지 않음) 받고, 설정 앱의 "지금 받기"(`POST /api/site/files/refresh`)가 바로 받는다. 고정 메서드 호출(`sharesMethods`, `NoTouch`)이고, 성공했을 때만 바꾼다. 서버가 스스로 `site.json`을 쓰는 유일한 경우이며, 메모리(`handler.filesSite`)와 함께 바꾼다
   - 응답 해석은 `files.ParseShares`: `absdirpath`·`status`는 OMV 8.1.0부터 있으므로 없으면 `mntent.dir` + `reldirpath`로 만들고, `status`가 있고 `OK`가 아니면 뺀다(`auth-omv.md`의 "OMV 8 버전별 차이")
