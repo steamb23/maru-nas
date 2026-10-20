@@ -35,13 +35,13 @@ describe('애드온 앱', () => {
     })
   })
 
-  it('준비 중 앱은 애드온이 아니다', () => {
+  it('파일 탐색기는 셸 앱이다', () => {
     expect(isAddonApp('files')).toBe(false)
-    expect(getApp('files').kind).toBe('placeholder')
+    expect(getApp('files').kind).toBe('shell')
     expect(getApp('storage').kind).toBe('addon')
   })
 
-  it('준비 중 앱·링크 앱과 애드온의 id가 겹치지 않는다', () => {
+  it('셸 앱·링크 앱과 애드온의 id가 겹치지 않는다', () => {
     const others = APP_IDS.filter((id) => !isAddonApp(id))
     for (const id of others) expect(Object.hasOwn(MANIFESTS, id)).toBe(false)
   })
@@ -60,7 +60,7 @@ describe('셸 앱', () => {
     expect(isAddonApp('settings')).toBe(false)
     expect(isLinkApp('settings')).toBe(false)
     expect(getApp('settings').kind).toBe('shell')
-    expect(isShellApp('files')).toBe(false)
+    expect(isShellApp('files')).toBe(true)
     expect(isShellApp('workbench')).toBe(false)
   })
 })
@@ -85,7 +85,7 @@ describe('isAppId', () => {
 })
 
 describe('isMultiInstance', () => {
-  it('창을 여러 개 여는 앱은 웹 터미널뿐이다', () => {
-    expect(APP_IDS.filter(isMultiInstance)).toEqual(['terminal'])
+  it('창을 여러 개 여는 앱은 파일 탐색기와 웹 터미널이다', () => {
+    expect(APP_IDS.filter(isMultiInstance)).toEqual(['files', 'terminal'])
   })
 })

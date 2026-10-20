@@ -1,0 +1,251 @@
+/* 파일 탐색기의 자세히 목록(FileList). 줄 높이(34px)는 virtual.ts의 ROW_HEIGHT와 맞춘다. 줄은 스크롤 영역 안에
+   absolute로 놓는다(보이는 줄만 그린다). */
+
+.files-list {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  container-type: inline-size;
+}
+
+.files-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 130px 80px 100px;
+  gap: 12px;
+  align-items: center;
+  box-sizing: border-box;
+  height: 34px;
+  padding: 0 10px;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.files-row.header {
+  flex: none;
+  height: 30px;
+  margin: 0 8px;
+  border-bottom: 1px solid var(--window-border);
+  border-radius: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.files-row.header button {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.files-row.header button.sorted {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.files-row.header .size button {
+  margin-left: auto;
+}
+
+.files-sort {
+  width: 0;
+  height: 0;
+  border-right: 4px solid transparent;
+  border-left: 4px solid transparent;
+}
+
+.files-sort.asc {
+  border-bottom: 5px solid currentColor;
+}
+
+.files-sort.desc {
+  border-top: 5px solid currentColor;
+}
+
+.files-scroll {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  outline: none;
+}
+
+.files-scroll:focus-visible {
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--accent) 50%, transparent);
+}
+
+.files-spacer {
+  position: relative;
+}
+
+.files-spacer .files-row {
+  position: absolute;
+  right: 8px;
+  left: 8px;
+  cursor: default;
+}
+
+.files-spacer .files-row:not(.skeleton):hover {
+  background: var(--hover-bg);
+}
+
+.files-spacer .files-row:not(.skeleton):active {
+  background: var(--press-bg);
+}
+
+.files-spacer .files-row.selected {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.files-spacer .files-row.selected:hover {
+  background: color-mix(in srgb, var(--accent) 24%, transparent);
+}
+
+.files-spacer .files-row.selected:active {
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+.files-row.dim .files-name {
+  color: var(--text-muted);
+}
+
+.files-cell {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.files-cell.name {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.files-cell.date,
+.files-cell.size,
+.files-cell.kind {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.files-spacer .files-cell.size {
+  text-align: right;
+}
+
+.files-row.header .files-cell.size {
+  display: flex;
+}
+
+.files-icon {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  width: 20px;
+  height: 20px;
+}
+
+.files-lock {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  display: grid;
+  place-items: center;
+  width: 13px;
+  height: 13px;
+  border-radius: 7px;
+  background: var(--window-bg);
+  color: var(--text-muted);
+}
+
+.files-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 아직 받지 않은 줄 */
+.files-skel {
+  display: block;
+  height: 10px;
+  border-radius: 5px;
+  background: var(--hover-bg);
+}
+
+.files-skel.icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+}
+
+.files-row.skeleton {
+  grid-template-columns: 20px minmax(0, 1fr);
+}
+
+.files-empty {
+  position: absolute;
+  inset: 24px 16px auto;
+  margin: 0;
+  color: var(--text-muted);
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+/* 스크롤 위치 말풍선(AC-Large) */
+.files-bubble {
+  position: absolute;
+  right: 24px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-width: 60%;
+  padding: 7px 12px;
+  border: 1px solid var(--window-border);
+  border-radius: 8px;
+  background: var(--window-bg);
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.22);
+  font-size: 12px;
+  pointer-events: none;
+}
+
+.files-bubble strong {
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.files-bubble span {
+  color: var(--text-muted);
+}
+
+@container (max-width: 560px) {
+  .files-row,
+  .files-row.header {
+    grid-template-columns: minmax(0, 1fr) 120px 72px;
+  }
+
+  .files-cell.kind {
+    display: none;
+  }
+}
+
+@container (max-width: 400px) {
+  .files-row,
+  .files-row.header {
+    grid-template-columns: minmax(0, 1fr) 72px;
+  }
+
+  .files-cell.date {
+    display: none;
+  }
+}

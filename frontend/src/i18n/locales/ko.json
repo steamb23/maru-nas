@@ -134,6 +134,162 @@
     },
     "verify": "확인"
   },
+  "files": {
+    "nav": {
+      "label": "위치",
+      "home": "홈 폴더",
+      "shares": "공유 폴더",
+      "disks": "디스크",
+      "unreachable": "루트 파일시스템의 공유 폴더라 아직 열 수 없습니다.",
+      "fallback": "공유 폴더 목록을 아직 받지 못해 디스크를 대신 보입니다. 관리자가 한 번 로그인하면 공유 폴더 이름으로 바뀝니다.",
+      "none": "볼 수 있는 폴더가 없습니다."
+    },
+    "toolbar": {
+      "back": "뒤로",
+      "forward": "앞으로",
+      "up": "상위 폴더",
+      "refresh": "새로 고침",
+      "path": "경로",
+      "search": "이 폴더에서 찾기",
+      "searchMany": "{{total}}개에서 찾기",
+      "upload": "올리기",
+      "uploadDenied": "이 폴더에 쓸 권한이 없습니다."
+    },
+    "columns": {
+      "name": "이름",
+      "modified": "수정한 날짜",
+      "size": "크기",
+      "kind": "종류"
+    },
+    "status": {
+      "items_one": "항목 {{total}}개",
+      "items_other": "항목 {{total}}개",
+      "shown": "항목 {{total}}개 표시 (잘림)",
+      "selected": "1개 선택함",
+      "sortName": "이름순",
+      "sortMtime": "날짜순",
+      "sortSize": "크기순",
+      "preparing": "{{sort}} 정렬 준비 중",
+      "writable": "이 폴더: 읽기·쓰기 가능",
+      "readOnly": "이 폴더: 읽기만 가능"
+    },
+    "banner": {
+      "truncated": "항목이 30만 개보다 많아 일부만 보입니다. 정렬과 찾기도 보이는 항목 안에서만 합니다. 하위 폴더로 나누면 모두 볼 수 있습니다.",
+      "prepareMtime": "수정한 날짜순으로 정렬하려면 항목 정보를 모두 읽어야 합니다. 다 읽을 때까지는 이름순으로 보입니다.",
+      "prepareSize": "크기순으로 정렬하려면 항목 정보를 모두 읽어야 합니다. 다 읽을 때까지는 이름순으로 보입니다.",
+      "progress": "{{done}} / {{total}}",
+      "cancel": "취소"
+    },
+    "kinds": {
+      "folder": "폴더",
+      "locked": "권한 없음",
+      "link": "심볼릭 링크",
+      "other": "특수 파일",
+      "unknown": "항목",
+      "file": "파일",
+      "image": "이미지",
+      "video": "동영상",
+      "audio": "오디오",
+      "archive": "압축 파일",
+      "diskImage": "디스크 이미지",
+      "pdf": "PDF 문서",
+      "document": "문서",
+      "spreadsheet": "스프레드시트",
+      "presentation": "프레젠테이션",
+      "text": "텍스트",
+      "markdown": "Markdown 문서",
+      "web": "웹 문서",
+      "code": "스크립트·코드",
+      "executable": "실행 파일"
+    },
+    "list": {
+      "label": "파일 목록",
+      "empty": "빈 폴더입니다.",
+      "noMatch": "이름에 \"{{query}}\"가 든 항목이 없습니다.",
+      "position": "{{index}} / {{total}}",
+      "lockedFolder": "이 폴더를 열 권한이 없습니다.",
+      "badName": "이름이 UTF-8이 아니라 열 수 없습니다."
+    },
+    "menu": {
+      "open": "열기",
+      "download": "내려받기",
+      "info": "정보"
+    },
+    "info": {
+      "label": "선택한 파일 정보",
+      "close": "정보 패널 닫기",
+      "download": "내려받기",
+      "kindSize": "{{kind}} · {{size}}",
+      "modified": "수정한 날짜",
+      "location": "위치",
+      "target": "링크 대상",
+      "permissions": "권한",
+      "myAccess": "내 권한: {{access}}",
+      "readWrite": "읽기·쓰기",
+      "readOnly": "읽기만",
+      "writeOnly": "쓰기만",
+      "noAccess": "없음",
+      "unknown": "알 수 없음",
+      "owner": "소유자",
+      "group": "그룹",
+      "mode": "모드",
+      "acl": "ACL",
+      "aclYes": "있음",
+      "aclNo": "없음",
+      "note": "탐색기는 파일 시스템 권한만 따릅니다. OMV 공유 폴더 권한은 SMB·FTP에만 적용됩니다.",
+      "editAcl": "OMV에서 ACL 편집",
+      "loadFailed": "정보를 불러오지 못했습니다."
+    },
+    "upload": {
+      "title": "올리기",
+      "inProgress": "올리기 {{total}}개 중 {{active}}개 남음",
+      "allDone": "올리기 {{total}}개 끝남",
+      "collapse": "접기",
+      "expand": "펼치기",
+      "cancel": "취소",
+      "retry": "다시 올리기",
+      "clear": "목록 비우기",
+      "done": "완료",
+      "skipped": "건너뜀",
+      "canceled": "취소함",
+      "waiting": "기다리는 중",
+      "progress": "{{sent}} / {{size}}",
+      "remaining": "약 {{time}} 남음",
+      "badName": "{{name}}은(는) 올릴 수 없는 이름입니다.",
+      "conflictTitle": "같은 이름의 파일이 있습니다",
+      "conflictMessage": "\"{{name}}\" 파일이 이미 있습니다. 덮어쓸까요?",
+      "applyAll": "남은 파일에도 같게 적용",
+      "overwrite": "덮어쓰기",
+      "skip": "건너뛰기",
+      "errors": {
+        "file_exists": "같은 이름의 파일이 생겼습니다.",
+        "permission_denied": "이 폴더에 쓸 권한이 없습니다.",
+        "no_space": "디스크 공간이 모자랍니다.",
+        "read_only": "읽기 전용 파일시스템입니다.",
+        "transfer_timeout": "60초 동안 진행이 없어 연결을 끊었습니다.",
+        "helper_busy": "동시에 실행 중인 작업이 많습니다. 잠시 뒤 다시 올리세요.",
+        "is_dir": "같은 이름의 폴더가 있습니다.",
+        "network": "연결이 끊겼습니다.",
+        "unknown": "올리지 못했습니다."
+      }
+    },
+    "errors": {
+      "not_found": "폴더나 파일이 없습니다. 지워졌거나 이름이 바뀌었을 수 있습니다.",
+      "permission_denied": "볼 권한이 없습니다.",
+      "outside_roots": "파일 탐색기에서 볼 수 없는 위치입니다.",
+      "not_dir": "폴더가 아닙니다.",
+      "not_regular": "일반 파일이 아니라 내려받을 수 없습니다.",
+      "helper_unavailable": "권한 도우미에 연결할 수 없습니다.",
+      "helper_reauth": "권한 도우미 세션이 끝났습니다. 다시 로그인하세요.",
+      "helper_busy": "동시에 실행 중인 작업이 많습니다. 잠시 뒤 다시 시도하세요.",
+      "generic": "불러오지 못했습니다.",
+      "retry": "다시 시도"
+    },
+    "security": {
+      "message": "이 세션은 파일 탐색기를 쓰기 전에 보안 확인이 필요합니다. 본인 확인을 마치면 폴더를 보입니다.",
+      "verify": "확인"
+    }
+  },
   "sysinfo": {
     "disconnected": "연결 끊김 — 다시 연결하는 중…",
     "cpu": "CPU",
@@ -397,6 +553,19 @@
     "showNav": "메뉴 보기"
   },
   "settings": {
+    "files": {
+      "title": "파일 탐색기",
+      "shares": "공유 폴더 목록",
+      "sharesDesc": "일반 사용자의 세션으로는 OMV 공유 폴더 목록을 받을 수 없어, 관리자가 로그인할 때 받은 목록을 이름표로 둡니다. 실제로 열 수 있는 범위는 파일 시스템 권한이 정합니다.",
+      "sharesState_one": "공유 폴더 {{count}}개 · {{time}}에 받음",
+      "sharesState_other": "공유 폴더 {{count}}개 · {{time}}에 받음",
+      "sharesNone": "아직 받지 못했습니다.",
+      "refresh": "지금 받기",
+      "refreshFailed": "공유 폴더 목록을 받지 못했습니다.",
+      "showDisks": "디스크 최상위 보기",
+      "showDisksDesc": "관리자에게 공유 폴더 밖, /srv 아래 디스크의 맨 위까지 보입니다.",
+      "saveFailed": "설정을 저장하지 못했습니다."
+    },
     "nav": "설정 메뉴",
     "groups": {
       "user": "사용자",

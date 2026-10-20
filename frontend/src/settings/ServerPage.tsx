@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next'
 import { useCapabilitiesStore } from '../addons/capabilities'
 import { ApiError, fetchCapabilities, fetchServerSettings, saveServerSettings } from '../api/client'
 import type { ServerSettings } from '../api/types.gen'
+import { FilesSection } from './FilesSection'
 import { HelperSection } from './HelperSection'
 import { CommandBlock, SettingsCard, SettingsNotice, SettingsRow, SettingsSection, Switch } from './controls'
 import { OVERRIDE_FLAGS, type OverrideKey, SOURCE_LABELS, overridesWith, runtimeLabelKey } from './server'
@@ -101,6 +102,8 @@ export function ServerPage() {
       )}
 
       <HelperSection />
+
+      <FilesSection />
 
       {data && (
         <SettingsSection title={t('settings.server.runtime')} description={t('settings.server.runtimeDesc')}>

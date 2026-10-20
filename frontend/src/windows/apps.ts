@@ -41,17 +41,20 @@ export type WindowAddonId = {
 }[AddonId]
 
 // 아직 애드온이 없는 앱. 애드온을 만들면 여기서 지운다(같은 id를 함께 두지 않는다).
-const PLACEHOLDER_APPS = {
-  files: {
-    titleKey: 'apps.files',
-    icon: 'folder',
-    kind: 'placeholder',
-    defaultSize: { width: 640, height: 420 },
-  },
-} as const satisfies Record<string, WindowAppDef>
+const PLACEHOLDER_APPS = {} as const satisfies Record<string, WindowAppDef>
 
 // 셸이 직접 그리는 창 앱. 보기 컴포넌트는 shell/shellViews.ts에 있다(이 파일은 node 테스트 대상이라 import하지 않는다).
 const SHELL_APPS = {
+  // 파일 탐색기. 홈 폴더와 공유 폴더를 권한 도우미가 사용자 권한으로 다룬다(src/files). 도우미가 있을 때만 보인다.
+  // 두 폴더를 나란히 보도록 창을 여러 개 연다.
+  files: {
+    titleKey: 'apps.files',
+    icon: 'folder',
+    kind: 'shell',
+    defaultSize: { width: 1200, height: 680 },
+    minSize: { width: 400, height: 360 },
+    multiInstance: true,
+  },
   // 웹 터미널. 같은 호스트의 sshd에 대시보드 사용자로 접속한 셸이다(src/terminal). 관리자가 허용했을 때만 보인다.
   terminal: {
     titleKey: 'apps.terminal',

@@ -134,6 +134,162 @@
     },
     "verify": "Verify"
   },
+  "files": {
+    "nav": {
+      "label": "Locations",
+      "home": "Home folder",
+      "shares": "Shared folders",
+      "disks": "Disks",
+      "unreachable": "This shared folder is on the root file system and can't be opened yet.",
+      "fallback": "The shared folder list hasn't been loaded yet, so disks are shown instead. They change to shared folder names once an administrator signs in.",
+      "none": "There are no folders you can view."
+    },
+    "toolbar": {
+      "back": "Back",
+      "forward": "Forward",
+      "up": "Parent folder",
+      "refresh": "Refresh",
+      "path": "Path",
+      "search": "Search this folder",
+      "searchMany": "Search {{total}} items",
+      "upload": "Upload",
+      "uploadDenied": "You don't have permission to write to this folder."
+    },
+    "columns": {
+      "name": "Name",
+      "modified": "Date modified",
+      "size": "Size",
+      "kind": "Type"
+    },
+    "status": {
+      "items_one": "{{total}} item",
+      "items_other": "{{total}} items",
+      "shown": "Showing {{total}} items (truncated)",
+      "selected": "1 selected",
+      "sortName": "By name",
+      "sortMtime": "By date",
+      "sortSize": "By size",
+      "preparing": "{{sort}} (preparing)",
+      "writable": "This folder: read and write",
+      "readOnly": "This folder: read only"
+    },
+    "banner": {
+      "truncated": "This folder has more than 300,000 items, so only some are shown. Sorting and search also cover only the shown items. Split it into subfolders to see everything.",
+      "prepareMtime": "Sorting by date modified needs the details of every item. Until they are all read, items stay sorted by name.",
+      "prepareSize": "Sorting by size needs the details of every item. Until they are all read, items stay sorted by name.",
+      "progress": "{{done}} / {{total}}",
+      "cancel": "Cancel"
+    },
+    "kinds": {
+      "folder": "Folder",
+      "locked": "No permission",
+      "link": "Symbolic link",
+      "other": "Special file",
+      "unknown": "Item",
+      "file": "File",
+      "image": "Image",
+      "video": "Video",
+      "audio": "Audio",
+      "archive": "Archive",
+      "diskImage": "Disk image",
+      "pdf": "PDF document",
+      "document": "Document",
+      "spreadsheet": "Spreadsheet",
+      "presentation": "Presentation",
+      "text": "Text",
+      "markdown": "Markdown document",
+      "web": "Web document",
+      "code": "Script or code",
+      "executable": "Executable"
+    },
+    "list": {
+      "label": "Files",
+      "empty": "This folder is empty.",
+      "noMatch": "No items with \"{{query}}\" in the name.",
+      "position": "{{index}} / {{total}}",
+      "lockedFolder": "You don't have permission to open this folder.",
+      "badName": "This name isn't UTF-8, so it can't be opened."
+    },
+    "menu": {
+      "open": "Open",
+      "download": "Download",
+      "info": "Details"
+    },
+    "info": {
+      "label": "Selected file details",
+      "close": "Close details",
+      "download": "Download",
+      "kindSize": "{{kind}} · {{size}}",
+      "modified": "Date modified",
+      "location": "Location",
+      "target": "Link target",
+      "permissions": "Permissions",
+      "myAccess": "Your access: {{access}}",
+      "readWrite": "Read and write",
+      "readOnly": "Read only",
+      "writeOnly": "Write only",
+      "noAccess": "None",
+      "unknown": "Unknown",
+      "owner": "Owner",
+      "group": "Group",
+      "mode": "Mode",
+      "acl": "ACL",
+      "aclYes": "Yes",
+      "aclNo": "No",
+      "note": "The file explorer follows file system permissions only. OMV shared folder privileges apply only to SMB and FTP.",
+      "editAcl": "Edit ACL in OMV",
+      "loadFailed": "Couldn't load the details."
+    },
+    "upload": {
+      "title": "Uploads",
+      "inProgress": "{{active}} of {{total}} uploads left",
+      "allDone": "{{total}} uploads finished",
+      "collapse": "Collapse",
+      "expand": "Expand",
+      "cancel": "Cancel",
+      "retry": "Upload again",
+      "clear": "Clear list",
+      "done": "Done",
+      "skipped": "Skipped",
+      "canceled": "Canceled",
+      "waiting": "Waiting",
+      "progress": "{{sent}} / {{size}}",
+      "remaining": "About {{time}} left",
+      "badName": "{{name}} can't be uploaded with this name.",
+      "conflictTitle": "A file with this name exists",
+      "conflictMessage": "\"{{name}}\" already exists. Replace it?",
+      "applyAll": "Do the same for the remaining files",
+      "overwrite": "Replace",
+      "skip": "Skip",
+      "errors": {
+        "file_exists": "A file with the same name appeared.",
+        "permission_denied": "You don't have permission to write to this folder.",
+        "no_space": "Not enough disk space.",
+        "read_only": "The file system is read-only.",
+        "transfer_timeout": "The connection was closed after 60 seconds without progress.",
+        "helper_busy": "Too many tasks are running at once. Upload again in a moment.",
+        "is_dir": "A folder with the same name exists.",
+        "network": "The connection was lost.",
+        "unknown": "Couldn't upload."
+      }
+    },
+    "errors": {
+      "not_found": "The folder or file doesn't exist. It may have been deleted or renamed.",
+      "permission_denied": "You don't have permission to view this.",
+      "outside_roots": "The file explorer can't show this location.",
+      "not_dir": "This isn't a folder.",
+      "not_regular": "This isn't a regular file, so it can't be downloaded.",
+      "helper_unavailable": "Can't connect to the privileged helper.",
+      "helper_reauth": "The privileged helper session ended. Sign in again.",
+      "helper_busy": "Too many tasks are running at once. Try again in a moment.",
+      "generic": "Couldn't load.",
+      "retry": "Try again"
+    },
+    "security": {
+      "message": "This session needs a security check before using the file explorer. Folders appear once you verify.",
+      "verify": "Verify"
+    }
+  },
   "sysinfo": {
     "disconnected": "Disconnected — reconnecting…",
     "cpu": "CPU",
@@ -397,6 +553,19 @@
     "showNav": "Show sections"
   },
   "settings": {
+    "files": {
+      "title": "File explorer",
+      "shares": "Shared folder list",
+      "sharesDesc": "Regular user sessions can't read the OMV shared folder list, so the list read when an administrator signs in is kept as labels. What can actually be opened is decided by file system permissions.",
+      "sharesState_one": "{{count}} shared folder · read {{time}}",
+      "sharesState_other": "{{count}} shared folders · read {{time}}",
+      "sharesNone": "Not read yet.",
+      "refresh": "Read now",
+      "refreshFailed": "Couldn't read the shared folder list.",
+      "showDisks": "Show disk tops",
+      "showDisksDesc": "Lets administrators see outside shared folders, up to the top of the disks under /srv.",
+      "saveFailed": "Couldn't save the setting."
+    },
     "nav": "Settings sections",
     "groups": {
       "user": "User",

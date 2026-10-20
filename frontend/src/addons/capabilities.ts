@@ -27,9 +27,11 @@ const HIDDEN: AppAccess = { visible: false, notice: null }
 // 창 안에 안내한다. 이미 열린 창이면 두 경우 모두 창 안에 안내한다.
 // 링크 앱은 주소가 설정되어 있을 때만 보인다. capability를 받기 전에는 열 주소를 모르므로
 // "받기 전에는 모두 보인다"의 예외로 숨긴다. 웹 터미널도 관리자가 허용했을 때만 보이므로 같은 예외다.
+// 파일 탐색기는 권한 도우미가 없으면 쓸 수 없으므로 숨긴다(받기 전에는 보인다).
 export function appAccess(caps: CapabilitiesResponse | null, id: AppId): AppAccess {
   if (isLinkApp(id)) return linkConfigured(id, caps) ? OPEN : HIDDEN
   if (id === 'terminal') return caps?.terminal ? OPEN : HIDDEN
+  if (id === 'files') return caps && !caps.helper ? HIDDEN : OPEN
   return isAddonApp(id) ? addonAccess(caps, id) : OPEN
 }
 

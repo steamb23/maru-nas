@@ -3,10 +3,14 @@
 // 실행 파일에 들어가므로, 아이콘을 쓸 때마다 여기에 한 줄씩 추가한다.
 
 import documentOpen from '@colloid/actions/symbolic/document-open-symbolic.svg?url'
+import documentProperties from '@colloid/actions/symbolic/document-properties-symbolic.svg?url'
 import editCopy from '@colloid/actions/symbolic/edit-copy-symbolic.svg?url'
 import editDelete from '@colloid/actions/symbolic/edit-delete-symbolic.svg?url'
 import editFind from '@colloid/actions/symbolic/edit-find-symbolic.svg?url'
 import externalLink from '@colloid/actions/symbolic/external-link-symbolic.svg?url'
+import goNext from '@colloid/actions/symbolic/go-next-symbolic.svg?url'
+import goPrevious from '@colloid/actions/symbolic/go-previous-symbolic.svg?url'
+import goUp from '@colloid/actions/symbolic/go-up-symbolic.svg?url'
 import hamburgerMenu from '@colloid/actions/symbolic/hamburger-menu-symbolic.svg?url'
 import helpAbout from '@colloid/actions/symbolic/help-about-symbolic.svg?url'
 import listAdd from '@colloid/actions/symbolic/list-add-symbolic.svg?url'
@@ -16,6 +20,7 @@ import mediaPlaybackStop from '@colloid/actions/symbolic/media-playback-stop-sym
 import objectSelect from '@colloid/actions/symbolic/object-select-symbolic.svg?url'
 import panEnd from '@colloid/actions/symbolic/pan-end-symbolic.svg?url'
 import panStart from '@colloid/actions/symbolic/pan-start-symbolic.svg?url'
+import processStop from '@colloid/actions/symbolic/process-stop-symbolic.svg?url'
 import systemLockScreen from '@colloid/actions/symbolic/system-lock-screen-symbolic.svg?url'
 import systemLogOut from '@colloid/actions/symbolic/system-log-out-symbolic.svg?url'
 import viewAppGrid from '@colloid/actions/symbolic/view-app-grid-symbolic.svg?url'
@@ -42,12 +47,35 @@ import systemUsers from '@colloid/apps/symbolic/system-users-symbolic.svg?url'
 import utilitiesSystemMonitorSymbolic from '@colloid/apps/symbolic/utilities-system-monitor-symbolic.svg?url'
 import preferencesDesktopLocale from '@colloid/categories/symbolic/preferences-desktop-locale-symbolic.svg?url'
 import driveHarddisk from '@colloid/devices/scalable/drive-harddisk.svg?url'
+import driveHarddiskSymbolic from '@colloid/devices/symbolic/drive-harddisk-symbolic.svg?url'
+import applicationPdf from '@colloid/mimetypes/scalable/application-pdf.svg?url'
+import applicationXCdImage from '@colloid/mimetypes/scalable/application-x-cd-image.svg?url'
+import applicationXExecutable from '@colloid/mimetypes/scalable/application-x-executable.svg?url'
+import audioXGeneric from '@colloid/mimetypes/scalable/audio-x-generic.svg?url'
+import imageXGeneric from '@colloid/mimetypes/scalable/image-x-generic.svg?url'
+import inodeSymlink from '@colloid/mimetypes/scalable/inode-symlink.svg?url'
+import packageXGeneric from '@colloid/mimetypes/scalable/package-x-generic.svg?url'
+import textHtml from '@colloid/mimetypes/scalable/text-html.svg?url'
+import textMarkdown from '@colloid/mimetypes/scalable/text-markdown.svg?url'
+import textXGeneric from '@colloid/mimetypes/scalable/text-x-generic.svg?url'
+import textXScript from '@colloid/mimetypes/scalable/text-x-script.svg?url'
+import iconUnknown from '@colloid/mimetypes/scalable/unknown.svg?url'
+import videoXGeneric from '@colloid/mimetypes/scalable/video-x-generic.svg?url'
+import xOfficeDocument from '@colloid/mimetypes/scalable/x-office-document.svg?url'
+import xOfficePresentation from '@colloid/mimetypes/scalable/x-office-presentation.svg?url'
+import xOfficeSpreadsheet from '@colloid/mimetypes/scalable/x-office-spreadsheet.svg?url'
 import folder from '@colloid/places/scalable/folder.svg?url'
+import folderRemote from '@colloid/places/symbolic/folder-remote-symbolic.svg?url'
 import networkServer from '@colloid/places/symbolic/network-server-symbolic.svg?url'
+import userHome from '@colloid/places/symbolic/user-home-symbolic.svg?url'
 import avatarDefault from '@colloid/status/symbolic/avatar-default-symbolic.svg?url'
 import channelSecure from '@colloid/status/symbolic/channel-secure-symbolic.svg?url'
+import dialogInformation from '@colloid/status/symbolic/dialog-information-symbolic.svg?url'
+import dialogWarning from '@colloid/status/symbolic/dialog-warning-symbolic.svg?url'
+import download from '@colloid/status/symbolic/download-symbolic.svg?url'
 import securityHigh from '@colloid/status/symbolic/security-high-symbolic.svg?url'
 import softwareUpdateAvailable from '@colloid/status/symbolic/software-update-available-symbolic.svg?url'
+import upload from '@colloid/status/symbolic/upload-symbolic.svg?url'
 import windowNew from '@colloid/status/symbolic/window-new-symbolic.svg?url'
 import type { Icon } from '../types'
 
@@ -99,4 +127,32 @@ export const COLLOID_ICONS = {
   folder: { url: folder, kind: 'color' },
   'preferences-system': { url: preferencesSystem, kind: 'color' },
   'utilities-terminal': { url: utilitiesTerminal, kind: 'color' },
+  'go-previous-symbolic': { url: goPrevious, kind: 'symbolic' },
+  'go-next-symbolic': { url: goNext, kind: 'symbolic' },
+  'go-up-symbolic': { url: goUp, kind: 'symbolic' },
+  'document-properties-symbolic': { url: documentProperties, kind: 'symbolic' },
+  'process-stop-symbolic': { url: processStop, kind: 'symbolic' },
+  'drive-harddisk-symbolic': { url: driveHarddiskSymbolic, kind: 'symbolic' },
+  'user-home-symbolic': { url: userHome, kind: 'symbolic' },
+  'folder-remote-symbolic': { url: folderRemote, kind: 'symbolic' },
+  'upload-symbolic': { url: upload, kind: 'symbolic' },
+  'download-symbolic': { url: download, kind: 'symbolic' },
+  'dialog-information-symbolic': { url: dialogInformation, kind: 'symbolic' },
+  'dialog-warning-symbolic': { url: dialogWarning, kind: 'symbolic' },
+  'text-x-generic': { url: textXGeneric, kind: 'color' },
+  'image-x-generic': { url: imageXGeneric, kind: 'color' },
+  'video-x-generic': { url: videoXGeneric, kind: 'color' },
+  'audio-x-generic': { url: audioXGeneric, kind: 'color' },
+  'package-x-generic': { url: packageXGeneric, kind: 'color' },
+  'application-x-cd-image': { url: applicationXCdImage, kind: 'color' },
+  'x-office-spreadsheet': { url: xOfficeSpreadsheet, kind: 'color' },
+  'x-office-document': { url: xOfficeDocument, kind: 'color' },
+  'x-office-presentation': { url: xOfficePresentation, kind: 'color' },
+  'text-markdown': { url: textMarkdown, kind: 'color' },
+  'application-pdf': { url: applicationPdf, kind: 'color' },
+  'text-x-script': { url: textXScript, kind: 'color' },
+  'text-html': { url: textHtml, kind: 'color' },
+  'application-x-executable': { url: applicationXExecutable, kind: 'color' },
+  'inode-symlink': { url: inodeSymlink, kind: 'color' },
+  'unknown': { url: iconUnknown, kind: 'color' },
 } as const satisfies Record<string, Icon>

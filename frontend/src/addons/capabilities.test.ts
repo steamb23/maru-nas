@@ -24,10 +24,15 @@ describe('appAccess', () => {
     expect(appAccess(c, 'system-info')).toEqual({ visible: true, notice: 'plugin_missing' })
   })
 
-  it('응답에 없는 애드온과 준비 중 앱은 그대로 그린다', () => {
+  it('응답에 없는 애드온은 그대로 그린다', () => {
     const c = caps([])
     expect(appAccess(c, 'system-info')).toEqual({ visible: true, notice: null })
-    expect(appAccess(c, 'files')).toEqual({ visible: true, notice: null })
+  })
+
+  it('파일 탐색기는 권한 도우미가 있을 때만 보인다(받기 전에는 보인다)', () => {
+    expect(appAccess(null, 'files')).toEqual({ visible: true, notice: null })
+    expect(appAccess(caps([]), 'files')).toEqual({ visible: false, notice: null })
+    expect(appAccess({ ...caps([]), helper: true }, 'files')).toEqual({ visible: true, notice: null })
   })
 
   it('웹 터미널은 관리자가 허용했을 때만 보인다(받기 전에는 숨긴다)', () => {

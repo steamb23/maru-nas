@@ -11,6 +11,17 @@ import type {
   DrawerRequest,
   ElevationRequest,
   ErrorResponse,
+  FileAccess,
+  FileInfo,
+  FileItem,
+  FilesListing,
+  FilesPage,
+  FilesPrepareResponse,
+  FilesRoot,
+  FilesRoots,
+  FilesSettings,
+  FilesSettingsRequest,
+  FilesShare,
   HelperIdentity,
   HelperIdentityResponse,
   HelperStatus,
@@ -51,6 +62,7 @@ import type {
   ServerSettings,
   ServerSettingsRequest,
   SessionInfo,
+  SharedFolder,
   Shortcut,
   ShortcutsRequest,
   SiteDefaults,
@@ -1084,4 +1096,222 @@ export async function fetchSecurityPolicy(signal?: AbortSignal): Promise<Securit
 export async function saveSecurityPolicy(policy: SecurityPolicy): Promise<void> {
   const body: SecurityPolicyRequest = { security: policy }
   await request('PUT', '/site/security', { body })
+}
+
+// 파일 탐색기. 파일은 권한 도우미가 로그인한 사용자의 권한으로 다루고, 백엔드는 보이는 폴더 밖의 경로를 거른다.
+
+const isFilesRoot = (v: unknown): v is FilesRoot => isObj(v) && isStr(v.name) && isStr(v.path)
+
+const isFilesShare = (v: unknown): v is FilesShare =>
+  isObj(v) && isStr(v.uuid) && isStr(v.name) && isStr(v.path) && isBool(v.reachable)
+
+export function isFilesRoots(v: unknown): v is FilesRoots {
+  return (
+    isObj(v) &&
+    isOptional(v.home, isFilesRoot) &&
+    isArrayOf(v.shares, isFilesShare) &&
+    isArrayOf(v.disks, isFilesRoot) &&
+    isBool(v.fallback) &&
+    isOptional(v.sharesUpdatedAt, isStr)
+  )
+}
+
+export function isFilesListing(v: unknown): v is FilesListing {
+  return isObj(v) && isStr(v.id) && isStr(v.path) && isNum(v.total) && isBool(v.truncated) && isBool(v.writable)
+}
+
+const FILE_TYPES = ['dir', 'file', 'symlink', 'other'] as const
+
+export function isFileItem(v: unknown): v is FileItem {
+  return (
+    isObj(v) &&
+    isStr(v.name) &&
+    isOneOf(v.type, [...FILE_TYPES, 'unknown'] as const) &&
+    isOneOf(v.state, ['ok', 'pending', 'gone', 'error'] as const) &&
+    isOptional(v.size, isNum) &&
+    isOptional(v.modTime, isNum) &&
+    isOptional(v.locked, isBool) &&
+    isOptional(v.linkType, (x: unknown) => isOneOf(x, FILE_TYPES)) &&
+    isOptional(v.badName, isBool)
+  )
+}
+
+export function isFilesPage(v: unknown): v is FilesPage {
+  return isObj(v) && isNum(v.total) && isNum(v.offset) && isArrayOf(v.items, isFileItem)
+}
+
+const isFileAccess = (v: unknown): v is FileAccess => isObj(v) && isBool(v.read) && isBool(v.write)
+
+export function isFileInfo(v: unknown): v is FileInfo {
+  return (
+    isObj(v) &&
+    isStr(v.path) &&
+    isStr(v.name) &&
+    isOneOf(v.type, FILE_TYPES) &&
+    isNum(v.size) &&
+    isNum(v.modTime) &&
+    isNum(v.mode) &&
+    isNum(v.uid) &&
+    isNum(v.gid) &&
+    isOptional(v.owner, isStr) &&
+    isOptional(v.group, isStr) &&
+    isOptional(v.acl, isBool) &&
+    isOptional(v.access, isFileAccess) &&
+    isOptional(v.shareUuid, isStr) &&
+    isOptional(v.target, isStr)
+  )
+}
+
+const isSharedFolder = (v: unknown): v is SharedFolder => isObj(v) && isStr(v.uuid) && isStr(v.name) && isStr(v.path)
+
+export function isFilesSettings(v: unknown): v is FilesSettings {
+  return isObj(v) && isArrayOf(v.shares, isSharedFolder) && isOptional(v.sharesUpdatedAt, isStr) && isBool(v.showDisks)
+}
+
+const q = encodeURIComponent
+
+// fetchFilesRoots는 파일 탐색기 사이드바에 처음 보이는 폴더(홈, 공유 폴더, 디스크)다.
+export async function fetchFilesRoots(signal?: AbortSignal): Promise<FilesRoots> {
+  const data = await getJSON('/files/roots', { signal })
+  if (!isFilesRoots(data)) throw new Error('/files/roots: unexpected response shape')
+  return data
+}
+
+// openListing은 폴더의 이름 목록을 연다. 같은 세션이 연 목록이 그대로면 서버가 다시 읽지 않는다(refresh면 다시 읽는다).
+export async function openListing(path: string, refresh = false, signal?: AbortSignal): Promise<FilesListing> {
+  const data = await getJSON(`/files/list?path=${q(path)}${refresh ? '&refresh=1' : ''}`, { signal })
+  if (!isFilesListing(data)) throw new Error('/files/list: unexpected response shape')
+  return data
+}
+
+export interface ListingRange {
+  offset: number
+  limit: number
+  sort: 'name' | 'mtime' | 'size'
+  desc: boolean
+  query: string
+  // namesOnly면 정보 없이 이름만 받는다(도우미를 부르지 않는다. 스크롤 위치 말풍선).
+  namesOnly?: boolean
+}
+
+// fetchListingRange는 목록의 보기(정렬·찾기)에서 범위 하나다. 정보가 없는 항목은 서버가 읽어 채운다.
+export async function fetchListingRange(id: string, r: ListingRange, signal?: AbortSignal): Promise<FilesPage> {
+  const params = new URLSearchParams({
+    offset: String(r.offset),
+    limit: String(r.limit),
+    sort: r.sort,
+    order: r.desc ? 'desc' : 'asc',
+  })
+  if (r.query) params.set('q', r.query)
+  if (r.namesOnly) params.set('names', '1')
+  const data = await getJSON(`/files/list/${q(id)}?${params}`, { signal })
+  if (!isFilesPage(data)) throw new Error('/files/list/{id}: unexpected response shape')
+  return data
+}
+
+// prepareListing은 정보가 없는 항목을 한 묶음 더 읽는다(날짜·크기순 준비). filled가 total이 될 때까지 부른다.
+export async function prepareListing(id: string, signal?: AbortSignal): Promise<FilesPrepareResponse> {
+  const data = await postJSON(`/files/list/${q(id)}/prepare`, { signal })
+  if (!isObj(data) || !isNum(data.filled) || !isNum(data.total)) {
+    throw new Error('/files/list/{id}/prepare: unexpected response shape')
+  }
+  return { filled: data.filled, total: data.total }
+}
+
+// fetchFileInfo는 정보 패널 내용(소유자, 그룹, 모드, ACL, 내 권한)이다.
+export async function fetchFileInfo(path: string, signal?: AbortSignal): Promise<FileInfo> {
+  const data = await getJSON(`/files/info?path=${q(path)}`, { signal })
+  if (!isFileInfo(data)) throw new Error('/files/info: unexpected response shape')
+  return data
+}
+
+// fileDownloadUrl은 내려받기 주소다. 브라우저의 내려받기 관리자가 받도록 <a download>로 연다.
+export function fileDownloadUrl(path: string): string {
+  return `${API_BASE}/files/download?path=${q(path)}`
+}
+
+export interface UploadOptions {
+  overwrite: boolean
+  onProgress: (sent: number) => void
+  signal: AbortSignal
+}
+
+// uploadFile은 파일 하나를 path에 올린다. 진행률을 받으려고 XHR로 보낸다(fetch는 올리기 진행을 알리지 않는다).
+// 백엔드는 원시 본문(application/octet-stream)만 받는다(CSRF 보조 장치). 취소하면 AbortError다.
+export function uploadFile(path: string, file: Blob, opts: UploadOptions): Promise<FileItem> {
+  const url = `/files/upload?path=${q(path)}${opts.overwrite ? '&overwrite=1' : ''}`
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest()
+    const abort = () => xhr.abort()
+    opts.signal.addEventListener('abort', abort, { once: true })
+    const done = () => opts.signal.removeEventListener('abort', abort)
+    xhr.open('PUT', `${API_BASE}${url}`)
+    xhr.setRequestHeader('Content-Type', 'application/octet-stream')
+    xhr.upload.onprogress = (e) => opts.onProgress(e.loaded)
+    xhr.onload = () => {
+      done()
+      let body: unknown = null
+      try {
+        body = JSON.parse(xhr.responseText)
+      } catch {
+        // JSON이 아닌 응답(프록시 오류 페이지 등)
+      }
+      if (xhr.status >= 200 && xhr.status < 300) {
+        if (isFileItem(body)) resolve(body)
+        else reject(new Error(`${url}: unexpected response shape`))
+        return
+      }
+      const err = apiErrorOf(url, xhr.status, body)
+      if (xhr.status === 401) onUnauthorized?.()
+      reject(err)
+    }
+    xhr.onerror = () => {
+      done()
+      reject(new TypeError(`${url}: network error`))
+    }
+    xhr.onabort = () => {
+      done()
+      reject(new DOMException('upload aborted', 'AbortError'))
+    }
+    if (opts.signal.aborted) {
+      done()
+      reject(new DOMException('upload aborted', 'AbortError'))
+      return
+    }
+    xhr.send(file)
+  })
+}
+
+// apiErrorOf는 이미 읽은 오류 본문으로 ApiError를 만든다(XHR 응답용, toApiError와 같은 규칙).
+function apiErrorOf(path: string, status: number, body: unknown): ApiError {
+  let code: ErrorCode | undefined
+  let retryAfter: number | undefined
+  let required: RequiredLevel | undefined
+  if (isObj(body)) {
+    if (ERROR_CODES.includes(body.code as ErrorCode)) code = body.code as ErrorCode
+    if (isNum(body.retryAfterSeconds) && body.retryAfterSeconds > 0) retryAfter = body.retryAfterSeconds
+    if (isOneOf(body.required, ['password', 'twoFactor'] as const)) required = body.required
+  }
+  return new ApiError(status, `${path}: HTTP ${status}`, code, retryAfter, required)
+}
+
+// fetchFilesSettings는 파일 탐색기 전역 설정(공유 폴더 스냅숏, 디스크 최상위 보기)이다(관리자).
+export async function fetchFilesSettings(signal?: AbortSignal): Promise<FilesSettings> {
+  const data = await getJSON('/site/files', { signal })
+  if (!isFilesSettings(data)) throw new Error('/site/files: unexpected response shape')
+  return data
+}
+
+export async function saveFilesSettings(showDisks: boolean): Promise<FilesSettings> {
+  const body: FilesSettingsRequest = { showDisks }
+  const data = await (await request('PUT', '/site/files', { body })).json()
+  if (!isFilesSettings(data)) throw new Error('/site/files: unexpected response shape')
+  return data
+}
+
+// refreshFilesShares는 공유 폴더 스냅숏을 지금 OMV에서 받는다(관리자).
+export async function refreshFilesShares(): Promise<FilesSettings> {
+  const data = await postJSON('/site/files/refresh')
+  if (!isFilesSettings(data)) throw new Error('/site/files/refresh: unexpected response shape')
+  return data
 }

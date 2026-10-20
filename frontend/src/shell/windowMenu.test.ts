@@ -5,7 +5,7 @@ import { type TaskMenuActions, taskMenuItems, titlebarMenuItems } from './window
 
 const win = (id: string): WindowState => ({
   id,
-  appId: 'files',
+  appId: 'settings',
   instance: 1,
   x: 0,
   y: 0,

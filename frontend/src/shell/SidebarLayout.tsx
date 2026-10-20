@@ -39,13 +39,24 @@ interface Props {
   nav: ReactNode
   // 사이드바 항목의 선택자. 화살표 키로 오가고, 누르면 덮어 연 사이드바를 닫는다(메뉴 단추로 포커스를 돌려준다).
   navItems?: string
-  // 머리의 제목(지금 페이지 이름)
-  title: ReactNode
+  // 머리의 제목(지금 페이지 이름). header를 주면 쓰지 않는다.
+  title?: ReactNode
+  // header는 제목 대신 머리에 그릴 내용이다(파일 탐색기의 도구 막대). 좁은 창의 메뉴 단추는 그 앞에 그린다.
+  header?: ReactNode
   // 머리 아래 본문
   children: ReactNode
 }
 
-export function SidebarLayout({ className, narrowWidth, navLabel, nav, navItems = '.sidebar-nav-item', title, children }: Props) {
+export function SidebarLayout({
+  className,
+  narrowWidth,
+  navLabel,
+  nav,
+  navItems = '.sidebar-nav-item',
+  title,
+  header,
+  children,
+}: Props) {
   const { t } = useTranslation()
   const navId = useId()
   const rootRef = useRef<HTMLDivElement>(null)
@@ -156,7 +167,7 @@ export function SidebarLayout({ className, narrowWidth, navLabel, nav, navItems 
               <IconImage name="hamburger-menu-symbolic" size={16} />
             </button>
           )}
-          <h2 className="sidebar-title">{title}</h2>
+          {header ?? <h2 className="sidebar-title">{title}</h2>}
         </header>
         {children}
       </div>

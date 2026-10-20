@@ -1,10 +1,11 @@
 import { useEffect } from 'react'
 import { ApiError, fetchSession, sendActivity } from '../api/client'
+import { ACTIVITY_EVENT } from './activity'
 import { CONFIRM_RETRY_MS, type KeeperState, decide } from './sessionKeeper'
 import { useAuthStore } from './store'
 
-// 사용자 입력으로 보는 이벤트
-const INPUT_EVENTS = ['pointerdown', 'keydown', 'wheel'] as const
+// 사용자 입력으로 보는 이벤트. ACTIVITY_EVENT는 입력 없이 이어지는 사용자 작업(파일 올리기)이 알리는 활동이다.
+const INPUT_EVENTS = ['pointerdown', 'keydown', 'wheel', ACTIVITY_EVENT] as const
 
 // useSessionKeeper는 로그인한 동안 사용자 입력을 감지해 OMV 세션을 연장하고,
 // 예상 만료 시각이 되면 백엔드에 확인해 만료됐으면 로그인 화면으로 보낸다(sessionKeeper.ts).

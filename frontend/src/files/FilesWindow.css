@@ -1,0 +1,395 @@
+/* 파일 탐색기 창(FilesWindow). 사이드바 틀(SidebarLayout)의 머리에 도구 막대를 두고, 그 아래에 올리기 단추 줄,
+   안내 배너, 목록 + 정보 패널, 상태 표시줄을 둔다. 창을 꽉 채우는 앱형 창이라 내용 폭을 제한하지 않는다. */
+
+.files .sidebar-header {
+  padding: 10px 12px 6px;
+}
+
+.files-nav-group {
+  margin: 0;
+  padding: 14px 10px 4px;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.files .sidebar-nav-item[aria-disabled='true'] {
+  color: var(--text-muted);
+  cursor: default;
+}
+
+.files .sidebar-nav-item[aria-disabled='true']:hover,
+.files .sidebar-nav-item[aria-disabled='true']:active {
+  background: none;
+}
+
+.files .sidebar-nav-item > span:last-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.files-nav-note {
+  display: flex;
+  gap: 8px;
+  margin: 12px 4px 0;
+  padding: 10px;
+  border-radius: 8px;
+  background: var(--window-bg);
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.files-nav-note .symbolic-icon {
+  flex: none;
+  margin-top: 2px;
+}
+
+/* 도구 막대: 뒤로·앞으로·상위 폴더·새로 고침, 경로, 찾기 */
+.files-toolbar {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+}
+
+.files-toolbar-buttons {
+  display: flex;
+  flex: none;
+  gap: 2px;
+}
+
+.files-icon-button {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  transition: scale var(--press-out) ease;
+}
+
+.files-icon-button.small {
+  width: 24px;
+  height: 24px;
+}
+
+.files-icon-button:hover:not(:disabled) {
+  background: var(--hover-bg);
+}
+
+.files-icon-button:active:not(:disabled) {
+  background: var(--press-bg);
+  scale: var(--press-scale);
+  transition-duration: var(--press-in);
+}
+
+.files-icon-button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.files-path {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+  height: 32px;
+  padding: 0 6px;
+  overflow: hidden;
+  border: 1px solid var(--window-border);
+  border-radius: 6px;
+  background: var(--window-bg);
+}
+
+.files-crumb {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+}
+
+/* 앞 단계는 줄어들고 지금 폴더는 끝까지 보이게 한다. */
+.files-crumb:last-child {
+  flex: none;
+  max-width: 60%;
+}
+
+.files-crumb button {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 6px;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.files-crumb button > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.files-crumb button[aria-current='page'] {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.files-crumb button:hover {
+  background: var(--hover-bg);
+}
+
+.files-crumb button:active {
+  background: var(--press-bg);
+}
+
+.files-crumb-sep {
+  flex: none;
+  width: 0;
+  height: 0;
+  margin: 0 2px;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  border-left: 5px solid var(--text-muted);
+}
+
+.files-search {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  width: 200px;
+  height: 32px;
+  padding: 0 10px;
+  box-sizing: border-box;
+  border: 1px solid var(--window-border);
+  border-radius: 6px;
+  background: var(--window-bg);
+  color: var(--text-muted);
+}
+
+.files-search input {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  outline: none;
+  background: none;
+  color: var(--text);
+  font-size: 13px;
+}
+
+.files-search:focus-within {
+  outline: 2px solid color-mix(in srgb, var(--accent) 60%, transparent);
+  outline-offset: -1px;
+}
+
+.files .sidebar-main {
+  container-type: inline-size;
+}
+
+@container (max-width: 560px) {
+  .files-search {
+    width: 140px;
+  }
+}
+
+@container (max-width: 440px) {
+  .files-toolbar-buttons .files-icon-button:nth-child(2),
+  .files-toolbar-buttons .files-icon-button:nth-child(4) {
+    display: none;
+  }
+}
+
+/* 올리기 단추 줄 */
+.files-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px 10px;
+}
+
+.files-upload-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.files-banner {
+  display: flex;
+  flex: none;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0 12px 8px;
+  font-size: 12px;
+  line-height: 1.5;
+  word-break: keep-all;
+}
+
+.files-banner .symbolic-icon {
+  flex: none;
+  margin-top: 1px;
+}
+
+/* 날짜·크기순 정렬 준비(AC-Large-Sort) */
+.files-prepare {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0 12px 8px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  font-size: 12px;
+}
+
+.files-prepare-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.files-prepare-line .symbolic-icon {
+  flex: none;
+  color: var(--accent);
+}
+
+.files-prepare-line > span:nth-child(2) {
+  flex: 1;
+  line-height: 1.5;
+  word-break: keep-all;
+}
+
+.files-prepare-count {
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* 목록과 정보 패널. 좁으면 정보 패널을 목록 위에 덮어 연다. */
+.files-content {
+  position: relative;
+  display: grid;
+  flex: 1;
+  grid-template-columns: minmax(0, 1fr);
+  min-height: 0;
+  border-top: 1px solid var(--window-border);
+}
+
+.files-content.with-pane {
+  grid-template-columns: minmax(0, 1fr) 288px;
+}
+
+@container (max-width: 640px) {
+  .files-content.with-pane {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .files-content .files-info {
+    position: absolute;
+    inset: 0 0 0 auto;
+    z-index: 3;
+    width: min(288px, 100%);
+    box-shadow: -4px 0 24px rgb(0 0 0 / 0.25);
+  }
+}
+
+.files-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  height: 100%;
+  padding: 24px;
+  box-sizing: border-box;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.files-center p {
+  max-width: 380px;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  word-break: keep-all;
+}
+
+.files-center-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.files-status {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 12px;
+  height: 30px;
+  padding: 0 16px;
+  overflow: hidden;
+  border-top: 1px solid var(--window-border);
+  color: var(--text-muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.files-status-fill {
+  flex: 1;
+}
+
+@container (max-width: 480px) {
+  .files-status > span:nth-child(3) {
+    display: none;
+  }
+}
+
+.files-text-button {
+  flex: none;
+  padding: 2px 6px;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.files-text-button:hover {
+  background: var(--hover-bg);
+}
+
+.files-text-button:active {
+  background: var(--press-bg);
+}
+
+.files-mono {
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+}
+
+.files-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.files-conflict p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
