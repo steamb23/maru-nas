@@ -27,7 +27,7 @@ paths:
 ## 창 내용 폭
 
 - 설정 창을 기준으로, 창 내용은 넓은 창에서 최대 폭(`base.css`의 `--window-content-width`, 720px) 열로 가운데 정렬한다. 내용 컨테이너의 좌우 padding을 `max(여백, calc((100% - var(--window-content-width)) / 2))`로 계산한다(설정은 `.settings .sidebar-header`·`.settings-page`, 목록형 애드온 창은 `.addon-window`). `.window-body`에는 걸지 않는다(사이드바 틀은 창 너비를 다 써야 한다)
-- 예외는 창을 꽉 채우는 앱형 창이다. 위아래 고정 영역(도구 막대·상태 표시줄)이나 사이드바가 있고, 목록·표·그래프가 남은 높이를 채워 자기 안에서 스크롤하며, 넓을수록 한 줄에 더 많이 보이는 창이다. 시스템 정보 창이 그렇고(`.addon-window`를 쓰지 않는다), 로드맵의 파일 탐색기도 이 기준을 따른다. 이런 창의 안내 문구는 가운데 정렬 안내(`AddonUnavailable` 등)로 두고, 대화상자는 모달이라 영향이 없다
+- 예외는 창을 꽉 채우는 앱형 창이다. 위아래 고정 영역(도구 막대·상태 표시줄)이나 사이드바가 있고, 목록·표·그래프가 남은 높이를 채워 자기 안에서 스크롤하며, 넓을수록 한 줄에 더 많이 보이는 창이다. 시스템 정보 창과 파일 탐색기가 그렇다(`.addon-window`를 쓰지 않는다). 이런 창의 안내 문구는 가운데 정렬 안내(`AddonUnavailable` 등)로 두고, 대화상자는 모달이라 영향이 없다
 
 ## 위젯 레이어
 
@@ -44,12 +44,12 @@ paths:
 
 - 바탕화면에는 사용자가 고른 바로가기만 놓는다(`DesktopShortcuts`). 모든 앱은 작업표시줄 왼쪽 끝 버튼으로 여는 "모든 앱" 화면(`AppDrawer`)에 있다. 화면 용어는 "바로가기"(붙여 씀)와 "모든 앱", 코드 이름은 `shortcut`과 `AppDrawer`다
 - 앱은 창 앱(`addon`, `placeholder`, 셸이 직접 그리는 `shell`)과 링크 앱(`link`, 창 없이 브라우저 탭으로 연다)이다(`windows/apps.ts`). 셸 앱의 보기 컴포넌트는 `shell/shellViews.ts`에 두어 node 테스트 대상인 `apps.ts`가 컴포넌트를 import하지 않게 한다. 창 저장소는 `WindowAppId`만 받으므로, 앱을 여는 곳(서랍 타일·바로가기·메뉴 "열기")은 `shell/launchApp.ts`의 `launchApp`을 부른다
-  - 창 앱은 앱마다 창 하나이고, 다시 열면 그 창을 복원해 앞으로 가져온다(저장소의 `open`). `multiInstance` 앱(지금은 웹 터미널)만 열 때마다(바로가기·서랍 클릭, "열기") 새 창을 연다. 열린 창을 앞으로 가져오는 것은 작업표시줄 버튼이 한다
+  - 창 앱은 앱마다 창 하나이고, 다시 열면 그 창을 복원해 앞으로 가져온다(저장소의 `open`). `multiInstance` 앱(지금은 파일 탐색기와 웹 터미널)만 열 때마다(바로가기·서랍 클릭, "열기") 새 창을 연다. 열린 창을 앞으로 가져오는 것은 작업표시줄 버튼이 한다
   - 창 id는 늘 `win-<n>`이고 앱 id와 같지 않다. 앱 id로 창 하나를 찾는 코드는 `multiInstance` 앱에서 틀리므로, 새로 만들면 여러 창을 전제로 한다
   - 창마다 같은 앱 안의 번호(`WindowState.instance`)를 열 때 받는다(그 앱의 열린 창이 쓰지 않는 가장 작은 수, 닫으면 다시 씀). 둘째 창부터 제목에 붙이며(`windows/title.ts`의 `windowTitle`, 문구 `window.numberedTitle`), 제목을 그리는 곳(제목 표시줄, 작업표시줄 버튼·툴팁·퇴장 버튼, "더 보기" 메뉴의 `windowTitleLabel`)은 모두 이 함수를 쓴다. `windows[]` 순서로 번호를 매기지 않는다(작업표시줄에서 순서를 바꾸면 제목이 바뀐다)
   - 링크 앱(지금은 OMV 워크벤치)은 `openLink`가 `window.open(주소, 탭 이름)`으로 이름 붙은 탭 하나를 다시 쓴다. 이름 조회가 되도록 `noopener`를 주지 않으며, 팝업 차단을 피하려고 입력 처리기 안에서 동기로 부른다. 주소 계산은 `windows/links.ts`(끝에 OMV 첫 화면 `#/`를 붙여, 다시 열 때 새로 고침 없이 이동한다)
   - 열기 전에 "새 탭에서 열립니다" 데스크톱 대화상자를 띄운다(`linkNoticeDialog.tsx`의 `confirmLinkOpen`, 내용은 `LinkNotice.tsx`). 탭은 "열기" 클릭 처리 안에서 바로 연다(결과를 기다린 뒤 열면 팝업 차단). "다음에 알리지 않음"은 브라우저별 편의 설정이라 쿠키(`onmaru_link_notice_<id>=off`, 1년, Path 없음)에 두며 계산은 `linkNotice.ts`
-  - 링크 앱은 주소(`/api/capabilities`의 `workbenchUrl`)가 있을 때만 보인다. capability를 받기 전에도 숨긴다(`appAccess`의 예외). 셸 앱인 웹 터미널(`terminal`)도 같은 예외로 `capabilities.terminal`(관리자가 허용)일 때만 보인다. 프로필 메뉴의 "OMV 워크벤치 열기"는 `requires: 'workbench'`로 같은 조건을 따른다
+  - 링크 앱은 주소(`/api/capabilities`의 `workbenchUrl`)가 있을 때만 보인다. capability를 받기 전에도 숨긴다(`appAccess`의 예외). 셸 앱인 웹 터미널(`terminal`)도 같은 예외로 `capabilities.terminal`(관리자가 허용)일 때만 보인다. 파일 탐색기(`files`)는 받은 capability에 권한 도우미가 없을 때(`capabilities.helper`가 false)만 숨긴다. 프로필 메뉴의 "OMV 워크벤치 열기"는 `requires: 'workbench'`로 같은 조건을 따른다
 - 목록은 `shortcuts/store.ts`(사용자별 `/api/preferences`의 `shortcuts`, 불러오기·저장 방식은 위젯 저장소와 같다), 순서 계산은 `shortcuts/list.ts`, 칸 계산은 `shortcuts/layout.ts`가 한다
   - 저장 목록에는 지금 보이지 않는 앱(일반 사용자의 관리자 전용 앱)도 남긴다. 화면 순서와 놓을 자리는 보이는 목록 기준이며(`placeShortcut`), 보이지 않는 앱은 서로의 순서를 지킨다
   - 한 번도 저장하지 않았으면 기본 목록(시스템 정보·파일·저장소), 모두 지웠으면 빈 바탕화면이다. 모르는 앱 id는 불러올 때 뺀다
@@ -154,7 +154,7 @@ paths:
 
 ## 사이드바 틀
 
-- `SidebarLayout`(`shell/SidebarLayout.tsx`·`.css`)은 왼쪽 사이드바와 오른쪽 내용(제목 머리 + 본문)으로 나눈 창 내용 틀이다. 설정 앱과 시스템 정보 창이 쓴다. 항목은 쓰는 쪽이 그리고(공통 모양 `.sidebar-nav-item`, 지금 페이지에 `aria-current="page"`), 너비는 `--sidebar-width`로 바꾼다
+- `SidebarLayout`(`shell/SidebarLayout.tsx`·`.css`)은 왼쪽 사이드바와 오른쪽 내용(제목 머리 + 본문)으로 나눈 창 내용 틀이다. 설정 앱, 시스템 정보 창, 파일 탐색기가 쓴다. 머리에는 제목(`title`) 대신 다른 내용(`header`, 파일 탐색기의 도구 막대)을 둘 수 있다. 항목은 쓰는 쪽이 그리고(공통 모양 `.sidebar-nav-item`, 지금 페이지에 `aria-current="page"`), 너비는 `--sidebar-width`로 바꾼다
 - 창 너비가 `narrowWidth`보다 좁으면(ResizeObserver로 재서 `.narrow`) 사이드바를 숨기고 메뉴 단추(☰, `hamburger-menu-symbolic`)로 내용 위에 덮어 연다. 열면 지금 페이지 항목에 포커스하고, 열린 동안 내용은 `inert`이며, Esc·바깥 누르기·항목(`navItems`) 누르기로 닫는다. 닫힌 뒤(내용의 `inert`가 풀린 뒤) 메뉴 단추로 포커스를 돌려준다. 열기·닫기 값은 `sidebarAnim.ts`
 
 ## 화면 설정(테마·배경)

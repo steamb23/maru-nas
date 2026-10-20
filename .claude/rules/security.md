@@ -10,7 +10,7 @@ paths:
 
 # 보안 강화 모드
 
-보안에 민감한 기능(웹 터미널, root 권한 상승)을 확인을 더 거친 세션에서만 쓰게 한다. 막는 것은 세션 탈취(열어 둔 브라우저, 훔친 쿠키)와 비밀번호 유출이고, onmaru 자체가 뚫린 경우는 막지 못한다. 사용자 설명은 `README.md`의 "보안 강화 모드". 패스키만으로 로그인하는 기능은 아래 "패스키로 로그인"에 있다.
+보안에 민감한 기능(웹 터미널, root 권한 상승, 파일 탐색기)을 확인을 더 거친 세션에서만 쓰게 한다. 막는 것은 세션 탈취(열어 둔 브라우저, 훔친 쿠키)와 비밀번호 유출이고, onmaru 자체가 뚫린 경우는 막지 못한다. 사용자 설명은 `README.md`의 "보안 강화 모드". 패스키만으로 로그인하는 기능은 아래 "패스키로 로그인"에 있다.
 
 ## 설계
 
@@ -21,8 +21,8 @@ paths:
 - **정책**은 기능별 `off`/`password`/`twoFactor`이고 `site.json`의 `security`(`api.SecurityPolicy`)에 둔다. 처리기는 메모리(`handler.policy`)에 올려 쓰고 저장할 때 함께 바꾼다. 모르는 값(손으로 고친 파일)은 `twoFactor`로 본다. 공개 `GET /api/site`에는 넣지 않는다
   - **정책 변경도 막는다**(`setSecurityPolicy`): 바꾸는 기능마다 이전·새 단계 중 높은 쪽을 그 관리자 세션이 거쳤어야 한다. 아니면 403 `security_required`(`ErrorResponse.Required`). 빼앗은 관리자 세션이 정책을 내리고 기능을 여는 것을 막는다
   - 정책을 올리면(`enforcePolicy`) 조건을 채우지 못하는 세션의 터미널을 `security_required`로 닫고(`terminal.Manager.CloseSession`) root 권한 상승을 끝낸다(도우미 `Drop`)
-  - 새 대상(파일 탐색기 등)은 `api.SecurityPolicy`에 필드를 더하고 `normalizePolicy`·변경 가드의 목록·`enforcePolicy`·프론트 목록(`SecurityPolicyPage.tsx`의 `TARGETS`, `SecurityPage.tsx`의 `TARGET_KEYS`)에 넣는다
-- **적용**: 웹 터미널은 WebSocket을 받은 뒤 `status closed reason=security_required`로 알린다(브라우저는 핸드셰이크의 HTTP 상태를 읽지 못한다). root 상승(`elevate`)은 비밀번호를 묻기 전에 403 `security_required`
+  - 새 대상은 `api.SecurityPolicy`에 필드를 더하고 `normalizePolicy`·변경 가드의 목록·"모두 꺼짐" 조건·`stepUpOffer`·`enforcePolicy`(필요하면)·프론트 목록(`SecurityPolicyPage.tsx`의 `TARGETS`, `SecurityPage.tsx`의 `TARGET_KEYS`)·문구(`security.targets.*`, `settings.securityPolicy.*Desc`)에 넣는다
+- **적용**: 웹 터미널은 WebSocket을 받은 뒤 `status closed reason=security_required`로 알린다(브라우저는 핸드셰이크의 HTTP 상태를 읽지 못한다). root 상승(`elevate`)은 비밀번호를 묻기 전에 403 `security_required`. 파일 탐색기는 `/api/files/*` 전부(목록·내려받기 포함, `requireFiles`)가 403 `security_required`이고, 요청마다 보므로 정책을 올려도 따로 닫지 않는다(이미 시작한 전송은 끝까지 간다). 창은 안내와 확인 단추를 두고 `requestStepUp({target: 'files'})` 뒤 다시 연다
 - **로그인 단계**: 2차 인증을 요구하는 기능이 있고 사용자에게 수단이 있으면 로그인 응답에만 `stepUp`(쓸 수 있는 수단)을 담는다. 세션은 이미 만들어졌고 건너뛰면 일반 세션이다. `SessionInfo`에는 넣지 않는다(세션 복원이 다시 묻지 않게)
 
 ## 확인 수단

@@ -46,6 +46,7 @@
 - SMART: `Smart.getList`(admin)를 하루 한 번·새로고침 때만. 백그라운드 버전 `getListBg`는 쓰지 않았다(백엔드 캐시가 같은 역할)
 - 컨테이너: `Compose.getContainers`(모두)
 - 시스템 정보 창: 직접 읽기만. 프로세스 목록은 `System.getTopInfo`(admin) 대신 `/proc`를 읽는다. 그 RPC는 호출마다 `top`(과 `jc`)을 실행하므로 2초 주기에는 무겁다. 대신 OMV와 같이 관리자에게만 준다(provider 조건)
+- 파일 탐색기의 공유 폴더 목록: `ShareMgmt.enumerateSharedFolders`(admin, 파라미터 없음, `{total, data}`가 아닌 배열). 일반 사용자 세션으로는 받을 수 없어 관리자 세션이 받아 `site.json`에 스냅숏으로 둔다. 항목의 `absdirpath`·`status`는 8.1.0부터 있다(`auth-omv.md`의 "OMV 8 버전별 차이"). 파일 자체는 OMV RPC가 아니라 권한 도우미의 사용자 권한 연산으로 다룬다(`.claude/rules/files.md`). 스냅숏이 없을 때 보이는 디스크는 `/proc/mounts`의 `/srv` 아래 마운트와 by-label 라벨이다(디스크 용량과 같은 직접 읽기)
 - 디스크 I/O는 물리 디스크의 합계다. mdadm RAID1의 미러 쓰기와 RAID5·6의 패리티 쓰기까지 세므로 볼륨에 쓴 양이 아니라 장치가 처리한 양이다. 파티션·md·dm은 이중으로 세지 않게 뺀다
 
 ### 조작에 쓴 출처

@@ -4,7 +4,7 @@
 
 OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표시줄·아이콘이 있는 데스크톱형 웹 대시보드.
 
-영역별 상세 규칙은 `.claude/rules/`에 있고 해당 파일을 다룰 때 로드된다: `auth-omv.md`(OMV 8 동작, 인증 설계), `backend.md`, `helper.md`(권한 도우미), `terminal.md`(웹 터미널), `security.md`(보안 강화 모드), `frontend.md`, `frontend-shell.md`(창·작업표시줄·애니메이션), `i18n.md`, `icons.md`, `installer.md`(설치기). 작업 전 설계를 논의할 때는 해당 파일을 직접 읽는다. 설계 문서는 `.claude/docs/`(`addons.md`, `data-sources.md`, `helper.md`, `upgrade.md`)에 있다.
+영역별 상세 규칙은 `.claude/rules/`에 있고 해당 파일을 다룰 때 로드된다: `auth-omv.md`(OMV 8 동작, 인증 설계), `backend.md`, `helper.md`(권한 도우미), `terminal.md`(웹 터미널), `files.md`(파일 탐색기), `security.md`(보안 강화 모드), `frontend.md`, `frontend-shell.md`(창·작업표시줄·애니메이션), `i18n.md`, `icons.md`, `installer.md`(설치기). 작업 전 설계를 논의할 때는 해당 파일을 직접 읽는다. 설계 문서는 `.claude/docs/`(`addons.md`, `data-sources.md`, `helper.md`, `upgrade.md`)에 있다.
 
 ## 목표와 범위
 
@@ -47,6 +47,7 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
   - 설정 앱(`src/settings/`)은 대시보드 설정, 자기 계정 프로필, 보안 수단, 정보만 다룬다. 전역에 적용되는 설정은 관리자만 바꾸고, 그 밖의 OMV·OS 설정은 넣지 않는다. 페이지 목록은 `README.md`의 "설정 앱"
   - 웹에서 덮어쓰는 가동 설정은 재시작 없이 바뀌는 워크벤치 주소, SMART 확인 시각, 웹 터미널 허용뿐이다(`site.json`, 플래그보다 우선). 나머지는 root가 `/etc/default/onmaru`를 고친다
 - **권한 도우미**(`onmaru-helper`, `-helper-socket`, 설치기가 기본으로 설치): root로 도는 별도 실행 파일이 소켓 활성화로 onmaru 서비스 사용자의 연결만 받는다. 로그인할 때 비밀번호를 `unix_chkpwd`로 확인해 티켓을 주고, 연산을 그 사용자 권한으로 강등해 실행한다. root 연산은 권한 상승한 관리자 세션에서 5분 동안, 정해진 목록만 쓴다(지금은 `id`와 대시보드에서 업그레이드의 `upgrade.apply`). 상세는 `.claude/docs/helper.md`, 규칙은 `.claude/rules/helper.md`
+- **파일 탐색기**(`internal/files`, `src/files/`, 셸 앱): 홈 폴더와 공유 폴더를 도우미의 사용자 권한 연산으로 둘러보고 내려받고 올린다. 공유 폴더 목록은 관리자 세션이 받은 스냅숏(`site.json`)이고, 접근은 파일 시스템 권한만 따른다. 큰 폴더는 이름을 먼저 읽고 보이는 범위의 정보만 읽는다. 상세는 `.claude/rules/files.md`
 - **웹 터미널**(`internal/terminal`, 기본 꺼짐): 백엔드가 루프백 sshd에 대시보드 세션 사용자로만 접속해 WebSocket(`/api/terminal`)으로 셸을 중계한다. TTY를 직접 띄우지 않으며, 누가 들어갈 수 있는지는 OMV의 SSH 설정이 정한다. 상세는 `.claude/rules/terminal.md`
 - **보안 강화 모드**(`internal/security`): 웹 터미널·root 권한 상승을 세션의 보증 수준(로그인 < 비밀번호 재확인 < 2차 인증)으로 막는다. 2차 인증(패스키·TOTP·복구 코드·OMV 2차 인증)의 확인은 onmaru가 하며 도우미에 넣지 않는다. 상세는 `.claude/rules/security.md`
 - **OMV RPC는 항상 백엔드가 중계한다**: 브라우저 → `/api/rpc` → 백엔드 → OMV `rpc.php`. 브라우저가 `rpc.php`를 직접 호출하지 않는다
@@ -97,7 +98,7 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 개발 서버 환경 변수와 워크트리:
 
 - 포트: `ONMARU_LISTEN`(백엔드), `FAKEOMV_LISTEN`(가짜 OMV), `FAKESSH_LISTEN`(가짜 sshd), `DEV_PORT`(Vite). 상태 디렉터리는 `ONMARU_STATE_DIR`
-- `make dev-fake` 전용: `FAKEOMV_TIMEOUT=1m`(세션 timeout, 분 단위), `FAKEOMV_VERSION=8.3`(옛 OMV 응답, `omvfake.Version`), `FAKESSH_AUTH=publickey`(가짜 sshd가 받는 인증 방법), `FAKEUPGRADE_SCENARIO=manual`(가짜 업그레이드 서비스의 시나리오: web, manual, latest, check-fail, apply-fail, disabled), `FAKEUPGRADE_STEP=20s`(가짜 업그레이드 서비스의 단계 사이 지연, 기본 1.5s)
+- `make dev-fake` 전용: `FAKEOMV_TIMEOUT=1m`(세션 timeout, 분 단위), `FAKEOMV_VERSION=8.3`(옛 OMV 응답, `omvfake.Version`), `FAKEFILES_LARGE=60000`(파일 탐색기의 큰 폴더, 가짜 디스크의 사진/휴대폰 백업), `FAKESSH_AUTH=publickey`(가짜 sshd가 받는 인증 방법), `FAKEUPGRADE_SCENARIO=manual`(가짜 업그레이드 서비스의 시나리오: web, manual, latest, check-fail, apply-fail, disabled), `FAKEUPGRADE_STEP=20s`(가짜 업그레이드 서비스의 단계 사이 지연, 기본 1.5s)
 - 웹 터미널 허용은 설정 앱이나 `ONMARU_TERMINAL=true`로 켠다
 - git 워크트리에서 실행하면 주 체크아웃의 `frontend/.env.local`(워크트리에 있으면 그 값이 우선)과 `.dev-state`를 쓴다. 주 체크아웃에서 `make dev BRANCH=<브랜치>`(`make dev-fake`도 같다)로 그 브랜치가 체크아웃된 워크트리의 코드를 실행할 수 있다(실행은 부른 쪽의 `scripts/dev.sh`)
 

@@ -196,7 +196,7 @@
   - 검사(`Registry.ValidateWidgets`): 위젯 보기가 있는 등록된 애드온, 애드온마다 하나, 크기는 manifest 범위 안, 좌표는 0~200칸, 서로 겹치지 않음, 64개 이하. 본문 64KB 이하, `application/json`만
   - capability(역할·플러그인)는 검사하지 않는다. 역할이나 플러그인이 바뀌어도 배치를 잃지 않게 하고, 표시 여부는 프론트가 정한다(관리자 전용은 그리지 않고, 플러그인 없음은 위젯 안에 짧은 안내)
 - `PUT /api/preferences/shortcuts`: 바로가기 목록 전체(`[{app}]`, 바탕화면 순서)를 바꾼다. 다른 설정은 그대로 둔다
-  - 검사(`addons.ValidateShortcuts`)는 형식만 본다: 앱 id는 애드온 id와 같은 형식, 앱마다 하나, 64개 이하. 준비 중 앱(`files`)은 프론트에만 있으므로 레지스트리로 검사하지 않고, 모르는 id는 프론트가 불러올 때 뺀다. capability도 위젯과 같은 이유로 보지 않는다
+  - 검사(`addons.ValidateShortcuts`)는 형식만 본다: 앱 id는 애드온 id와 같은 형식, 앱마다 하나, 64개 이하. 셸 앱(`files`, `terminal`, `settings`)과 링크 앱은 프론트에만 있으므로 레지스트리로 검사하지 않고, 모르는 id는 프론트가 불러올 때 뺀다. capability도 위젯과 같은 이유로 보지 않는다
   - 객체 목록으로 둔 것은 나중에 폴더·OMV 페이지 바로가기를 필드만 더해 담기 위해서다
 - `PUT /api/preferences/appearance`: 화면 설정(`{theme, wallpaper, animations, taskbarAlign, widgetsLocked}`) 전체를 바꾼다. 빈 값은 관리자 기본 화면을 따른다. 바탕화면 이미지는 `…/wallpaper-image`로 따로 올리며, 응답의 `wallpaperImage`(리비전)는 저장하지 않고 응답할 때 붙인다
 - `PUT /api/preferences/drawer`: "모든 앱" 화면 설정(`{sort}`) 전체를 바꾼다. `sort`는 `recommended`(추천순, 대시보드가 정한 순서)나 `name`(화면 언어의 이름순)만 받는다. 저장한 적 없거나 프론트가 모르는 값이면 추천순이다

@@ -26,7 +26,7 @@ paths:
 - 주기 요청·세션 확인으로 부르는 OMV RPC는 `options.updatelastaccess=false`로 호출해 OMV 세션을 연장하지 않는다. 세션 연장은 로그인과 사용자 활동 신호만 한다(`auth-omv.md`의 "세션 만료")
 - 애드온 계약은 `internal/addons`, 내장 애드온은 `internal/addons/<id>/`, 정적 목록은 `internal/addons/builtin`이다. manifest를 바꾸면 `make types`로 `frontend/src/addons/manifests.gen.ts`도 다시 만든다(`.claude/docs/addons.md`)
 - OMV RPC는 `/api/rpc` 중계든 provider 내부 호출이든 manifest 허용 목록(`Registry.Classify`)과 `addons.WritesEnabled`를 거친다
-  - 예외: 애드온이 아닌 서버 기능은 고정 메서드 목록(`rpcCaller.fixed`)만 부른다. 지금은 프로필(`internal/server/profile.go`의 `profileMethods`)뿐이며, 쓰기는 여기서도 `writes`와 `WritesEnabled`를 따른다
+  - 예외: 애드온이 아닌 서버 기능은 고정 메서드 목록(`rpcCaller.fixed`)만 부른다. 지금은 프로필(`internal/server/profile.go`의 `profileMethods`)과 파일 탐색기의 공유 폴더 스냅숏(`internal/server/files.go`의 `sharesMethods`, `ShareMgmt.enumerateSharedFolders`, 관리자 세션)이며, 쓰기는 여기서도 `writes`와 `WritesEnabled`를 따른다
 - 쓰기 RPC는 애드온 조작(`Addon.Actions`, `POST /api/addons/{id}/actions/{action}`)과 프로필 저장(`PUT /api/profile`, 자기 계정의 전자 우편·태그를 `UserMgmt.setUserByContext`로)으로만 부른다. `/api/rpc`와 `Fetch`는 쓰기를 거부한다. 조작은 브라우저가 보낸 대상을 검사하고 OMV 파라미터를 직접 만든다(OMV에는 파라미터를 검사하지 않고 셸 명령을 만드는 메서드가 있다). 백그라운드 작업은 `addons.WaitBg`로 기다린다(`.claude/docs/addons.md`의 "조작")
 - OMV 설정을 바꾸고 적용하는 흐름(적용 대기 확인 → 변경 → `Config.applyChangesBg` → `WaitBg`)은 `addons.ApplyChange` 하나로 한다. 이 백엔드 안의 적용은 그 안의 잠금으로 하나씩 실행된다(서비스 켜기·끄기, 관리자의 프로필 저장). 적용 대기가 이미 있으면 남이 만든 변경을 대신 배포하지 않게 409 `config_dirty`로 거절한다
 - 프로필(`GET·PUT /api/profile`)은 로그인한 사용자 자신만 다룬다. 관리자는 `UserMgmt.getUser(자기 이름)`, 일반 사용자는 `getUserByContext`로 읽고, SSH 키·uid 등은 넘기지 않는다. OMV의 설명 칸(comment, GECOS)은 워크벤치가 "Tags"로 쓰므로 쉼표로 나눈 태그로 주고받는다. 저장은 보내지 않은 값을 지금 값으로 채워 보내며, 관리자는 `ApplyChange`로 적용까지, 일반 사용자는 적용 대기로 남긴다. 시스템 계정·수정 금지 계정은 409 `profile_readonly`
@@ -35,6 +35,15 @@ paths:
 - `Smart.getList`는 대기 중인 디스크를 깨운다. 주기적으로 부르지 말고 `smart.Cache`를 거친다(온도는 `Peek`만)
 - OMV가 매번 프로세스를 실행하는 느린 읽기 RPC(`Services.getStatus`, `Compose.getContainers`)는 `addons.SharedCache`로 세션 사이에 짧게(5초) 함께 쓴다. 결과가 사용자와 무관한 RPC에만 쓰고, `Request.Refresh`면 건너뛰며, 상태를 바꾸는 조작은 끝난 뒤(실패해도) `Invalidate`한다
 - `/proc`·`/sys`를 읽는 코드는 파서(`io.Reader` 입력)와 읽기(`fs.FS` 주입)를 나눠 `testdata/`의 합성 픽스처로 테스트한다(`internal/addons/sysinfo` 참고)
+
+## 파일 탐색기
+
+규칙은 `.claude/rules/files.md`, 도우미 쪽 연산은 `.claude/docs/helper.md`의 "파일 탐색기 연산".
+
+- 라우트(`internal/server/files.go`): `GET /api/files/roots`, `GET /api/files/list`, `GET /api/files/list/{id}`, `POST /api/files/list/{id}/prepare`, `GET /api/files/info`, `GET /api/files/download`, `PUT /api/files/upload`(모두 `requireFiles`: 보안 정책 `files` → 도우미 티켓), 관리자 `GET·PUT /api/site/files`, `POST /api/site/files/refresh`. 경로 계산·정렬·목록 캐시는 `internal/files`
+- 도우미 파일 오류 코드는 `writeFilesError`가 HTTP로 바꾼다(`not_found` 404, `permission_denied`·`outside_roots` 403, `exists` 409 `file_exists`, `no_space` 507, `busy` 429 `helper_busy`, `timeout` 504 `transfer_timeout` 등). 나머지는 `writeHelperError`
+- 디스크(`Config.Mounts`, `storage.Reader.MountsUnder`)와 데이터 디스크 디렉터리(`Config.FilesSrvDir`, 기본 `/srv`). 개발 서버는 `ONMARU_DEV_FILES_SRV`(개발 전용, 플래그·가동 설정 목록·설치기 레지스트리에 넣지 않음)로 가짜 도우미 디스크를 가리킨다
+- HTTP 서버에는 `ReadTimeout`·`WriteTimeout`을 두지 않는다(6시간 전송). 전송 상한과 무진행 끊기는 도우미가 한다
 
 ## 대시보드에서 업그레이드
 
@@ -51,8 +60,8 @@ paths:
 
 ## 테스트
 
-- 서버 테스트는 `internal/server/server_test.go`의 `newEnv`·`browser`를 쓴다. `omvfake`를 `httptest`로 띄우고 실제 `omv.Client`와 서버 핸들러를 연결한다. 도우미가 필요하면 `envOptions{helper: true}`가 `helperfake`를 임시 소켓에 띄워 실제 `client.Client`로 연결한다
+- 서버 테스트는 `internal/server/server_test.go`의 `newEnv`·`browser`를 쓴다. `omvfake`를 `httptest`로 띄우고 실제 `omv.Client`와 서버 핸들러를 연결한다. 도우미가 필요하면 `envOptions{helper: true}`가 `helperfake`를 임시 소켓에 띄워 실제 `client.Client`로 연결한다. `files: true`면 그 가짜 디스크를 파일 탐색기의 디스크로 둔다
 - 시계는 주입한다. OMV 세션 만료는 `omvfake.Expire(user)`로 흉내 낸다
-- 옛 OMV 8 버전의 응답은 `omvfake.SetVersion`(`Version82`, `Version80`)으로 흉내 낸다. 버전마다 RPC가 다른 기능은 해당 버전대도 테스트한다(`auth-omv.md`의 "OMV 8 버전별 차이")
+- 옛 OMV 8 버전의 응답은 `omvfake.SetVersion`(`Version82`, `Version81`, `Version80`)으로 흉내 낸다. 버전마다 RPC가 다른 기능은 해당 버전대도 테스트한다(`auth-omv.md`의 "OMV 8 버전별 차이")
 - 새 RPC를 쓰는 기능은 `omvfake`에 그 RPC의 합성 응답을 추가해 같은 방식으로 테스트한다. 응답 형식은 OMV 소스(`/usr/share/openmediavault/engined/rpc/`)를 읽고 만들며 NAS 실제 출력을 넣지 않는다
 - `omvfake`는 인증된 모든 호출에서 User-Agent를 검사한다(실제 OMV보다 엄격). 백엔드가 고정 User-Agent를 지키는지 확인하기 위해서다

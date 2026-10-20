@@ -35,6 +35,7 @@ OMV 8의 모든 버전을 지원한다. OMV 패키지(`packages.openmediavault.o
 
 - **`Session.login` 응답**: `status`와 2차 인증(`Session.verify`)은 8.5.0(Issue #2235)에서 생겼다. 8.4 이하는 `{"authenticated": true, "username", "permissions", "sessionid"}`이고 실패는 똑같이 HTTP 400이다. 백엔드는 `status`가 없고 `authenticated`가 true이면 `authenticated` 상태로 바꿔 같은 흐름을 탄다(`omv.loginResult`). 8.5의 verify 응답에도 `authenticated`가 들어 있을 수 있으므로 옛 형식은 `status`가 없는 것으로 판단한다
 - **8.5.0-1의 `Session.authenticate`**: 이 한 릴리스만 `login`을 `authenticate`로 바꿨고 8.5.0-2에서 되돌렸다. 지원하지 않는다
+- **`ShareMgmt.enumerateSharedFolders`**(파일 탐색기의 공유 폴더 스냅숏, 관리자 전용): 항목의 `absdirpath`와 `status`(`OK`, `ENOENT`, `ENOTDIR`, `ENOENT_DB_MNTENT`)는 8.1.0에서 생겼다. 8.0은 `mntent.dir` + `reldirpath`로 경로를 만들고 폴더가 있는지는 모른다(`files.ParseShares`). 워크벤치의 ACL 화면 라우트(`storage/shared-folders/acl/<uuid>`)는 8.0부터 같다
 - **`WebGui.getAutoLogoutSettings`**: 8.2.0에서 생겼다. 8.0·8.1에서는 HTTP 404(없는 메서드, `rpc/rpc.inc`)라 `Probe`가 세션은 살아 있고 timeout은 모른다고 본다. 이때 브라우저에 남은 시간을 주지 않고 만료는 확인 주기의 Probe(401)로 안다
 
 ## 인증 설계
@@ -44,6 +45,7 @@ OMV 8의 모든 버전을 지원한다. OMV 패키지(`packages.openmediavault.o
 - 백엔드의 OMV 클라이언트는 세션 ID를 쿠키가 아닌 `X-OpenMediaVault-SessionID` 헤더로 보내고, 응답 `Set-Cookie`로 바뀐 ID를 갱신한다
 - `/api/*`는 대시보드 세션이 없으면 401을 반환한다(`/api/health`, 로그인 라우트, 로그인 화면이 쓰는 `GET /api/site`와 `GET /api/site/images/login-background` 제외). 본문이 있는 요청(POST, PUT)은 `Content-Type: application/json`만 받는다(CSRF 보조 장치)
   - 예외: 이미지 올리기(`PUT /api/preferences/wallpaper-image`, `…/avatar-image`, `PUT /api/site/images/{name}`)는 원시 이미지 본문(`image/png|jpeg|webp`)만 받는다. HTML 폼은 이 형식을 보낼 수 없고 다른 출처의 fetch는 preflight에서 막히므로 같은 보조 장치가 된다. multipart는 받지 않는다
+  - 예외: 파일 탐색기의 올리기(`PUT /api/files/upload`)는 원시 본문(`application/octet-stream`)만 받는다. 이 형식도 HTML 폼이 보낼 수 없고 다른 출처의 fetch는 preflight에서 막힌다. 내려받기(`GET /api/files/download`)는 같은 사이트 이동(`<a download>`)이라 SameSite=Strict 쿠키가 간다
   - 공개 로그인 배경은 대시보드 주소에 닿는 누구나 받을 수 있다(로그인 화면에 보이는 그림이다). 설정 앱이 관리자에게 이 점을 알린다
 - 로그인 상태를 localStorage·sessionStorage에 저장하지 않는다. 앱 시작 시 `/api/session`으로 상태를 복원한다(workbench처럼 탭마다 로그인하지 않게 하기 위함)
   - 패스키로 로그인의 브라우저 항목(localStorage `onmaru.passkeyLogin`)은 로그인 상태가 아니다. 서버 share와 패스키 PRF가 함께 있어야 풀리는 비밀번호 암호문이며, 있어도 세션은 생기지 않는다(`.claude/rules/security.md`의 "패스키로 로그인")
