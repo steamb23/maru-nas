@@ -113,3 +113,37 @@ func (r *Reader) kernelName(dev string) string {
 	}
 	return deviceName(dev)
 }
+
+// MountLabel은 마운트 지점과 그 파일시스템의 라벨(없으면 빈 값), 장치다.
+type MountLabel struct {
+	MountPoint string
+	Label      string
+	Device     string
+}
+
+// MountsUnder는 dir 아래(dir 자신은 빼고)에 마운트된 파일시스템이다(마운트 지점 순). 용량은 읽지 않는다.
+// 파일 탐색기가 공유 폴더 스냅숏이 없을 때 /srv 아래 디스크를 대신 보이는 데 쓴다. 권한 도우미의 기준
+// 디렉터리(/srv 아래 마운트 지점)와 같은 규칙이다.
+func (r *Reader) MountsUnder(dir string) ([]MountLabel, error) {
+	f, err := r.proc.Open("mounts")
+	if err != nil {
+		return nil, err
+	}
+	mounts, err := ParseMounts(f)
+	f.Close()
+	if err != nil {
+		return nil, err
+	}
+	labels := r.labels()
+	prefix := strings.TrimSuffix(dir, "/") + "/"
+	var out []MountLabel
+	for _, m := range mounts {
+		if !strings.HasPrefix(m.MountPoint, prefix) ||
+			slices.ContainsFunc(out, func(o MountLabel) bool { return o.MountPoint == m.MountPoint }) {
+			continue
+		}
+		out = append(out, MountLabel{MountPoint: m.MountPoint, Label: labels[r.kernelName(m.Device)], Device: m.Device})
+	}
+	slices.SortFunc(out, func(a, b MountLabel) int { return strings.Compare(a.MountPoint, b.MountPoint) })
+	return out, nil
+}

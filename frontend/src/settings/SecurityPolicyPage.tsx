@@ -37,6 +37,7 @@ type LoadState = { status: 'loading' } | { status: 'error' } | Loaded
 const TARGETS: readonly { id: SecurityTarget; label: ParseKeys; desc: ParseKeys }[] = [
   { id: 'terminal', label: 'security.targets.terminal', desc: 'settings.securityPolicy.terminalDesc' },
   { id: 'elevation', label: 'security.targets.elevation', desc: 'settings.securityPolicy.elevationDesc' },
+  { id: 'files', label: 'security.targets.files', desc: 'settings.securityPolicy.filesDesc' },
 ]
 
 const LEVELS: readonly Level[] = ['off', 'password', 'twoFactor']

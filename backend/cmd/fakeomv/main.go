@@ -15,6 +15,8 @@
 // 인증하고(공개 키는 가짜 도우미의 가짜 홈에 쓴 authorized_keys로 확인), 장난감 셸만 있다. 호스트 공개 키는
 // FAKESSH_HOST_KEY 경로에 쓰고, FAKESSH_AUTH로 받을 인증 방법을 고른다(예: publickey면 공개 키만 받는 sshd).
 //
+// 가짜 도우미가 있으면 파일 탐색기용 합성 파일과 공유 폴더를 만든다(files.go, FAKEFILES_LARGE로 큰 폴더).
+//
 // 가짜 도우미가 있고 ONMARU_DEV_UPGRADE_ROOT·ONMARU_STATE_DIR가 있으면 대시보드에서 업그레이드의 가짜 업그레이드
 // 서비스(internal/upgrade/upgradefake)도 띄운다. onmaru가 그 상태 디렉터리에 남긴 확인 요청과 가짜 도우미가 쓴
 // 적용 요청을 처리해 가짜 루트의 상태 파일에 쓴다. FAKEUPGRADE_SCENARIO로 시나리오(web, manual, latest, check-fail,
@@ -85,6 +87,11 @@ func main() {
 		defer h.Close()
 		helper = h
 		log.Printf("fake helper listening on %s (files under %s)", sock, root)
+		// 파일 탐색기: 가짜 디스크에 합성 파일을 만들고 가짜 OMV의 공유 폴더가 그 아래를 가리키게 한다.
+		seedFiles(h.Disk())
+		d := omvfake.DefaultPluginData()
+		d.SharedFolders = devShares(h.Disk())
+		srv.SetPluginData(d)
 		for _, u := range helperfake.DefaultUsers() {
 			log.Printf("  helper account %s uid %d groups %v", u.Name, u.UID, u.Groups)
 		}

@@ -84,8 +84,11 @@ const (
 	// Version82는 OMV 8.2.0 ~ 8.4.x다. Session.login이 status 없이 authenticated(bool)를 준다.
 	// 2차 인증이 없으므로 Session.verify가 없고 2차 인증 계정도 바로 로그인된다.
 	Version82
-	// Version80은 OMV 8.0 ~ 8.1.x다. Version82에 더해 WebGui.getAutoLogoutSettings가 없다.
+	// Version80은 OMV 8.0.x다. Version81에 더해 ShareMgmt.enumerateSharedFolders 항목에 absdirpath·status가 없다
+	// (engined/rpc/sharemgmt.inc).
 	Version80
+	// Version81은 OMV 8.1.x다. Version82에 더해 WebGui.getAutoLogoutSettings가 없다.
+	Version81
 )
 
 // ParseVersion은 "8.3"·"8.5.11" 같은 OMV 버전을 그 버전이 속한 버전대로 바꾼다.
@@ -103,6 +106,8 @@ func ParseVersion(s string) (Version, error) {
 		return Version85, nil
 	case minor >= 2:
 		return Version82, nil
+	case minor == 1:
+		return Version81, nil
 	}
 	return Version80, nil
 }
@@ -111,8 +116,10 @@ func (v Version) String() string {
 	switch v {
 	case Version82:
 		return "8.2-8.4"
+	case Version81:
+		return "8.1"
 	case Version80:
-		return "8.0-8.1"
+		return "8.0"
 	}
 	return "8.5+"
 }
@@ -354,7 +361,7 @@ func (s *Server) handle(req *request, body rpcBody, touch bool) (any, *rpcError)
 		return nil, errStatus(http.StatusUnauthorized, "Session not authenticated.")
 	}
 	if body.Service == "WebGui" && body.Method == "getAutoLogoutSettings" {
-		if s.version == Version80 {
+		if s.version == Version80 || s.version == Version81 {
 			return nil, noMethod(body.Service, body.Method)
 		}
 		return map[string]any{"timeout": int(s.timeout / time.Minute)}, nil

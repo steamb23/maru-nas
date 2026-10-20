@@ -112,6 +112,11 @@ type envOptions struct {
 	rp       *security.RP
 	// upgrade면 대시보드에서 업그레이드의 파일을 임시 디렉터리에 둔다(env.upgradeRoot, upgradeState).
 	upgrade bool
+	// mounts, filesSrv는 Config의 Mounts, FilesSrvDir다(파일 탐색기의 디스크). files면 가짜 도우미의 가짜 디스크
+	// 하나(라벨 data1)를 디스크로, 그 부모를 FilesSrvDir로 둔다.
+	mounts   MountSource
+	filesSrv string
+	files    bool
 }
 
 func newEnv(t *testing.T, o envOptions) *env {
@@ -166,6 +171,10 @@ func newEnv(t *testing.T, o envOptions) *env {
 		}
 		t.Cleanup(func() { fakeHelper.Close() })
 		helper = helperclient.New(fakeHelper.Socket)
+		if o.files {
+			o.filesSrv = filepath.Dir(fakeHelper.Disk())
+			o.mounts = fakeMounts{{MountPoint: fakeHelper.Disk(), Label: "data1"}}
+		}
 	} else if o.helperSocket != "" {
 		helper = helperclient.New(o.helperSocket)
 	}
@@ -217,6 +226,8 @@ func newEnv(t *testing.T, o envOptions) *env {
 		Terminal:          manager,
 		TerminalEnabled:   o.terminal && !o.terminalOff,
 		Upgrade:           upgrades,
+		Mounts:            o.mounts,
+		FilesSrvDir:       o.filesSrv,
 		Security:          o.security,
 		RP:                o.rp,
 		CheckInterval:     o.interval,

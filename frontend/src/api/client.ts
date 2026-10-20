@@ -117,6 +117,19 @@ const ERROR_CODES: readonly ErrorCode[] = [
   'upgrade_disabled',
   'upgrade_busy',
   'upgrade_outdated',
+  'not_found',
+  'permission_denied',
+  'outside_roots',
+  'file_exists',
+  'not_dir',
+  'is_dir',
+  'not_regular',
+  'no_space',
+  'read_only',
+  'helper_busy',
+  'transfer_timeout',
+  'listing_expired',
+  'sort_pending',
 ]
 
 export type RequiredLevel = NonNullable<ErrorResponse['required']>

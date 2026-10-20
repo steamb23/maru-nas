@@ -814,6 +814,10 @@ export interface SiteSettings {
    * Security는 보안 강화 모드의 기능별 단계다. 없으면 모두 꺼짐이다.
    */
   security?: SecurityPolicy;
+  /**
+   * Files는 파일 탐색기의 전역 설정과 공유 폴더 스냅숏이다. 없으면 스냅숏이 없고 디스크 보기는 꺼짐이다.
+   */
+  files?: SiteFiles;
 }
 /**
  * SiteLogin은 로그인 화면 설정이다. 저장한 적 없으면 대시보드 기본 배경에 대기 연출을 켠다.
@@ -1400,6 +1404,58 @@ export const ErrUpgradeBusy = "upgrade_busy";
  */
 export const ErrUpgradeOutdated = "upgrade_outdated";
 /**
+ * 파일 탐색기의 파일 연산 오류. 권한 도우미가 사용자 권한으로 실행한 결과다.
+ */
+export const ErrNotFound = "not_found";
+/**
+ * 오류 코드. ErrorResponse.Code에 들어간다.
+ */
+export const ErrPermissionDenied = "permission_denied";
+/**
+ * ErrOutsideRoots는 파일 탐색기가 보이는 폴더(홈, 공유 폴더, 켠 경우 디스크) 밖이거나 권한 도우미의 기준 디렉터리 밖이라는 뜻이다.
+ */
+export const ErrOutsideRoots = "outside_roots";
+/**
+ * 오류 코드. ErrorResponse.Code에 들어간다.
+ */
+export const ErrFileExists = "file_exists";
+/**
+ * 오류 코드. ErrorResponse.Code에 들어간다.
+ */
+export const ErrNotDir = "not_dir";
+/**
+ * 오류 코드. ErrorResponse.Code에 들어간다.
+ */
+export const ErrIsDir = "is_dir";
+/**
+ * ErrNotRegular는 일반 파일이 아니라(FIFO, 장치 등) 내려받을 수 없다는 뜻이다.
+ */
+export const ErrNotRegular = "not_regular";
+/**
+ * 오류 코드. ErrorResponse.Code에 들어간다.
+ */
+export const ErrNoSpace = "no_space";
+/**
+ * 오류 코드. ErrorResponse.Code에 들어간다.
+ */
+export const ErrReadOnly = "read_only";
+/**
+ * ErrHelperBusy는 권한 도우미가 동시에 실행할 수 있는 연산 수(사용자당 4개)를 넘었다는 뜻이다.
+ */
+export const ErrHelperBusy = "helper_busy";
+/**
+ * ErrTransferTimeout은 전송이 60초 동안 진행되지 않았거나 시간 상한(6시간)을 넘었다는 뜻이다.
+ */
+export const ErrTransferTimeout = "transfer_timeout";
+/**
+ * ErrListingExpired는 목록(FilesListing.ID)이 사라졌다는 뜻이다(유휴, 상한, 로그아웃). 폴더를 다시 연다.
+ */
+export const ErrListingExpired = "listing_expired";
+/**
+ * ErrSortPending은 날짜·크기순 정렬에 필요한 항목 정보를 아직 다 읽지 않았다는 뜻이다(prepare를 마저 부른다).
+ */
+export const ErrSortPending = "sort_pending";
+/**
  * ErrorResponse는 2xx가 아닌 상태 코드와 함께 반환된다.
  */
 export interface ErrorResponse {
@@ -1407,7 +1463,7 @@ export interface ErrorResponse {
   /**
    * Code는 화면에서 분기할 때 쓰는 오류 종류다. 없을 수 있다.
    */
-  code?: 'invalid_credentials' | 'rate_limited' | 'challenge_failed' | 'challenge_expired' | 'omv_unavailable' | 'unauthorized' | 'bad_request' | 'rpc_forbidden' | 'admin_required' | 'plugin_missing' | 'omv_error' | 'action_busy' | 'action_failed' | 'action_timeout' | 'config_dirty' | 'image_too_large' | 'unsupported_image' | 'profile_readonly' | 'helper_unavailable' | 'helper_reauth' | 'elevation_failed' | 'elevation_not_allowed' | 'elevation_required' | 'terminal_disabled' | 'security_required' | 'factor_failed' | 'manage_required' | 'passkey_unavailable' | 'passkey_uv_unsupported' | 'security_unavailable' | 'passkey_login_unknown' | 'passkey_login_expired' | 'passkey_login_stale' | 'upgrade_disabled' | 'upgrade_busy' | 'upgrade_outdated';
+  code?: 'invalid_credentials' | 'rate_limited' | 'challenge_failed' | 'challenge_expired' | 'omv_unavailable' | 'unauthorized' | 'bad_request' | 'rpc_forbidden' | 'admin_required' | 'plugin_missing' | 'omv_error' | 'action_busy' | 'action_failed' | 'action_timeout' | 'config_dirty' | 'image_too_large' | 'unsupported_image' | 'profile_readonly' | 'helper_unavailable' | 'helper_reauth' | 'elevation_failed' | 'elevation_not_allowed' | 'elevation_required' | 'terminal_disabled' | 'security_required' | 'factor_failed' | 'manage_required' | 'passkey_unavailable' | 'passkey_uv_unsupported' | 'security_unavailable' | 'passkey_login_unknown' | 'passkey_login_expired' | 'passkey_login_stale' | 'upgrade_disabled' | 'upgrade_busy' | 'upgrade_outdated' | 'not_found' | 'permission_denied' | 'outside_roots' | 'file_exists' | 'not_dir' | 'is_dir' | 'not_regular' | 'no_space' | 'read_only' | 'helper_busy' | 'transfer_timeout' | 'listing_expired' | 'sort_pending';
   /**
    * RetryAfterSeconds는 rate_limited일 때 다시 시도할 수 있기까지 남은 초다.
    */
@@ -1591,6 +1647,10 @@ export const FactorPasskey = "passkey";
 export interface SecurityPolicy {
   terminal?: 'off' | 'password' | 'twoFactor';
   elevation?: 'off' | 'password' | 'twoFactor';
+  /**
+   * Files는 파일 탐색기다. 목록·내려받기 같은 읽기까지 모두 막는다(빼앗은 세션이 내려받기만 해도 정보가 샌다).
+   */
+  files?: 'off' | 'password' | 'twoFactor';
   /**
    * PasskeyLoginDays는 패스키로 로그인 등록의 만료 기간(일)이다. 없으면 PasskeyLoginDaysDefault다. 바꾸려면
    * 비밀번호를 다시 확인한 세션이어야 한다. 줄이면 기존 등록에도 바로 적용되고, 늘리면 새 등록부터 적용된다.
@@ -2006,4 +2066,200 @@ export interface StartUpgradeRequest {
    * Settings는 업그레이드 계획이 물은 설정의 이름과 값이다(confirm은 yes/no).
    */
   settings: { [key: string]: string};
+}
+/**
+ * SiteFiles는 파일 탐색기의 전역 설정이다(site.json).
+ */
+export interface SiteFiles {
+  /**
+   * Shares는 관리자 세션이 OMV에서 받은 공유 폴더 목록이다(이름표). 실제로 닿을 수 있는 범위는 도우미가 정한다.
+   */
+  shares?: SharedFolder[];
+  /**
+   * SharesUpdatedAt은 Shares를 마지막으로 받은 시각(RFC 3339)이다. 비어 있으면 받은 적이 없다.
+   */
+  sharesUpdatedAt?: string;
+  /**
+   * ShowDisks는 관리자에게 /srv 아래 디스크의 맨 위까지 보이는지다(디스크 최상위 보기).
+   */
+  showDisks?: boolean;
+}
+/**
+ * SharedFolder는 OMV 공유 폴더 하나다(ShareMgmt.enumerateSharedFolders).
+ */
+export interface SharedFolder {
+  uuid: string;
+  name: string;
+  /**
+   * Path는 공유 폴더의 절대 경로다(OMV absdirpath).
+   */
+  path: string;
+}
+/**
+ * FilesRoots는 GET /api/files/roots의 응답이다. 파일 탐색기 사이드바에 처음 보이는 폴더다.
+ */
+export interface FilesRoots {
+  /**
+   * Home은 로그인한 사용자의 홈 폴더다. 권한 도우미가 쓸 수 있는 홈이 없으면 없다.
+   */
+  home?: FilesRoot;
+  /**
+   * Shares는 공유 폴더 스냅숏이다(이름순).
+   */
+  shares: FilesShare[];
+  /**
+   * Disks는 /srv 아래 마운트다. 스냅숏이 없거나(Fallback) 관리자가 디스크 최상위 보기를 켰을 때 관리자에게만 있다.
+   */
+  disks: FilesRoot[];
+  /**
+   * Fallback은 공유 폴더 스냅숏을 아직 받지 못해 디스크를 대신 보인다는 뜻이다.
+   */
+  fallback: boolean;
+  /**
+   * SharesUpdatedAt은 스냅숏을 받은 시각(RFC 3339)이다.
+   */
+  sharesUpdatedAt?: string;
+}
+/**
+ * FilesRoot는 사이드바 항목 하나다.
+ */
+export interface FilesRoot {
+  name: string;
+  path: string;
+}
+/**
+ * FilesShare는 사이드바의 공유 폴더 하나다.
+ */
+export interface FilesShare {
+  uuid: string;
+  name: string;
+  path: string;
+  /**
+   * Reachable은 권한 도우미가 닿을 수 있는 곳(/srv 아래 마운트)인지다. 루트 파일시스템의 공유 폴더는 아직 열 수 없다.
+   */
+  reachable: boolean;
+}
+/**
+ * FilesListing은 GET /api/files/list의 응답이다. 폴더의 이름 목록을 서버가 세션별로 잠시 두고 ID로 가리킨다.
+ */
+export interface FilesListing {
+  id: string;
+  path: string;
+  /**
+   * Total은 폴더의 항목 수다(찾기를 적용하지 않은 수).
+   */
+  total: number /* int */;
+  /**
+   * Truncated는 항목이 상한(30만 개)을 넘어 일부만 읽었다는 뜻이다.
+   */
+  truncated: boolean;
+  /**
+   * Writable은 이 사용자가 이 폴더에 파일을 만들 수 있는지다(올리기).
+   */
+  writable: boolean;
+}
+/**
+ * FilesPage는 GET /api/files/list/{id}의 응답이다. 정렬·찾기를 적용한 보기에서 offset부터의 항목이다.
+ */
+export interface FilesPage {
+  /**
+   * Total은 보기의 항목 수다(찾기를 적용한 수).
+   */
+  total: number /* int */;
+  offset: number /* int */;
+  items: FileItem[];
+}
+/**
+ * FileItem은 목록의 항목 하나다. names=1로 이름만 받으면 State가 pending이고 정보가 없다.
+ */
+export interface FileItem {
+  name: string;
+  /**
+   * Type은 항목 종류다. unknown은 파일시스템이 종류를 주지 않았고 아직 정보를 읽지 않았다는 뜻이다.
+   */
+  type: 'dir' | 'file' | 'symlink' | 'other' | 'unknown';
+  /**
+   * State는 정보를 읽었는지다. gone은 읽는 사이에 지워졌다는 뜻, error는 읽지 못했다는 뜻이다.
+   */
+  state: 'ok' | 'pending' | 'gone' | 'error';
+  /**
+   * Size는 일반 파일의 크기(바이트)다.
+   */
+  size?: number /* int64 */;
+  /**
+   * ModTime은 수정 시각(Unix 밀리초)이다.
+   */
+  modTime?: number /* int64 */;
+  /**
+   * Locked는 폴더인데 이 사용자가 들어갈 수 없다는 뜻이다.
+   */
+  locked?: boolean;
+  /**
+   * LinkType은 심볼릭 링크를 따라간 대상의 종류다(깨졌거나 범위 밖이면 없다).
+   */
+  linkType?: 'dir' | 'file' | 'symlink' | 'other';
+  /**
+   * BadName은 이름이 UTF-8이 아니라 열거나 내려받을 수 없다는 뜻이다(Name은 바꿔 그린 이름이다).
+   */
+  badName?: boolean;
+}
+/**
+ * FilesPrepareResponse는 POST /api/files/list/{id}/prepare의 응답이다. Filled가 Total이면 날짜·크기순으로 볼 수 있다.
+ */
+export interface FilesPrepareResponse {
+  filled: number /* int */;
+  total: number /* int */;
+}
+/**
+ * FileInfo는 GET /api/files/info의 응답이다(정보 패널).
+ */
+export interface FileInfo {
+  path: string;
+  name: string;
+  type: 'dir' | 'file' | 'symlink' | 'other';
+  size: number /* int64 */;
+  modTime: number /* int64 */;
+  mode: number /* uint32 */;
+  target?: string;
+  linkType?: 'dir' | 'file' | 'symlink' | 'other';
+  uid: number /* int */;
+  gid: number /* int */;
+  /**
+   * Owner, Group은 이름이다. 찾지 못했으면 없다(화면은 UID, GID를 보인다).
+   */
+  owner?: string;
+  group?: string;
+  /**
+   * ACL은 POSIX ACL이 있는지다. 확인하지 못했으면 없다(심볼릭 링크 포함).
+   */
+  acl?: boolean;
+  /**
+   * Access는 이 사용자가 읽고 쓸 수 있는지다. 확인하지 못했으면 없다(심볼릭 링크 포함).
+   */
+  access?: FileAccess;
+  /**
+   * ShareUUID는 이 경로가 속한 공유 폴더다(관리자에게 OMV ACL 화면 링크를 줄 때 쓴다). 관리자에게만 준다.
+   */
+  shareUuid?: string;
+}
+/**
+ * FileAccess는 이 사용자의 권한이다. 폴더는 들어가 목록을 보는 것이 읽기, 안에 만드는 것이 쓰기다.
+ */
+export interface FileAccess {
+  read: boolean;
+  write: boolean;
+}
+/**
+ * FilesSettings는 GET /api/site/files의 응답이자 POST /api/site/files/refresh의 응답이다(관리자).
+ */
+export interface FilesSettings {
+  shares: SharedFolder[];
+  sharesUpdatedAt?: string;
+  showDisks: boolean;
+}
+/**
+ * FilesSettingsRequest는 PUT /api/site/files의 본문이다.
+ */
+export interface FilesSettingsRequest {
+  showDisks: boolean;
 }

@@ -3,6 +3,7 @@ package storage
 import (
 	"errors"
 	"os"
+	"slices"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -122,5 +123,28 @@ func TestStorage(t *testing.T) {
 func TestStorageWithoutMounts(t *testing.T) {
 	if _, err := NewReaderFS(fstest.MapFS{}, fstest.MapFS{}, Statfs).Storage(); err == nil {
 		t.Error("want error")
+	}
+}
+
+func TestMountsUnder(t *testing.T) {
+	mounts, _ := os.ReadFile("testdata/mounts")
+	proc := fstest.MapFS{"mounts": {Data: mounts}}
+	dev := fstest.MapFS{
+		`disk/by-label/my\x20data`: {Data: []byte("../../sda1"), Mode: os.ModeSymlink},
+		"disk/by-label/vault":      {Data: []byte("../../dm-0"), Mode: os.ModeSymlink},
+		"mapper/vault":             {Data: []byte("../dm-0"), Mode: os.ModeSymlink},
+	}
+	got, err := NewReaderFS(proc, dev, Statfs).MountsUnder("/srv")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []MountLabel{
+		{MountPoint: "/srv/dev-disk-by-uuid-00000000-0000-4000-8000-000000000001", Label: "my data", Device: "/dev/sda1"},
+		{MountPoint: "/srv/dev-disk-by-uuid-00000000-0000-4000-8000-000000000002", Device: "/dev/sdb1"},
+		{MountPoint: "/srv/mergerfs/pool", Device: "pool:a:b"},
+		{MountPoint: "/srv/my vault", Label: "vault", Device: "/dev/mapper/vault"},
+	}
+	if !slices.Equal(got, want) {
+		t.Fatalf("mounts under /srv = %+v", got)
 	}
 }

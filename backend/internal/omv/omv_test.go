@@ -81,7 +81,7 @@ func TestLoginAuthenticated(t *testing.T) {
 // OMV 8.4 이하는 Session.login이 status 없이 authenticated를 준다. 8.0·8.1에는
 // WebGui.getAutoLogoutSettings도 없어 세션이 살아 있는지만 알고 timeout은 모른다.
 func TestLoginLegacyVersions(t *testing.T) {
-	for _, v := range []omvfake.Version{omvfake.Version82, omvfake.Version80} {
+	for _, v := range []omvfake.Version{omvfake.Version82, omvfake.Version81, omvfake.Version80} {
 		t.Run(v.String(), func(t *testing.T) {
 			c, fake, _ := setup(t, 5*time.Minute)
 			fake.SetVersion(v)
@@ -107,7 +107,7 @@ func TestLoginLegacyVersions(t *testing.T) {
 				t.Fatal(err)
 			}
 			want := omv.SessionState{Timeout: 5 * time.Minute, TimeoutKnown: true}
-			if v == omvfake.Version80 {
+			if v == omvfake.Version80 || v == omvfake.Version81 {
 				want = omv.SessionState{}
 			}
 			if st != want {
@@ -123,7 +123,7 @@ func TestLoginLegacyVersions(t *testing.T) {
 
 func TestFakeParseVersion(t *testing.T) {
 	for in, want := range map[string]omvfake.Version{
-		"8.0": omvfake.Version80, "8.1.1": omvfake.Version80, "8.2": omvfake.Version82,
+		"8.0": omvfake.Version80, "8.1.1": omvfake.Version81, "8.2": omvfake.Version82,
 		"8.4.0": omvfake.Version82, "8.5": omvfake.Version85, "8.5.11": omvfake.Version85, "8.10": omvfake.Version85,
 	} {
 		if got, err := omvfake.ParseVersion(in); err != nil || got != want {

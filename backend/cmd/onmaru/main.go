@@ -24,6 +24,7 @@ import (
 	"onmaru/backend/config"
 	"onmaru/backend/internal/addons"
 	"onmaru/backend/internal/addons/builtin"
+	"onmaru/backend/internal/addons/storage"
 	"onmaru/backend/internal/api"
 	"onmaru/backend/internal/helper/client"
 	"onmaru/backend/internal/omv"
@@ -152,6 +153,13 @@ func main() {
 
 	upgrades := upgrade.New(upgradePaths(os.Getenv(envDevUpgradeRoot), *stateDir), nil)
 
+	var mounts server.MountSource = deps.Storage
+	filesSrv := os.Getenv(envDevFilesSrv)
+	if filesSrv != "" {
+		log.Printf("files: dev disks under %s (%s)", filesSrv, envDevFilesSrv)
+		mounts = devDisks{}
+	}
+
 	var helper server.Helper
 	if *helperSocket != "" {
 		hc := client.New(*helperSocket)
@@ -189,6 +197,8 @@ func main() {
 				Logf:     log.Printf,
 			}),
 			TerminalEnabled: *terminalEnabled,
+			Mounts:          mounts,
+			FilesSrvDir:     filesSrv,
 			Upgrade:         upgrades,
 			Security:        store,
 			RP:              rp,
@@ -312,6 +322,28 @@ func runtimeSettings(explicit map[string]bool, lookup func(string) (string, bool
 // 파일 경로 앞에 붙는 가짜 루트이며, 가짜 업그레이드 서비스(cmd/fakeomv)가 그 아래에 쓴다. 운영에서 바꿀 이유가 없는
 // 경로이므로 플래그로 두지 않는다(가동 설정 목록에도 넣지 않는다).
 const envDevUpgradeRoot = "ONMARU_DEV_UPGRADE_ROOT"
+
+// envDevFilesSrv는 개발 서버(make dev-fake) 전용 환경 변수다. 파일 탐색기가 데이터 디스크로 보는 디렉터리를
+// 가짜 권한 도우미의 루트(<상태 디렉터리>/helper-root/srv)로 바꾸고, 그 바로 아래 폴더를 디스크로 본다(가짜 디스크는
+// 마운트가 아니라 폴더다). 운영에서는 언제나 /srv이므로 플래그로 두지 않는다(가동 설정 목록에도 넣지 않는다).
+const envDevFilesSrv = "ONMARU_DEV_FILES_SRV"
+
+// devDisks는 개발 서버의 가짜 디스크(dir 바로 아래 폴더)다.
+type devDisks struct{}
+
+func (devDisks) MountsUnder(dir string) ([]storage.MountLabel, error) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil, err
+	}
+	var out []storage.MountLabel
+	for _, e := range entries {
+		if e.IsDir() {
+			out = append(out, storage.MountLabel{MountPoint: filepath.Join(dir, e.Name())})
+		}
+	}
+	return out, nil
+}
 
 // upgradePaths는 대시보드에서 업그레이드의 파일 경로다. 업그레이드 서비스의 경로 유닛은 설치한 상태 디렉터리
 // (config.InstalledStateDir) 안의 확인 요청만 지켜보므로, 상태 디렉터리가 그곳이 아니면 확인 요청을 쓰지 않는다

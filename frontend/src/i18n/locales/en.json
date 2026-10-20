@@ -772,6 +772,7 @@
       "levelsDesc": "Password again asks for the password once more in the session. Two-step verification needs a passkey, an authenticator app or a recovery code, or OpenMediaVault two-factor sign-in.",
       "terminalDesc": "Before opening the web terminal.",
       "elevationDesc": "Before an administrator elevates to root.",
+      "filesDesc": "Before browsing folders or downloading and uploading files in the file explorer.",
       "noAutoLogout": "OpenMediaVault auto logout is off, so a checked session stays checked until sign-out. Turn on auto logout in the OMV web UI.",
       "passkeys": "Passkeys",
       "passkeysOn": "Available for {{rpId}}.",
@@ -861,7 +862,8 @@
     },
     "targets": {
       "terminal": "Web terminal",
-      "elevation": "Root elevation"
+      "elevation": "Root elevation",
+      "files": "File explorer"
     },
     "recovery": {
       "title": "Recovery codes",

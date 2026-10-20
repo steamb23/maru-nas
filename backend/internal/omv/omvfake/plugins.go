@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"slices"
+	"strconv"
+	"strings"
 )
 
 // 코어·플러그인 RPC의 합성 응답. 형식은 OMV 8 소스를 따른다.
@@ -12,6 +14,8 @@ import (
 //   - Compose.getContainers (모두): engined/rpc/compose.inc(openmediavault-compose).
 //     첫 행은 런타임 행(name Docker/Podman, status는 번역된 문구), 나머지는 docker container ls
 //   - CpuTemp.get (모두): engined/rpc/cputemp.inc(openmediavault-cputemp). {cputemp: 숫자}
+//   - ShareMgmt.enumerateSharedFolders (admin): engined/rpc/sharemgmt.inc. 배열(rpc.common.getlist 없음), 항목마다
+//     설정 필드와 mntent·absdirpath·status(8.1.0부터)
 //   - Services.getStatus (admin): engined/rpc/services.inc. IServiceStatus 모듈마다 {name, title, enabled, running},
 //     {total, data}. title은 OMV가 번역한 문구다
 //   - Compose.doContainerCommand (admin): docker <command> <command2> <id>를 백그라운드 작업으로 돌리고
@@ -76,6 +80,20 @@ type PluginData struct {
 	FailContainers []string
 	// Missing은 설치되지 않은 것처럼 404("RPC service ... not found.")를 돌려줄 서비스다.
 	Missing []string
+	// SharedFolders는 ShareMgmt.enumerateSharedFolders의 공유 폴더다(관리자 전용).
+	SharedFolders []SharedFolder
+}
+
+// SharedFolder는 공유 폴더 하나의 합성 값이다. 경로는 MountDir + RelDirPath다.
+type SharedFolder struct {
+	UUID       string
+	Name       string
+	MountDir   string
+	RelDirPath string
+	// NoMount면 마운트 지점 설정이 없는 것처럼(status ENOENT_DB_MNTENT, 경로 없음) 준다.
+	NoMount bool
+	// Missing이면 폴더가 없는 것처럼(status ENOENT) 준다.
+	Missing bool
 }
 
 // DefaultPluginData는 개발 서버와 테스트가 쓰는 합성 값이다.
@@ -190,6 +208,11 @@ func (s *Server) handlePlugin(sess *session, service, method string, params json
 			data = []ServiceStatus{}
 		}
 		return map[string]any{"total": len(data), "data": data}, nil, true
+	case "ShareMgmt.enumerateSharedFolders":
+		if e := adminOnly(); e != nil {
+			return nil, e, true
+		}
+		return s.sharedFolders(d.SharedFolders), nil, true
 	case "Compose.doContainerCommand":
 		if e := adminOnly(); e != nil {
 			return nil, e, true
@@ -223,4 +246,42 @@ func (s *Server) containerCommand(params json.RawMessage) string {
 		}
 		s.plugin.Containers = list
 	})
+}
+
+// sharedFolders는 ShareMgmt.enumerateSharedFolders 응답이다(engined/rpc/sharemgmt.inc). absdirpath·status는
+// OMV 8.1.0에서 생겼으므로 Version80에서는 주지 않는다.
+func (s *Server) sharedFolders(list []SharedFolder) []map[string]any {
+	out := []map[string]any{}
+	for _, f := range list {
+		item := map[string]any{
+			"uuid":        f.UUID,
+			"name":        f.Name,
+			"comment":     "",
+			"mntentref":   "fa4e0000-0000-4000-8000-00000000000" + strconv.Itoa(len(out)%10),
+			"reldirpath":  f.RelDirPath,
+			"privileges":  map[string]any{"privilege": []any{}},
+			"_used":       false,
+			"device":      "",
+			"description": f.Name,
+			"snapshots":   false,
+		}
+		mntent := map[string]any{"devicefile": "", "fsname": "", "dir": "", "type": "", "posixacl": false}
+		status := "OK"
+		abs := ""
+		if f.NoMount {
+			status = "ENOENT_DB_MNTENT"
+		} else {
+			mntent["dir"], mntent["type"], mntent["fsname"] = f.MountDir, "ext4", "/dev/disk/by-uuid/fake"
+			abs = strings.TrimSuffix(f.MountDir, "/") + "/" + f.RelDirPath
+			if f.Missing {
+				status = "ENOENT"
+			}
+		}
+		item["mntent"] = mntent
+		if s.version != Version80 {
+			item["absdirpath"], item["status"] = abs, status
+		}
+		out = append(out, item)
+	}
+	return out
 }

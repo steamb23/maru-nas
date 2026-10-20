@@ -72,7 +72,7 @@ func normalizePolicy(p api.SecurityPolicy) api.SecurityPolicy {
 		log.Printf("site settings: unknown passkey login period %d, using %d days", days, passkeyLoginDayChoices[0])
 		days = passkeyLoginDayChoices[0]
 	}
-	return api.SecurityPolicy{Terminal: norm(p.Terminal), Elevation: norm(p.Elevation), PasskeyLoginDays: days}
+	return api.SecurityPolicy{Terminal: norm(p.Terminal), Elevation: norm(p.Elevation), Files: norm(p.Files), PasskeyLoginDays: days}
 }
 
 // passkeyLoginDays는 지금 패스키로 로그인 등록의 만료 기간(일)이다.
@@ -176,7 +176,7 @@ func (h *handler) stepUpOffer(s auth.Session) *api.StepUpInfo {
 		return nil
 	}
 	p := h.securityPolicy()
-	if p.Terminal != api.SecurityTwoFactor && p.Elevation != api.SecurityTwoFactor {
+	if p.Terminal != api.SecurityTwoFactor && p.Elevation != api.SecurityTwoFactor && p.Files != api.SecurityTwoFactor {
 		return nil
 	}
 	rec, err := h.Security.GetSecurity(s.Username)
@@ -458,6 +458,7 @@ func (h *handler) verifyFactor(s auth.Session, req api.SecurityVerifyRequest) er
 }
 
 // enforcePolicy는 정책을 올린 뒤 조건을 채우지 못하는 세션의 터미널을 닫고 root 권한 상승을 끝낸다.
+// 파일 탐색기는 요청마다 정책을 보므로 따로 닫을 것이 없다(이미 시작한 전송은 끝까지 간다).
 func (h *handler) enforcePolicy() {
 	p := h.securityPolicy()
 	for _, ss := range h.Sessions.List() {
@@ -495,14 +496,14 @@ func (h *handler) setSecurityPolicy(w http.ResponseWriter, r *http.Request, s au
 		return
 	}
 	if req.Security == nil || !validLevel(req.Security.Terminal) || !validLevel(req.Security.Elevation) ||
-		!validDays(req.Security.PasskeyLoginDays) {
+		!validLevel(req.Security.Files) || !validDays(req.Security.PasskeyLoginDays) {
 		writeError(w, http.StatusBadRequest, api.ErrBadRequest, "invalid security policy")
 		return
 	}
 	next := normalizePolicy(*req.Security)
 	cur := h.securityPolicy()
 	need := auth.AssuranceLogin
-	for _, pair := range [][2]string{{cur.Terminal, next.Terminal}, {cur.Elevation, next.Elevation}} {
+	for _, pair := range [][2]string{{cur.Terminal, next.Terminal}, {cur.Elevation, next.Elevation}, {cur.Files, next.Files}} {
 		if pair[0] != pair[1] {
 			need = max(need, required(pair[0]), required(pair[1]))
 		}
@@ -516,7 +517,8 @@ func (h *handler) setSecurityPolicy(w http.ResponseWriter, r *http.Request, s au
 		return
 	}
 	if !h.updateSite(w, func(v *api.SiteSettings) {
-		if next.Terminal == api.SecurityOff && next.Elevation == api.SecurityOff && next.PasskeyLoginDays == api.PasskeyLoginDaysDefault {
+		if next.Terminal == api.SecurityOff && next.Elevation == api.SecurityOff && next.Files == api.SecurityOff &&
+			next.PasskeyLoginDays == api.PasskeyLoginDaysDefault {
 			v.Security = nil
 		} else {
 			p := next
@@ -526,8 +528,8 @@ func (h *handler) setSecurityPolicy(w http.ResponseWriter, r *http.Request, s au
 		return
 	}
 	h.setPolicy(next)
-	log.Printf("security: policy changed: by=%q ip=%s terminal=%s elevation=%s passkey_login_days=%d", s.Username, clientIP(r),
-		next.Terminal, next.Elevation, next.PasskeyLoginDays)
+	log.Printf("security: policy changed: by=%q ip=%s terminal=%s elevation=%s files=%s passkey_login_days=%d", s.Username, clientIP(r),
+		next.Terminal, next.Elevation, next.Files, next.PasskeyLoginDays)
 	h.enforcePolicy()
 	w.WriteHeader(http.StatusNoContent)
 }

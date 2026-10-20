@@ -15,6 +15,7 @@ import (
 	"onmaru/backend/internal/api"
 	"onmaru/backend/internal/auth"
 	"onmaru/backend/internal/buildinfo"
+	"onmaru/backend/internal/files"
 	"onmaru/backend/internal/omv"
 	"onmaru/backend/internal/prefs"
 	"onmaru/backend/internal/security"
@@ -95,6 +96,10 @@ type Config struct {
 	Terminal *terminal.Manager
 	// TerminalEnabled는 -terminal이다. 설정의 서버 페이지에서 덮어쓴 값이 있으면 그 값이 우선한다.
 	TerminalEnabled bool
+	// Mounts는 /srv 아래 마운트(파일 탐색기의 디스크)다. nil이면 디스크를 보이지 않는다.
+	Mounts MountSource
+	// FilesSrvDir는 데이터 디스크가 마운트되는 디렉터리다. 비우면 /srv. 개발 서버가 가짜 도우미의 루트로 바꾼다.
+	FilesSrvDir string
 	// Upgrade는 대시보드에서 업그레이드의 파일(상태 파일, 설정 파일, 확인 요청)이다. nil이면 꺼진 것으로 본다.
 	Upgrade *upgrade.Manager
 	// Security는 보안 강화 모드의 수단 기록 저장소다. nil이면 메모리에 둔다.
@@ -129,6 +134,9 @@ type handler struct {
 	securityLimiter *auth.Limiter
 	// policy는 지금 보안 강화 정책이다(security.go).
 	policy policyState
+	// files는 파일 탐색기의 세션별 폴더 목록과 홈 폴더, filesSite는 파일 탐색기 전역 설정이다(files.go).
+	files     *files.Cache
+	filesSite filesSiteState
 	// challenges는 진행 중인 패스키 확인·등록, pendingPasskeys는 등록 값은 맞았지만 아직 시험 확인을 하지 않은
 	// 패스키, totpSetup은 설정 중인 TOTP 비밀이다. 대시보드 세션에 묶인다.
 	challenges      *security.Ephemeral[ceremony]
@@ -196,7 +204,9 @@ func New(cfg Config) http.Handler {
 		deviceCodes:     security.NewEphemeral[string](deviceCodeTTL),
 		loginCeremonies: security.NewEphemeral[loginCeremony](challengeTTL),
 		passkeyUnlocks:  security.NewEphemeral[passkeyUnlock](passkeyUnlockTTL),
+		files:           files.NewCache(),
 	}
+	h.files.Now = cfg.Now
 	for _, l := range []*auth.Limiter{h.terminalLimiter, h.securityLimiter} {
 		l.Now = cfg.Now
 	}
@@ -204,11 +214,13 @@ func New(cfg Config) http.Handler {
 	h.loginCeremonies.Now, h.passkeyUnlocks.Now = cfg.Now, cfg.Now
 	h.loadOverrides()
 	h.loadPolicy()
+	h.loadFilesSite()
 	if cfg.Helper != nil || cfg.Terminal != nil {
 		// 세션이 어떻게 끝나든(로그아웃, 만료, 밀려남, 2차 인증 포기) 도우미 티켓을 폐기하고
-		// 그 세션의 터미널을 닫는다.
+		// 그 세션의 터미널과 파일 탐색기 목록을 닫는다.
 		cfg.Sessions.OnRemove = func(s auth.Session) {
 			h.closeHelper(s.HelperTicket)
+			h.files.RemoveSession(s.ID)
 			if cfg.Terminal != nil {
 				cfg.Terminal.CloseSession(s.ID, terminal.ReasonSessionEnded)
 			}
@@ -241,6 +253,13 @@ func New(cfg Config) http.Handler {
 	mux.HandleFunc("POST /api/helper/elevation", h.requireAdmin(h.elevate))
 	mux.HandleFunc("DELETE /api/helper/elevation", h.requireSession(h.dropElevation))
 	mux.HandleFunc("GET /api/terminal", h.requireSession(h.terminal))
+	mux.HandleFunc("GET /api/files/roots", h.requireFiles(h.filesRoots))
+	mux.HandleFunc("GET /api/files/list", h.requireFiles(h.filesList))
+	mux.HandleFunc("GET /api/files/list/{id}", h.requireFiles(h.filesPage))
+	mux.HandleFunc("POST /api/files/list/{id}/prepare", h.requireFiles(h.filesPrepare))
+	mux.HandleFunc("GET /api/files/info", h.requireFiles(h.filesInfo))
+	mux.HandleFunc("GET /api/files/download", h.requireFiles(h.filesDownload))
+	mux.HandleFunc("PUT /api/files/upload", h.requireFiles(h.filesUpload))
 	mux.HandleFunc("GET /api/security", h.requireSession(h.securityInfo))
 	mux.HandleFunc("POST /api/security/verify", h.requireSession(h.verifySecurity))
 	mux.HandleFunc("POST /api/security/manage", h.requireSession(h.manageSecurity))
@@ -284,6 +303,9 @@ func New(cfg Config) http.Handler {
 	mux.HandleFunc("PUT /api/site/server", h.requireAdmin(h.setServerSettings))
 	mux.HandleFunc("GET /api/site/security", h.requireAdmin(h.securityPolicyInfo))
 	mux.HandleFunc("PUT /api/site/security", h.requireAdmin(h.setSecurityPolicy))
+	mux.HandleFunc("GET /api/site/files", h.requireAdmin(h.filesSettings))
+	mux.HandleFunc("PUT /api/site/files", h.requireAdmin(h.setFilesSettings))
+	mux.HandleFunc("POST /api/site/files/refresh", h.requireAdmin(h.refreshFilesShares))
 	mux.HandleFunc("/api/", func(w http.ResponseWriter, _ *http.Request) {
 		writeJSON(w, http.StatusNotFound, api.ErrorResponse{Error: "not found"})
 	})

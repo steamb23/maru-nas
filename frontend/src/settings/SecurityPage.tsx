@@ -36,6 +36,7 @@ type LoadState = { status: 'loading' } | { status: 'error'; key: ParseKeys } | {
 const TARGET_KEYS: Record<SecurityTarget, ParseKeys> = {
   terminal: 'security.targets.terminal',
   elevation: 'security.targets.elevation',
+  files: 'security.targets.files',
 }
 
 // 관리 창이 이만큼 남지 않았으면 다시 확인한다(대화상자를 여는 사이에 닫히지 않게).

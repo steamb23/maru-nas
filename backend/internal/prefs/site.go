@@ -2,6 +2,7 @@ package prefs
 
 import (
 	"path/filepath"
+	"slices"
 
 	"onmaru/backend/internal/api"
 )
@@ -82,6 +83,11 @@ func cloneSite(v api.SiteSettings) api.SiteSettings {
 	if v.Security != nil {
 		p := *v.Security
 		v.Security = &p
+	}
+	if v.Files != nil {
+		f := *v.Files
+		f.Shares = slices.Clone(f.Shares)
+		v.Files = &f
 	}
 	return v
 }

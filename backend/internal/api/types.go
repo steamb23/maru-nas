@@ -543,6 +543,8 @@ type SiteSettings struct {
 	Server   *ServerOverrides `json:"server,omitempty"`
 	// Security는 보안 강화 모드의 기능별 단계다. 없으면 모두 꺼짐이다.
 	Security *SecurityPolicy `json:"security,omitempty"`
+	// Files는 파일 탐색기의 전역 설정과 공유 폴더 스냅숏이다. 없으면 스냅숏이 없고 디스크 보기는 꺼짐이다.
+	Files *SiteFiles `json:"files,omitempty"`
 }
 
 // SiteLogin은 로그인 화면 설정이다. 저장한 적 없으면 대시보드 기본 배경에 대기 연출을 켠다.
@@ -919,13 +921,33 @@ const (
 	ErrUpgradeBusy = "upgrade_busy"
 	// ErrUpgradeOutdated는 그 커밋으로 업그레이드할 수 있다고 끝난 확인이 없다는 뜻이다(다시 확인해야 한다).
 	ErrUpgradeOutdated = "upgrade_outdated"
+	// 파일 탐색기의 파일 연산 오류. 권한 도우미가 사용자 권한으로 실행한 결과다.
+	ErrNotFound         = "not_found"
+	ErrPermissionDenied = "permission_denied"
+	// ErrOutsideRoots는 파일 탐색기가 보이는 폴더(홈, 공유 폴더, 켠 경우 디스크) 밖이거나 권한 도우미의 기준 디렉터리 밖이라는 뜻이다.
+	ErrOutsideRoots = "outside_roots"
+	ErrFileExists   = "file_exists"
+	ErrNotDir       = "not_dir"
+	ErrIsDir        = "is_dir"
+	// ErrNotRegular는 일반 파일이 아니라(FIFO, 장치 등) 내려받을 수 없다는 뜻이다.
+	ErrNotRegular = "not_regular"
+	ErrNoSpace    = "no_space"
+	ErrReadOnly   = "read_only"
+	// ErrHelperBusy는 권한 도우미가 동시에 실행할 수 있는 연산 수(사용자당 4개)를 넘었다는 뜻이다.
+	ErrHelperBusy = "helper_busy"
+	// ErrTransferTimeout은 전송이 60초 동안 진행되지 않았거나 시간 상한(6시간)을 넘었다는 뜻이다.
+	ErrTransferTimeout = "transfer_timeout"
+	// ErrListingExpired는 목록(FilesListing.ID)이 사라졌다는 뜻이다(유휴, 상한, 로그아웃). 폴더를 다시 연다.
+	ErrListingExpired = "listing_expired"
+	// ErrSortPending은 날짜·크기순 정렬에 필요한 항목 정보를 아직 다 읽지 않았다는 뜻이다(prepare를 마저 부른다).
+	ErrSortPending = "sort_pending"
 )
 
 // ErrorResponse는 2xx가 아닌 상태 코드와 함께 반환된다.
 type ErrorResponse struct {
 	Error string `json:"error"`
 	// Code는 화면에서 분기할 때 쓰는 오류 종류다. 없을 수 있다.
-	Code string `json:"code,omitempty" tstype:"'invalid_credentials' | 'rate_limited' | 'challenge_failed' | 'challenge_expired' | 'omv_unavailable' | 'unauthorized' | 'bad_request' | 'rpc_forbidden' | 'admin_required' | 'plugin_missing' | 'omv_error' | 'action_busy' | 'action_failed' | 'action_timeout' | 'config_dirty' | 'image_too_large' | 'unsupported_image' | 'profile_readonly' | 'helper_unavailable' | 'helper_reauth' | 'elevation_failed' | 'elevation_not_allowed' | 'elevation_required' | 'terminal_disabled' | 'security_required' | 'factor_failed' | 'manage_required' | 'passkey_unavailable' | 'passkey_uv_unsupported' | 'security_unavailable' | 'passkey_login_unknown' | 'passkey_login_expired' | 'passkey_login_stale' | 'upgrade_disabled' | 'upgrade_busy' | 'upgrade_outdated'"`
+	Code string `json:"code,omitempty" tstype:"'invalid_credentials' | 'rate_limited' | 'challenge_failed' | 'challenge_expired' | 'omv_unavailable' | 'unauthorized' | 'bad_request' | 'rpc_forbidden' | 'admin_required' | 'plugin_missing' | 'omv_error' | 'action_busy' | 'action_failed' | 'action_timeout' | 'config_dirty' | 'image_too_large' | 'unsupported_image' | 'profile_readonly' | 'helper_unavailable' | 'helper_reauth' | 'elevation_failed' | 'elevation_not_allowed' | 'elevation_required' | 'terminal_disabled' | 'security_required' | 'factor_failed' | 'manage_required' | 'passkey_unavailable' | 'passkey_uv_unsupported' | 'security_unavailable' | 'passkey_login_unknown' | 'passkey_login_expired' | 'passkey_login_stale' | 'upgrade_disabled' | 'upgrade_busy' | 'upgrade_outdated' | 'not_found' | 'permission_denied' | 'outside_roots' | 'file_exists' | 'not_dir' | 'is_dir' | 'not_regular' | 'no_space' | 'read_only' | 'helper_busy' | 'transfer_timeout' | 'listing_expired' | 'sort_pending'"`
 	// RetryAfterSeconds는 rate_limited일 때 다시 시도할 수 있기까지 남은 초다.
 	RetryAfterSeconds int `json:"retryAfterSeconds,omitempty"`
 	// Required는 security_required일 때 거쳐야 하는 단계다.
@@ -1059,6 +1081,8 @@ const (
 type SecurityPolicy struct {
 	Terminal  string `json:"terminal,omitempty" tstype:"'off' | 'password' | 'twoFactor'"`
 	Elevation string `json:"elevation,omitempty" tstype:"'off' | 'password' | 'twoFactor'"`
+	// Files는 파일 탐색기다. 목록·내려받기 같은 읽기까지 모두 막는다(빼앗은 세션이 내려받기만 해도 정보가 샌다).
+	Files string `json:"files,omitempty" tstype:"'off' | 'password' | 'twoFactor'"`
 	// PasskeyLoginDays는 패스키로 로그인 등록의 만료 기간(일)이다. 없으면 PasskeyLoginDaysDefault다. 바꾸려면
 	// 비밀번호를 다시 확인한 세션이어야 한다. 줄이면 기존 등록에도 바로 적용되고, 늘리면 새 등록부터 적용된다.
 	PasskeyLoginDays int `json:"passkeyLoginDays,omitempty" tstype:"7 | 30 | 90 | 180 | 365"`
@@ -1365,4 +1389,140 @@ type StartUpgradeRequest struct {
 	Target string `json:"target"`
 	// Settings는 업그레이드 계획이 물은 설정의 이름과 값이다(confirm은 yes/no).
 	Settings map[string]string `json:"settings"`
+}
+
+// 파일 탐색기. 파일은 권한 도우미가 로그인한 사용자의 권한으로 다룬다(fs.names, fs.statmany, fs.info, fs.read, fs.write).
+// 경로는 모두 절대 경로이고, 대시보드가 보이는 폴더(홈, 공유 폴더, 디스크) 안이어야 한다.
+
+// SiteFiles는 파일 탐색기의 전역 설정이다(site.json).
+type SiteFiles struct {
+	// Shares는 관리자 세션이 OMV에서 받은 공유 폴더 목록이다(이름표). 실제로 닿을 수 있는 범위는 도우미가 정한다.
+	Shares []SharedFolder `json:"shares,omitempty"`
+	// SharesUpdatedAt은 Shares를 마지막으로 받은 시각(RFC 3339)이다. 비어 있으면 받은 적이 없다.
+	SharesUpdatedAt string `json:"sharesUpdatedAt,omitempty"`
+	// ShowDisks는 관리자에게 /srv 아래 디스크의 맨 위까지 보이는지다(디스크 최상위 보기).
+	ShowDisks bool `json:"showDisks,omitempty"`
+}
+
+// SharedFolder는 OMV 공유 폴더 하나다(ShareMgmt.enumerateSharedFolders).
+type SharedFolder struct {
+	UUID string `json:"uuid"`
+	Name string `json:"name"`
+	// Path는 공유 폴더의 절대 경로다(OMV absdirpath).
+	Path string `json:"path"`
+}
+
+// FilesRoots는 GET /api/files/roots의 응답이다. 파일 탐색기 사이드바에 처음 보이는 폴더다.
+type FilesRoots struct {
+	// Home은 로그인한 사용자의 홈 폴더다. 권한 도우미가 쓸 수 있는 홈이 없으면 없다.
+	Home *FilesRoot `json:"home,omitempty"`
+	// Shares는 공유 폴더 스냅숏이다(이름순).
+	Shares []FilesShare `json:"shares"`
+	// Disks는 /srv 아래 마운트다. 스냅숏이 없거나(Fallback) 관리자가 디스크 최상위 보기를 켰을 때 관리자에게만 있다.
+	Disks []FilesRoot `json:"disks"`
+	// Fallback은 공유 폴더 스냅숏을 아직 받지 못해 디스크를 대신 보인다는 뜻이다.
+	Fallback bool `json:"fallback"`
+	// SharesUpdatedAt은 스냅숏을 받은 시각(RFC 3339)이다.
+	SharesUpdatedAt string `json:"sharesUpdatedAt,omitempty"`
+}
+
+// FilesRoot는 사이드바 항목 하나다.
+type FilesRoot struct {
+	Name string `json:"name"`
+	Path string `json:"path"`
+}
+
+// FilesShare는 사이드바의 공유 폴더 하나다.
+type FilesShare struct {
+	UUID string `json:"uuid"`
+	Name string `json:"name"`
+	Path string `json:"path"`
+	// Reachable은 권한 도우미가 닿을 수 있는 곳(/srv 아래 마운트)인지다. 루트 파일시스템의 공유 폴더는 아직 열 수 없다.
+	Reachable bool `json:"reachable"`
+}
+
+// FilesListing은 GET /api/files/list의 응답이다. 폴더의 이름 목록을 서버가 세션별로 잠시 두고 ID로 가리킨다.
+type FilesListing struct {
+	ID   string `json:"id"`
+	Path string `json:"path"`
+	// Total은 폴더의 항목 수다(찾기를 적용하지 않은 수).
+	Total int `json:"total"`
+	// Truncated는 항목이 상한(30만 개)을 넘어 일부만 읽었다는 뜻이다.
+	Truncated bool `json:"truncated"`
+	// Writable은 이 사용자가 이 폴더에 파일을 만들 수 있는지다(올리기).
+	Writable bool `json:"writable"`
+}
+
+// FilesPage는 GET /api/files/list/{id}의 응답이다. 정렬·찾기를 적용한 보기에서 offset부터의 항목이다.
+type FilesPage struct {
+	// Total은 보기의 항목 수다(찾기를 적용한 수).
+	Total  int        `json:"total"`
+	Offset int        `json:"offset"`
+	Items  []FileItem `json:"items"`
+}
+
+// FileItem은 목록의 항목 하나다. names=1로 이름만 받으면 State가 pending이고 정보가 없다.
+type FileItem struct {
+	Name string `json:"name"`
+	// Type은 항목 종류다. unknown은 파일시스템이 종류를 주지 않았고 아직 정보를 읽지 않았다는 뜻이다.
+	Type string `json:"type" tstype:"'dir' | 'file' | 'symlink' | 'other' | 'unknown'"`
+	// State는 정보를 읽었는지다. gone은 읽는 사이에 지워졌다는 뜻, error는 읽지 못했다는 뜻이다.
+	State string `json:"state" tstype:"'ok' | 'pending' | 'gone' | 'error'"`
+	// Size는 일반 파일의 크기(바이트)다.
+	Size int64 `json:"size,omitempty"`
+	// ModTime은 수정 시각(Unix 밀리초)이다.
+	ModTime int64 `json:"modTime,omitempty"`
+	// Locked는 폴더인데 이 사용자가 들어갈 수 없다는 뜻이다.
+	Locked bool `json:"locked,omitempty"`
+	// LinkType은 심볼릭 링크를 따라간 대상의 종류다(깨졌거나 범위 밖이면 없다).
+	LinkType string `json:"linkType,omitempty" tstype:"'dir' | 'file' | 'symlink' | 'other'"`
+	// BadName은 이름이 UTF-8이 아니라 열거나 내려받을 수 없다는 뜻이다(Name은 바꿔 그린 이름이다).
+	BadName bool `json:"badName,omitempty"`
+}
+
+// FilesPrepareResponse는 POST /api/files/list/{id}/prepare의 응답이다. Filled가 Total이면 날짜·크기순으로 볼 수 있다.
+type FilesPrepareResponse struct {
+	Filled int `json:"filled"`
+	Total  int `json:"total"`
+}
+
+// FileInfo는 GET /api/files/info의 응답이다(정보 패널).
+type FileInfo struct {
+	Path     string `json:"path"`
+	Name     string `json:"name"`
+	Type     string `json:"type" tstype:"'dir' | 'file' | 'symlink' | 'other'"`
+	Size     int64  `json:"size"`
+	ModTime  int64  `json:"modTime"`
+	Mode     uint32 `json:"mode"`
+	Target   string `json:"target,omitempty"`
+	LinkType string `json:"linkType,omitempty" tstype:"'dir' | 'file' | 'symlink' | 'other'"`
+	UID      int    `json:"uid"`
+	GID      int    `json:"gid"`
+	// Owner, Group은 이름이다. 찾지 못했으면 없다(화면은 UID, GID를 보인다).
+	Owner string `json:"owner,omitempty"`
+	Group string `json:"group,omitempty"`
+	// ACL은 POSIX ACL이 있는지다. 확인하지 못했으면 없다(심볼릭 링크 포함).
+	ACL *bool `json:"acl,omitempty"`
+	// Access는 이 사용자가 읽고 쓸 수 있는지다. 확인하지 못했으면 없다(심볼릭 링크 포함).
+	Access *FileAccess `json:"access,omitempty"`
+	// ShareUUID는 이 경로가 속한 공유 폴더다(관리자에게 OMV ACL 화면 링크를 줄 때 쓴다). 관리자에게만 준다.
+	ShareUUID string `json:"shareUuid,omitempty"`
+}
+
+// FileAccess는 이 사용자의 권한이다. 폴더는 들어가 목록을 보는 것이 읽기, 안에 만드는 것이 쓰기다.
+type FileAccess struct {
+	Read  bool `json:"read"`
+	Write bool `json:"write"`
+}
+
+// FilesSettings는 GET /api/site/files의 응답이자 POST /api/site/files/refresh의 응답이다(관리자).
+type FilesSettings struct {
+	Shares          []SharedFolder `json:"shares"`
+	SharesUpdatedAt string         `json:"sharesUpdatedAt,omitempty"`
+	ShowDisks       bool           `json:"showDisks"`
+}
+
+// FilesSettingsRequest는 PUT /api/site/files의 본문이다.
+type FilesSettingsRequest struct {
+	ShowDisks bool `json:"showDisks"`
 }

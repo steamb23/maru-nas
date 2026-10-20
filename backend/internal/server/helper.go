@@ -3,12 +3,14 @@ package server
 import (
 	"context"
 	"errors"
+	"io"
 	"log"
 	"net/http"
 	"time"
 
 	"onmaru/backend/internal/api"
 	"onmaru/backend/internal/auth"
+	"onmaru/backend/internal/helper/client"
 	"onmaru/backend/internal/helper/proto"
 )
 
@@ -27,6 +29,13 @@ type Helper interface {
 	SSHRevoke(ctx context.Context, ticket, publicKey string) error
 	// UpgradeApply는 대시보드에서 업그레이드의 적용 요청을 업그레이드 서비스에 넘긴다(root 연산, 상승한 티켓).
 	UpgradeApply(ctx context.Context, ticket, target string, settings map[string]string) error
+	// 파일 탐색기가 쓰는 사용자 권한 파일 연산이다(files.go).
+	Stat(ctx context.Context, ticket, path string) (proto.Entry, error)
+	Names(ctx context.Context, ticket, path string) (proto.NamesResult, []proto.NameEntry, error)
+	StatMany(ctx context.Context, ticket, dir string, names []string) (proto.StatManyResult, error)
+	Info(ctx context.Context, ticket, path string) (proto.InfoResult, error)
+	Read(ctx context.Context, ticket, path string, offset, length int64) (proto.ReadResult, *client.Body, error)
+	Write(ctx context.Context, ticket, path string, overwrite bool, r io.Reader, size int64) (proto.Entry, error)
 }
 
 const (

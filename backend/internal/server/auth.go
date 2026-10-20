@@ -176,6 +176,8 @@ func (h *handler) startSession(w http.ResponseWriter, r *http.Request, res omv.L
 	h.setCookie(w, r, DeviceCookie, h.Limiter.Trust(res.Username, deviceToken(r)), int(auth.DeviceTTL/time.Second))
 	// 실행 중에 플러그인을 설치하거나 지웠을 수 있으므로 로그인할 때 다시 확인한다.
 	h.Plugins.Refresh()
+	// 관리자가 로그인하면 파일 탐색기의 공유 폴더 스냅숏을 뒤에서 갱신한다(일반 사용자 세션은 받을 수 없다).
+	h.refreshSharesOnLogin(s, ip)
 	log.Printf("login ok: user=%q ip=%s admin=%t helper=%t assurance=%s", s.Username, ip, s.Admin, s.HelperTicket != "", assuranceName(s.Assurance))
 	info := h.sessionInfo(s)
 	writeJSON(w, http.StatusOK, api.LoginResponse{
