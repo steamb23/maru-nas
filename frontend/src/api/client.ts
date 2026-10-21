@@ -1463,7 +1463,7 @@ export interface UploadOptions {
 }
 
 // checkUpload은 올리기의 사전 확인이다. 본문 없이 알 수 있는 거절(세션, 보안 확인, 이름, 범위)을 본문을 보내기 전에
-// 받는다. 리버스 프록시는 올리기의 거절을 본문을 다 보낸 뒤에야 넘기기도 하기 때문이다. 사용성을 위한 것이고 PUT이
+// 받는다. PUT의 거절은 백엔드가 남은 본문을 받은 뒤에 답하므로 본문을 다 보낸 뒤에야 온다. 사용성을 위한 것이고 PUT이
 // 모든 검사를 다시 한다.
 export async function checkUpload(path: string, signal?: AbortSignal): Promise<void> {
   const body: FilesUploadCheckRequest = { path }

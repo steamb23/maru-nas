@@ -88,8 +88,8 @@ func TestDrainRejected(t *testing.T) {
 		read   int64
 		close  bool
 	}{
-		// 세션이 있는 거절은 남은 본문을 끝까지 받는다.
-		{"403", reject(http.StatusForbidden), size, size, true},
+		// 세션이 있는 거절은 남은 본문을 끝까지 받고 연결을 그대로 둔다.
+		{"403", reject(http.StatusForbidden), size, size, false},
 		// 세션이 없으면 상한까지만 받는다.
 		{"401", reject(http.StatusUnauthorized), size, 1000 + rejectDrainAnon, true},
 		// 길이를 모르는 본문도 상한까지만 받는다.
@@ -152,7 +152,7 @@ func putLikeBrowser(t *testing.T, addr, target, cookie string, size int) (*http.
 	return res, werr
 }
 
-// 본문을 다 받기 전에 거절해도 남은 본문을 받은 뒤 닫으므로, 본문을 끝까지 보내는 클라이언트가 쓰기 오류(RST) 없이
+// 본문을 다 받기 전에 거절해도 남은 본문을 먼저 받으므로, 본문을 끝까지 보내는 클라이언트가 쓰기 오류(RST) 없이
 // 응답을 받는다. 프록시는 이 클라이언트와 같은 자리에 있다(브라우저 → 프록시 → onmaru).
 func TestFilesUploadEarlyRejectNoReset(t *testing.T) {
 	site := prefs.NewMemoryStore()
@@ -177,7 +177,7 @@ func TestFilesUploadEarlyRejectNoReset(t *testing.T) {
 	if werr != nil {
 		t.Fatalf("write: %v", werr)
 	}
-	if res.StatusCode != http.StatusForbidden || !res.Close || res.ContentLength <= 0 {
+	if res.StatusCode != http.StatusForbidden || res.Close || res.ContentLength <= 0 {
 		t.Fatalf("status %d, close %v, length %d", res.StatusCode, res.Close, res.ContentLength)
 	}
 }
