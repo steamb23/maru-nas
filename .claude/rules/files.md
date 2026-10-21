@@ -18,7 +18,7 @@ paths:
 - `/api/files/*`는 보이는 폴더 밖 경로를 도우미에 보내기 전에 403 `outside_roots`로 거른다(`allowedPath`). 실제 범위는 도우미가 기준 디렉터리로 다시 정한다. `/srv/` 아래가 아닌 공유 폴더(sharerootfs)는 `reachable: false`이고 열 수 없다(도우미 추가 기준 경로는 로드맵)
 - **공유 폴더 스냅숏**: `ShareMgmt.enumerateSharedFolders`는 관리자 전용이라 관리자 세션이 받아 `site.json`의 `files.shares`에 둔다. `startSession`이 관리자이고 도우미가 있으면 뒤에서(10초, 로그인 응답을 기다리게 하지 않음) 받고, 설정 앱의 "지금 받기"(`POST /api/site/files/refresh`)가 바로 받는다. 고정 메서드 호출(`sharesMethods`, `NoTouch`)이고, 성공했을 때만 바꾼다. 서버가 스스로 `site.json`을 쓰는 유일한 경우이며, 메모리(`handler.filesSite`)와 함께 바꾼다
   - 응답 해석은 `files.ParseShares`: `absdirpath`·`status`는 OMV 8.1.0부터 있으므로 없으면 `mntent.dir` + `reldirpath`로 만들고, `status`가 있고 `OK`가 아니면 뺀다(`auth-omv.md`의 "OMV 8 버전별 차이")
-- 보안 강화 정책 `files`(`api.SecurityPolicy.Files`)는 `/api/files/*` 전부(뿌리 포함)를 막는다. 적용 범위 `filesScope`가 `writes`면 읽기 라우트(`requireFiles`: 뿌리, 목록, 범위, find, prepare, 정보, 내려받기, 휴지통 목록·볼륨)는 열고 쓰기 라우트(`requireFilesWrite`: 올리기, 만들기, 이름 바꾸기, 삭제, 복사, 휴지통 넣기·되돌리기·영구 삭제·비우기)만 막는다. 요청마다 보므로 정책을 올려도 따로 닫을 것이 없고, 이미 시작한 전송은 끝까지 간다
+- 보안 강화 정책 `files`(`api.SecurityPolicy.Files`)는 `/api/files/*` 전부(뿌리 포함)를 막는다. 적용 범위 `filesScope`가 `writes`면 읽기 라우트(`requireFiles`: 뿌리, 목록, 범위, find, prepare, 정보, 내려받기, 휴지통 목록·볼륨)는 열고 쓰기 라우트(`requireFilesWrite`: 올리기와 그 사전 확인, 만들기, 이름 바꾸기, 삭제, 복사, 휴지통 넣기·되돌리기·영구 삭제·비우기)만 막는다. 요청마다 보므로 정책을 올려도 따로 닫을 것이 없고, 이미 시작한 전송은 끝까지 간다
 
 ## 목록(큰 폴더)
 
@@ -33,8 +33,10 @@ paths:
 
 - 내려받기(`GET /api/files/download`)는 `fs.read` 스트림이다. 내용을 브라우저가 그리지 않게 언제나 `application/octet-stream`, `attachment`(ASCII `filename` + RFC 5987 `filename*`), `nosniff`, `CSP: default-src 'none'; sandbox`로 보낸다. 범위는 하나(`bytes=a-b`, `a-`, `-n`)와 ETag `If-Range`만 받고, 여러 범위는 200 전체다
 - 프런트는 숨긴 `<a download>`로 받는다(`files/download.ts`). 401이면 브라우저가 오류 본문을 파일로 저장하므로 누르기 직전에 `GET /api/files/info`로 세션과 파일을 먼저 확인한다
-- 올리기(`PUT /api/files/upload?path=&overwrite=1`)는 원시 본문(`application/octet-stream`만, CSRF 보조 장치, `auth-omv.md`)과 `Content-Length`(없으면 411)를 받아 메모리에 모으지 않고 `fs.write`로 흘려 보낸다. 이름은 `proto.ValidName` + UTF-8 + `.onmaru-upload-` 접두사 금지
-- 프런트: 탐색기 창이 고른(끌어 놓은) 파일마다 `info`로 같은 이름을 먼저 확인하고(`uploads.ts`의 `checkUploads`, 있으면 덮어쓰기·건너뛰기, 남은 파일에 같게 적용) 그 파일들을 올리기 작업 하나로 파일 작업 목록에 더한다(`startUpload`, 아래 "파일 작업"). 작업은 파일을 하나씩 XHR로 올린다(`uploadFile`, 진행률). 탐색기 창을 닫아도 이어진다
+- 올리기(`PUT /api/files/upload?path=&overwrite=1`)는 원시 본문(`application/octet-stream`만, CSRF 보조 장치, `auth-omv.md`)과 `Content-Length`(없으면 411)를 받아 메모리에 모으지 않고 `fs.write`로 흘려 보낸다. 이름은 `proto.ValidName` + UTF-8 + `.onmaru-upload-` 접두사 금지. 핸들러와 사전 확인은 `internal/server/files_upload.go`
+  - **본문 전 거절**: Go 서버는 핸들러가 본문을 읽기 전에 응답하고 남은 본문이 256KiB 이상이면 본문을 버리지 않고 500ms 뒤 연결을 닫는다. 브라우저(HTTP/1.1)와 일부 프록시는 본문을 끝까지 보낸 뒤에야 응답을 읽으므로 닫힌 연결에 쓰다가 RST를 받고, 거절이 502(Vite 프록시)나 늦은 응답·멈춤(Caddy)이 된다. 그래서 라우트를 `drainRejected`로 감싼다: 본문을 다 받기 전에 오류(400 이상)로 답하면 `EnableFullDuplex`로 응답을 길이와 함께 먼저 보내고(`Connection: close`) 남은 본문을 받은 뒤 닫는다. 세션이 있으면 `Content-Length`까지(60초 무진행이면 멈춤), 세션이 없는 401과 길이를 모르는 본문은 1MiB까지만 받는다. 401·보안 정책·형식·이름·범위 거절과 도우미의 도중 거절(`exists`, `permission_denied`, `no_space`)이 모두 이 경로다
+  - **사전 확인**(`POST /api/files/upload/check {path}`, 204): 프록시에 따라 위 거절도 본문을 다 보낸 뒤에야 브라우저에 오므로, 프런트는 PUT 전에 본문 없이 같은 가드(`requireFilesWrite`)와 같은 검사(`uploadTarget`: 새 이름, 보이는 폴더 안)를 거친다. 도우미는 부르지 않는다(같은 이름·쓰기 권한은 PUT이 안다). 사용성을 위한 것이고 PUT은 모든 검사를 그대로 한다
+- 프런트: 탐색기 창이 고른(끌어 놓은) 파일마다 `info`로 같은 이름을 먼저 확인하고(`uploads.ts`의 `checkUploads`, 있으면 덮어쓰기·건너뛰기, 남은 파일에 같게 적용) 그 파일들을 올리기 작업 하나로 파일 작업 목록에 더한다(`startUpload`, 아래 "파일 작업"). 작업은 파일을 하나씩 XHR로 올린다(`uploadFile`, 진행률). `uploadFile`은 본문을 보내기 전에 사전 확인(`checkUpload`)을 하므로, `withStepUp`이 보안 확인 대화상자를 본문 전에 띄우고 확인 뒤 둘 다 다시 한다. 탐색기 창을 닫아도 이어진다
 
 ## 만들기·이름 바꾸기·옮기기·삭제
 
@@ -62,7 +64,7 @@ paths:
 - 작업은 종류와 관계없이 하나씩 차례로 한다. 올리기 작업 하나는 한 번에 고른 파일들이고(계산은 `uploadJobs.ts`), 진행률은 취소한 파일을 뺀 바이트다. 속도는 0.5초 간격 지수 평활(`nextRate`)이다
 - 작업 창은 작업이 400ms를 넘을 때 열고(앱 목록·바로가기에는 보이지 않는다, `appAccess`), 모두 문제없이 끝나면 스스로 닫는다. 하지 못한 항목·건너뛴 특수 파일·멈춘 오류가 있거나 올리기를 취소해 다시 올릴 파일이 남았으면(`uploadJobs.ts`의 `unfinished`) (금방 끝났어도) 열어 둔다. 작업 창을 닫으면 남은 작업을 취소한다(창 저장소를 구독한다. 닫기 애니메이션 동안 목록이 그대로 보이게 목록은 다음 작업을 더할 때 비운다). 세션 만료(401)와 보안 확인 취소는 알림 대화상자 없이 취소로 두고, 다시 올릴 수 있게 작업 창에 남긴다
 - 올리지 못한 파일은 이유별로 묶어 보이고, 끝난 작업에서 다시 올린다(`retryUpload`: 같은 이름이 생긴 파일은 "덮어써서 올리기", 그 밖의 실패와 취소한 파일은 "다시 올리기"). 파일 내용(`File`)은 작업이 목록에 있는 동안 둔다
-- 보안 확인 대화상자는 작업을 더한 탐색기 창에 띄우고, 그 창이 닫혔으면 작업 창, 그것도 없으면 바탕화면에 띄운다(`liveScope`). 띄울 곳은 요청을 시작할 때가 아니라 `security_required`를 받은 때 고른다(`withStepUp`에 함수로 넘긴다). 프록시를 거치면 올리기의 거절이 본문을 다 보낸 뒤에야 오기도 해서 그사이 탐색기 창이 닫힐 수 있다
+- 보안 확인 대화상자는 작업을 더한 탐색기 창에 띄우고, 그 창이 닫혔으면 작업 창, 그것도 없으면 바탕화면에 띄운다(`liveScope`). 띄울 곳은 요청을 시작할 때가 아니라 `security_required`를 받은 때 고른다(`withStepUp`에 함수로 넘긴다). 사전 확인 뒤 PUT이 거절되면(그사이 정책이 바뀜) 프록시에 따라 거절이 본문을 다 보낸 뒤에야 와서 그사이 탐색기 창이 닫힐 수 있다
 - 작업하는 동안 세션 활동(`auth/activity.ts`의 `reportActivity`, 세션 유지기가 60초에 한 번 연장)을 30초마다 알리고 `beforeunload`로 경고한다
 
 ## 휴지통
@@ -107,8 +109,9 @@ paths:
 
 - Go: `internal/files`(정렬, 스냅숏 해석 8.0·8.1+, 보기·찾기·자리, 캐시 상한·유휴), `internal/server/files_test.go`(`envOptions{files: true}`가 가짜 도우미 디스크를 디스크·`FilesSrvDir`로 둔다: 뿌리·스냅숏·관리자 로그인 갱신, 범위 밖 403, 목록·범위·prepare·find·410, 내려받기 헤더·Range·If-Range, 올리기 형식·길이·이름·덮어쓰기, 만들기·이름 바꾸기·옮기기(같은 디스크, 홈으로는 `cross_device`)·삭제(`not_empty`)와 `root_folder`(디스크 최상위 보기 포함), 보안 정책)
 - Go(휴지통): `TestFilesTrash`(홈·디스크 휴지통, 볼륨 종류, 되돌리기 범위·충돌, 영구 삭제, 비우기), `TestSiteTrashPrepare`(관리자, 상승 필요, 만든 뒤 `.Trash/<uid>`), `TestFilesSecurityWritesOnly`·`TestFilesScopeChangeNeedsStepUp`(쓰기 전용 범위)
+- Go(올리기): `TestFilesUploadCheck`(가드·이름·범위, 만들지 않음), `TestDrainRejected`(남은 본문을 받는 양과 상한, 성공·본문 뒤 오류는 그대로), `TestFilesUploadEarlyRejectNoReset`(본문을 끝까지 보내는 클라이언트가 실제 TCP에서 RST 없이 403을 받음, 루프백 버퍼보다 큰 32MiB)
 - Go(복사): `worker/copy_test.go`(다른 디스크로 파일·폴더·링크, 특수 파일 건너뛰기, 시각·실행 비트, 이름마다의 실패, 시작 전 실패, 끊으면 임시 이름 지우기), `TestFilesCopy`(사건 흐름, 같은 이름, 시작 전 오류 응답, 인자 크기)
-- Vitest: 고르기 구간, 새 이름 검사·확장자 앞 고르기, `moveAllowed`, `volumeOf`, `runEach` 중지·실패 묶기, 변경 알림, 끌어 놓기의 할 일(`dropMode`), 복사 요청 나누기·진행률·속도, 올리기 작업(차례, 다시 올리기·덮어쓰기, 멈추기, 양), 복사 응답 사건 읽기(`client.test.ts`)
+- Vitest: 고르기 구간, 새 이름 검사·확장자 앞 고르기, `moveAllowed`, `volumeOf`, `runEach` 중지·실패 묶기, 변경 알림, 끌어 놓기의 할 일(`dropMode`), 복사 요청 나누기·진행률·속도, 올리기 작업(차례, 다시 올리기·덮어쓰기, 멈추기, 양), 복사 응답 사건 읽기와 올리기 사전 확인(거절하면 본문을 보내지 않음, `client.test.ts`)
 - 브라우저(복사): 가짜 홈과 가짜 디스크는 기준 디렉터리가 달라 홈 ↔ 디스크가 복사다. 작업 창을 보려면 파일 수만 개짜리 폴더를 쓴다(큰 파일 하나는 로컬 디스크에서 금방 끝난다)
 - 브라우저(휴지통): 가짜 디스크 맨 위(`helper-root/srv/disk1`)는 개발 사용자 소유라 처음에는 `own`이다. `none`(휴지통 없음 안내)은 맨 위를 잠시 `chmod 0555`로 바꿔 보고, 디스크 휴지통 만들기는 상승할 수 있는 `totp`로 확인한다. 서버의 `trash-list --trash-dir=<휴지통>`으로 형식 호환을 볼 수 있다
 - `make dev-fake`: 가짜 OMV가 가짜 도우미 디스크(`helper-root/srv/disk1`)에 합성 파일과 공유 폴더(문서, 미디어, 사진, 폴더 없는 백업, 루트 파일시스템의 kvm)를 만든다(`cmd/fakeomv/files.go`). `FAKEFILES_LARGE=<n>`이면 사진/휴대폰 백업에 빈 파일 n개를 만든다. onmaru는 개발 전용 환경 변수 `ONMARU_DEV_FILES_SRV`(플래그·가동 설정 목록에 넣지 않음)로 그 아래 폴더를 디스크로 본다

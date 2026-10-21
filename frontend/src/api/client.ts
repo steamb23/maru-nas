@@ -30,6 +30,7 @@ import type {
   FilesTrashRestoreRequest,
   FilesTrashResult,
   FilesTrashVolumes,
+  FilesUploadCheckRequest,
   SiteTrashDisks,
   SiteTrashPrepareRequest,
   TrashItem,
@@ -1461,9 +1462,23 @@ export interface UploadOptions {
   signal: AbortSignal
 }
 
-// uploadFile은 파일 하나를 path에 올린다. 진행률을 받으려고 XHR로 보낸다(fetch는 올리기 진행을 알리지 않는다).
-// 백엔드는 원시 본문(application/octet-stream)만 받는다(CSRF 보조 장치). 취소하면 AbortError다.
-export function uploadFile(path: string, file: Blob, opts: UploadOptions): Promise<FileItem> {
+// checkUpload은 올리기의 사전 확인이다. 본문 없이 알 수 있는 거절(세션, 보안 확인, 이름, 범위)을 본문을 보내기 전에
+// 받는다. 리버스 프록시는 올리기의 거절을 본문을 다 보낸 뒤에야 넘기기도 하기 때문이다. 사용성을 위한 것이고 PUT이
+// 모든 검사를 다시 한다.
+export async function checkUpload(path: string, signal?: AbortSignal): Promise<void> {
+  const body: FilesUploadCheckRequest = { path }
+  await request('POST', '/files/upload/check', { body, signal })
+}
+
+// uploadFile은 파일 하나를 path에 올린다. 본문을 보내기 전에 checkUpload로 먼저 확인하므로, withStepUp으로 감싸면
+// 보안 확인 대화상자가 본문을 보내기 전에 뜨고 확인 뒤 둘 다 다시 한다. 진행률을 받으려고 XHR로 보낸다(fetch는 올리기
+// 진행을 알리지 않는다). 백엔드는 원시 본문(application/octet-stream)만 받는다(CSRF 보조 장치). 취소하면 AbortError다.
+export async function uploadFile(path: string, file: Blob, opts: UploadOptions): Promise<FileItem> {
+  await checkUpload(path, opts.signal)
+  return sendUpload(path, file, opts)
+}
+
+function sendUpload(path: string, file: Blob, opts: UploadOptions): Promise<FileItem> {
   const url = `/files/upload?path=${q(path)}${opts.overwrite ? '&overwrite=1' : ''}`
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest()
