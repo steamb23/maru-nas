@@ -6,6 +6,8 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 
 영역별 상세 규칙은 `.claude/rules/`에 있고 해당 파일을 다룰 때 로드된다: `auth-omv.md`(OMV 8 동작, 인증 설계), `backend.md`, `helper.md`(권한 도우미), `terminal.md`(웹 터미널), `files.md`(파일 탐색기), `security.md`(보안 강화 모드), `frontend.md`, `frontend-shell.md`(창·작업표시줄·애니메이션), `i18n.md`, `icons.md`, `installer.md`(설치기). 작업 전 설계를 논의할 때는 해당 파일을 직접 읽는다. 설계 문서는 `.claude/docs/`(`addons.md`, `data-sources.md`, `helper.md`, `upgrade.md`)에 있다.
 
+클라우드 세션(`CLAUDE_CODE_REMOTE=true`)에서 달라지는 규칙은 `.claude/rules/cloud.md`에 있다. SessionStart 훅(`.claude/hooks/cloud-session.sh`)이 클라우드에서만 불러오며, 문맥에 없으면 작업 전에 직접 읽는다.
+
 ## 목표와 범위
 
 - 가동 현황 확인과 간단한 조작은 이 대시보드에서, 심층 설정은 OMV 기본 웹 UI(workbench)에서 한다
