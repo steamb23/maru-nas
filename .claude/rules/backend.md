@@ -40,8 +40,9 @@ paths:
 
 규칙은 `.claude/rules/files.md`, 도우미 쪽 연산은 `.claude/docs/helper.md`의 "파일 탐색기 연산".
 
-- 라우트(`internal/server/files.go`): `GET /api/files/roots`, `GET /api/files/list`, `GET /api/files/list/{id}`, `POST /api/files/list/{id}/prepare`, `GET /api/files/info`, `GET /api/files/download`, `PUT /api/files/upload`(모두 `requireFiles`: 보안 정책 `files` → 도우미 티켓), 관리자 `GET·PUT /api/site/files`, `POST /api/site/files/refresh`. 경로 계산·정렬·목록 캐시는 `internal/files`
-- 도우미 파일 오류 코드는 `writeFilesError`가 HTTP로 바꾼다(`not_found` 404, `permission_denied`·`outside_roots` 403, `exists` 409 `file_exists`, `no_space` 507, `busy` 429 `helper_busy`, `timeout` 504 `transfer_timeout` 등). 나머지는 `writeHelperError`
+- 라우트(`internal/server/files.go`): `GET /api/files/roots`, `GET /api/files/list`, `GET /api/files/list/{id}`, `GET /api/files/list/{id}/find`, `POST /api/files/list/{id}/prepare`, `GET /api/files/info`, `GET /api/files/download`, `PUT /api/files/upload`, `POST /api/files/mkdir`, `POST /api/files/rename`, `POST /api/files/delete`(모두 `requireFiles`: 보안 정책 `files` → 도우미 티켓), 관리자 `GET·PUT /api/site/files`, `POST /api/site/files/refresh`. 경로 계산·정렬·목록 캐시는 `internal/files`
+- 이름 바꾸기·옮기기·삭제는 사이드바에 보이는 폴더(홈, 공유 폴더, 디스크) 자신과 그것을 품은 경로를 409 `root_folder`로 막는다(`rootFolder`. 도우미는 공유 폴더를 지키지 않는다, `.claude/rules/files.md`)
+- 도우미 파일 오류 코드는 `writeFilesError`가 HTTP로 바꾼다(`not_found` 404, `permission_denied`·`outside_roots` 403, `exists` 409 `file_exists`, `not_empty`·`cross_device` 409, `no_space` 507, `busy` 429 `helper_busy`, `timeout` 504 `transfer_timeout` 등). 나머지는 `writeHelperError`
 - 디스크(`Config.Mounts`, `storage.Reader.MountsUnder`)와 데이터 디스크 디렉터리(`Config.FilesSrvDir`, 기본 `/srv`). 개발 서버는 `ONMARU_DEV_FILES_SRV`(개발 전용, 플래그·가동 설정 목록·설치기 레지스트리에 넣지 않음)로 가짜 도우미 디스크를 가리킨다
 - HTTP 서버에는 `ReadTimeout`·`WriteTimeout`을 두지 않는다(6시간 전송). 전송 상한과 무진행 끊기는 도우미가 한다
 
