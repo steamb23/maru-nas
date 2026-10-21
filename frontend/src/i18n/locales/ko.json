@@ -148,7 +148,9 @@
       "none": "볼 수 있는 폴더가 없습니다.",
       "trash": "휴지통",
       "trashCount_one": "휴지통 항목 {{total}}개",
-      "trashCount_other": "휴지통 항목 {{total}}개"
+      "trashCount_other": "휴지통 항목 {{total}}개",
+      "readOnly": "읽기 전용",
+      "readOnlyShare": "{{path}} (공유 폴더 권한: 읽기 전용)"
     },
     "toolbar": {
       "back": "뒤로",
@@ -179,7 +181,8 @@
       "sortSize": "크기순",
       "preparing": "{{sort}} 정렬 준비 중",
       "writable": "이 폴더: 읽기·쓰기 가능",
-      "readOnly": "이 폴더: 읽기만 가능"
+      "readOnly": "이 폴더: 읽기만 가능",
+      "shareReadOnly": "이 폴더: 읽기만 가능(공유 폴더 권한)"
     },
     "banner": {
       "truncated": "항목이 30만 개보다 많아 일부만 보입니다. 정렬과 찾기도 보이는 항목 안에서만 합니다. 하위 폴더로 나누면 모두 볼 수 있습니다.",
@@ -288,7 +291,8 @@
         "bad_request": "할 수 없는 작업입니다. 폴더를 그 폴더 안으로 옮기려 했을 수 있습니다.",
         "network": "연결이 끊겼습니다.",
         "generic": "작업하지 못했습니다.",
-        "no_trash": "이 디스크에는 휴지통이 없습니다."
+        "no_trash": "이 디스크에는 휴지통이 없습니다.",
+        "share_read_only": "공유 폴더 권한이 읽기만 허락해 이 공유 폴더에는 쓸 수 없습니다."
       },
       "trashing": "휴지통으로 옮기는 중",
       "restoring": "되돌리는 중",
@@ -405,7 +409,8 @@
         "helper_busy": "동시에 실행 중인 작업이 많습니다. 잠시 뒤 다시 올리세요.",
         "is_dir": "같은 이름의 폴더가 있습니다.",
         "network": "연결이 끊겼습니다.",
-        "unknown": "올리지 못했습니다."
+        "unknown": "올리지 못했습니다.",
+        "share_read_only": "공유 폴더 권한이 읽기만 허락합니다."
       }
     },
     "errors": {
@@ -732,7 +737,11 @@
       "trashDisk": "{{disk}} 디스크 휴지통",
       "trashOn": "있음",
       "trashCreate": "휴지통 만들기",
-      "trashFailed": "디스크 휴지통을 만들지 못했습니다."
+      "trashFailed": "디스크 휴지통을 만들지 못했습니다.",
+      "followPrivileges": "OMV 공유 폴더 권한 따르기",
+      "followPrivilegesDesc": "OMV에서 정한 공유 폴더 권한(Privileges)을 파일 탐색기에도 적용합니다. 권한이 없는 공유 폴더는 보이지 않고, 읽기만 허락된 공유 폴더에는 쓸 수 없습니다. 파일 시스템 권한도 함께 적용되며, 관리자도 자기 계정의 권한을 따릅니다. 권한을 바꾼 뒤에는 “지금 받기”를 눌러 주세요.",
+      "followPrivilegesFallback": "공유 폴더 목록을 받기 전에는 적용되지 않습니다.",
+      "followFailed": "공유 폴더 목록을 받지 못해 권한 따르기를 켜지 않았습니다."
     },
     "nav": "설정 메뉴",
     "groups": {

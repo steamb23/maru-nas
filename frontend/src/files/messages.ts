@@ -26,6 +26,7 @@ const UPLOAD_KEYS: Partial<Record<string, ParseKeys>> = {
   permission_denied: 'files.upload.errors.permission_denied',
   no_space: 'files.upload.errors.no_space',
   read_only: 'files.upload.errors.read_only',
+  share_read_only: 'files.upload.errors.share_read_only',
   transfer_timeout: 'files.upload.errors.transfer_timeout',
   helper_busy: 'files.upload.errors.helper_busy',
   is_dir: 'files.upload.errors.is_dir',

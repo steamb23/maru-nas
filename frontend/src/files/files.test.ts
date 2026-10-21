@@ -93,6 +93,12 @@ const roots = rootsOf({
 })
 
 describe('경로', () => {
+  it('읽기 전용 공유 폴더를 표시한다', () => {
+    const r = rootsOf({ shares: [{ uuid: 'u', name: 's', path: '/srv/d/s', reachable: true, readOnly: true }], disks: [], fallback: false })
+    expect(r[0]).toMatchObject({ kind: 'share', readOnly: true })
+    expect(roots.find((x) => x.name === '미디어')?.readOnly).toBe(false)
+  })
+
   it('가장 긴 뿌리를 고르고 닿지 않는 뿌리는 건너뛴다', () => {
     expect(findRoot(roots, '/srv/d1/media/a')?.name).toBe('미디어')
     expect(findRoot(roots, '/srv/d1/media/movies/2024')?.name).toBe('영화')

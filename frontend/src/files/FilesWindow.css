@@ -459,6 +459,13 @@
   margin-top: 12px;
 }
 
+/* 읽기 전용 공유 폴더(공유 폴더 권한 따르기)의 자물쇠 */
+.files-nav-badge {
+  display: inline-flex;
+  margin-left: auto;
+  color: var(--text-muted);
+}
+
 .files-nav-count {
   margin-left: auto;
   padding: 0 7px;

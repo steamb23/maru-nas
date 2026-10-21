@@ -23,7 +23,7 @@ func (h *handler) filesTrash(w http.ResponseWriter, r *http.Request, s auth.Sess
 	if !decodeJSON(w, r, &req) {
 		return
 	}
-	roots, ok := h.allowedPaths(w, r, s, ticket, req.Path)
+	roots, ok := h.allowedWritePaths(w, r, s, ticket, req.Path)
 	if !ok {
 		return
 	}
@@ -80,7 +80,7 @@ func (h *handler) filesTrashRestore(w http.ResponseWriter, r *http.Request, s au
 		writeError(w, http.StatusBadRequest, api.ErrBadRequest, "invalid trash item or name")
 		return
 	}
-	if !h.allowedPath(w, r, s, ticket, dir) {
+	if _, ok := h.allowedWritePaths(w, r, s, ticket, dir); !ok {
 		return
 	}
 	e, err := h.Helper.TrashRestore(r.Context(), ticket, req.Trash, req.Name, req.To)

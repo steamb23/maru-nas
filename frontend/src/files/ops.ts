@@ -59,6 +59,7 @@ const OP_ERROR_KEYS: Partial<Record<string, ParseKeys>> = {
   not_regular: 'files.ops.errors.not_regular',
   bad_request: 'files.ops.errors.bad_request',
   no_trash: 'files.ops.errors.no_trash',
+  share_read_only: 'files.ops.errors.share_read_only',
 }
 
 // opErrorKey는 만들기·이름 바꾸기·옮기기·삭제 실패의 문구 키다.

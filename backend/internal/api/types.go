@@ -972,13 +972,15 @@ const (
 	ErrRootFolder = "root_folder"
 	// ErrNoTrash는 그 항목이 든 디스크에 쓸 수 있는 휴지통이 없다는 뜻이다(영구 삭제만 할 수 있다).
 	ErrNoTrash = "no_trash"
+	// ErrShareReadOnly는 OMV 공유 폴더 권한이 읽기만 허락해 그 공유 폴더 안에 쓸 수 없다는 뜻이다(공유 폴더 권한 따르기).
+	ErrShareReadOnly = "share_read_only"
 )
 
 // ErrorResponse는 2xx가 아닌 상태 코드와 함께 반환된다.
 type ErrorResponse struct {
 	Error string `json:"error"`
 	// Code는 화면에서 분기할 때 쓰는 오류 종류다. 없을 수 있다.
-	Code string `json:"code,omitempty" tstype:"'invalid_credentials' | 'rate_limited' | 'challenge_failed' | 'challenge_expired' | 'omv_unavailable' | 'unauthorized' | 'bad_request' | 'rpc_forbidden' | 'admin_required' | 'plugin_missing' | 'omv_error' | 'action_busy' | 'action_failed' | 'action_timeout' | 'config_dirty' | 'image_too_large' | 'unsupported_image' | 'profile_readonly' | 'helper_unavailable' | 'helper_reauth' | 'elevation_failed' | 'elevation_not_allowed' | 'elevation_required' | 'terminal_disabled' | 'security_required' | 'factor_failed' | 'manage_required' | 'passkey_unavailable' | 'passkey_uv_unsupported' | 'security_unavailable' | 'passkey_login_unknown' | 'passkey_login_expired' | 'passkey_login_stale' | 'upgrade_disabled' | 'upgrade_busy' | 'upgrade_outdated' | 'not_found' | 'permission_denied' | 'outside_roots' | 'file_exists' | 'not_dir' | 'is_dir' | 'not_regular' | 'no_space' | 'read_only' | 'helper_busy' | 'transfer_timeout' | 'listing_expired' | 'sort_pending' | 'not_empty' | 'cross_device' | 'root_folder' | 'no_trash'"`
+	Code string `json:"code,omitempty" tstype:"'invalid_credentials' | 'rate_limited' | 'challenge_failed' | 'challenge_expired' | 'omv_unavailable' | 'unauthorized' | 'bad_request' | 'rpc_forbidden' | 'admin_required' | 'plugin_missing' | 'omv_error' | 'action_busy' | 'action_failed' | 'action_timeout' | 'config_dirty' | 'image_too_large' | 'unsupported_image' | 'profile_readonly' | 'helper_unavailable' | 'helper_reauth' | 'elevation_failed' | 'elevation_not_allowed' | 'elevation_required' | 'terminal_disabled' | 'security_required' | 'factor_failed' | 'manage_required' | 'passkey_unavailable' | 'passkey_uv_unsupported' | 'security_unavailable' | 'passkey_login_unknown' | 'passkey_login_expired' | 'passkey_login_stale' | 'upgrade_disabled' | 'upgrade_busy' | 'upgrade_outdated' | 'not_found' | 'permission_denied' | 'outside_roots' | 'file_exists' | 'not_dir' | 'is_dir' | 'not_regular' | 'no_space' | 'read_only' | 'helper_busy' | 'transfer_timeout' | 'listing_expired' | 'sort_pending' | 'not_empty' | 'cross_device' | 'root_folder' | 'no_trash' | 'share_read_only'"`
 	// RetryAfterSeconds는 rate_limited일 때 다시 시도할 수 있기까지 남은 초다.
 	RetryAfterSeconds int `json:"retryAfterSeconds,omitempty"`
 	// Required는 security_required일 때 거쳐야 하는 단계다.
@@ -1439,6 +1441,9 @@ type SiteFiles struct {
 	SharesUpdatedAt string `json:"sharesUpdatedAt,omitempty"`
 	// ShowDisks는 관리자에게 /srv 아래 디스크의 맨 위까지 보이는지다(디스크 최상위 보기).
 	ShowDisks bool `json:"showDisks,omitempty"`
+	// FollowPrivileges는 OMV 공유 폴더 권한(Privileges)을 파일 탐색기에도 적용하는지다. 권한이 없는 공유 폴더는
+	// 보이지 않고, 읽기만 허락된 공유 폴더에는 쓰지 못한다(파일 시스템 권한도 함께 적용된다).
+	FollowPrivileges bool `json:"followPrivileges,omitempty"`
 }
 
 // SharedFolder는 OMV 공유 폴더 하나다(ShareMgmt.enumerateSharedFolders).
@@ -1447,7 +1452,23 @@ type SharedFolder struct {
 	Name string `json:"name"`
 	// Path는 공유 폴더의 절대 경로다(OMV absdirpath).
 	Path string `json:"path"`
+	// Privileges는 OMV에 정한 사용자·그룹 권한이다(정하지 않은 사용자·그룹은 없다). 비어 있으면 정한 권한이 없다.
+	Privileges []SharePrivilege `json:"privileges,omitempty"`
 }
+
+// SharePrivilege는 공유 폴더 권한 하나다(OMV privileges.privilege). Perms는 SharePerms* 중 하나다.
+type SharePrivilege struct {
+	Type  string `json:"type" tstype:"'user' | 'group'"`
+	Name  string `json:"name"`
+	Perms int    `json:"perms"`
+}
+
+// 공유 폴더 권한 값(OMV와 같다).
+const (
+	SharePermsNone      = 0
+	SharePermsReadOnly  = 5
+	SharePermsReadWrite = 7
+)
 
 // FilesRoots는 GET /api/files/roots의 응답이다. 파일 탐색기 사이드바에 처음 보이는 폴더다.
 type FilesRoots struct {
@@ -1476,6 +1497,8 @@ type FilesShare struct {
 	Path string `json:"path"`
 	// Reachable은 권한 도우미가 닿을 수 있는 곳(/srv 아래 마운트)인지다. 루트 파일시스템의 공유 폴더는 아직 열 수 없다.
 	Reachable bool `json:"reachable"`
+	// ReadOnly는 OMV 공유 폴더 권한이 이 사용자에게 읽기만 허락한다는 뜻이다(공유 폴더 권한 따르기).
+	ReadOnly bool `json:"readOnly,omitempty"`
 }
 
 // FilesListing은 GET /api/files/list의 응답이다. 폴더의 이름 목록을 서버가 세션별로 잠시 두고 ID로 가리킨다.
@@ -1488,6 +1511,8 @@ type FilesListing struct {
 	Truncated bool `json:"truncated"`
 	// Writable은 이 사용자가 이 폴더에 파일을 만들 수 있는지다(올리기).
 	Writable bool `json:"writable"`
+	// ShareReadOnly는 OMV 공유 폴더 권한이 읽기만 허락해 쓰지 못한다는 뜻이다(공유 폴더 권한 따르기). Writable도 false다.
+	ShareReadOnly bool `json:"shareReadOnly,omitempty"`
 }
 
 // FilesPage는 GET /api/files/list/{id}의 응답이다. 정렬·찾기를 적용한 보기에서 offset부터의 항목이다.
@@ -1733,6 +1758,8 @@ type FileInfo struct {
 	Access *FileAccess `json:"access,omitempty"`
 	// ShareUUID는 이 경로가 속한 공유 폴더다(관리자에게 OMV ACL 화면 링크를 줄 때 쓴다). 관리자에게만 준다.
 	ShareUUID string `json:"shareUuid,omitempty"`
+	// ShareReadOnly는 OMV 공유 폴더 권한이 읽기만 허락한다는 뜻이다(공유 폴더 권한 따르기). Access.Write도 false다.
+	ShareReadOnly bool `json:"shareReadOnly,omitempty"`
 }
 
 // FileAccess는 이 사용자의 권한이다. 폴더는 들어가 목록을 보는 것이 읽기, 안에 만드는 것이 쓰기다.
@@ -1743,12 +1770,14 @@ type FileAccess struct {
 
 // FilesSettings는 GET /api/site/files의 응답이자 POST /api/site/files/refresh의 응답이다(관리자).
 type FilesSettings struct {
-	Shares          []SharedFolder `json:"shares"`
-	SharesUpdatedAt string         `json:"sharesUpdatedAt,omitempty"`
-	ShowDisks       bool           `json:"showDisks"`
+	Shares           []SharedFolder `json:"shares"`
+	SharesUpdatedAt  string         `json:"sharesUpdatedAt,omitempty"`
+	ShowDisks        bool           `json:"showDisks"`
+	FollowPrivileges bool           `json:"followPrivileges"`
 }
 
-// FilesSettingsRequest는 PUT /api/site/files의 본문이다.
+// FilesSettingsRequest는 PUT /api/site/files의 본문이다. 보내지 않은 설정은 그대로 둔다.
 type FilesSettingsRequest struct {
-	ShowDisks bool `json:"showDisks"`
+	ShowDisks        *bool `json:"showDisks,omitempty"`
+	FollowPrivileges *bool `json:"followPrivileges,omitempty"`
 }

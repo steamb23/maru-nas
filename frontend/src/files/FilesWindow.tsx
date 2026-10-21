@@ -948,11 +948,16 @@ export function FilesWindow({ active }: WindowViewProps) {
       data-drop-path={r.reachable ? r.path : undefined}
       aria-current={!trashOpen && root === r ? 'page' : undefined}
       aria-disabled={!r.reachable || undefined}
-      title={r.reachable ? r.path : t('files.nav.unreachable')}
+      title={r.reachable ? (r.readOnly ? t('files.nav.readOnlyShare', { path: r.path }) : r.path) : t('files.nav.unreachable')}
       onClick={() => r.reachable && navigate(r.path)}
     >
       <IconImage name={icon} size={16} />
       <span>{r.name}</span>
+      {r.readOnly && (
+        <span className="files-nav-badge" aria-label={t('files.nav.readOnly')}>
+          <IconImage name="system-lock-screen-symbolic" size={12} />
+        </span>
+      )}
     </button>
   )
   const homes = roots.filter((r) => r.kind === 'home')
@@ -1356,7 +1361,11 @@ export function FilesWindow({ active }: WindowViewProps) {
           listing && listing.total > MANY_ITEMS && <span>{sortName[view.sort]}</span>
         )}
         <span className="files-status-fill" />
-        {listing && <span>{writable ? t('files.status.writable') : t('files.status.readOnly')}</span>}
+        {listing && (
+          <span>
+            {writable ? t('files.status.writable') : listing.shareReadOnly ? t('files.status.shareReadOnly') : t('files.status.readOnly')}
+          </span>
+        )}
       </footer>
     </SidebarLayout>
   )

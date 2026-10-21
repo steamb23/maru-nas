@@ -43,7 +43,13 @@ func (h *handler) filesCopy(w http.ResponseWriter, r *http.Request, s auth.Sessi
 		writeError(w, http.StatusBadRequest, api.ErrBadRequest, "names are too long for one request")
 		return
 	}
-	if _, ok := h.allowedPaths(w, r, s, ticket, req.Dir, req.To); !ok {
+	roots, ok := h.allowedPaths(w, r, s, ticket, req.Dir, req.To)
+	if !ok {
+		return
+	}
+	// 원본은 읽기만 하므로 대상만 쓸 수 있는 곳이어야 한다.
+	if readOnlyAt(roots, req.To) {
+		writeError(w, http.StatusForbidden, api.ErrShareReadOnly, "the shared folder privileges allow reading only")
 		return
 	}
 

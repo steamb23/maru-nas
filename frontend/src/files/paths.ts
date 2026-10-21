@@ -12,13 +12,17 @@ export interface Root {
   uuid?: string
   // reachable이 false면 권한 도우미가 닿지 않는 곳이라 열 수 없다(루트 파일시스템의 공유 폴더).
   reachable: boolean
+  // readOnly면 OMV 공유 폴더 권한이 읽기만 허락한다(공유 폴더 권한 따르기).
+  readOnly?: boolean
 }
 
 // rootsOf는 사이드바 순서(홈, 공유 폴더, 디스크)의 뿌리 목록이다.
 export function rootsOf(r: FilesRoots): Root[] {
   const out: Root[] = []
   if (r.home) out.push({ kind: 'home', name: r.home.name, path: r.home.path, reachable: true })
-  for (const s of r.shares) out.push({ kind: 'share', name: s.name, path: s.path, uuid: s.uuid, reachable: s.reachable })
+  for (const s of r.shares) {
+    out.push({ kind: 'share', name: s.name, path: s.path, uuid: s.uuid, reachable: s.reachable, readOnly: s.readOnly === true })
+  }
   for (const d of r.disks) out.push({ kind: 'disk', name: d.name, path: d.path, reachable: true })
   return out
 }

@@ -17,12 +17,23 @@ import (
 // FAKEFILES_LARGE=<n>이면 사진 공유 폴더에 이름만 다른 빈 파일 n개짜리 큰 폴더(휴대폰 백업)를 만든다.
 
 // devShares는 가짜 OMV의 공유 폴더다. 백업은 폴더가 없는 공유 폴더(목록에서 빠짐), kvm은 루트 파일시스템의
-// 공유 폴더(도우미가 닿지 않음)를 흉내 낸다.
+// 공유 폴더(도우미가 닿지 않음)를 흉내 낸다. 공유 폴더 권한 따르기를 켜면 user에게 사진은 읽기 전용, 관리는 보이지
+// 않는다(미디어는 정한 권한이 없어 모두에게 열린다).
 func devShares(disk string) []omvfake.SharedFolder {
+	rw := func(names ...string) []omvfake.Privilege {
+		var out []omvfake.Privilege
+		for _, n := range names {
+			out = append(out, omvfake.Privilege{Type: "user", Name: n, Perms: 7})
+		}
+		return out
+	}
 	return []omvfake.SharedFolder{
-		{UUID: "fa4e0001-0000-4000-8000-000000000001", Name: "문서", MountDir: disk, RelDirPath: "docs/"},
+		{UUID: "fa4e0001-0000-4000-8000-000000000001", Name: "문서", MountDir: disk, RelDirPath: "docs/",
+			Privileges: []omvfake.Privilege{{Type: "group", Name: "users", Perms: 7}}},
 		{UUID: "fa4e0001-0000-4000-8000-000000000002", Name: "미디어", MountDir: disk, RelDirPath: "media/"},
-		{UUID: "fa4e0001-0000-4000-8000-000000000003", Name: "사진", MountDir: disk, RelDirPath: "photos/"},
+		{UUID: "fa4e0001-0000-4000-8000-000000000003", Name: "사진", MountDir: disk, RelDirPath: "photos/",
+			Privileges: append(rw("admin", "totp"), omvfake.Privilege{Type: "user", Name: "user", Perms: 5})},
+		{UUID: "fa4e0001-0000-4000-8000-000000000006", Name: "관리", MountDir: disk, RelDirPath: "manage/", Privileges: rw("admin", "totp")},
 		{UUID: "fa4e0001-0000-4000-8000-000000000004", Name: "백업", MountDir: disk, RelDirPath: "backup/", Missing: true},
 		{UUID: "fa4e0001-0000-4000-8000-000000000005", Name: "kvm", MountDir: "/", RelDirPath: "kvm/"},
 	}
@@ -32,6 +43,7 @@ func devShares(disk string) []omvfake.SharedFolder {
 func seedFiles(disk string) {
 	files := map[string]int{
 		"docs/README.md":                        1200,
+		"manage/점검 계획.txt":                      900,
 		"docs/회의록 2026-10.txt":                  3400,
 		"docs/예산.xlsx":                          18600,
 		"docs/보고서/2026 상반기.pdf":                 512000,
