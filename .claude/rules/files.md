@@ -58,7 +58,7 @@ paths:
 
 ## 파일 작업(복사, 올리기)
 
-- 오래 걸리는 전송(복사, 올리기)은 파일 작업 목록(`transferStore.ts`)에 두고 파일 작업 창(셸 앱 `transfers`, `TransfersWindow.tsx`)이 그린다. 탐색기 창마다 상태를 따로 두는 원칙의 예외로 모듈 저장소에 둔다(작업은 그 창을 닫아도 이어지고 작업 창 하나에 모인다). 그 자리의 조작(삭제, 옮기기, 휴지통 작업)은 창의 고르기·목록에 묶여 있으므로 여기에 넣지 않고 창 안 배너(`runOp`)로 둔다
+- 오래 걸리는 전송(복사, 올리기)은 파일 작업 목록(`transferStore.ts`)에 두고 파일 작업 창(셸 앱 `transfers`, `TransfersWindow.tsx`)이 그린다. 탐색기 창마다 상태를 따로 두는 원칙의 예외로 모듈 저장소에 둔다(작업은 그 창을 닫아도 이어지고 작업 창 하나에 모인다). 그 자리의 조작(삭제, 옮기기, 휴지통 작업)은 창의 고르기·목록에 묶여 있으므로 여기에 넣지 않고 창 안 배너(`runOp`)로 둔다. 둘은 진행 부품(`TaskProgress.tsx`의 `ProgressMeter`·`TaskCurrent`, 배너는 `TaskBanner`)과 실패 묶음(`groupFailures` + `FailuresBody`)을 함께 쓴다
 - 작업은 종류와 관계없이 하나씩 차례로 한다. 올리기 작업 하나는 한 번에 고른 파일들이고(계산은 `uploadJobs.ts`), 진행률은 취소한 파일을 뺀 바이트다. 속도는 0.5초 간격 지수 평활(`nextRate`)이다
 - 작업 창은 작업이 400ms를 넘을 때 열고(앱 목록·바로가기에는 보이지 않는다, `appAccess`), 모두 문제없이 끝나면 스스로 닫는다. 하지 못한 항목·건너뛴 특수 파일·멈춘 오류가 있으면 (금방 끝났어도) 열어 둔다. 작업 창을 닫으면 남은 작업을 취소한다(창 저장소를 구독한다. 닫기 애니메이션 동안 목록이 그대로 보이게 목록은 다음 작업을 더할 때 비운다). 세션 만료(401)와 보안 확인 취소는 알리지 않고 취소로 둔다
 - 올리지 못한 파일은 이유별로 묶어 보이고, 끝난 작업에서 다시 올린다(`retryUpload`: 같은 이름이 생긴 파일은 "덮어써서 올리기", 그 밖의 실패와 취소한 파일은 "다시 올리기"). 파일 내용(`File`)은 작업이 목록에 있는 동안 둔다
@@ -78,7 +78,7 @@ paths:
 
 ## 창(프런트)
 
-- `src/files/`: `FilesWindow.tsx`(사이드바·도구 막대·상태 표시줄, 상태와 이동, 만들기·이름 바꾸기·삭제·옮기기), `FileList.tsx`(가상 목록, 고르기, 끌어서 옮기기), `InfoPane.tsx`(정보 패널), `ConflictBody.tsx`·`conflictDialog.tsx`(이름 충돌), `NameForm.tsx`·`nameDialog.tsx`(이름 입력), `DeleteBody.tsx`(삭제 확인, 하지 못한 항목 안내), `TrashView.tsx`(휴지통 보기), `TransfersWindow.tsx`·`transferStore.ts`(파일 작업 창과 작업 목록), `uploads.ts`(올리기 전 이름 확인), `stepUp.ts`(쓰기 요청의 보안 확인), 순수 모듈 `paths.ts`, `copyJobs.ts`, `history.ts`, `virtual.ts`, `pageCache.ts`, `kinds.ts`, `uploadJobs.ts`, `messages.ts`, `selection.ts`, `ops.ts`(Vitest `files.test.ts`)
+- `src/files/`: `FilesWindow.tsx`(사이드바·도구 막대·상태 표시줄, 상태와 이동, 만들기·이름 바꾸기·삭제·옮기기), `FileList.tsx`(가상 목록, 고르기, 끌어서 옮기기), `InfoPane.tsx`(정보 패널), `ConflictBody.tsx`·`conflictDialog.tsx`(이름 충돌), `NameForm.tsx`·`nameDialog.tsx`(이름 입력), `DeleteBody.tsx`(삭제 확인, 하지 못한 항목 안내), `TrashView.tsx`(휴지통 보기), `TransfersWindow.tsx`·`transferStore.ts`(파일 작업 창과 작업 목록), `TaskProgress.tsx`(진행 막대·지금 항목·창 안 진행 배너), `uploads.ts`(올리기 전 이름 확인), `stepUp.ts`(쓰기 요청의 보안 확인), 순수 모듈 `paths.ts`, `copyJobs.ts`, `history.ts`, `virtual.ts`, `pageCache.ts`, `kinds.ts`, `uploadJobs.ts`, `messages.ts`, `selection.ts`, `ops.ts`(Vitest `files.test.ts`)
 - 셸 앱이고 창을 여러 개 연다(`multiInstance`). 상태는 창마다 컴포넌트에 두며 모듈 저장소에 두지 않는다. 권한 도우미가 없으면(`capabilities.helper`) 앱은 그대로 보이고 창 안에 못 쓰는 이유를 안내한다(`appAccess`의 `helper_missing`, `AddonUnavailable`). 도우미는 설정되어 있는데 닿지 않거나 티켓이 없으면 창이 `/api/files/roots`의 오류(`helper_unavailable`·`helper_reauth`)를 보인다
 - 시안: Design 캔버스의 AC-Main·AC-Selected(정보 패널은 파일을 눌렀을 때만, 폴더는 고르기만), AC-Large(가상 스크롤·자리 표시·위치 말풍선), AC-Large-Sort(날짜순 준비 배너), S-Locked(보안 확인), S-Fallback(대체 안내)
 - 틀은 `SidebarLayout`의 `header`(도구 막대)를 쓰고 좁은 기준은 720px다. 정보 패널은 내용 너비 640px 아래(컨테이너 쿼리)에서 목록 위에 덮는다
@@ -94,7 +94,7 @@ paths:
 - 정보 패널은 하나만 골랐고 그 줄이 파일일 때만 연다(여러 개를 고르거나 고르기를 지우면 닫는다). 패널의 이름 바꾸기·삭제 단추는 패널의 파일에 한다
 - 메뉴(`FilesWindow`의 `menuItems`): 줄은 (하나일 때) 열기 또는 내려받기 / 이름 바꾸기(F2) / 삭제…(Delete, 여럿이면 "항목 N개 삭제…") / (파일 하나) 정보, 빈 곳은 폴더 만들기·올리기·모두 선택·새로 고침이다. 고르지 않은 줄에서 열면 그 줄 하나를 고른다. 쓸 수 없는 폴더에서는 비활성 이유로 "쓰기 권한 없음"을 보인다
 - 이름 대화상자(`NameForm`)는 `PasskeyAdd`처럼 대화상자 안에서 요청하고 실패(`ops.ts`의 `opErrorKey`)를 입력란 아래에 보인다. 처음 포커스를 받을 때 이름 바꾸기는 확장자 앞까지(`stemLength`) 고른다. 새 폴더 이름은 `find`로 "새 폴더", "새 폴더 (2)"…에서 없는 것을 고른다
-- 여러 항목 작업(삭제, 옮기기, 휴지통 넣기·되돌리기·영구 삭제·비우기, `ops.ts`의 `RunOp`)은 `runEach`로 하나씩 차례로 한다(도우미의 사용자당 동시 연산 4개 안에서 목록에 자리를 남긴다). 300ms가 지나도 끝나지 않으면 진행 배너와 "중지"(하던 항목까지 하고 멈춤)를 보이고, 하지 못한 항목은 이유별로 묶어(`groupFailures`) 알린다. 세션이 끝났거나(401) 보안 확인을 취소했거나 `stopOn`이면 남은 항목도 안 되므로 멈춘다. 옮기기는 미리 알지 못한 `cross_device`(같은 기준 안의 다른 마운트)를 만나면 거기서 멈추고 그 항목부터 복사로 넘긴다
+- 여러 항목 작업(삭제, 옮기기, 휴지통 넣기·되돌리기·영구 삭제·비우기, `ops.ts`의 `RunOp`)은 `runEach`로 하나씩 차례로 한다(도우미의 사용자당 동시 연산 4개 안에서 목록에 자리를 남긴다). 300ms가 지나도 끝나지 않으면 진행 배너(지금 항목 이름과 함께)와 "중지"(하던 항목까지 하고 멈춤)를 보이고, 하지 못한 항목은 이유별로 묶어(`groupFailures`) 알린다. 세션이 끝났거나(401) 보안 확인을 취소했거나 `stopOn`이면 남은 항목도 안 되므로 멈춘다. 옮기기는 미리 알지 못한 `cross_device`(같은 기준 안의 다른 마운트)를 만나면 거기서 멈추고 그 항목부터 복사로 넘긴다
 - **끌어서 옮기기·복사하기**: HTML5 끌기는 `nativeGuard`가 `dragstart`에서 막으므로 포인터로 한다(마우스·펜만. 터치는 스크롤·길게 누르기 메뉴와 겹친다). 누른 줄에서 6px 넘게 움직이면 그때 pointer capture를 잡는다(그냥 누르기의 click은 줄로 간다). 고르지 않은 줄을 끌면 그 줄 하나를 고르되 정보 패널은 열지 않는다(끄는 도중 목록 폭이 바뀌면 놓을 곳이 움직인다)
   - 놓을 곳은 `elementFromPoint` + `[data-drop-path]`(폴더 줄, 경로 단계, 사이드바 항목, 다른 탐색기 창의 것 포함)다. 목록 자신(`.files-list`)도 쓸 수 있는 폴더면 그 폴더를 가리키므로, 다른 창의 빈 곳이나 파일 줄에 놓으면 그 창의 폴더로 간다(목록 둘레에 점선으로 표시). 지금 폴더와, 끄는 폴더 자신·그 안은 놓을 곳이 아니다. 표시(`DROP_TARGET`)와 이름표(`.files-drag-ghost`, body에 붙이고 포인터를 받지 않음)는 렌더 없이 DOM으로 바꾼다
   - 놓으면 할 일은 창의 `dropMode`(`copyJobs.ts`)가 정하고 이름표에 "옮기기"·"복사"·"휴지통으로"로 보인다. 원본 폴더와 대상이 다른 디스크(휴지통 볼륨의 `top`이 다름)면 복사, 같으면 옮기기다. 옮기기·휴지통은 원본 폴더에 쓸 수 있어야 하므로 읽기 전용 폴더에서도 끌 수 있지만 다른 디스크로만 놓인다. 볼륨을 받지 못했으면 옮겨 본다

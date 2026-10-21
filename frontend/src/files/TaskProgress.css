@@ -1,0 +1,71 @@
+/* 파일 작업의 진행 부품(TaskProgress). 진행 막대와 지금 항목 줄은 파일 작업 창과 탐색기 창 안의 진행 배너(여러 항목
+   작업, 날짜·크기순 정렬 준비 AC-Large-Sort)가 함께 쓴다. */
+
+.task-banner {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0 12px 8px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  font-size: 12px;
+}
+
+.task-banner-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.task-banner-line .symbolic-icon {
+  flex: none;
+  color: var(--accent);
+}
+
+.task-banner-label {
+  flex: 1;
+  line-height: 1.5;
+  word-break: keep-all;
+}
+
+.task-banner-count {
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.task-current {
+  margin: 0;
+  overflow: hidden;
+  font-size: 12px;
+  color: var(--text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 양을 모르면(세는 중) 짧은 막대가 오간다. */
+.task-meter.busy .meter-fill {
+  width: 30%;
+  animation: task-busy 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes task-busy {
+  from {
+    translate: 0;
+  }
+
+  to {
+    translate: 233%;
+  }
+}
+
+:root[data-animations='off'] .task-meter.busy .meter-fill {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .task-meter.busy .meter-fill {
+    animation: none;
+  }
+}
