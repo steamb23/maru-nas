@@ -87,6 +87,9 @@ const OP_BANNER_MS = 300
 const NEW_FOLDER_TRIES = 50
 // 다른 창이 같은 폴더를 바꾸면 그 창이 새로 읽을 때까지 이만큼 기다렸다가 그 목록을 함께 쓴다.
 const FOLLOW_MS = 300
+// 아이콘 보기에서 닫힌 정보 패널은 고른 뒤 이만큼 기다렸다가 연다. 패널이 열리면 칸이 다시 배치되므로 바로 열면
+// 두 번 누르기의 두 번째 누름이 다른 칸이나 패널에 떨어진다.
+const GRID_PANE_DELAY_MS = 400
 
 // 상태에는 그 결과를 받은 요청(try, path)을 함께 둔다. 지금 요청과 다르면 받는 중으로 본다(effect 안에서 상태를 지우지 않게).
 type RootsState = { try: number } & (
@@ -160,7 +163,14 @@ export function FilesWindow({ active }: WindowViewProps) {
   const [view, setView] = useState<View>(DEFAULT_VIEW)
   const [queryInput, setQueryInput] = useState('')
   const [sel, setSel] = useState<Selection>(NO_SELECTION)
-  const [pane, setPane] = useState<string | null>(null)
+  const [pane, setPaneState] = useState<string | null>(null)
+  // paneTimer는 아이콘 보기에서 미뤄 둔 정보 패널 열기다. 패널을 바꾸는 다른 일이 생기면 취소한다.
+  const paneTimer = useRef<number | undefined>(undefined)
+  const setPane = (p: string | null) => {
+    window.clearTimeout(paneTimer.current)
+    paneTimer.current = undefined
+    setPaneState(p)
+  }
   // deep이면 찾기 칸이 지금 폴더를 거르지 않고, Enter로 하위 폴더까지 찾는다. search가 있으면 목록 대신 검색 결과를 보인다.
   const [deep, setDeep] = useState(false)
   const [search, setSearch] = useState<Search | null>(null)
@@ -259,20 +269,24 @@ export function FilesWindow({ active }: WindowViewProps) {
   }, [path, reload, rootsReady, rootsTry])
   const listingState: ListingState = listingResult.path === path ? listingResult : { path, status: 'loading' }
 
-  // 찾기 입력을 잠시 기다렸다가 보기에 반영한다. 하위 폴더 검색 범위면 지금 폴더를 거르지 않는다.
+  // 찾기 입력을 잠시 기다렸다가 보기에 반영한다. 하위 폴더 검색 범위면 지금 폴더를 거르지 않는다. 보기의 찾기어가
+  // 그대로면 고른 줄을 지우지 않는다(폴더를 옮기며 찾기 칸을 비울 때 "위치 열기"가 고른 항목을 지키게).
+  const viewQuery = view.query
   useEffect(() => {
     const next = deep ? '' : queryInput
+    if (next === viewQuery) return
     const timer = window.setTimeout(() => {
       setView((v) => (v.query === next ? v : { ...v, query: next }))
       setSel(NO_SELECTION)
     }, QUERY_DELAY_MS)
     return () => window.clearTimeout(timer)
-  }, [queryInput, deep])
+  }, [queryInput, deep, viewQuery])
 
   useEffect(
     () => () => {
       prepCtl.current?.abort()
       opCtl.current?.abort()
+      window.clearTimeout(paneTimer.current)
     },
     [],
   )
@@ -286,7 +300,7 @@ export function FilesWindow({ active }: WindowViewProps) {
     let follow: number | undefined
     const off = onFilesChanged((c) => {
       if (c.dirs.includes(TRASH)) setTrashVersion((v) => v + 1)
-      if (pane && c.gone.some((g) => within(pane, g))) setPane(null)
+      if (pane && c.gone.some((g) => within(pane, g))) setPaneState(null)
       if (!path || !affects(c, path)) return
       if (c.origin !== self && c.refreshed === path) follow = window.setTimeout(() => reopen(false), FOLLOW_MS)
       else reopen(true)
@@ -526,7 +540,17 @@ export function FilesWindow({ active }: WindowViewProps) {
     if (!item || soleIndex(s) !== s.focus) return
     // 파일을 누르면 정보 패널을 연다. 폴더는 고르기만 한다(시안 AC-Main).
     if (isFolderLike(item) || item.type === 'dir') setPane(null)
-    else if (item.state !== 'gone' && !item.badName) setPane(joinPath(path, item.name))
+    else if (item.state !== 'gone' && !item.badName) {
+      const p = joinPath(path, item.name)
+      if (layout !== 'grid' || pane !== null) setPane(p)
+      else {
+        window.clearTimeout(paneTimer.current)
+        paneTimer.current = window.setTimeout(() => {
+          paneTimer.current = undefined
+          setPaneState(p)
+        }, GRID_PANE_DELAY_MS)
+      }
+    }
   }
 
   const writable = listing?.writable ?? false
