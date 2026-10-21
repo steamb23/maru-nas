@@ -1547,6 +1547,8 @@ type TrashVolume struct {
 // FilesTrashVolumes는 GET /api/files/trash/volumes의 응답이다.
 type FilesTrashVolumes struct {
 	Volumes []TrashVolume `json:"volumes"`
+	// Items는 휴지통의 항목 수다(정보를 읽지 않고 센 값, 사이드바의 개수).
+	Items int `json:"items"`
 }
 
 // TrashItem은 휴지통 항목 하나다.

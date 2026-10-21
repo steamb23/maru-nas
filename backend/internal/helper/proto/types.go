@@ -206,6 +206,8 @@ type TrashVolume struct {
 // TrashDirsResult는 fs.trashdirs의 결과다.
 type TrashDirsResult struct {
 	Volumes []TrashVolume `json:"volumes"`
+	// Items는 사용자의 모든 휴지통에 든 trashinfo 수다(항목을 읽지 않고 센 값, 사이드바의 개수).
+	Items int `json:"items"`
 }
 
 // TrashItem은 휴지통 항목 하나다.

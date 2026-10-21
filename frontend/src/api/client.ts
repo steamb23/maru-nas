@@ -1301,11 +1301,13 @@ export async function trashFile(path: string): Promise<FilesTrashResult> {
   return data
 }
 
-// fetchTrashVolumes는 홈 폴더와 디스크마다 휴지통 종류다.
+// fetchTrashVolumes는 홈 폴더와 디스크마다 휴지통 종류와, 휴지통의 항목 수(정보를 읽지 않고 센 값)다.
 export async function fetchTrashVolumes(signal?: AbortSignal): Promise<FilesTrashVolumes> {
   const data = await getJSON('/files/trash/volumes', { signal })
-  if (!isObj(data) || !isArrayOf(data.volumes, isTrashVolume)) throw new Error('/files/trash/volumes: unexpected response shape')
-  return { volumes: data.volumes }
+  if (!isObj(data) || !isArrayOf(data.volumes, isTrashVolume) || !isNum(data.items)) {
+    throw new Error('/files/trash/volumes: unexpected response shape')
+  }
+  return { volumes: data.volumes, items: data.items }
 }
 
 // fetchTrash는 사용자의 모든 휴지통 항목이다(지운 시각이 늦은 것부터).

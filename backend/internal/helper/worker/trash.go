@@ -358,6 +358,27 @@ func trashVolumes(job Job, cfg Config) (proto.TrashDirsResult, error) {
 		}
 		out.Volumes = append(out.Volumes, v)
 	}
+	// 항목 수는 trashinfo 이름만 센다(파일 정보는 읽지 않는다).
+	dirs, err := userTrashDirs(job, cfg)
+	if err != nil {
+		return out, err
+	}
+	for _, d := range dirs {
+		r, err := os.OpenRoot(d.base)
+		if err != nil {
+			continue
+		}
+		if f, err := r.Open(path.Join(d.rel, "info")); err == nil {
+			names, _ := f.Readdirnames(-1)
+			f.Close()
+			for _, n := range names {
+				if strings.HasSuffix(n, trashInfoSuffix) {
+					out.Items++
+				}
+			}
+		}
+		r.Close()
+	}
 	return out, nil
 }
 

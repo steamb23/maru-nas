@@ -12,7 +12,6 @@ import {
   type RequiredLevel,
   deleteFile,
   fetchFilesRoots,
-  fetchTrash,
   fetchTrashVolumes,
   findInListing,
   makeFolder,
@@ -295,12 +294,12 @@ export function FilesWindow({ active }: WindowViewProps) {
     return () => ctl.abort()
   }, [pendingSelect, listing, view])
 
-  // 사이드바 휴지통 항목의 개수. 휴지통이 바뀌면 다시 센다.
+  // 사이드바 휴지통 항목의 개수. 휴지통이 바뀌면 다시 센다(항목 정보는 읽지 않는 가벼운 요청).
   useEffect(() => {
     if (!rootsReady) return
     const ctl = new AbortController()
-    fetchTrash(ctl.signal).then(
-      (r) => setTrashCount(r.items.length),
+    fetchTrashVolumes(ctl.signal).then(
+      (r) => setTrashCount(r.items),
       () => {},
     )
     return () => ctl.abort()

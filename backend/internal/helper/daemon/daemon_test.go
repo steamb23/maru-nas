@@ -481,6 +481,30 @@ func TestRunUpgradeApply(t *testing.T) {
 	}
 }
 
+// trash.prepare는 상승한 티켓으로 /srv 아래 디스크 맨 위에 .Trash(1777)를 만들고 감사 로그에 디스크를 남긴다.
+func TestRunTrashPrepare(t *testing.T) {
+	e := newEnv(t, nil)
+	srv := filepath.Join(t.TempDir(), "srv")
+	disk := filepath.Join(srv, "disk1")
+	if err := os.MkdirAll(disk, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	e.spawner.cfg.SrvDir = srv
+	e.spawner.cfg.MountInfo = func() (io.ReadCloser, error) {
+		return io.NopCloser(strings.NewReader("1 0 8:17 / " + disk + " rw - ext4 /dev/sdb1 rw\n")), nil
+	}
+	bob := e.open("bob", false)
+	params, _ := json.Marshal(proto.TrashPrepareParams{Disk: disk})
+	req := proto.Request{Op: proto.OpRun, Ticket: bob.Ticket, Scope: proto.ScopeRoot, Action: proto.ActionTrashPrepare, Params: params}
+	e.expect(proto.CodeElevationRequired, req)
+	e.expect("", proto.Request{Op: proto.OpElevate, Ticket: bob.Ticket, Password: "bob-pw"})
+	e.expect("", req)
+	if fi, err := os.Lstat(filepath.Join(disk, ".Trash")); err != nil || fi.Mode()&os.ModeSticky == 0 || fi.Mode().Perm() != 0o777 {
+		t.Fatalf(".Trash = %v %v", fi, err)
+	}
+	e.logs.wait(t, `run: user="bob" scope=root action=trash.prepare disk="`+disk+`" result=ok`)
+}
+
 func TestElevationNotAllowed(t *testing.T) {
 	e := newEnv(t, nil)
 	for _, user := range []string{"alice", "carol", "admin"} {

@@ -2306,6 +2306,10 @@ export interface TrashVolume {
  */
 export interface FilesTrashVolumes {
   volumes: TrashVolume[];
+  /**
+   * Items는 휴지통의 항목 수다(정보를 읽지 않고 센 값, 사이드바의 개수).
+   */
+  items: number /* int */;
 }
 /**
  * TrashItem은 휴지통 항목 하나다.

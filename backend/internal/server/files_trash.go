@@ -46,7 +46,7 @@ func (h *handler) filesTrashVolumes(w http.ResponseWriter, r *http.Request, s au
 		h.writeFilesError(w, s, err)
 		return
 	}
-	out := api.FilesTrashVolumes{Volumes: []api.TrashVolume{}}
+	out := api.FilesTrashVolumes{Volumes: []api.TrashVolume{}, Items: res.Items}
 	for _, v := range res.Volumes {
 		out.Volumes = append(out.Volumes, api.TrashVolume{Top: v.Top, Kind: v.Kind, Shared: v.Shared})
 	}

@@ -216,6 +216,12 @@ func TestTrashListRestorePurgeEmpty(t *testing.T) {
 	e.file(filepath.Join(own, "info", "orphan.trashinfo"), "[Trash Info]\nPath=orphan\nDeletionDate=2026-10-04T08:00:00\n")
 	e.file(filepath.Join(own, "files", "lonely"), "")
 
+	var vols proto.TrashDirsResult
+	e.ok(&vols, proto.ScopeUser, proto.ActionTrashDirs, nil, nil)
+	if vols.Items != 4 {
+		t.Fatalf("trashinfo count = %d", vols.Items)
+	}
+
 	var list proto.TrashListResult
 	e.ok(&list, proto.ScopeUser, proto.ActionTrashList, nil, nil)
 	if len(list.Items) != 3 || list.Truncated {
