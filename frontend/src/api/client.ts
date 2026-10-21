@@ -225,6 +225,8 @@ interface RequestOptions {
   image?: Blob
   // true면 401을 받아도 onUnauthorized를 부르지 않는다.
   authRequest?: boolean
+  // range가 있으면 Range 머리로 보낸다(GET만, 미리보기의 텍스트 앞부분).
+  range?: string
 }
 
 async function request(
@@ -241,6 +243,8 @@ async function request(
     // 백엔드는 본문이 있는 요청에 application/json만 받는다(CSRF 보조 장치).
     init.headers = { 'Content-Type': 'application/json' }
     init.body = JSON.stringify(opts.body ?? {})
+  } else if (opts.range) {
+    init.headers = { Range: opts.range }
   }
   const res = await fetch(`${API_BASE}${path}`, init)
   if (!res.ok) {
@@ -1468,6 +1472,20 @@ export async function fetchFileInfo(path: string, signal?: AbortSignal): Promise
 // fileDownloadUrl은 내려받기 주소다. 브라우저의 내려받기 관리자가 받도록 <a download>로 연다.
 export function fileDownloadUrl(path: string): string {
   return `${API_BASE}/files/download?path=${q(path)}`
+}
+
+// filePreviewUrl은 미리보기 주소다. 브라우저가 그리는 형식(이미지, 동영상, 오디오, PDF)으로 온다(<img>, <video> 등의 src).
+export function filePreviewUrl(path: string): string {
+  return `${API_BASE}/files/preview?path=${q(path)}`
+}
+
+// fetchPreviewBytes는 미리보기 내용의 앞 limit바이트다(텍스트 보기). size는 정보로 아는 파일 크기이고, 그보다 크면
+// 범위로 앞부분만 받는다(크기 0인 파일은 범위를 만족하지 못하므로 범위 없이 받는다).
+export async function fetchPreviewBytes(path: string, size: number, limit: number, signal?: AbortSignal): Promise<Uint8Array> {
+  const range = size > limit ? `bytes=0-${limit - 1}` : undefined
+  const res = await request('GET', `/files/preview?path=${q(path)}`, { signal, range })
+  const bytes = new Uint8Array(await res.arrayBuffer())
+  return bytes.length > limit ? bytes.subarray(0, limit) : bytes
 }
 
 export interface UploadOptions {

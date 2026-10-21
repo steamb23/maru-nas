@@ -11,7 +11,7 @@ import { useLanguage } from '../i18n'
 import { IconImage } from '../icons/IconImage'
 import { openWorkbenchRoute } from '../shell/launchApp'
 import { startDownload } from './download'
-import { KIND_KEYS, kindIcon, kindOf, modeString } from './kinds'
+import { KIND_KEYS, type PreviewKind, kindIcon, kindOf, modeString, previewKind } from './kinds'
 import { type Root, locationLabel } from './paths'
 import { errorKey } from './messages'
 
@@ -23,13 +23,15 @@ interface Props {
   canWrite: boolean
   onRename: (item: FileItem) => void
   onDelete: (item: FileItem) => void
+  // onPreview는 미리보기 창에 이 파일을 연다.
+  onPreview: (kind: PreviewKind) => void
   onClose: () => void
 }
 
 // 상태에는 그 결과를 받은 경로를 함께 둔다. 지금 경로와 다르면 받는 중으로 본다.
 type State = { path: string } & ({ status: 'loading' } | { status: 'ready'; info: FileInfo } | { status: 'error'; err: unknown })
 
-export function InfoPane({ path, roots, admin, canWrite, onRename, onDelete, onClose }: Props) {
+export function InfoPane({ path, roots, admin, canWrite, onRename, onDelete, onPreview, onClose }: Props) {
   const { t } = useTranslation()
   const lang = useLanguage()
   const workbench = useCapabilitiesStore((s) => Boolean(s.caps?.workbenchUrl))
@@ -66,6 +68,7 @@ export function InfoPane({ path, roots, admin, canWrite, onRename, onDelete, onC
 
   // item은 이름 바꾸기·삭제에 넘기는 항목이다(정보를 받은 뒤에만 단추를 쓸 수 있다).
   const item: FileItem | null = info && { name, type: info.type, state: 'ok', linkType: info.linkType }
+  const preview = item && canDownload ? previewKind(item) : null
 
   const download = () => {
     setDownloadError(null)
@@ -95,6 +98,17 @@ export function InfoPane({ path, roots, admin, canWrite, onRename, onDelete, onC
           <IconImage name="download-symbolic" size={16} />
           {t('files.info.download')}
         </button>
+        {preview && (
+          <button
+            type="button"
+            className="addon-button files-info-icon"
+            aria-label={t('files.info.preview')}
+            title={t('files.info.preview')}
+            onClick={() => onPreview(preview)}
+          >
+            <IconImage name="view-reveal-symbolic" size={16} />
+          </button>
+        )}
         <button
           type="button"
           className="addon-button files-info-icon"

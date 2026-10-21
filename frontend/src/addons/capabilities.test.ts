@@ -35,6 +35,7 @@ describe('appAccess', () => {
     expect(appAccess({ ...caps([]), helper: true }, 'files')).toEqual({ visible: true, notice: null })
     // 파일 작업 창은 탐색기가 여는 창이라 아이콘을 두지 않는다.
     expect(appAccess(null, 'transfers')).toEqual({ visible: false, notice: null })
+    expect(appAccess(null, 'viewer')).toEqual({ visible: false, notice: null })
   })
 
   it('웹 터미널은 관리자가 허용했을 때만 보인다(받기 전에는 숨긴다)', () => {

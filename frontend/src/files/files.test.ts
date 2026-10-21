@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { ApiError } from '../api/client'
+import type { FileItem } from '../api/types.gen'
 import {
   MAX_NAMES,
   MAX_NAMES_JSON,
@@ -15,7 +16,7 @@ import {
   remainingSeconds as copyRemaining,
 } from './copyJobs'
 import { back, canBack, canForward, current, forward, MAX_HISTORY, replaceCurrent, startHistory, visit } from './history'
-import { extension, isFolderLike, kindOf, modeString } from './kinds'
+import { extension, isFolderLike, kindOf, modeString, previewKind } from './kinds'
 import { PageCache, pagesFor } from './pageCache'
 import { affects, groupFailures, notifyFilesChanged, onFilesChanged, opErrorKey, runEach } from './ops'
 import {
@@ -188,6 +189,34 @@ describe('가상 스크롤', () => {
     expect(scrollToShow(5, 100, 0, 340)).toBe(0)
     expect(scrollToShow(20, 100, 0, 340)).toBe(21 * ROW_HEIGHT - 340)
     expect(scrollToShow(2, 100, 500, 340)).toBe(2 * ROW_HEIGHT)
+  })
+})
+
+describe('미리보기 종류', () => {
+  const file = (name: string, extra: Partial<FileItem> = {}): FileItem => ({ name, type: 'file', state: 'ok', ...extra })
+  it('브라우저가 여는 형식과 텍스트만 미리본다', () => {
+    expect(previewKind(file('사진.JPG'))).toBe('image')
+    expect(previewKind(file('그림.svg'))).toBe('image')
+    expect(previewKind(file('영상.mp4'))).toBe('video')
+    expect(previewKind(file('노래.flac'))).toBe('audio')
+    expect(previewKind(file('문서.pdf'))).toBe('pdf')
+    expect(previewKind(file('메모.txt'))).toBe('text')
+    expect(previewKind(file('설명.md'))).toBe('text')
+    expect(previewKind(file('main.go'))).toBe('text')
+    expect(previewKind(file('표.csv'))).toBe('text')
+    // 브라우저가 못 여는 형식, 문서, 확장자 없는 파일은 미리보지 않는다.
+    expect(previewKind(file('사진.heic'))).toBeNull()
+    expect(previewKind(file('영상.mkv'))).toBeNull()
+    expect(previewKind(file('보고서.docx'))).toBeNull()
+    expect(previewKind(file('README'))).toBeNull()
+  })
+
+  it('파일과 파일로 가는 링크만 본다', () => {
+    expect(previewKind(file('a.png', { type: 'dir' }))).toBeNull()
+    expect(previewKind(file('a.png', { type: 'symlink', linkType: 'file' }))).toBe('image')
+    expect(previewKind(file('a.png', { type: 'symlink' }))).toBeNull()
+    expect(previewKind(file('a.png', { state: 'gone' }))).toBeNull()
+    expect(previewKind(file('a.png', { badName: true }))).toBeNull()
   })
 })
 

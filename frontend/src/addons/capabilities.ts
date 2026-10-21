@@ -31,9 +31,9 @@ const HELPER_MISSING: AppAccess = { visible: true, notice: 'helper_missing' }
 // 링크 앱은 주소가 설정되어 있을 때만 보인다. capability를 받기 전에는 열 주소를 모르므로
 // "받기 전에는 모두 보인다"의 예외로 숨긴다. 웹 터미널도 관리자가 허용했을 때만 보이므로 같은 예외다.
 // 파일 탐색기는 권한 도우미가 없으면 쓸 수 없지만, 앱이 있다는 것과 못 쓰는 이유를 알 수 있게
-// 아이콘을 두고 창 안에 안내한다(helper_missing). 파일 작업 창은 탐색기가 여는 창이라 아이콘을 두지 않는다.
+// 아이콘을 두고 창 안에 안내한다(helper_missing). 파일 작업 창과 미리보기 창은 탐색기가 여는 창이라 아이콘을 두지 않는다.
 export function appAccess(caps: CapabilitiesResponse | null, id: AppId): AppAccess {
-  if (id === 'transfers') return HIDDEN
+  if (id === 'transfers' || id === 'viewer') return HIDDEN
   if (isLinkApp(id)) return linkConfigured(id, caps) ? OPEN : HIDDEN
   if (id === 'terminal') return caps?.terminal ? OPEN : HIDDEN
   if (id === 'files') return caps && !caps.helper ? HELPER_MISSING : OPEN

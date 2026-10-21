@@ -1,0 +1,160 @@
+/* 미리보기 창(ViewerWindow). 위 도구 막대(이름, 종류·크기, 내려받기)와 내용 영역이다. */
+
+.viewer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.viewer-toolbar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--window-border);
+}
+
+.viewer-toolbar .addon-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.viewer-title {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.viewer-title strong,
+.viewer-title span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.viewer-title strong {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.viewer-title span {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.viewer-banner {
+  flex: none;
+  margin: 8px 12px 0;
+}
+
+.viewer-body {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+
+.viewer-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  height: 100%;
+  padding: 24px;
+  box-sizing: border-box;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.viewer-center p {
+  max-width: 380px;
+  margin: 0;
+}
+
+/* 이미지: 기본은 창에 맞추고, 누르면 실제 크기로 보며 스크롤한다. 투명한 곳은 체크무늬로 보인다. */
+.viewer-image {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 12px;
+  overflow: hidden;
+  background-image: conic-gradient(var(--hover-bg) 25%, transparent 0 50%, var(--hover-bg) 0 75%, transparent 0);
+  background-size: 20px 20px;
+}
+
+.viewer-image img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  cursor: zoom-in;
+}
+
+.viewer-image.actual {
+  place-items: start;
+  overflow: auto;
+}
+
+.viewer-image.actual img {
+  max-width: none;
+  max-height: none;
+  cursor: zoom-out;
+}
+
+.viewer-media {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  background: #000;
+}
+
+.viewer-media video {
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.viewer-media.audio {
+  align-content: center;
+  gap: 24px;
+  background: none;
+}
+
+.viewer-media.audio audio {
+  width: min(480px, 90%);
+}
+
+.viewer-pdf {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+.viewer-text-wrap {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.viewer-text {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: 12px 16px;
+  overflow: auto;
+  font-family: ui-monospace, 'Cascadia Mono', 'DejaVu Sans Mono', Menlo, Consolas, monospace;
+  font-size: 12.5px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  tab-size: 4;
+  outline: none;
+}
+
+.viewer-text:focus-visible {
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--accent) 50%, transparent);
+}

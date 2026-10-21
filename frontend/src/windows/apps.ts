@@ -75,6 +75,15 @@ const SHELL_APPS = {
     defaultSize: { width: 460, height: 340 },
     minSize: { width: 360, height: 220 },
   },
+  // 미리보기. 파일 탐색기에서 고른 파일(이미지, 동영상, 오디오, PDF, 텍스트)을 보인다(src/viewer). 탐색기가 여는 창이라
+  // "모든 앱"과 바로가기에는 보이지 않는다(appAccess). 창 하나를 다시 쓰며, 다른 파일을 열면 그 파일로 바뀐다.
+  viewer: {
+    titleKey: 'apps.viewer',
+    icon: 'accessories-document-viewer',
+    kind: 'shell',
+    defaultSize: { width: 900, height: 640 },
+    minSize: { width: 320, height: 240 },
+  },
   // 설정. 화면(테마·바탕화면) 같은 사용자 설정과 관리자의 전역 설정, 정보 페이지를 둔다(src/settings).
   settings: {
     titleKey: 'apps.settings',

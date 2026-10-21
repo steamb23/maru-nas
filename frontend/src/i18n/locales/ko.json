@@ -104,7 +104,8 @@
     "services": "서비스",
     "workbench": "OMV 워크벤치",
     "settings": "설정",
-    "terminal": "터미널"
+    "terminal": "터미널",
+    "viewer": "미리보기"
   },
   "terminal": {
     "connecting": "{{user}} 계정으로 SSH 서버에 접속하는 중…",
@@ -229,7 +230,8 @@
       "delete": "삭제…",
       "deleteMany": "항목 {{total}}개 삭제…",
       "deleteKey": "Delete",
-      "readOnly": "쓰기 권한 없음"
+      "readOnly": "쓰기 권한 없음",
+      "preview": "미리보기"
     },
     "name": {
       "label": "이름",
@@ -383,7 +385,8 @@
       "aclNo": "없음",
       "note": "탐색기는 파일 시스템 권한만 따릅니다. OMV 공유 폴더 권한은 SMB·FTP에만 적용됩니다.",
       "editAcl": "OMV에서 ACL 편집",
-      "loadFailed": "정보를 불러오지 못했습니다."
+      "loadFailed": "정보를 불러오지 못했습니다.",
+      "preview": "미리보기"
     },
     "upload": {
       "title": "올리기",
@@ -1232,5 +1235,15 @@
       "leftoverSignaled": "브라우저에 이 패스키를 지우도록 알렸습니다.",
       "leftoverManual": "패스키 저장소에 남은 {{rpId}}의 이 패스키는 쓸 수 없으니 직접 지우세요."
     }
+  },
+  "viewer": {
+    "empty": "파일 탐색기에서 파일을 열면 여기에 보입니다.",
+    "actualSize": "실제 크기",
+    "fit": "창에 맞추기",
+    "imageFailed": "이 이미지를 표시할 수 없습니다. 브라우저가 지원하지 않는 형식이거나 파일이 손상되었을 수 있습니다.",
+    "mediaFailed": "이 파일을 재생할 수 없습니다. 브라우저가 지원하지 않는 코덱일 수 있습니다. 내려받아 다른 프로그램으로 열어 주세요.",
+    "pdfFailed": "이 PDF를 표시할 수 없습니다. 내려받아 열어 주세요.",
+    "binary": "텍스트가 아닌 파일이라 내용을 보일 수 없습니다.",
+    "truncated": "파일이 커서 앞의 {{size}}만 보입니다."
   }
 }

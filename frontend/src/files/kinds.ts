@@ -77,8 +77,8 @@ const add = (kind: Kind, exts: string) => {
   for (const e of exts.split(' ')) EXTENSIONS[e] = kind
 }
 add('image', 'jpg jpeg png gif webp bmp tif tiff heic heif avif svg raw cr2 nef arw dng ico')
-add('video', 'mp4 mkv mov avi wmv webm m4v mpg mpeg ts m2ts flv 3gp')
-add('audio', 'mp3 flac wav aac m4a ogg opus wma aiff alac')
+add('video', 'mp4 mkv mov avi wmv webm m4v ogv mpg mpeg ts m2ts flv 3gp')
+add('audio', 'mp3 flac wav aac m4a ogg oga opus wma aiff alac')
 add('archive', 'zip 7z rar tar gz tgz bz2 xz zst lz4 deb rpm')
 add('diskImage', 'iso img qcow2 vmdk vdi vhd vhdx')
 add('pdf', 'pdf')
@@ -111,6 +111,33 @@ export function kindOf(item: Pick<FileItem, 'name' | 'type' | 'locked' | 'linkTy
       return 'unknown'
   }
   return EXTENSIONS[extension(item.name)] ?? 'file'
+}
+
+export type PreviewKind = 'image' | 'video' | 'audio' | 'pdf' | 'text'
+
+// PREVIEW_EXTENSIONS는 브라우저가 그리거나 재생하는 형식이다. 백엔드 미리보기(files_preview.go의 previewTypes)가 이
+// 형식으로 보낸다. 같은 종류라도 브라우저가 못 여는 형식(heic, tiff, mkv, avi 등)은 넣지 않는다.
+const PREVIEW_EXTENSIONS: Record<string, PreviewKind> = {}
+const addPreview = (kind: PreviewKind, exts: string) => {
+  for (const e of exts.split(' ')) PREVIEW_EXTENSIONS[e] = kind
+}
+addPreview('image', 'jpg jpeg png gif webp avif bmp ico svg')
+addPreview('video', 'mp4 m4v webm ogv mov')
+addPreview('audio', 'mp3 m4a aac oga ogg opus wav flac')
+addPreview('pdf', 'pdf')
+// TEXT_KINDS는 텍스트로 보이는 종류다(백엔드는 목록 밖의 파일을 text/plain으로 보낸다).
+const TEXT_KINDS: ReadonlySet<Kind> = new Set(['text', 'markdown', 'web', 'code'])
+const TEXT_EXTENSIONS = new Set(['csv', 'tsv'])
+
+// previewKind는 미리보기 창에서 보일 수 있는 파일이면 그 보기, 아니면 null이다. 일반 파일과 파일로 가는 링크만 본다.
+export function previewKind(item: Pick<FileItem, 'name' | 'type' | 'linkType' | 'badName' | 'state'>): PreviewKind | null {
+  if (item.badName || item.state === 'gone') return null
+  if (item.type !== 'file' && !(item.type === 'symlink' && item.linkType === 'file')) return null
+  const ext = extension(item.name)
+  const media = PREVIEW_EXTENSIONS[ext]
+  if (media) return media
+  const kind = EXTENSIONS[ext]
+  return (kind && TEXT_KINDS.has(kind)) || TEXT_EXTENSIONS.has(ext) ? 'text' : null
 }
 
 export function kindIcon(kind: Kind): IconName {
