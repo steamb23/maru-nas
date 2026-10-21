@@ -79,7 +79,7 @@ const SHELL_APPS = {
   // "모든 앱"과 바로가기에는 보이지 않는다(appAccess). 창 하나를 다시 쓰며, 다른 파일을 열면 그 파일로 바뀐다.
   viewer: {
     titleKey: 'apps.viewer',
-    icon: 'accessories-document-viewer',
+    icon: 'accessories-image-viewer',
     kind: 'shell',
     defaultSize: { width: 900, height: 640 },
     minSize: { width: 320, height: 240 },

@@ -35,7 +35,8 @@ import windowClose from '@colloid/actions/symbolic/window-close-symbolic.svg?url
 import windowMaximize from '@colloid/actions/symbolic/window-maximize-symbolic.svg?url'
 import windowMinimize from '@colloid/actions/symbolic/window-minimize-symbolic.svg?url'
 import windowRestore from '@colloid/actions/symbolic/window-restore-symbolic.svg?url'
-import accessoriesDocumentViewer from '@colloid/apps/scalable/accessories-document-viewer.svg?url'
+// Colloid의 accessories-image-viewer는 eog.svg로 가는 링크다(links/apps/scalable).
+import accessoriesImageViewer from '@colloid/apps/scalable/eog.svg?url'
 import gnomeDiskUtility from '@colloid/apps/scalable/org.gnome.DiskUtility.svg?url'
 import preferencesSystemNetworkEthernet from '@colloid/apps/scalable/preferences-system-network-ethernet.svg?url'
 import preferencesSystemNetworkServer from '@colloid/apps/scalable/preferences-system-network-server.svg?url'
@@ -140,7 +141,7 @@ export const COLLOID_ICONS = {
   'folder-download': { url: folderDownload, kind: 'color' },
   'preferences-system': { url: preferencesSystem, kind: 'color' },
   'utilities-terminal': { url: utilitiesTerminal, kind: 'color' },
-  'accessories-document-viewer': { url: accessoriesDocumentViewer, kind: 'color' },
+  'accessories-image-viewer': { url: accessoriesImageViewer, kind: 'color' },
   'go-previous-symbolic': { url: goPrevious, kind: 'symbolic' },
   'go-next-symbolic': { url: goNext, kind: 'symbolic' },
   'go-up-symbolic': { url: goUp, kind: 'symbolic' },
