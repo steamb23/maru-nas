@@ -142,7 +142,8 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
   - 주 체크아웃에서 `git worktree add -b <브랜치> .claude/worktrees/<이름> main`으로 만들고 `EnterWorktree`의 `path`로 들어간다. `EnterWorktree`의 `name`은 로컬 `main`보다 뒤처질 수 있는 `origin/main`에서 갈라지므로 쓰지 않는다
   - 워크트리 안에서 `git submodule update --init --depth 1`과 `npm --prefix frontend ci`를 먼저 실행한다
   - 사용자는 주 체크아웃에서 `make dev BRANCH=<브랜치>`나 `make dev-pick`으로 그 워크트리의 개발 서버를 띄운다
-  - `main` 병합(rebase 후 fast-forward)은 `ExitWorktree`(keep)로 주 체크아웃에 돌아간 뒤 `git merge --ff-only <브랜치>`로 한다. 워크트리 안에서는 주 체크아웃을 대상으로 한 git 명령이 거부된다. 병합한 뒤에는 워크트리 디렉터리를 `trash-put`으로 지우고 `git worktree prune`을 실행한다
+  - `main` 병합(rebase 후 fast-forward)은 `ExitWorktree`(keep)로 주 체크아웃에 돌아간 뒤 `git merge --ff-only <브랜치>`로 한다. `EnterWorktree`로 들어간 워크트리 안에서는 주 체크아웃을 대상으로 한 git 명령이 거부된다. 병합한 뒤에는 워크트리 디렉터리를 `trash-put`으로 지우고 `git worktree prune`을 실행한다
+  - 처음부터 워크트리에서 시작한 세션(앱이 만든 `.claude/worktrees/<이름>-<해시>`, 브랜치 `claude/<이름>-<해시>`)은 새 워크트리를 만들지 않고 그 브랜치에서 작업한다. 이 세션은 `EnterWorktree`를 거치지 않았으므로 `ExitWorktree`로 주 체크아웃에 돌아갈 수 없다(아무 일도 하지 않는다). `main` 병합은 워크트리 안에서 `main` 위로 rebase한 뒤 `git -C <주 체크아웃> merge --ff-only <브랜치>`로 한다. 워크트리는 세션이 쓰고 있는 디렉터리이므로 `trash-put`·`git worktree prune`으로 지우지 않으며, 세션을 보관(archive)하면 앱이 정리한다
 - 작은 단위로 작업하고, 작업 단위 하나가 끝날 때마다 승인을 기다리지 않고 브랜치에 커밋한다
 - 브랜치의 작업이 모두 끝나면 변경 요약을 제시하고, `main` 병합은 사용자가 승인한 뒤에만 한다
 - 커밋 전에 `make check`를 실행한다. 프론트엔드나 embed 관련 변경이면 `make build`도 확인한다
