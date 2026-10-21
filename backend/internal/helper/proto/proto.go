@@ -95,13 +95,17 @@ const (
 	// ActionTrashPrepare는 데이터 디스크 맨 위에 모든 사용자가 함께 쓰는 휴지통 .Trash(1777)를 만든다(root 범위).
 	// 디스크 맨 위는 보통 root 소유라 사용자가 휴지통 폴더를 만들 수 없기 때문이다.
 	ActionTrashPrepare = "trash.prepare"
+	// ActionSearch는 폴더와 그 아래 모든 폴더에서 이름에 찾기어가 든 항목을 찾는다(파일 탐색기의 하위 폴더 검색).
+	// 찾은 항목은 Partial 응답으로 보내고, 마지막 응답에 결과를 담는다.
+	ActionSearch = "fs.search"
 )
 
 // Actions는 범위마다 실행할 수 있는 연산이다. root 연산은 여기에 타입 있는 함수로만 더한다.
 var Actions = map[string][]string{
 	ScopeUser: {ActionID, ActionList, ActionStat, ActionRead, ActionWrite, ActionMkdir, ActionRename, ActionRemove,
 		ActionNames, ActionStatMany, ActionInfo, ActionSSHAuthorize, ActionSSHRevoke,
-		ActionTrash, ActionTrashDirs, ActionTrashList, ActionTrashRestore, ActionTrashPurge, ActionTrashEmpty, ActionCopy},
+		ActionTrash, ActionTrashDirs, ActionTrashList, ActionTrashRestore, ActionTrashPurge, ActionTrashEmpty, ActionCopy,
+		ActionSearch},
 	ScopeRoot: {ActionID, ActionUpgradeApply, ActionTrashPrepare},
 }
 
@@ -140,7 +144,7 @@ type Response struct {
 	Result            json.RawMessage `json:"result,omitempty"`
 	// Size는 머리 뒤에 따라오는 본문의 바이트 수다(fs.read).
 	Size int64 `json:"size,omitempty"`
-	// Partial은 마지막이 아닌 진행 응답이다(fs.copy). 뒤에 응답이 더 온다.
+	// Partial은 마지막이 아닌 진행 응답이다(fs.copy, fs.search). 뒤에 응답이 더 온다.
 	Partial bool `json:"partial,omitempty"`
 }
 

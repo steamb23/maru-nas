@@ -1,0 +1,71 @@
+/* 하위 폴더 검색 보기(SearchView): 이름 · 위치 · 종류. 줄 모양은 FileList와 같고 위치 열은 TrashView의 .from을 쓴다. */
+.files-row.search,
+.files-row.header.search {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 100px;
+}
+
+.files-search-bar {
+  gap: 10px;
+}
+
+.files-search-status {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  font-size: 13px;
+}
+
+.files-search-status > span {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.files-search-spinner {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border: 2px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: files-search-spin 0.9s linear infinite;
+}
+
+@keyframes files-search-spin {
+  to {
+    rotate: 360deg;
+  }
+}
+
+/* 애니메이션을 꺼도 멈춘 원으로 남지 않게 천천히 돈다(찾는 중이라는 표시). */
+:root[data-animations='off'] .files-search-spinner {
+  animation-duration: 2.7s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .files-search-spinner {
+    animation-duration: 2.7s;
+  }
+}
+
+@container (max-width: 560px) {
+  .files-row.search,
+  .files-row.header.search {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 0.8fr);
+  }
+
+  .files-row.search .files-cell.kind {
+    display: none;
+  }
+}
+
+@container (max-width: 400px) {
+  .files-row.search,
+  .files-row.header.search {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .files-row.search .files-cell.from {
+    display: none;
+  }
+}

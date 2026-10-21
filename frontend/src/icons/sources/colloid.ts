@@ -71,7 +71,9 @@ import xOfficeSpreadsheet from '@colloid/mimetypes/scalable/x-office-spreadsheet
 import folder from '@colloid/places/scalable/folder.svg?url'
 import folderDownload from '@colloid/places/scalable/folder-download.svg?url'
 import folderNew from '@colloid/places/symbolic/folder-new-symbolic.svg?url'
+import folderOpen from '@colloid/places/symbolic/folder-open-symbolic.svg?url'
 import folderRemote from '@colloid/places/symbolic/folder-remote-symbolic.svg?url'
+import folderSavedSearch from '@colloid/places/symbolic/folder-saved-search-symbolic.svg?url'
 import networkServer from '@colloid/places/symbolic/network-server-symbolic.svg?url'
 import userHome from '@colloid/places/symbolic/user-home-symbolic.svg?url'
 import userTrash from '@colloid/places/symbolic/user-trash-symbolic.svg?url'
@@ -147,6 +149,8 @@ export const COLLOID_ICONS = {
   'drive-harddisk-symbolic': { url: driveHarddiskSymbolic, kind: 'symbolic' },
   'user-home-symbolic': { url: userHome, kind: 'symbolic' },
   'folder-remote-symbolic': { url: folderRemote, kind: 'symbolic' },
+  'folder-open-symbolic': { url: folderOpen, kind: 'symbolic' },
+  'folder-saved-search-symbolic': { url: folderSavedSearch, kind: 'symbolic' },
   'folder-new-symbolic': { url: folderNew, kind: 'symbolic' },
   'user-trash-symbolic': { url: userTrash, kind: 'symbolic' },
   'document-edit-symbolic': { url: documentEdit, kind: 'symbolic' },

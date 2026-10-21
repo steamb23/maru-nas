@@ -1563,6 +1563,33 @@ type FilesCopyRequest struct {
 	To    string   `json:"to"`
 }
 
+// FilesSearchEvent는 GET /api/files/search 응답(text/event-stream)의 사건 하나다(data 줄의 JSON). 진행(Hits, Dirs)이
+// 여러 번 오고 마지막에 Result나 Error 하나가 온다. 시작하기 전의 실패는 사건이 아니라 보통의 오류 응답이다.
+type FilesSearchEvent struct {
+	// Hits는 앞 사건 뒤에 새로 찾은 항목이다.
+	Hits []FilesSearchHit `json:"hits,omitempty"`
+	// Dirs는 지금까지 읽은 폴더 수, Skipped는 읽지 못해 건너뛴 폴더 수다.
+	Dirs    int                `json:"dirs"`
+	Skipped int                `json:"skipped,omitempty"`
+	Result  *FilesSearchResult `json:"result,omitempty"`
+	// Error는 검색을 시작한 뒤 멈춘 오류이고, Status는 같은 오류를 응답으로 받았을 때의 HTTP 상태다.
+	Error  *ErrorResponse `json:"error,omitempty"`
+	Status int            `json:"status,omitempty"`
+}
+
+// FilesSearchHit은 찾은 항목 하나다. Path는 절대 경로, Type은 FileItem.Type과 같다(종류를 모르면 unknown).
+type FilesSearchHit struct {
+	Path string `json:"path"`
+	Type string `json:"type" tstype:"'dir' | 'file' | 'symlink' | 'other' | 'unknown'"`
+}
+
+// FilesSearchResult는 검색의 끝이다. Truncated면 찾은 항목이 상한(2000개)에 닿아 멈췄다.
+type FilesSearchResult struct {
+	Dirs      int  `json:"dirs"`
+	Skipped   int  `json:"skipped,omitempty"`
+	Truncated bool `json:"truncated,omitempty"`
+}
+
 // FilesCopyEvent는 POST /api/files/copy 응답(text/event-stream)의 사건 하나다(data 줄의 JSON). Progress가 여러 번
 // 오고 마지막에 Result나 Error 하나가 온다. 시작하기 전의 실패는 사건이 아니라 보통의 오류 응답이다.
 type FilesCopyEvent struct {

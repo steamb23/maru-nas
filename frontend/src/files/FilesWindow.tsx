@@ -34,6 +34,7 @@ import { DeleteBody, DeleteTitle, FailuresBody } from './DeleteBody'
 import { dropMode } from './copyJobs'
 import { DROP_TARGET, FileList, type FileListHandle, type SortKey, type View } from './FileList'
 import { InfoPane } from './InfoPane'
+import { type Search, SearchView } from './SearchView'
 import { TrashView } from './TrashView'
 import { startDownload } from './download'
 import { type History, back, canBack, canForward, current, forward, replaceCurrent, startHistory, visit } from './history'
@@ -160,6 +161,9 @@ export function FilesWindow({ active }: WindowViewProps) {
   const [queryInput, setQueryInput] = useState('')
   const [sel, setSel] = useState<Selection>(NO_SELECTION)
   const [pane, setPane] = useState<string | null>(null)
+  // deep이면 찾기 칸이 지금 폴더를 거르지 않고, Enter로 하위 폴더까지 찾는다. search가 있으면 목록 대신 검색 결과를 보인다.
+  const [deep, setDeep] = useState(false)
+  const [search, setSearch] = useState<Search | null>(null)
   // trashOpen이면 목록 대신 휴지통 보기를 보인다(둘러보던 폴더와 기록은 그대로 둔다).
   const [trashOpen, setTrashOpen] = useState(false)
   const [trashCount, setTrashCount] = useState<number | null>(null)
@@ -255,14 +259,15 @@ export function FilesWindow({ active }: WindowViewProps) {
   }, [path, reload, rootsReady, rootsTry])
   const listingState: ListingState = listingResult.path === path ? listingResult : { path, status: 'loading' }
 
-  // 찾기 입력을 잠시 기다렸다가 보기에 반영한다.
+  // 찾기 입력을 잠시 기다렸다가 보기에 반영한다. 하위 폴더 검색 범위면 지금 폴더를 거르지 않는다.
   useEffect(() => {
+    const next = deep ? '' : queryInput
     const timer = window.setTimeout(() => {
-      setView((v) => (v.query === queryInput ? v : { ...v, query: queryInput }))
+      setView((v) => (v.query === next ? v : { ...v, query: next }))
       setSel(NO_SELECTION)
     }, QUERY_DELAY_MS)
     return () => window.clearTimeout(timer)
-  }, [queryInput])
+  }, [queryInput, deep])
 
   useEffect(
     () => () => {
@@ -340,19 +345,53 @@ export function FilesWindow({ active }: WindowViewProps) {
     setPrep(null)
     setListError(null)
     setTrashOpen(false)
+    setSearch(null)
     setHistory(next)
   }
   const navigate = (to: string) => {
     if (!findRoot(roots, to)) return
     if (to === path) {
       if (trashOpen) closeTrash()
+      if (search) closeSearch()
       return
     }
     moveTo((h) => (h ? visit(h, to) : startHistory(to)))
   }
+  const closeSearch = () => {
+    setSearch(null)
+    setQueryInput('')
+  }
+  // startSearch는 지금 폴더와 그 아래에서 찾는다. 같은 찾기어로 다시 부르면 다시 찾는다.
+  const startSearch = (query: string) => {
+    if (!path || !query.trim()) return
+    setSel(NO_SELECTION)
+    setPane(null)
+    setSearch((s) => ({ path: s?.path ?? path, query, seq: (s?.seq ?? 0) + 1 }))
+  }
+  const retrySearch = () => setSearch((s) => (s ? { ...s, seq: s.seq + 1 } : s))
+  const searchSecurity = async (level?: RequiredLevel) => {
+    if (await requestStepUp(dialogs.scope, { level, target: 'files' })) retrySearch()
+    else closeSearch()
+  }
+  // locate는 찾은 항목이 든 폴더를 열고 그 항목을 고른다.
+  const locate = (p: string) => {
+    const dir = dirName(p)
+    const pick = { name: p.slice(dir.length + 1), listingId: listing?.id ?? '' }
+    if (dir === path) {
+      closeSearch()
+      setPendingSelect(pick)
+      reopen(true)
+      return
+    }
+    // moveTo가 고르기 대상을 지우므로 그 뒤에 둔다.
+    moveTo((h) => (h ? visit(h, dir) : startHistory(dir)))
+    setPendingSelect(pick)
+  }
+
   const openTrash = () => {
     if (trashOpen) return
     setTrashOpen(true)
+    setSearch(null)
     setSel(NO_SELECTION)
     setPane(null)
     setQueryInput('')
@@ -770,12 +809,14 @@ export function FilesWindow({ active }: WindowViewProps) {
     }
   }
 
-  const download = (item: FileItem) => {
-    if (!path) return
-    startDownload(joinPath(path, item.name), item.name).catch((err: unknown) => {
+  const downloadPath = (p: string, name: string) => {
+    startDownload(p, name).catch((err: unknown) => {
       if (err instanceof ApiError && err.status === 401) return
-      dialogs.alert({ title: item.name, message: t(errorKey(err)) })
+      dialogs.alert({ title: name, message: t(errorKey(err)) })
     })
+  }
+  const download = (item: FileItem) => {
+    if (path) downloadPath(joinPath(path, item.name), item.name)
   }
 
   const menuItems = (item: FileItem | null, s: Selection): ContextMenuItem[] => {
@@ -982,8 +1023,8 @@ export function FilesWindow({ active }: WindowViewProps) {
           className="files-icon-button"
           aria-label={t('files.toolbar.back')}
           title={t('files.toolbar.back')}
-          disabled={!trashOpen && (!history || !canBack(history))}
-          onClick={() => (trashOpen ? closeTrash() : moveTo((h) => (h ? back(h) : h)))}
+          disabled={!trashOpen && !search && (!history || !canBack(history))}
+          onClick={() => (trashOpen ? closeTrash() : search ? closeSearch() : moveTo((h) => (h ? back(h) : h)))}
         >
           <IconImage name="go-previous-symbolic" size={16} />
         </button>
@@ -1013,7 +1054,7 @@ export function FilesWindow({ active }: WindowViewProps) {
           aria-label={t('files.toolbar.refresh')}
           title={t('files.toolbar.refresh')}
           disabled={!path}
-          onClick={() => (trashOpen ? setTrashReload((n) => n + 1) : reopen(true))}
+          onClick={() => (trashOpen ? setTrashReload((n) => n + 1) : search ? retrySearch() : reopen(true))}
         >
           <IconImage name="view-refresh-symbolic" size={16} />
         </button>
@@ -1054,7 +1095,9 @@ export function FilesWindow({ active }: WindowViewProps) {
           placeholder={
             trashOpen
               ? t('files.trash.search')
-              : listing && listing.total > MANY_ITEMS
+              : deep
+                ? t('files.search.placeholder')
+                : listing && listing.total > MANY_ITEMS
                 ? t('files.toolbar.searchMany', { total: fmt(listing.total) })
                 : t('files.toolbar.search')
           }
@@ -1062,13 +1105,33 @@ export function FilesWindow({ active }: WindowViewProps) {
           maxLength={255}
           onChange={(e) => setQueryInput(e.currentTarget.value)}
           onKeyDown={(e) => {
-            if (e.key === 'Escape' && queryInput) {
+            if (e.key === 'Escape' && (queryInput || search)) {
               e.preventDefault()
-              setQueryInput('')
+              if (search) closeSearch()
+              else setQueryInput('')
+            } else if (e.key === 'Enter' && deep && !trashOpen) {
+              e.preventDefault()
+              startSearch(queryInput)
             }
           }}
         />
       </label>
+      {!trashOpen && (
+        <button
+          type="button"
+          className="files-icon-button files-search-scope"
+          aria-label={t('files.search.deep')}
+          title={t('files.search.deep')}
+          aria-pressed={deep}
+          disabled={!path}
+          onClick={() => {
+            if (deep) setSearch(null)
+            setDeep(!deep)
+          }}
+        >
+          <IconImage name="folder-saved-search-symbolic" size={16} />
+        </button>
+      )}
     </div>
   )
 
@@ -1100,6 +1163,24 @@ export function FilesWindow({ active }: WindowViewProps) {
           runOp={runOp}
           changed={changed}
           reload={trashReload}
+        />
+      </SidebarLayout>
+    )
+  }
+
+  if (search) {
+    return (
+      <SidebarLayout className="files" narrowWidth={FILES_NARROW_WIDTH} navLabel={t('files.nav.label')} nav={nav} header={header}>
+        <SearchView
+          search={search}
+          roots={roots}
+          admin={admin}
+          onFolder={navigate}
+          onLocate={locate}
+          onPreview={preview}
+          onDownload={downloadPath}
+          onSecurity={(level) => void searchSecurity(level)}
+          onRetry={retrySearch}
         />
       </SidebarLayout>
     )

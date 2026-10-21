@@ -17,6 +17,9 @@ const (
 	// (MaxRequest) 안에 들어가야 한다.
 	MaxCopy       = 512
 	MaxCopyParams = 56 << 10
+	// MaxSearch는 fs.search가 찾는 최대 항목 수다. 넘치면 Truncated다. MaxSearchQuery는 찾기어의 최대 바이트 수다.
+	MaxSearch      = 2000
+	MaxSearchQuery = 255
 	// MaxNameBytes는 이름 하나의 최대 바이트 수(NAME_MAX)다.
 	MaxNameBytes = 255
 )

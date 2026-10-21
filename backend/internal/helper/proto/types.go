@@ -136,6 +136,36 @@ type CopyFailure struct {
 	Code string `json:"code"`
 }
 
+// SearchParams는 fs.search의 인자다. Path 폴더와 그 아래에서 이름에 Query가 든(대소문자 무시) 항목을 Limit개
+// (MaxSearch 이하, 0이면 MaxSearch)까지 찾는다.
+type SearchParams struct {
+	Path  string `json:"path"`
+	Query string `json:"query"`
+	Limit int    `json:"limit,omitempty"`
+}
+
+// SearchHit은 찾은 항목 하나다. Path는 SearchParams.Path 안의 상대 경로("사진/2024/a.jpg"), Type은 Type*
+// 중 하나이거나 종류를 모르면 빈 값이다.
+type SearchHit struct {
+	Path string `json:"path"`
+	Type string `json:"type,omitempty"`
+}
+
+// SearchProgress는 fs.search의 진행 응답이다. Hits는 앞 응답 뒤에 새로 찾은 항목, Dirs는 지금까지 읽은 폴더 수,
+// Skipped는 읽지 못해 건너뛴 폴더 수다.
+type SearchProgress struct {
+	Hits    []SearchHit `json:"hits,omitempty"`
+	Dirs    int         `json:"dirs"`
+	Skipped int         `json:"skipped,omitempty"`
+}
+
+// SearchResult는 fs.search의 결과다. 찾은 항목은 모두 진행 응답으로 보냈다. Truncated는 Limit에서 멈췄는지다.
+type SearchResult struct {
+	Dirs      int  `json:"dirs"`
+	Skipped   int  `json:"skipped,omitempty"`
+	Truncated bool `json:"truncated,omitempty"`
+}
+
 // RemoveParams는 fs.remove의 인자다. Recursive가 false면 빈 폴더와 파일만 지운다.
 type RemoveParams struct {
 	Path      string `json:"path"`

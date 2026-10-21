@@ -26,6 +26,8 @@ import type {
   FilesPrefsRequest,
   FilesPrepareResponse,
   FilesRenameRequest,
+  FilesSearchHit,
+  FilesSearchResult,
   FilesTrashItemRequest,
   FilesTrashList,
   FilesTrashRequest,
@@ -1379,6 +1381,58 @@ export async function copyFiles(
     reader.releaseLock()
   }
   throw new TypeError('/files/copy: stream ended before the result')
+}
+
+const isSearchHit = (v: unknown): v is FilesSearchHit =>
+  isObj(v) && isStr(v.path) && isOneOf(v.type, [...FILE_TYPES, 'unknown'] as const)
+
+const isSearchResult = (v: unknown): v is FilesSearchResult =>
+  isObj(v) && isNum(v.dirs) && isOptional(v.skipped, isNum) && isOptional(v.truncated, isBool)
+
+// SearchProgress는 검색 응답의 진행 하나다(새로 찾은 항목과 지금까지 읽은 폴더 수).
+export interface SearchProgress {
+  hits: FilesSearchHit[]
+  dirs: number
+  skipped: number
+}
+
+// searchFiles는 path 폴더와 그 아래에서 이름에 query가 든 항목을 찾는다(대소문자 무시). 찾은 항목은 onProgress로
+// 오는 대로 받는다. 시작하기 전의 실패와 시작한 뒤 멈춘 실패는 ApiError로 던진다. signal로 끊으면 서버와 도우미가 멈춘다.
+export async function searchFiles(
+  path: string,
+  query: string,
+  onProgress: (p: SearchProgress) => void,
+  signal?: AbortSignal,
+): Promise<FilesSearchResult> {
+  const url = `/files/search?path=${q(path)}&q=${q(query)}`
+  const res = await request('GET', url, { signal })
+  if (!res.body) throw new Error('/files/search: no response body')
+  const reader = res.body.pipeThrough(new TextDecoderStream()).getReader()
+  let buffer = ''
+  try {
+    for (;;) {
+      const { value, done } = await reader.read()
+      if (done) break
+      const parsed = parseCopyEvents(buffer + value)
+      buffer = parsed.rest
+      for (const ev of parsed.events) {
+        if (!isObj(ev)) continue
+        if (isSearchResult(ev.result)) return ev.result
+        if (isObj(ev.error)) {
+          const status = isNum(ev.status) && ev.status >= 400 ? ev.status : 503
+          if (status === 401) onUnauthorized?.()
+          throw apiErrorOf('/files/search', status, ev.error)
+        }
+        if (isNum(ev.dirs)) {
+          const hits = Array.isArray(ev.hits) ? (ev.hits as unknown[]).filter(isSearchHit) : []
+          onProgress({ hits, dirs: ev.dirs, skipped: isNum(ev.skipped) ? ev.skipped : 0 })
+        }
+      }
+    }
+  } finally {
+    reader.releaseLock()
+  }
+  throw new TypeError('/files/search: stream ended before the result')
 }
 
 // 휴지통. 권한 도우미가 trash-put과 같은 곳·형식으로 다룬다(서버의 trash-list·trash-restore와 같은 휴지통).
