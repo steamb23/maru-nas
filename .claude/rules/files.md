@@ -18,7 +18,7 @@ paths:
 - `/api/files/*`는 보이는 폴더 밖 경로를 도우미에 보내기 전에 403 `outside_roots`로 거른다(`allowedPath`). 실제 범위는 도우미가 기준 디렉터리로 다시 정한다. `/srv/` 아래가 아닌 공유 폴더(sharerootfs)는 `reachable: false`이고 열 수 없다(도우미 추가 기준 경로는 로드맵)
 - **공유 폴더 스냅숏**: `ShareMgmt.enumerateSharedFolders`는 관리자 전용이라 관리자 세션이 받아 `site.json`의 `files.shares`에 둔다. `startSession`이 관리자이고 도우미가 있으면 뒤에서(10초, 로그인 응답을 기다리게 하지 않음) 받고, 설정 앱의 "지금 받기"(`POST /api/site/files/refresh`)가 바로 받는다. 고정 메서드 호출(`sharesMethods`, `NoTouch`)이고, 성공했을 때만 바꾼다. 서버가 스스로 `site.json`을 쓰는 유일한 경우이며, 메모리(`handler.filesSite`)와 함께 바꾼다
   - 응답 해석은 `files.ParseShares`: `absdirpath`·`status`는 OMV 8.1.0부터 있으므로 없으면 `mntent.dir` + `reldirpath`로 만들고, `status`가 있고 `OK`가 아니면 뺀다(`auth-omv.md`의 "OMV 8 버전별 차이")
-- 보안 강화 정책 `files`(`api.SecurityPolicy.Files`)는 `/api/files/*` 전부(뿌리 포함)를 `requireFiles`에서 막는다. 요청마다 보므로 정책을 올려도 따로 닫을 것이 없고, 이미 시작한 전송은 끝까지 간다
+- 보안 강화 정책 `files`(`api.SecurityPolicy.Files`)는 `/api/files/*` 전부(뿌리 포함)를 막는다. 적용 범위 `filesScope`가 `writes`면 읽기 라우트(`requireFiles`: 뿌리, 목록, 범위, find, prepare, 정보, 내려받기, 휴지통 목록·볼륨)는 열고 쓰기 라우트(`requireFilesWrite`: 올리기, 만들기, 이름 바꾸기, 삭제, 휴지통 넣기·되돌리기·영구 삭제·비우기)만 막는다. 요청마다 보므로 정책을 올려도 따로 닫을 것이 없고, 이미 시작한 전송은 끝까지 간다
 
 ## 목록(큰 폴더)
 
@@ -42,20 +42,32 @@ paths:
 - **보이는 폴더 지키기**(`rootFolder`): 도우미는 자기 기준 디렉터리(홈, `/srv` 아래 마운트 지점)만 지키고 공유 폴더는 지키지 않는다. 그래서 onmaru가 보이는 폴더(홈, 스냅숏의 공유 폴더 전부, 디스크) 자신이거나 그것을 품은 경로의 이름 바꾸기·옮기기·삭제를 409 `root_folder`로 막는다(디스크 최상위 보기에서는 공유 폴더가 디스크의 한 폴더로 보인다). 스냅숏이 없는 대체 상태에서는 공유 폴더를 모르므로 파일 시스템 권한(디스크 맨 위는 보통 root 소유)에 맡긴다
 - 새 이름(`splitNew`, `newNameOK`)은 올리기와 같은 검사(`proto.ValidName`, UTF-8, `.onmaru-upload-` 접두사 금지)를 거친다. 폴더를 자기 안으로 옮기는 요청(`to`가 `from` 안)과 같은 경로는 400이다. 프런트도 같은 검사(`paths.ts`의 `nameProblem`, `moveAllowed`)를 먼저 한다
 - 옮기기는 이름 바꾸기 하나다. 다른 기준 디렉터리나 다른 파일시스템이면 도우미가 `cross_device`(409)를 주고 복사하지 않는다. 대상이 있으면 덮어쓰지 않는다(`file_exists`)
-- 삭제는 SMB 휴지통(`.recycle`)을 거치지 않는 영구 삭제다(휴지통은 `ROADMAP.md`). `recursive`는 목록에서 폴더(`type`이 `dir`, 심볼릭 링크 아님)인 항목에만 보내고, 그 밖의 항목이 실제로는 비어 있지 않은 폴더면 `not_empty`(409)다. 목록이 낡아 파일로 보인 폴더를 통째로 지우지 않게 하기 위해서다. 도우미는 `fs.remove`를 10분까지 기다리고, 넘으면 일부만 지운 채 `transfer_timeout`이다(다시 지우면 이어서 지운다)
+- `POST /api/files/delete`는 SMB 휴지통(`.recycle`)을 거치지 않는 영구 삭제다(삭제의 기본은 아래 "휴지통"). `recursive`는 목록에서 폴더(`type`이 `dir`, 심볼릭 링크 아님)인 항목에만 보내고, 그 밖의 항목이 실제로는 비어 있지 않은 폴더면 `not_empty`(409)다. 목록이 낡아 파일로 보인 폴더를 통째로 지우지 않게 하기 위해서다. 도우미는 `fs.remove`를 10분까지 기다리고, 넘으면 일부만 지운 채 `transfer_timeout`이다(다시 지우면 이어서 지운다)
 - `GET /api/files/list/{id}/find?name=&sort=&order=&q=`는 보기에서 그 이름의 자리다(`Listing.IndexOf`, 없으면 -1). 만들거나 이름을 바꾼 뒤 다시 받은 목록에서 그 줄을 고를 때 쓰며 도우미를 부르지 않는다
 - 바꾼 뒤 프런트는 목록을 `refresh=1`로 다시 연다. 폴더 mtime이 거친 파일시스템에서도 낡은 목록을 다시 쓰지 않게 하기 위해서다
 
+## 휴지통
+
+- 도우미가 FreeDesktop 휴지통 규격을 trash-put과 같은 곳·형식으로 다룬다(`.claude/docs/helper.md`의 "휴지통"). 서버의 `trash-list`·`trash-restore`·`trash-empty`와 같은 휴지통이다
+- 라우트(`internal/server/files_trash.go`): `POST /api/files/trash {path}`(넣기, 보이는 폴더는 `root_folder`), `GET /api/files/trash`(모든 휴지통 항목, 시각은 밀리초), `GET /api/files/trash/volumes`(홈·디스크마다 `home`·`shared`·`own`·`none`), `POST /api/files/trash/restore {trash, name, to}`, `POST /api/files/trash/purge {trash, name}`, `POST /api/files/trash/empty`. 넣을 곳이 없으면 409 `no_trash`
+  - 되돌리기는 브라우저가 보낸 `to`(목록의 원래 경로나 같은 폴더의 새 이름)를 `splitNew`·`allowedPath`로 거른 뒤 도우미에 넘긴다. 도우미는 `to`로만 되돌리므로 보이는 폴더 밖으로 되돌리지 않는다
+  - 휴지통 경로(`trash`)는 도우미가 직접 찾은 사용자의 휴지통 디렉터리와 같을 때만 받는다
+- **디스크 휴지통**: OMV 데이터 디스크 맨 위는 보통 root 소유라 사용자가 `.Trash-<uid>`를 만들 수 없다. 관리자가 설정 앱 서버 페이지(`FilesSection`)에서 디스크마다 "휴지통 만들기"를 누르면 `POST /api/site/files/trash {disk}`(관리자, 디스크는 `MountsUnder`에 있어야 함)가 도우미 root 연산 `trash.prepare`로 맨 위에 `.Trash`(1777)를 만든다. 상승하지 않았으면 `elevation_required`이고 화면이 `requestElevation` 뒤 다시 요청한다. 상태는 `GET /api/site/files/trash`(관리자의 사용자 권한으로 `fs.trashdirs`)
+- 프런트 삭제(`FilesWindow`의 `deleteItems`): 지금 폴더의 볼륨(`fetchTrashVolumes` + `paths.ts`의 `volumeOf`)이 `none`이면 영구 삭제 확인(`DeleteBody` `noTrash`), 아니면 시안 S-Delete의 세 단추(영구 삭제… / 취소 / 휴지통으로 옮기기, 휴지통 단추에 포커스)다. Shift+Delete는 영구 삭제 확인으로 바로 간다. 휴지통에 넣지 못한 항목(`no_trash`, `cross_device`)은 `runOp`의 `keep`으로 모아 영구 삭제를 따로 묻는다. 사이드바의 휴지통 항목은 `data-drop-path`가 `TRASH`(`'trash:'`)라 끌어 놓으면 휴지통으로 옮긴다
+- **휴지통 보기**(`TrashView.tsx`, 시안 AC-Trash): `FilesWindow`의 `trashOpen`이면 목록 대신 그린다(둘러보던 폴더·기록은 그대로, 뒤로 단추와 사이드바 항목으로 나간다). 모든 휴지통 항목을 지운 시각 순으로 이름·원래 위치·지운 날짜·크기 열에 보이고(`virtual.ts`로 보이는 줄만, `selection.ts`로 고르기), 찾기는 도구 막대 찾기어로 이름을 거른다. 되돌리기·영구 삭제·휴지통 비우기와 정보 패널(원래 위치, 지운 날짜, 보관한 곳)을 둔다. 하나를 되돌릴 때 원래 자리에 같은 이름이 있으면 `askName`(`restore`)으로 새 이름을 묻는다. 휴지통이 없는 보이는 폴더는 위에 알린다
+- 휴지통이 바뀌면 변경 알림의 `dirs`에 `TRASH`를 넣는다. 사이드바의 항목 수와 휴지통 보기가 다시 받는다
+
 ## 창(프런트)
 
-- `src/files/`: `FilesWindow.tsx`(사이드바·도구 막대·상태 표시줄, 상태와 이동, 만들기·이름 바꾸기·삭제·옮기기), `FileList.tsx`(가상 목록, 고르기, 끌어서 옮기기), `InfoPane.tsx`(정보 패널), `UploadPanel.tsx`, `ConflictBody.tsx`·`conflictDialog.tsx`(이름 충돌), `NameForm.tsx`·`nameDialog.tsx`(이름 입력), `DeleteBody.tsx`(삭제 확인, 하지 못한 항목 안내), 순수 모듈 `paths.ts`, `history.ts`, `virtual.ts`, `pageCache.ts`, `kinds.ts`, `uploadQueue.ts`, `messages.ts`, `selection.ts`, `ops.ts`(Vitest `files.test.ts`)
+- `src/files/`: `FilesWindow.tsx`(사이드바·도구 막대·상태 표시줄, 상태와 이동, 만들기·이름 바꾸기·삭제·옮기기), `FileList.tsx`(가상 목록, 고르기, 끌어서 옮기기), `InfoPane.tsx`(정보 패널), `UploadPanel.tsx`, `ConflictBody.tsx`·`conflictDialog.tsx`(이름 충돌), `NameForm.tsx`·`nameDialog.tsx`(이름 입력), `DeleteBody.tsx`(삭제 확인, 하지 못한 항목 안내), `TrashView.tsx`(휴지통 보기), `stepUp.ts`(쓰기 요청의 보안 확인), 순수 모듈 `paths.ts`, `history.ts`, `virtual.ts`, `pageCache.ts`, `kinds.ts`, `uploadQueue.ts`, `messages.ts`, `selection.ts`, `ops.ts`(Vitest `files.test.ts`)
 - 셸 앱이고 창을 여러 개 연다(`multiInstance`). 상태는 창마다 컴포넌트에 두며 모듈 저장소에 두지 않는다. 권한 도우미가 없으면(`capabilities.helper`) 앱은 그대로 보이고 창 안에 못 쓰는 이유를 안내한다(`appAccess`의 `helper_missing`, `AddonUnavailable`). 도우미는 설정되어 있는데 닿지 않거나 티켓이 없으면 창이 `/api/files/roots`의 오류(`helper_unavailable`·`helper_reauth`)를 보인다
 - 시안: Design 캔버스의 AC-Main·AC-Selected(정보 패널은 파일을 눌렀을 때만, 폴더는 고르기만), AC-Large(가상 스크롤·자리 표시·위치 말풍선), AC-Large-Sort(날짜순 준비 배너), S-Menu(올리기 목록), S-Locked(보안 확인), S-Fallback(대체 안내)
 - 틀은 `SidebarLayout`의 `header`(도구 막대)를 쓰고 좁은 기준은 720px다. 정보 패널은 내용 너비 640px 아래(컨테이너 쿼리)에서 목록 위에 덮는다
 - 가상 목록: 줄 높이 34px(`virtual.ts`의 `ROW_HEIGHT`, CSS `.files-row`와 맞춤), 스크롤 높이가 800만 px를 넘으면 비율로 줄인다(브라우저 요소 높이 한계). 200줄 페이지를 보기마다 캐시하고(60페이지), 스크롤이 90ms 멈춘 뒤 받는다(동시 2페이지). 받은 페이지는 `useMemo`로 만든 보기별 캐시 객체에 쌓고 `bump`로 다시 그린다. 요청을 끊는 컨트롤러는 마운트마다 effect에서 만든다(StrictMode가 정리를 한 번 더 불러도 끊긴 채 남지 않게)
 - `role="grid"` + `aria-rowcount`/`aria-rowindex`, 포커스는 스크롤 영역 하나에 두고 고른 줄을 `aria-activedescendant`로 가리킨다. 화살표·PageUp/Down·Home/End로 고르고 Enter로 열며, Backspace는 상위 폴더다. 키보드로 폴더에 들어가면 새 목록에 포커스를 돌려준다
 - 비동기 결과는 요청(뿌리 `try`, 목록 `path`, 정보 패널 `path`)과 함께 상태에 두고, 지금 요청과 다르면 받는 중으로 본다(effect 안에서 상태를 동기로 지우지 않는다, oxlint `set-state-in-effect`)
-- 휴지통과 시안의 아이콘 보기 전환은 아직 그리지 않는다(`ROADMAP.md`)
+- 시안의 아이콘 보기 전환은 아직 그리지 않는다(`ROADMAP.md`)
+- 쓰기 요청(이름 대화상자, `runOp`의 항목, 올리기, 휴지통 작업)은 `stepUp.ts`의 `withStepUp`으로 보낸다. `security_required`면 창을 잠그지 않고 확인 대화상자(`requestStepUp`, 동시에 막힌 요청은 대화상자 하나를 함께 쓴다)를 띄운 뒤 한 번 다시 한다. 창 전체의 확인 화면은 뿌리·목록이 막혔을 때(읽기까지 막는 정책)만 보인다
 
 ## 고르기와 작업(프런트)
 
@@ -63,7 +75,7 @@ paths:
 - 정보 패널은 하나만 골랐고 그 줄이 파일일 때만 연다(여러 개를 고르거나 고르기를 지우면 닫는다). 패널의 이름 바꾸기·삭제 단추는 패널의 파일에 한다
 - 메뉴(`FilesWindow`의 `menuItems`): 줄은 (하나일 때) 열기 또는 내려받기 / 이름 바꾸기(F2) / 삭제…(Delete, 여럿이면 "항목 N개 삭제…") / (파일 하나) 정보, 빈 곳은 폴더 만들기·올리기·모두 선택·새로 고침이다. 고르지 않은 줄에서 열면 그 줄 하나를 고른다. 쓸 수 없는 폴더에서는 비활성 이유로 "쓰기 권한 없음"을 보인다
 - 이름 대화상자(`NameForm`)는 `PasskeyAdd`처럼 대화상자 안에서 요청하고 실패(`ops.ts`의 `opErrorKey`)를 입력란 아래에 보인다. 처음 포커스를 받을 때 이름 바꾸기는 확장자 앞까지(`stemLength`) 고른다. 새 폴더 이름은 `find`로 "새 폴더", "새 폴더 (2)"…에서 없는 것을 고른다
-- 여러 항목 작업(삭제, 옮기기)은 `runEach`로 하나씩 차례로 한다(도우미의 사용자당 동시 연산 4개 안에서 목록에 자리를 남긴다). 300ms가 지나도 끝나지 않으면 진행 배너와 "중지"(하던 항목까지 하고 멈춤)를 보이고, 하지 못한 항목은 이유별로 묶어(`groupFailures`) 알린다. 세션이 끝났거나(401) `security_required`·`cross_device`면 남은 항목도 안 되므로 멈춘다
+- 여러 항목 작업(삭제, 옮기기, 휴지통 넣기·되돌리기·영구 삭제·비우기, `ops.ts`의 `RunOp`)은 `runEach`로 하나씩 차례로 한다(도우미의 사용자당 동시 연산 4개 안에서 목록에 자리를 남긴다). 300ms가 지나도 끝나지 않으면 진행 배너와 "중지"(하던 항목까지 하고 멈춤)를 보이고, 하지 못한 항목은 이유별로 묶어(`groupFailures`) 알린다. 세션이 끝났거나(401) 보안 확인을 취소했거나 `stopOn`(옮기기의 `cross_device`)이면 남은 항목도 안 되므로 멈춘다
 - **끌어서 옮기기**: HTML5 끌기는 `nativeGuard`가 `dragstart`에서 막으므로 포인터로 한다(마우스·펜만. 터치는 스크롤·길게 누르기 메뉴와 겹친다). 누른 줄에서 6px 넘게 움직이면 그때 pointer capture를 잡는다(그냥 누르기의 click은 줄로 간다). 고르지 않은 줄을 끌면 그 줄 하나를 고르되 정보 패널은 열지 않는다(끄는 도중 목록 폭이 바뀌면 놓을 곳이 움직인다)
   - 놓을 곳은 `elementFromPoint` + `[data-drop-path]`(폴더 줄, 경로 단계, 사이드바 항목, 다른 탐색기 창의 것 포함)다. 지금 폴더와, 끄는 폴더 자신·그 안은 놓을 곳이 아니다. 표시(`DROP_TARGET`)와 이름표(`.files-drag-ghost`, body에 붙이고 포인터를 받지 않음)는 렌더 없이 DOM으로 바꾼다
   - 목록 위·아래 32px 띠에서는 스크롤하고, Esc나 창 포커스를 잃으면 취소한다. 끌기를 끝낸 뒤 따라오는 click 하나는 무시한다(Esc로 취소하면 놓기 전에 끝나므로 다음 누름까지 남긴다)
@@ -74,7 +86,9 @@ paths:
 ## 테스트
 
 - Go: `internal/files`(정렬, 스냅숏 해석 8.0·8.1+, 보기·찾기·자리, 캐시 상한·유휴), `internal/server/files_test.go`(`envOptions{files: true}`가 가짜 도우미 디스크를 디스크·`FilesSrvDir`로 둔다: 뿌리·스냅숏·관리자 로그인 갱신, 범위 밖 403, 목록·범위·prepare·find·410, 내려받기 헤더·Range·If-Range, 올리기 형식·길이·이름·덮어쓰기, 만들기·이름 바꾸기·옮기기(같은 디스크, 홈으로는 `cross_device`)·삭제(`not_empty`)와 `root_folder`(디스크 최상위 보기 포함), 보안 정책)
-- Vitest: 고르기 구간, 새 이름 검사·확장자 앞 고르기, `moveAllowed`, `runEach` 중지·실패 묶기, 변경 알림
+- Go(휴지통): `TestFilesTrash`(홈·디스크 휴지통, 볼륨 종류, 되돌리기 범위·충돌, 영구 삭제, 비우기), `TestSiteTrashPrepare`(관리자, 상승 필요, 만든 뒤 `.Trash/<uid>`), `TestFilesSecurityWritesOnly`·`TestFilesScopeChangeNeedsStepUp`(쓰기 전용 범위)
+- Vitest: 고르기 구간, 새 이름 검사·확장자 앞 고르기, `moveAllowed`, `volumeOf`, `runEach` 중지·실패 묶기, 변경 알림
+- 브라우저(휴지통): 가짜 디스크 맨 위(`helper-root/srv/disk1`)는 개발 사용자 소유라 처음에는 `own`이다. `none`(휴지통 없음 안내)은 맨 위를 잠시 `chmod 0555`로 바꿔 보고, 디스크 휴지통 만들기는 상승할 수 있는 `totp`로 확인한다. 서버의 `trash-list --trash-dir=<휴지통>`으로 형식 호환을 볼 수 있다
 - `make dev-fake`: 가짜 OMV가 가짜 도우미 디스크(`helper-root/srv/disk1`)에 합성 파일과 공유 폴더(문서, 미디어, 사진, 폴더 없는 백업, 루트 파일시스템의 kvm)를 만든다(`cmd/fakeomv/files.go`). `FAKEFILES_LARGE=<n>`이면 사진/휴대폰 백업에 빈 파일 n개를 만든다. onmaru는 개발 전용 환경 변수 `ONMARU_DEV_FILES_SRV`(플래그·가동 설정 목록에 넣지 않음)로 그 아래 폴더를 디스크로 본다
 - 브라우저: Playwright 컨테이너는 문자셋 때문에 한글 이름 내려받기를 `download`로 저장한다(Blob도 같다). 한글 파일 이름은 실제 브라우저에서 확인한다
   - 끌어서 옮기기는 `page.mouse`(down → 여러 단계 move → up)로, 바깥 파일 끌어 놓기는 페이지 안에서 `DataTransfer`에 `File`을 넣어 `dragover`·`drop` 이벤트를 보내 확인한다
