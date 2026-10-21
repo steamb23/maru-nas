@@ -27,6 +27,8 @@ const (
 	verifyTimeout = 20 * time.Second
 	// opTimeout은 스트림이 아닌 연산의 시간 제한이다(도우미의 연산 제한보다 조금 길다).
 	opTimeout = 35 * time.Second
+	// removeTimeout은 삭제(fs.remove)의 시간 제한이다(도우미의 삭제 제한 10분보다 조금 길다).
+	removeTimeout = 10*time.Minute + 5*time.Second
 )
 
 // Client는 도우미 클라이언트다.
@@ -136,7 +138,11 @@ func (c *Client) run(ctx context.Context, ticket, scope, action string, params a
 		}
 		req.Params = b
 	}
-	return c.call(ctx, req, opTimeout, out)
+	timeout := opTimeout
+	if action == proto.ActionRemove {
+		timeout = removeTimeout
+	}
+	return c.call(ctx, req, timeout, out)
 }
 
 // Identity는 scope 범위 worker가 실제로 가진 권한이다.

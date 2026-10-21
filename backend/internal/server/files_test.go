@@ -388,6 +388,118 @@ func TestFilesUpload(t *testing.T) {
 	wantStatus(t, b.send(req), http.StatusLengthRequired)
 }
 
+func TestFilesMkdirRenameDelete(t *testing.T) {
+	e := newFilesEnv(t, envOptions{site: prefs.NewMemoryStore()})
+	e.shares(omvfake.Version85)
+	e.file("media/a.txt", "a")
+	e.file("media/sub/b.txt", "b")
+	e.file("docs/.keep", "")
+	e.file("other/c.txt", "c")
+	admin := e.browser()
+	admin.login("admin", "admin")
+	decode[api.FilesSettings](t, admin.do(http.MethodPost, "/api/site/files/refresh", struct{}{}))
+	b := e.browser()
+	b.login("user", "user")
+	media, docs, home := e.disk+"/media", e.disk+"/docs", e.helper.Home("user")
+	wantCode := func(rec *httptest.ResponseRecorder, status int, code string) {
+		t.Helper()
+		wantStatus(t, rec, status)
+		if got := decode[api.ErrorResponse](t, rec).Code; got != code {
+			t.Fatalf("code = %q, want %q (%s)", got, code, rec.Body.String())
+		}
+	}
+	mkdir := func(c *browser, p string) *httptest.ResponseRecorder {
+		return c.do(http.MethodPost, "/api/files/mkdir", api.FilesMkdirRequest{Path: p})
+	}
+	rename := func(c *browser, from, to string) *httptest.ResponseRecorder {
+		return c.do(http.MethodPost, "/api/files/rename", api.FilesRenameRequest{From: from, To: to})
+	}
+	remove := func(c *browser, p string, recursive bool) *httptest.ResponseRecorder {
+		return c.do(http.MethodPost, "/api/files/delete", api.FilesDeleteRequest{Path: p, Recursive: recursive})
+	}
+
+	// 폴더 만들기
+	rec := mkdir(b, media+"/새 폴더")
+	wantStatus(t, rec, http.StatusOK)
+	if it := decode[api.FileItem](t, rec); it.Name != "새 폴더" || it.Type != "dir" || it.State != "ok" || it.ModTime == 0 {
+		t.Fatalf("mkdir = %+v", it)
+	}
+	if st, err := os.Stat(filepath.Join(media, "새 폴더")); err != nil || !st.IsDir() {
+		t.Fatalf("mkdir on disk: %v", err)
+	}
+	wantCode(mkdir(b, media+"/새 폴더"), http.StatusConflict, api.ErrFileExists)
+	for _, p := range []string{media + "/.onmaru-upload-x", media + "/", "media/x", media + "/../x", "/"} {
+		wantStatus(t, mkdir(b, p), http.StatusBadRequest)
+	}
+	wantCode(mkdir(b, e.disk+"/x"), http.StatusForbidden, api.ErrOutsideRoots)
+	wantCode(mkdir(b, "/etc/x"), http.StatusForbidden, api.ErrOutsideRoots)
+	wantStatus(t, b.raw(http.MethodPost, "/api/files/mkdir", "text/plain", []byte(`{"path":"`+media+`/y"}`)), http.StatusUnsupportedMediaType)
+
+	// 만든 폴더의 자리(폴더 먼저, 이름순)
+	l := decode[api.FilesListing](t, b.do(http.MethodGet, "/api/files/list?path="+q(media)+"&refresh=1", nil))
+	find := func(query string) *httptest.ResponseRecorder {
+		return b.do(http.MethodGet, "/api/files/list/"+l.ID+"/find?"+query, nil)
+	}
+	for query, want := range map[string]int{"name=" + q("새 폴더"): 1, "name=a.txt": 2, "name=a.txt&order=desc": 2, "name=none": -1,
+		"name=" + q("새 폴더") + "&q=" + q("새"): 0} {
+		if got := decode[api.FilesFindResponse](t, find(query)); got.Index != want {
+			t.Fatalf("find %s = %d, want %d", query, got.Index, want)
+		}
+	}
+	wantStatus(t, find(""), http.StatusBadRequest)
+	wantCode(find("name=a.txt&sort=mtime"), http.StatusConflict, api.ErrSortPending)
+	wantCode(b.do(http.MethodGet, "/api/files/list/nope/find?name=a.txt", nil), http.StatusGone, api.ErrListingExpired)
+
+	// 이름 바꾸기
+	rec = rename(b, media+"/a.txt", media+"/가.txt")
+	wantStatus(t, rec, http.StatusOK)
+	if it := decode[api.FileItem](t, rec); it.Name != "가.txt" || it.Type != "file" || it.Size != 1 {
+		t.Fatalf("rename = %+v", it)
+	}
+	wantCode(rename(b, media+"/sub/b.txt", media+"/가.txt"), http.StatusConflict, api.ErrFileExists)
+	wantCode(rename(b, media+"/none", media+"/none2"), http.StatusNotFound, api.ErrNotFound)
+	// 같은 디스크의 다른 공유 폴더로 옮긴다(끌어 놓기).
+	wantStatus(t, rename(b, media+"/가.txt", docs+"/가.txt"), http.StatusOK)
+	if _, err := os.Stat(filepath.Join(docs, "가.txt")); err != nil {
+		t.Fatalf("moved: %v", err)
+	}
+	// 다른 디스크(홈)로는 옮기지 못한다.
+	wantCode(rename(b, docs+"/가.txt", home+"/가.txt"), http.StatusConflict, api.ErrCrossDevice)
+	// 폴더를 자기 안으로 옮기거나 같은 이름으로 바꾸지 않는다.
+	wantStatus(t, rename(b, media+"/sub", media+"/sub/inner"), http.StatusBadRequest)
+	wantStatus(t, rename(b, media+"/sub", media+"/sub"), http.StatusBadRequest)
+	wantStatus(t, rename(b, media+"/sub", media+"/.onmaru-upload-sub"), http.StatusBadRequest)
+	wantCode(rename(b, media+"/sub", e.disk+"/sub"), http.StatusForbidden, api.ErrOutsideRoots)
+	// 사이드바에 보이는 폴더(공유 폴더, 홈)는 이름을 바꾸거나 옮기지 않는다.
+	wantCode(rename(b, media, docs+"/media"), http.StatusConflict, api.ErrRootFolder)
+	wantCode(rename(b, home, docs+"/home"), http.StatusConflict, api.ErrRootFolder)
+
+	// 삭제
+	wantCode(remove(b, media+"/sub", false), http.StatusConflict, api.ErrNotEmpty)
+	wantStatus(t, remove(b, media+"/sub", true), http.StatusNoContent)
+	if _, err := os.Stat(filepath.Join(media, "sub")); !os.IsNotExist(err) {
+		t.Fatalf("sub left: %v", err)
+	}
+	wantCode(remove(b, media+"/sub", true), http.StatusNotFound, api.ErrNotFound)
+	wantStatus(t, remove(b, docs+"/가.txt", false), http.StatusNoContent)
+	wantCode(remove(b, media, true), http.StatusConflict, api.ErrRootFolder)
+	wantCode(remove(b, home, true), http.StatusConflict, api.ErrRootFolder)
+	wantCode(remove(b, e.disk+"/other", true), http.StatusForbidden, api.ErrOutsideRoots)
+	wantCode(remove(b, "/etc/passwd", false), http.StatusForbidden, api.ErrOutsideRoots)
+
+	// 디스크 최상위 보기에서는 공유 폴더가 디스크의 한 폴더로 보이지만, 공유 폴더와 그것을 품은 디스크는 지키고
+	// 그 밖의 폴더는 다룬다.
+	wantStatus(t, admin.do(http.MethodPut, "/api/site/files", api.FilesSettingsRequest{ShowDisks: true}), http.StatusOK)
+	wantCode(remove(admin, e.disk+"/media", true), http.StatusConflict, api.ErrRootFolder)
+	wantCode(rename(admin, e.disk+"/docs", e.disk+"/docs2"), http.StatusConflict, api.ErrRootFolder)
+	wantCode(remove(admin, e.disk, true), http.StatusConflict, api.ErrRootFolder)
+	wantStatus(t, rename(admin, e.disk+"/other", e.disk+"/other2"), http.StatusOK)
+	wantStatus(t, remove(admin, e.disk+"/other2", true), http.StatusNoContent)
+	if _, err := os.Stat(filepath.Join(e.disk, "media")); err != nil {
+		t.Fatalf("shared folder removed: %v", err)
+	}
+}
+
 func TestFilesSecurityPolicy(t *testing.T) {
 	site := prefs.NewMemoryStore()
 	site.UpdateSite(func(v *api.SiteSettings) { v.Security = &api.SecurityPolicy{Files: api.SecurityPassword} })
@@ -398,6 +510,15 @@ func TestFilesSecurityPolicy(t *testing.T) {
 		rec := b.do(http.MethodGet, p, nil)
 		wantStatus(t, rec, http.StatusForbidden)
 		if er := decode[api.ErrorResponse](t, rec); er.Code != api.ErrSecurityRequired || er.Required != api.SecurityPassword {
+			t.Fatalf("%s: %+v", p, er)
+		}
+	}
+	dir := e.helper.Home("user") + "/x"
+	for p, body := range map[string]any{"/api/files/mkdir": api.FilesMkdirRequest{Path: dir},
+		"/api/files/rename": api.FilesRenameRequest{From: dir, To: dir + "2"}, "/api/files/delete": api.FilesDeleteRequest{Path: dir}} {
+		rec := b.do(http.MethodPost, p, body)
+		wantStatus(t, rec, http.StatusForbidden)
+		if er := decode[api.ErrorResponse](t, rec); er.Code != api.ErrSecurityRequired {
 			t.Fatalf("%s: %+v", p, er)
 		}
 	}

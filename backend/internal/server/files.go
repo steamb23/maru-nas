@@ -10,6 +10,7 @@ import (
 	"log"
 	"mime"
 	"net/http"
+	"net/url"
 	"path"
 	"strconv"
 	"strings"
@@ -27,7 +28,7 @@ import (
 )
 
 // 파일 탐색기 API. 파일은 권한 도우미가 로그인한 사용자의 권한으로 다루고(fs.names, fs.statmany, fs.info, fs.read,
-// fs.write), 이 백엔드는 보이는 폴더(홈, 공유 폴더, 디스크) 밖의 경로를 도우미에 보내기 전에 거른다. 실제로 닿을
+// fs.write, fs.mkdir, fs.rename, fs.remove), 이 백엔드는 보이는 폴더(홈, 공유 폴더, 디스크) 밖의 경로를 도우미에 보내기 전에 거른다. 실제로 닿을
 // 수 있는 범위는 도우미가 자기 기준 디렉터리로 다시 정한다.
 
 // MountSource는 /srv 아래 마운트(디스크)다. *storage.Reader가 구현한다.
@@ -47,6 +48,8 @@ const (
 	sharesTimeout = 10 * time.Second
 	// maxQuery는 "이 폴더에서 찾기" 검색어의 최대 바이트 수다.
 	maxQuery = 255
+	// uploadTempPrefix는 권한 도우미가 올리는 중인 임시 파일에 쓰는 이름 접두사다. 이 이름으로는 만들거나 바꾸지 않는다.
+	uploadTempPrefix = ".onmaru-upload-"
 )
 
 // sharesMethods는 공유 폴더 스냅숏이 부르는 고정 메서드다(관리자 전용 RPC).
@@ -269,15 +272,34 @@ func (h *handler) roots(ctx context.Context, s auth.Session, ticket string) (api
 
 // allowedPath는 p가 s에게 보이는 폴더 안인지 확인한다. 아니면 오류 응답을 쓰고 false다.
 func (h *handler) allowedPath(w http.ResponseWriter, r *http.Request, s auth.Session, ticket, p string) bool {
-	if !files.ValidPath(p) {
-		writeError(w, http.StatusBadRequest, api.ErrBadRequest, "path must be an absolute, clean path")
-		return false
+	_, ok := h.allowedPaths(w, r, s, ticket, p)
+	return ok
+}
+
+// allowedPaths는 ps가 모두 s에게 보이는 폴더 안인지 확인하고 보이는 폴더를 돌려준다. 아니면 오류 응답을 쓰고 false다.
+func (h *handler) allowedPaths(w http.ResponseWriter, r *http.Request, s auth.Session, ticket string, ps ...string) (api.FilesRoots, bool) {
+	for _, p := range ps {
+		if !files.ValidPath(p) {
+			writeError(w, http.StatusBadRequest, api.ErrBadRequest, "path must be an absolute, clean path")
+			return api.FilesRoots{}, false
+		}
 	}
 	roots, err := h.roots(r.Context(), s, ticket)
 	if err != nil {
 		h.writeFilesError(w, s, err)
-		return false
+		return api.FilesRoots{}, false
 	}
+	for _, p := range ps {
+		if !withinRoots(roots, p) {
+			writeError(w, http.StatusForbidden, api.ErrOutsideRoots, "path is outside the folders the file explorer shows")
+			return api.FilesRoots{}, false
+		}
+	}
+	return roots, true
+}
+
+// withinRoots는 p가 보이는 폴더(홈, 닿을 수 있는 공유 폴더, 디스크) 가운데 하나의 안인지다.
+func withinRoots(roots api.FilesRoots, p string) bool {
 	ok := roots.Home != nil && files.Within(p, roots.Home.Path)
 	for _, sh := range roots.Shares {
 		ok = ok || (sh.Reachable && files.Within(p, sh.Path))
@@ -285,11 +307,48 @@ func (h *handler) allowedPath(w http.ResponseWriter, r *http.Request, s auth.Ses
 	for _, d := range roots.Disks {
 		ok = ok || files.Within(p, d.Path)
 	}
-	if !ok {
-		writeError(w, http.StatusForbidden, api.ErrOutsideRoots, "path is outside the folders the file explorer shows")
-		return false
+	return ok
+}
+
+// rootFolder는 p가 보이는 폴더(홈, 공유 폴더, 디스크) 자신이거나 그것을 품은 폴더인지다. 이런 폴더는 이름을 바꾸거나
+// 옮기거나 지우지 않는다. 권한 도우미는 자기 기준 디렉터리(홈, 마운트 지점)만 지키므로, 디스크 안의 공유 폴더는
+// 여기서 지킨다(디스크 최상위 보기에서는 공유 폴더가 디스크의 한 폴더로 보인다).
+func rootFolder(roots api.FilesRoots, p string) bool {
+	var paths []string
+	if roots.Home != nil {
+		paths = append(paths, roots.Home.Path)
 	}
-	return true
+	for _, sh := range roots.Shares {
+		paths = append(paths, sh.Path)
+	}
+	for _, d := range roots.Disks {
+		paths = append(paths, d.Path)
+	}
+	for _, rp := range paths {
+		if files.ValidPath(rp) && files.Within(rp, p) {
+			return true
+		}
+	}
+	return false
+}
+
+// newNameOK는 만들거나 바꿀 이름으로 쓸 수 있는지다: 도우미의 이름 검사, UTF-8(브라우저가 다시 가리킬 수 있게),
+// 올리는 중인 임시 파일의 접두사가 아님.
+func newNameOK(name string) bool {
+	return proto.ValidName(name) && utf8.ValidString(name) && !strings.HasPrefix(name, uploadTempPrefix)
+}
+
+// splitNew는 새로 만들 경로를 폴더와 이름으로 나눈다. 경로가 올바르지 않거나 이름을 쓸 수 없으면 false다.
+func splitNew(p string) (dir, name string, ok bool) {
+	if !files.ValidPath(p) {
+		return "", "", false
+	}
+	dir, name = path.Split(p)
+	dir = strings.TrimSuffix(dir, "/")
+	if dir == "" || !newNameOK(name) {
+		return "", "", false
+	}
+	return dir, name, true
 }
 
 // filesRoots는 사이드바에 처음 보이는 폴더다.
@@ -332,6 +391,17 @@ func listingOf(l *files.Listing) api.FilesListing {
 	return api.FilesListing{ID: l.ID, Path: l.Path, Total: l.Len(), Truncated: l.Truncated, Writable: l.Writable}
 }
 
+// parseView는 보기(정렬·방향·찾기어) 쿼리다. 잘못된 값이 있으면 false다.
+func parseView(q url.Values) (files.View, bool) {
+	sortKey, ok := files.ParseSortKey(q.Get("sort"))
+	order := q.Get("order")
+	query := q.Get("q")
+	if !ok || (order != "" && order != "asc" && order != "desc") || len(query) > maxQuery || !utf8.ValidString(query) {
+		return files.View{}, false
+	}
+	return files.View{Sort: sortKey, Desc: order == "desc", Query: query}, true
+}
+
 // filesPage는 목록의 보기(정렬·찾기)에서 범위 하나다. 정보가 없는 항목은 도우미에서 읽어 채운다.
 func (h *handler) filesPage(w http.ResponseWriter, r *http.Request, s auth.Session, ticket string) {
 	l, ok := h.files.Get(s.ID, r.PathValue("id"))
@@ -340,8 +410,7 @@ func (h *handler) filesPage(w http.ResponseWriter, r *http.Request, s auth.Sessi
 		return
 	}
 	q := r.URL.Query()
-	sortKey, okSort := files.ParseSortKey(q.Get("sort"))
-	order := q.Get("order")
+	view, okView := parseView(q)
 	offset, errOff := strconv.Atoi(cmp.Or(q.Get("offset"), "0"))
 	limit, errLim := strconv.Atoi(cmp.Or(q.Get("limit"), "100"))
 	names := q.Get("names") == "1"
@@ -349,13 +418,10 @@ func (h *handler) filesPage(w http.ResponseWriter, r *http.Request, s auth.Sessi
 	if names {
 		maxLimit = filesNamesLimit
 	}
-	query := q.Get("q")
-	if !okSort || (order != "" && order != "asc" && order != "desc") || errOff != nil || errLim != nil ||
-		offset < 0 || limit < 1 || limit > maxLimit || len(query) > maxQuery || !utf8.ValidString(query) {
+	if !okView || errOff != nil || errLim != nil || offset < 0 || limit < 1 || limit > maxLimit {
 		writeError(w, http.StatusBadRequest, api.ErrBadRequest, "invalid range")
 		return
 	}
-	view := files.View{Sort: sortKey, Desc: order == "desc", Query: query}
 	idx, total, err := l.Page(view, offset, limit)
 	if errors.Is(err, files.ErrSortPending) {
 		writeError(w, http.StatusConflict, api.ErrSortPending, "entry info is not loaded yet")
@@ -368,6 +434,28 @@ func (h *handler) filesPage(w http.ResponseWriter, r *http.Request, s auth.Sessi
 		}
 	}
 	writeJSON(w, http.StatusOK, api.FilesPage{Total: total, Offset: offset, Items: l.Items(idx, names)})
+}
+
+// filesFind는 보기에서 이름 하나의 자리다(만들거나 이름을 바꾼 항목을 목록에서 고를 때). 도우미를 부르지 않는다.
+func (h *handler) filesFind(w http.ResponseWriter, r *http.Request, s auth.Session, _ string) {
+	l, ok := h.files.Get(s.ID, r.PathValue("id"))
+	if !ok {
+		writeError(w, http.StatusGone, api.ErrListingExpired, "listing expired, open the folder again")
+		return
+	}
+	q := r.URL.Query()
+	view, okView := parseView(q)
+	name := q.Get("name")
+	if !okView || name == "" {
+		writeError(w, http.StatusBadRequest, api.ErrBadRequest, "invalid view or name")
+		return
+	}
+	i, err := l.IndexOf(view, name)
+	if errors.Is(err, files.ErrSortPending) {
+		writeError(w, http.StatusConflict, api.ErrSortPending, "entry info is not loaded yet")
+		return
+	}
+	writeJSON(w, http.StatusOK, api.FilesFindResponse{Index: i})
 }
 
 // filesPrepare는 정보가 없는 항목을 filesPrepareBatch개까지 더 읽는다. 브라우저가 진행 막대를 그리며 Filled가
@@ -598,10 +686,8 @@ func (h *handler) filesUpload(w http.ResponseWriter, r *http.Request, s auth.Ses
 		return
 	}
 	p := r.URL.Query().Get("path")
-	dir, name := path.Split(p)
-	dir = strings.TrimSuffix(dir, "/")
-	if !files.ValidPath(p) || dir == "" || !proto.ValidName(name) || !utf8.ValidString(name) ||
-		strings.HasPrefix(name, ".onmaru-upload-") {
+	dir, _, ok := splitNew(p)
+	if !ok {
 		writeError(w, http.StatusBadRequest, api.ErrBadRequest, "invalid file name")
 		return
 	}
@@ -622,8 +708,89 @@ func (h *handler) filesUpload(w http.ResponseWriter, r *http.Request, s auth.Ses
 		h.writeFilesError(w, s, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, api.FileItem{Name: e.Name, Type: e.Type, State: "ok", Size: e.Size,
-		ModTime: e.ModTimeNs / int64(time.Millisecond)})
+	writeJSON(w, http.StatusOK, fileItemOf(e))
+}
+
+// fileItemOf는 도우미가 돌려준 항목을 목록 항목 형태로 바꾼다(만들기·올리기·이름 바꾸기의 응답).
+func fileItemOf(e proto.Entry) api.FileItem {
+	return api.FileItem{Name: e.Name, Type: e.Type, State: "ok", Size: e.Size, ModTime: e.ModTimeNs / int64(time.Millisecond),
+		LinkType: e.LinkType}
+}
+
+// filesMkdir는 폴더를 만든다. 만든 폴더의 항목을 돌려준다.
+func (h *handler) filesMkdir(w http.ResponseWriter, r *http.Request, s auth.Session, ticket string) {
+	var req api.FilesMkdirRequest
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	dir, _, ok := splitNew(req.Path)
+	if !ok {
+		writeError(w, http.StatusBadRequest, api.ErrBadRequest, "invalid folder name")
+		return
+	}
+	if !h.allowedPath(w, r, s, ticket, dir) {
+		return
+	}
+	e, err := h.Helper.Mkdir(r.Context(), ticket, req.Path)
+	if err != nil {
+		h.writeFilesError(w, s, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, fileItemOf(e))
+}
+
+// filesRename은 이름을 바꾸거나 다른 폴더로 옮긴다(끌어 놓기). 옮기기는 이름 바꾸기 하나라 같은 디스크 안에서만
+// 되고(cross_device), 대상이 있으면 덮어쓰지 않는다(file_exists). 보이는 폴더 자신과 그것을 품은 폴더는 다루지 않는다.
+func (h *handler) filesRename(w http.ResponseWriter, r *http.Request, s auth.Session, ticket string) {
+	var req api.FilesRenameRequest
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	toDir, _, ok := splitNew(req.To)
+	if !ok || !files.ValidPath(req.From) {
+		writeError(w, http.StatusBadRequest, api.ErrBadRequest, "invalid name")
+		return
+	}
+	if files.Within(req.To, req.From) {
+		writeError(w, http.StatusBadRequest, api.ErrBadRequest, "cannot move a folder into itself")
+		return
+	}
+	roots, ok := h.allowedPaths(w, r, s, ticket, req.From, toDir)
+	if !ok {
+		return
+	}
+	if rootFolder(roots, req.From) {
+		writeError(w, http.StatusConflict, api.ErrRootFolder, "folders shown in the sidebar cannot be renamed or moved")
+		return
+	}
+	e, err := h.Helper.Rename(r.Context(), ticket, req.From, req.To)
+	if err != nil {
+		h.writeFilesError(w, s, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, fileItemOf(e))
+}
+
+// filesDelete는 파일이나 폴더를 지운다. SMB 휴지통(.recycle)을 거치지 않아 되돌릴 수 없으므로 브라우저가 확인
+// 대화상자를 먼저 띄운다. 보이는 폴더 자신과 그것을 품은 폴더는 지우지 않는다.
+func (h *handler) filesDelete(w http.ResponseWriter, r *http.Request, s auth.Session, ticket string) {
+	var req api.FilesDeleteRequest
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	roots, ok := h.allowedPaths(w, r, s, ticket, req.Path)
+	if !ok {
+		return
+	}
+	if rootFolder(roots, req.Path) {
+		writeError(w, http.StatusConflict, api.ErrRootFolder, "folders shown in the sidebar cannot be deleted")
+		return
+	}
+	if err := h.Helper.Remove(r.Context(), ticket, req.Path, req.Recursive); err != nil {
+		h.writeFilesError(w, s, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // writeFilesError는 파일 연산의 도우미 오류를 HTTP 응답으로 바꾼다. 파일 오류가 아니면 writeHelperError로 넘긴다.
@@ -657,6 +824,10 @@ func (h *handler) writeFilesError(w http.ResponseWriter, s auth.Session, err err
 		status, code = http.StatusTooManyRequests, api.ErrHelperBusy
 	case proto.CodeTimeout:
 		status, code = http.StatusGatewayTimeout, api.ErrTransferTimeout
+	case proto.CodeNotEmpty:
+		status, code = http.StatusConflict, api.ErrNotEmpty
+	case proto.CodeCrossDevice:
+		status, code = http.StatusConflict, api.ErrCrossDevice
 	default:
 		h.writeHelperError(w, s, err)
 		return

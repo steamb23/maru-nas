@@ -282,6 +282,9 @@ func toError(err error) *proto.Error {
 		code = proto.CodeReadOnly
 	case errors.Is(err, syscall.ENOSPC), errors.Is(err, syscall.EDQUOT):
 		code = proto.CodeNoSpace
+	case errors.Is(err, syscall.EXDEV):
+		// 같은 기준 디렉터리 안이라도 그 아래에 다른 파일시스템이 마운트되어 있으면 이름 바꾸기가 EXDEV다.
+		code = proto.CodeCrossDevice
 	case errors.Is(err, syscall.EINVAL), errors.Is(err, syscall.ELOOP), errors.Is(err, syscall.ENAMETOOLONG):
 		code = proto.CodeBadRequest
 	}

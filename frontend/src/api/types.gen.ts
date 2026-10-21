@@ -1456,6 +1456,20 @@ export const ErrListingExpired = "listing_expired";
  */
 export const ErrSortPending = "sort_pending";
 /**
+ * ErrNotEmpty는 폴더 안에 항목이 있어 지우지 않았다는 뜻이다(폴더 안까지 지우라고 하지 않은 삭제).
+ */
+export const ErrNotEmpty = "not_empty";
+/**
+ * ErrCrossDevice는 다른 디스크(권한 도우미의 다른 기준 디렉터리나 다른 파일시스템)로 옮기려 했다는 뜻이다.
+ * 옮기기는 이름 바꾸기 하나로만 하므로 복사가 필요한 곳으로는 옮길 수 없다.
+ */
+export const ErrCrossDevice = "cross_device";
+/**
+ * ErrRootFolder는 사이드바에 보이는 폴더(홈, 공유 폴더, 디스크)이거나 그것을 품은 폴더라서 이름을 바꾸거나
+ * 옮기거나 지울 수 없다는 뜻이다.
+ */
+export const ErrRootFolder = "root_folder";
+/**
  * ErrorResponse는 2xx가 아닌 상태 코드와 함께 반환된다.
  */
 export interface ErrorResponse {
@@ -2202,6 +2216,42 @@ export interface FileItem {
    * BadName은 이름이 UTF-8이 아니라 열거나 내려받을 수 없다는 뜻이다(Name은 바꿔 그린 이름이다).
    */
   badName?: boolean;
+}
+/**
+ * FilesFindResponse는 GET /api/files/list/{id}/find의 응답이다. 만들거나 이름을 바꾼 항목을 목록에서 고를 때 쓴다.
+ */
+export interface FilesFindResponse {
+  /**
+   * Index는 보기(정렬·찾기)에서 그 이름의 자리다. 보기에 없으면 -1이다.
+   */
+  index: number /* int */;
+}
+/**
+ * FilesMkdirRequest는 POST /api/files/mkdir의 본문이다. 응답은 만든 폴더의 FileItem이다.
+ */
+export interface FilesMkdirRequest {
+  /**
+   * Path는 만들 폴더의 절대 경로다.
+   */
+  path: string;
+}
+/**
+ * FilesRenameRequest는 POST /api/files/rename의 본문이다. 이름을 바꾸거나 다른 폴더로 옮긴다(같은 디스크 안).
+ * 응답은 옮긴 뒤의 FileItem이다. To가 이미 있으면 file_exists이고 덮어쓰지 않는다.
+ */
+export interface FilesRenameRequest {
+  from: string;
+  to: string;
+}
+/**
+ * FilesDeleteRequest는 POST /api/files/delete의 본문이다. 되돌릴 수 없는 삭제이고 응답 본문은 없다(204).
+ */
+export interface FilesDeleteRequest {
+  path: string;
+  /**
+   * Recursive면 폴더 안의 항목까지 모두 지운다. 아니면 파일과 빈 폴더만 지운다(not_empty).
+   */
+  recursive: boolean;
 }
 /**
  * FilesPrepareResponse는 POST /api/files/list/{id}/prepare의 응답이다. Filled가 Total이면 날짜·크기순으로 볼 수 있다.

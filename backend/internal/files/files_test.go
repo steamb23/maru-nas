@@ -117,9 +117,29 @@ func TestListingViews(t *testing.T) {
 		t.Fatalf("query = %q (%d)", got, total)
 	}
 
+	// 이름의 자리는 보기 순서를 따른다(만든 폴더를 목록에서 고를 때).
+	for _, c := range []struct {
+		v    View
+		name string
+		want int
+	}{
+		{View{Sort: SortName}, "a2.txt", 2},
+		{View{Sort: SortName, Desc: true}, "a2.txt", 6},
+		{View{Sort: SortName, Query: "zet"}, "Zeta", 0},
+		{View{Sort: SortName, Query: "zet"}, "a2.txt", -1},
+		{View{Sort: SortName}, "none", -1},
+	} {
+		if got, err := l.IndexOf(c.v, c.name); err != nil || got != c.want {
+			t.Fatalf("IndexOf(%+v, %q) = %d, %v; want %d", c.v, c.name, got, err, c.want)
+		}
+	}
+
 	// 날짜·크기순은 모든 정보가 있어야 한다.
 	if _, _, err := l.Page(View{Sort: SortMTime}, 0, 10); !errors.Is(err, ErrSortPending) {
 		t.Fatalf("mtime before fill: %v", err)
+	}
+	if _, err := l.IndexOf(View{Sort: SortMTime}, "a"); !errors.Is(err, ErrSortPending) {
+		t.Fatalf("IndexOf mtime before fill: %v", err)
 	}
 	next := l.NextUnfilled(100)
 	if len(next) != 7 {

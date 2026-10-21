@@ -941,6 +941,14 @@ const (
 	ErrListingExpired = "listing_expired"
 	// ErrSortPending은 날짜·크기순 정렬에 필요한 항목 정보를 아직 다 읽지 않았다는 뜻이다(prepare를 마저 부른다).
 	ErrSortPending = "sort_pending"
+	// ErrNotEmpty는 폴더 안에 항목이 있어 지우지 않았다는 뜻이다(폴더 안까지 지우라고 하지 않은 삭제).
+	ErrNotEmpty = "not_empty"
+	// ErrCrossDevice는 다른 디스크(권한 도우미의 다른 기준 디렉터리나 다른 파일시스템)로 옮기려 했다는 뜻이다.
+	// 옮기기는 이름 바꾸기 하나로만 하므로 복사가 필요한 곳으로는 옮길 수 없다.
+	ErrCrossDevice = "cross_device"
+	// ErrRootFolder는 사이드바에 보이는 폴더(홈, 공유 폴더, 디스크)이거나 그것을 품은 폴더라서 이름을 바꾸거나
+	// 옮기거나 지울 수 없다는 뜻이다.
+	ErrRootFolder = "root_folder"
 )
 
 // ErrorResponse는 2xx가 아닌 상태 코드와 함께 반환된다.
@@ -1478,6 +1486,32 @@ type FileItem struct {
 	LinkType string `json:"linkType,omitempty" tstype:"'dir' | 'file' | 'symlink' | 'other'"`
 	// BadName은 이름이 UTF-8이 아니라 열거나 내려받을 수 없다는 뜻이다(Name은 바꿔 그린 이름이다).
 	BadName bool `json:"badName,omitempty"`
+}
+
+// FilesFindResponse는 GET /api/files/list/{id}/find의 응답이다. 만들거나 이름을 바꾼 항목을 목록에서 고를 때 쓴다.
+type FilesFindResponse struct {
+	// Index는 보기(정렬·찾기)에서 그 이름의 자리다. 보기에 없으면 -1이다.
+	Index int `json:"index"`
+}
+
+// FilesMkdirRequest는 POST /api/files/mkdir의 본문이다. 응답은 만든 폴더의 FileItem이다.
+type FilesMkdirRequest struct {
+	// Path는 만들 폴더의 절대 경로다.
+	Path string `json:"path"`
+}
+
+// FilesRenameRequest는 POST /api/files/rename의 본문이다. 이름을 바꾸거나 다른 폴더로 옮긴다(같은 디스크 안).
+// 응답은 옮긴 뒤의 FileItem이다. To가 이미 있으면 file_exists이고 덮어쓰지 않는다.
+type FilesRenameRequest struct {
+	From string `json:"from"`
+	To   string `json:"to"`
+}
+
+// FilesDeleteRequest는 POST /api/files/delete의 본문이다. 되돌릴 수 없는 삭제이고 응답 본문은 없다(204).
+type FilesDeleteRequest struct {
+	Path string `json:"path"`
+	// Recursive면 폴더 안의 항목까지 모두 지운다. 아니면 파일과 빈 폴더만 지운다(not_empty).
+	Recursive bool `json:"recursive"`
 }
 
 // FilesPrepareResponse는 POST /api/files/list/{id}/prepare의 응답이다. Filled가 Total이면 날짜·크기순으로 볼 수 있다.

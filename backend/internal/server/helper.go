@@ -36,6 +36,9 @@ type Helper interface {
 	Info(ctx context.Context, ticket, path string) (proto.InfoResult, error)
 	Read(ctx context.Context, ticket, path string, offset, length int64) (proto.ReadResult, *client.Body, error)
 	Write(ctx context.Context, ticket, path string, overwrite bool, r io.Reader, size int64) (proto.Entry, error)
+	Mkdir(ctx context.Context, ticket, path string) (proto.Entry, error)
+	Rename(ctx context.Context, ticket, from, to string) (proto.Entry, error)
+	Remove(ctx context.Context, ticket, path string, recursive bool) error
 }
 
 const (

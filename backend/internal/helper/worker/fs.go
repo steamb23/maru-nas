@@ -364,9 +364,12 @@ func rename(job Job, cfg Config, c idleConn) error {
 		if err != nil {
 			return nil, err
 		}
-		// 기준 디렉터리 자체는 옮기지 않고, 기준 디렉터리 사이로도 옮기지 않는다.
-		if from.base != to.base || from.rel == "." || to.rel == "." {
+		// 기준 디렉터리 자체는 옮기지 않고, 기준 디렉터리 사이로도 옮기지 않는다(다른 디스크라 복사가 필요하다).
+		if from.rel == "." || to.rel == "." {
 			return nil, proto.NewError(proto.CodeBadRequest)
+		}
+		if from.base != to.base {
+			return nil, proto.NewError(proto.CodeCrossDevice)
 		}
 		r, err := os.OpenRoot(from.base)
 		if err != nil {

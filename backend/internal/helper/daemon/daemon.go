@@ -47,9 +47,11 @@ const (
 	headerTimeout = 5 * time.Second
 	replyTimeout  = 5 * time.Second
 	// opTimeout은 목록·정보 같은 연산의 최대 시간, streamTimeout은 읽기·쓰기 스트림의 최대 시간이다.
-	// 스트림은 worker가 진행이 멈추면(60초) 따로 끊는다.
+	// 스트림은 worker가 진행이 멈추면(60초) 따로 끊는다. removeTimeout은 삭제(fs.remove)의 최대 시간이다.
+	// 큰 폴더를 통째로 지우면 30초를 넘을 수 있고, 시간이 지나 worker를 끝내면 일부만 지운 채 남는다.
 	opTimeout     = 30 * time.Second
 	streamTimeout = 6 * time.Hour
+	removeTimeout = 10 * time.Minute
 )
 
 // Config는 도우미 설정이다.
@@ -441,8 +443,11 @@ func (s *Server) run(ctx context.Context, c *net.UnixConn, req proto.Request) {
 	defer release()
 
 	timeout := opTimeout
-	if req.Action == proto.ActionRead || req.Action == proto.ActionWrite {
+	switch req.Action {
+	case proto.ActionRead, proto.ActionWrite:
 		timeout = streamTimeout
+	case proto.ActionRemove:
+		timeout = removeTimeout
 	}
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()

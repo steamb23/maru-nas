@@ -441,9 +441,11 @@ func TestMkdirRenameRemove(t *testing.T) {
 		t.Fatalf("rename = %+v", en)
 	}
 	e.fail(proto.CodeExists, proto.ActionRename, proto.RenameParams{From: filepath.Join(dir, "c"), To: filepath.Join(e.disk, "b")}, nil)
-	e.fail(proto.CodeBadRequest, proto.ActionRename, proto.RenameParams{From: filepath.Join(e.disk, "b"), To: filepath.Join(e.disk2, "b")}, nil)
+	e.fail(proto.CodeCrossDevice, proto.ActionRename, proto.RenameParams{From: filepath.Join(e.disk, "b"), To: filepath.Join(e.disk2, "b")}, nil)
 	e.fail(proto.CodeBadRequest, proto.ActionRename, proto.RenameParams{From: e.disk, To: filepath.Join(e.disk, "x")}, nil)
 	e.fail(proto.CodeNotFound, proto.ActionRename, proto.RenameParams{From: filepath.Join(e.disk, "zz"), To: filepath.Join(e.disk, "yy")}, nil)
+	// 폴더를 자기 안으로 옮기면 커널이 EINVAL로 거절한다.
+	e.fail(proto.CodeBadRequest, proto.ActionRename, proto.RenameParams{From: dir, To: filepath.Join(dir, "inner")}, nil)
 
 	e.fail(proto.CodeNotEmpty, proto.ActionRemove, proto.RemoveParams{Path: dir}, nil)
 	e.ok(nil, proto.ScopeUser, proto.ActionRemove, proto.RemoveParams{Path: dir, Recursive: true}, nil)

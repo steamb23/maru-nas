@@ -126,6 +126,25 @@ func (l *Listing) Page(v View, offset, limit int) ([]int, int, error) {
 	return out, total, nil
 }
 
+// IndexOf는 보기 v에서 이름이 name인 항목의 자리다. 없으면 -1이다. 날짜·크기순은 Page와 같이 ErrSortPending일 수 있다.
+func (l *Listing) IndexOf(v View, name string) (int, error) {
+	if v.Sort == "" {
+		v.Sort = SortName
+	}
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	order, err := l.view(v)
+	if err != nil {
+		return 0, err
+	}
+	for k, i := range order {
+		if l.entries[i].name == name {
+			return k, nil
+		}
+	}
+	return -1, nil
+}
+
 // Unfilled는 idx 가운데 정보를 아직 읽지 않은 항목이다.
 func (l *Listing) Unfilled(idx []int) []int {
 	l.mu.Lock()

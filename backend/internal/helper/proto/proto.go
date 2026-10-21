@@ -144,6 +144,9 @@ const (
 	CodeNoSpace             = "no_space"
 	CodeBusy                = "busy"
 	CodeTimeout             = "timeout"
+	// CodeCrossDevice는 이름 바꾸기(옮기기)의 대상이 다른 기준 디렉터리나 다른 파일시스템이라는 뜻이다.
+	// 옮기기는 이름 바꾸기 하나로만 하므로 다른 디스크로는 옮길 수 없다(복사가 필요하다).
+	CodeCrossDevice = "cross_device"
 	// CodeNoHome은 사용자 홈 디렉터리가 없거나 쓸 수 없는 경로(/)라는 뜻이다.
 	CodeNoHome = "no_home"
 	// CodeSSHStrictModes는 홈이나 ~/.ssh가 다른 사용자에게 쓰기를 허용해 sshd(StrictModes)가
