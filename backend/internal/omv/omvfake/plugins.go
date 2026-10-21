@@ -94,6 +94,15 @@ type SharedFolder struct {
 	NoMount bool
 	// Missing이면 폴더가 없는 것처럼(status ENOENT) 준다.
 	Missing bool
+	// Privileges는 공유 폴더 권한이다(privileges.privilege). 비어 있으면 정한 권한이 없다.
+	Privileges []Privilege
+}
+
+// Privilege는 공유 폴더 권한 하나다. Type은 user 또는 group, Perms는 0(없음), 5(읽기), 7(읽기·쓰기)이다.
+type Privilege struct {
+	Type  string
+	Name  string
+	Perms int
 }
 
 // DefaultPluginData는 개발 서버와 테스트가 쓰는 합성 값이다.
@@ -248,6 +257,14 @@ func (s *Server) containerCommand(params json.RawMessage) string {
 	})
 }
 
+func privileges(list []Privilege) []any {
+	out := []any{}
+	for _, p := range list {
+		out = append(out, map[string]any{"type": p.Type, "name": p.Name, "perms": p.Perms})
+	}
+	return out
+}
+
 // sharedFolders는 ShareMgmt.enumerateSharedFolders 응답이다(engined/rpc/sharemgmt.inc). absdirpath·status는
 // OMV 8.1.0에서 생겼으므로 Version80에서는 주지 않는다.
 func (s *Server) sharedFolders(list []SharedFolder) []map[string]any {
@@ -259,7 +276,7 @@ func (s *Server) sharedFolders(list []SharedFolder) []map[string]any {
 			"comment":     "",
 			"mntentref":   "fa4e0000-0000-4000-8000-00000000000" + strconv.Itoa(len(out)%10),
 			"reldirpath":  f.RelDirPath,
-			"privileges":  map[string]any{"privilege": []any{}},
+			"privileges":  map[string]any{"privilege": privileges(f.Privileges)},
 			"_used":       false,
 			"device":      "",
 			"description": f.Name,

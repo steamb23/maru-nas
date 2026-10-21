@@ -1,5 +1,5 @@
-// 설정 서버 페이지(관리자)의 파일 탐색기 절: 공유 폴더 스냅숏(개수, 받은 시각, 지금 받기), 디스크 최상위 보기, 디스크
-// 휴지통. 일반 사용자의 세션으로는 OMV 공유 폴더 목록을 받을 수 없어 관리자가 로그인할 때 받은 목록을 이름표로 둔다.
+// 설정 서버 페이지(관리자)의 파일 탐색기 절: 공유 폴더 스냅숏(개수, 받은 시각, 지금 받기), 디스크 최상위 보기, OMV 공유
+// 폴더 권한 따르기, 디스크 휴지통. 일반 사용자의 세션으로는 OMV 공유 폴더 목록을 받을 수 없어 관리자가 로그인할 때 받은 목록을 이름표로 둔다.
 // OMV 데이터 디스크 맨 위는 보통 root 소유라 사용자가 휴지통 폴더를 만들 수 없으므로, 관리자가 권한 상승한 뒤 디스크마다
 // 모든 사용자가 쓰는 .Trash(1777)를 만든다.
 import { useEffect, useState } from 'react'
@@ -12,7 +12,7 @@ import {
   refreshFilesShares,
   saveFilesSettings,
 } from '../api/client'
-import type { FilesSettings, SiteTrashDisks } from '../api/types.gen'
+import type { FilesSettings, FilesSettingsRequest, SiteTrashDisks } from '../api/types.gen'
 import { formatDateTime } from '../addons/common/format'
 import { useLanguage } from '../i18n'
 import { useDialogs } from '../shell/dialogPresets'
@@ -27,7 +27,7 @@ export function FilesSection() {
   const [state, setState] = useState<LoadState>({ status: 'loading' })
   const dialogs = useDialogs()
   const [busy, setBusy] = useState<'refresh' | 'disks' | 'trash' | null>(null)
-  const [failure, setFailure] = useState<'refresh' | 'save' | 'trash' | null>(null)
+  const [failure, setFailure] = useState<'refresh' | 'save' | 'follow' | 'trash' | null>(null)
   const [trash, setTrash] = useState<SiteTrashDisks | null>(null)
 
   useEffect(() => {
@@ -74,17 +74,18 @@ export function FilesSection() {
     }
   }
 
-  const setShowDisks = async (showDisks: boolean) => {
+  // save는 설정 하나를 바꾼다. 공유 폴더 권한 따르기를 켜면 서버가 스냅숏을 먼저 다시 받으므로 그 실패를 따로 알린다.
+  const save = async (patch: FilesSettingsRequest) => {
     if (state.status !== 'ready') return
     const prev = state.data
-    setState({ status: 'ready', data: { ...prev, showDisks } })
+    setState({ status: 'ready', data: { ...prev, ...patch } })
     setBusy('disks')
     setFailure(null)
     try {
-      setState({ status: 'ready', data: await saveFilesSettings(showDisks) })
+      setState({ status: 'ready', data: await saveFilesSettings(patch) })
     } catch (err) {
       setState({ status: 'ready', data: prev })
-      if (!(err instanceof ApiError && err.status === 401)) setFailure('save')
+      if (!(err instanceof ApiError && err.status === 401)) setFailure(patch.followPrivileges ? 'follow' : 'save')
     } finally {
       setBusy(null)
     }
@@ -100,7 +101,9 @@ export function FilesSection() {
             ? t('settings.files.refreshFailed')
             : failure === 'trash'
               ? t('settings.files.trashFailed')
-              : t('settings.files.saveFailed')}
+              : failure === 'follow'
+                ? t('settings.files.followFailed')
+                : t('settings.files.saveFailed')}
         </SettingsNotice>
       )}
       <SettingsCard>
@@ -128,7 +131,28 @@ export function FilesSection() {
             checked={data?.showDisks ?? false}
             disabled={!data || busy !== null}
             label={t('settings.files.showDisks')}
-            onChange={(v) => void setShowDisks(v)}
+            onChange={(v) => void save({ showDisks: v })}
+          />
+        </SettingsRow>
+        <SettingsRow
+          label={t('settings.files.followPrivileges')}
+          description={
+            <>
+              {t('settings.files.followPrivilegesDesc')}
+              {data?.followPrivileges && !data.sharesUpdatedAt && (
+                <>
+                  <br />
+                  {t('settings.files.followPrivilegesFallback')}
+                </>
+              )}
+            </>
+          }
+        >
+          <Switch
+            checked={data?.followPrivileges ?? false}
+            disabled={!data || busy !== null}
+            label={t('settings.files.followPrivileges')}
+            onChange={(v) => void save({ followPrivileges: v })}
           />
         </SettingsRow>
       </SettingsCard>

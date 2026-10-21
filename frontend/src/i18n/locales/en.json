@@ -148,7 +148,9 @@
       "none": "There are no folders you can view.",
       "trash": "Trash",
       "trashCount_one": "{{total}} item in the trash",
-      "trashCount_other": "{{total}} items in the trash"
+      "trashCount_other": "{{total}} items in the trash",
+      "readOnly": "Read-only",
+      "readOnlyShare": "{{path}} (shared folder privileges: read-only)"
     },
     "toolbar": {
       "back": "Back",
@@ -179,7 +181,8 @@
       "sortSize": "By size",
       "preparing": "{{sort}} (preparing)",
       "writable": "This folder: read and write",
-      "readOnly": "This folder: read only"
+      "readOnly": "This folder: read only",
+      "shareReadOnly": "This folder: read-only (shared folder privileges)"
     },
     "banner": {
       "truncated": "This folder has more than 300,000 items, so only some are shown. Sorting and search also cover only the shown items. Split it into subfolders to see everything.",
@@ -288,7 +291,8 @@
         "bad_request": "This can't be done. You may have tried to move a folder into itself.",
         "network": "The connection was lost.",
         "generic": "The operation failed.",
-        "no_trash": "This disk has no trash."
+        "no_trash": "This disk has no trash.",
+        "share_read_only": "The shared folder privileges allow reading only, so nothing can be written to this shared folder."
       },
       "trashing": "Moving to the trash",
       "restoring": "Restoring",
@@ -405,7 +409,8 @@
         "helper_busy": "Too many tasks are running at once. Upload again in a moment.",
         "is_dir": "A folder with the same name exists.",
         "network": "The connection was lost.",
-        "unknown": "Couldn't upload."
+        "unknown": "Couldn't upload.",
+        "share_read_only": "The shared folder privileges allow reading only."
       }
     },
     "errors": {
@@ -732,7 +737,11 @@
       "trashDisk": "Trash on disk {{disk}}",
       "trashOn": "Available",
       "trashCreate": "Create trash",
-      "trashFailed": "Couldn't create the disk trash."
+      "trashFailed": "Couldn't create the disk trash.",
+      "followPrivileges": "Follow OMV shared folder privileges",
+      "followPrivilegesDesc": "Applies the shared folder privileges set in OMV to the file explorer as well. Shared folders without access are hidden, and read-only shared folders can't be written to. File system permissions still apply, and administrators follow their own account's privileges too. After changing privileges, press “Read now”.",
+      "followPrivilegesFallback": "This doesn't take effect until the shared folder list has been fetched.",
+      "followFailed": "The shared folder list couldn't be fetched, so privileges weren't turned on."
     },
     "nav": "Settings sections",
     "groups": {

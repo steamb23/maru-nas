@@ -168,6 +168,7 @@ const ERROR_CODES: readonly ErrorCode[] = [
   'cross_device',
   'root_folder',
   'no_trash',
+  'share_read_only',
 ]
 
 export type RequiredLevel = NonNullable<ErrorResponse['required']>
@@ -1147,7 +1148,7 @@ export async function saveSecurityPolicy(policy: SecurityPolicy): Promise<void> 
 const isFilesRoot = (v: unknown): v is FilesRoot => isObj(v) && isStr(v.name) && isStr(v.path)
 
 const isFilesShare = (v: unknown): v is FilesShare =>
-  isObj(v) && isStr(v.uuid) && isStr(v.name) && isStr(v.path) && isBool(v.reachable)
+  isObj(v) && isStr(v.uuid) && isStr(v.name) && isStr(v.path) && isBool(v.reachable) && isOptional(v.readOnly, isBool)
 
 export function isFilesRoots(v: unknown): v is FilesRoots {
   return (
@@ -1161,7 +1162,15 @@ export function isFilesRoots(v: unknown): v is FilesRoots {
 }
 
 export function isFilesListing(v: unknown): v is FilesListing {
-  return isObj(v) && isStr(v.id) && isStr(v.path) && isNum(v.total) && isBool(v.truncated) && isBool(v.writable)
+  return (
+    isObj(v) &&
+    isStr(v.id) &&
+    isStr(v.path) &&
+    isNum(v.total) &&
+    isBool(v.truncated) &&
+    isBool(v.writable) &&
+    isOptional(v.shareReadOnly, isBool)
+  )
 }
 
 const FILE_TYPES = ['dir', 'file', 'symlink', 'other'] as const
@@ -1202,6 +1211,7 @@ export function isFileInfo(v: unknown): v is FileInfo {
     isOptional(v.acl, isBool) &&
     isOptional(v.access, isFileAccess) &&
     isOptional(v.shareUuid, isStr) &&
+    isOptional(v.shareReadOnly, isBool) &&
     isOptional(v.target, isStr)
   )
 }
@@ -1209,7 +1219,13 @@ export function isFileInfo(v: unknown): v is FileInfo {
 const isSharedFolder = (v: unknown): v is SharedFolder => isObj(v) && isStr(v.uuid) && isStr(v.name) && isStr(v.path)
 
 export function isFilesSettings(v: unknown): v is FilesSettings {
-  return isObj(v) && isArrayOf(v.shares, isSharedFolder) && isOptional(v.sharesUpdatedAt, isStr) && isBool(v.showDisks)
+  return (
+    isObj(v) &&
+    isArrayOf(v.shares, isSharedFolder) &&
+    isOptional(v.sharesUpdatedAt, isStr) &&
+    isBool(v.showDisks) &&
+    isBool(v.followPrivileges)
+  )
 }
 
 const q = encodeURIComponent
@@ -1621,15 +1637,15 @@ function apiErrorOf(path: string, status: number, body: unknown): ApiError {
   return new ApiError(status, `${path}: HTTP ${status}`, code, retryAfter, required)
 }
 
-// fetchFilesSettings는 파일 탐색기 전역 설정(공유 폴더 스냅숏, 디스크 최상위 보기)이다(관리자).
+// fetchFilesSettings는 파일 탐색기 전역 설정(공유 폴더 스냅숏, 디스크 최상위 보기, 공유 폴더 권한 따르기)이다(관리자).
 export async function fetchFilesSettings(signal?: AbortSignal): Promise<FilesSettings> {
   const data = await getJSON('/site/files', { signal })
   if (!isFilesSettings(data)) throw new Error('/site/files: unexpected response shape')
   return data
 }
 
-export async function saveFilesSettings(showDisks: boolean): Promise<FilesSettings> {
-  const body: FilesSettingsRequest = { showDisks }
+// saveFilesSettings는 보낸 설정만 바꾼다(관리자). 공유 폴더 권한 따르기를 켜면 서버가 스냅숏을 먼저 다시 받는다.
+export async function saveFilesSettings(body: FilesSettingsRequest): Promise<FilesSettings> {
   const data = await (await request('PUT', '/site/files', { body })).json()
   if (!isFilesSettings(data)) throw new Error('/site/files: unexpected response shape')
   return data

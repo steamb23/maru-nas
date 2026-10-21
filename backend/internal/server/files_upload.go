@@ -67,14 +67,15 @@ func (h *handler) filesUploadCheck(w http.ResponseWriter, r *http.Request, s aut
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// uploadTarget은 p가 올릴 수 있는 경로인지 확인한다(새 이름 검사, 보이는 폴더 안). 아니면 오류 응답을 쓰고 false다.
+// uploadTarget은 p가 올릴 수 있는 경로인지 확인한다(새 이름 검사, 보이는 폴더 안, 읽기 전용 공유 폴더 밖). 아니면 오류 응답을 쓰고 false다.
 func (h *handler) uploadTarget(w http.ResponseWriter, r *http.Request, s auth.Session, ticket, p string) bool {
 	dir, _, ok := splitNew(p)
 	if !ok {
 		writeError(w, http.StatusBadRequest, api.ErrBadRequest, "invalid file name")
 		return false
 	}
-	return h.allowedPath(w, r, s, ticket, dir)
+	_, ok = h.allowedWritePaths(w, r, s, ticket, dir)
+	return ok
 }
 
 // drainRejected는 본문이 큰 라우트(올리기)를 감싸, 본문을 다 받기 전에 오류로 답할 때 남은 본문을 먼저 받고 응답한다.

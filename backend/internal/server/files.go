@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/url"
 	"path"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -91,7 +92,7 @@ func (h *handler) updateFilesSite(apply func(*api.SiteFiles)) error {
 	next.Shares = append([]api.SharedFolder(nil), next.Shares...)
 	apply(&next)
 	err := h.Site.UpdateSite(func(v *api.SiteSettings) {
-		if next.SharesUpdatedAt == "" && !next.ShowDisks {
+		if next.SharesUpdatedAt == "" && !next.ShowDisks && !next.FollowPrivileges {
 			v.Files = nil
 			return
 		}
@@ -148,32 +149,57 @@ func (h *handler) refreshSharesOnLogin(s auth.Session, ip string) {
 	}()
 }
 
-// filesSettings는 파일 탐색기 전역 설정(스냅숏, 디스크 보기)이다(관리자).
+// filesSettings는 파일 탐색기 전역 설정(스냅숏, 디스크 보기, 공유 폴더 권한 따르기)이다(관리자).
 func (h *handler) filesSettings(w http.ResponseWriter, _ *http.Request, _ auth.Session) {
 	writeJSON(w, http.StatusOK, filesSettingsOf(h.siteFiles()))
 }
 
 func filesSettingsOf(f api.SiteFiles) api.FilesSettings {
-	out := api.FilesSettings{Shares: f.Shares, SharesUpdatedAt: f.SharesUpdatedAt, ShowDisks: f.ShowDisks}
+	out := api.FilesSettings{Shares: f.Shares, SharesUpdatedAt: f.SharesUpdatedAt, ShowDisks: f.ShowDisks, FollowPrivileges: f.FollowPrivileges}
 	if out.Shares == nil {
 		out.Shares = []api.SharedFolder{}
 	}
 	return out
 }
 
-// setFilesSettings는 디스크 최상위 보기를 바꾼다(관리자).
+// setFilesSettings는 디스크 최상위 보기와 공유 폴더 권한 따르기를 바꾼다(관리자). 보내지 않은 설정은 그대로 둔다.
+// 권한 따르기를 켤 때는 권한이 담긴 스냅숏을 먼저 받는다(받지 못하면 켜지 않는다). 그 전의 스냅숏(옛 버전이 받았거나
+// 오래된 권한)으로 열어 주지 않기 위해서다.
 func (h *handler) setFilesSettings(w http.ResponseWriter, r *http.Request, s auth.Session) {
 	var req api.FilesSettingsRequest
 	if !decodeJSON(w, r, &req) {
 		return
 	}
-	if err := h.updateFilesSite(func(f *api.SiteFiles) { f.ShowDisks = req.ShowDisks }); err != nil {
+	if req.FollowPrivileges != nil && *req.FollowPrivileges && !h.siteFiles().FollowPrivileges {
+		ctx, cancel := context.WithTimeout(r.Context(), sharesTimeout)
+		defer cancel()
+		_, err := h.refreshShares(ctx, s, clientIP(r))
+		switch {
+		case errors.Is(err, errSessionExpired):
+			h.expire(w, r, s)
+			return
+		case err != nil:
+			log.Printf("files: refresh shared folders user=%q: %v", s.Username, err)
+			writeError(w, http.StatusBadGateway, api.ErrOMVError, "failed to read shared folders")
+			return
+		}
+	}
+	err := h.updateFilesSite(func(f *api.SiteFiles) {
+		if req.ShowDisks != nil {
+			f.ShowDisks = *req.ShowDisks
+		}
+		if req.FollowPrivileges != nil {
+			f.FollowPrivileges = *req.FollowPrivileges
+		}
+	})
+	if err != nil {
 		log.Printf("site settings: save file explorer settings: %v", err)
 		writeJSON(w, http.StatusInternalServerError, api.ErrorResponse{Error: "failed to save settings"})
 		return
 	}
-	log.Printf("files: show disks=%t by=%q", req.ShowDisks, s.Username)
-	writeJSON(w, http.StatusOK, filesSettingsOf(h.siteFiles()))
+	f := h.siteFiles()
+	log.Printf("files: show disks=%t follow privileges=%t by=%q", f.ShowDisks, f.FollowPrivileges, s.Username)
+	writeJSON(w, http.StatusOK, filesSettingsOf(f))
 }
 
 // refreshFilesShares는 공유 폴더 스냅숏을 지금 갱신한다(관리자, 설정 앱의 새로 고침 단추).
@@ -230,38 +256,62 @@ func (h *handler) filesGuard(write bool, next func(http.ResponseWriter, *http.Re
 	})
 }
 
-// home은 s 사용자의 홈 폴더다(도우미 id의 home, 세션별로 기억). 없으면 빈 값이다.
-func (h *handler) home(ctx context.Context, s auth.Session, ticket string) (string, error) {
-	if home, ok := h.files.Home(s.ID); ok {
-		return home, nil
+// identity는 s 사용자의 신원(도우미 id의 홈 폴더, 사용자·그룹 이름)이다. 세션별로 기억한다. 홈이 없으면 빈 값이다.
+func (h *handler) identity(ctx context.Context, s auth.Session, ticket string) (files.Identity, error) {
+	if id, ok := h.files.Identity(s.ID); ok {
+		return id, nil
 	}
 	id, err := h.Helper.Identity(ctx, ticket, proto.ScopeUser)
 	if err != nil {
-		return "", err
+		return files.Identity{}, err
 	}
-	home := ""
+	out := files.Identity{User: id.User}
 	if files.ValidPath(id.Home) {
-		home = id.Home
+		out.Home = id.Home
 	}
-	h.files.SetHome(s.ID, home)
-	return home, nil
+	for _, g := range id.Groups {
+		out.Groups = append(out.Groups, g.Name)
+	}
+	h.files.SetIdentity(s.ID, out)
+	return out, nil
+}
+
+// fileRoots는 s에게 보이는 폴더(응답)와, 공유 폴더 권한 따르기로 숨기거나 읽기 전용으로 둔 공유 폴더의 경로다.
+// hidden은 디스크 최상위 보기에서도 들어갈 수 없고, readOnly 안에는 쓸 수 없다. 둘은 브라우저에 보내지 않는다.
+type fileRoots struct {
+	api.FilesRoots
+	hidden   []string
+	readOnly []string
 }
 
 // roots는 s에게 보이는 폴더다. 디스크는 스냅숏이 없을 때(대체) 모두에게, 관리자가 디스크 최상위 보기를 켰을 때
-// 관리자에게 보인다.
-func (h *handler) roots(ctx context.Context, s auth.Session, ticket string) (api.FilesRoots, error) {
-	home, err := h.home(ctx, s, ticket)
+// 관리자에게 보인다. 공유 폴더 권한 따르기를 켰으면(스냅숏이 있을 때만) 권한이 없는 공유 폴더를 빼고, 읽기만
+// 허락된 공유 폴더를 읽기 전용으로 둔다. 관리자도 자기 계정의 권한을 따른다.
+func (h *handler) roots(ctx context.Context, s auth.Session, ticket string) (fileRoots, error) {
+	id, err := h.identity(ctx, s, ticket)
 	if err != nil {
-		return api.FilesRoots{}, err
+		return fileRoots{}, err
 	}
 	site := h.siteFiles()
-	out := api.FilesRoots{Shares: []api.FilesShare{}, Disks: []api.FilesRoot{}, SharesUpdatedAt: site.SharesUpdatedAt}
-	if home != "" {
-		out.Home = &api.FilesRoot{Name: path.Base(home), Path: home}
+	out := fileRoots{FilesRoots: api.FilesRoots{Shares: []api.FilesShare{}, Disks: []api.FilesRoot{}, SharesUpdatedAt: site.SharesUpdatedAt}}
+	if id.Home != "" {
+		out.Home = &api.FilesRoot{Name: path.Base(id.Home), Path: id.Home}
 	}
+	follow := site.FollowPrivileges && site.SharesUpdatedAt != ""
 	for _, sh := range site.Shares {
+		access := files.AccessWrite
+		if follow {
+			access = files.ShareAccess(sh.Privileges, id.User, id.Groups)
+		}
+		if access == files.AccessNone {
+			out.hidden = append(out.hidden, sh.Path)
+			continue
+		}
+		if access == files.AccessRead {
+			out.readOnly = append(out.readOnly, sh.Path)
+		}
 		out.Shares = append(out.Shares, api.FilesShare{UUID: sh.UUID, Name: sh.Name, Path: sh.Path,
-			Reachable: files.Reachable(sh.Path, h.filesSrvDir())})
+			Reachable: files.Reachable(sh.Path, h.filesSrvDir()), ReadOnly: access == files.AccessRead})
 	}
 	out.Fallback = site.SharesUpdatedAt == ""
 	if (out.Fallback || (s.Admin && site.ShowDisks)) && h.Mounts != nil {
@@ -287,29 +337,46 @@ func (h *handler) allowedPath(w http.ResponseWriter, r *http.Request, s auth.Ses
 }
 
 // allowedPaths는 ps가 모두 s에게 보이는 폴더 안인지 확인하고 보이는 폴더를 돌려준다. 아니면 오류 응답을 쓰고 false다.
-func (h *handler) allowedPaths(w http.ResponseWriter, r *http.Request, s auth.Session, ticket string, ps ...string) (api.FilesRoots, bool) {
+func (h *handler) allowedPaths(w http.ResponseWriter, r *http.Request, s auth.Session, ticket string, ps ...string) (fileRoots, bool) {
 	for _, p := range ps {
 		if !files.ValidPath(p) {
 			writeError(w, http.StatusBadRequest, api.ErrBadRequest, "path must be an absolute, clean path")
-			return api.FilesRoots{}, false
+			return fileRoots{}, false
 		}
 	}
 	roots, err := h.roots(r.Context(), s, ticket)
 	if err != nil {
 		h.writeFilesError(w, s, err)
-		return api.FilesRoots{}, false
+		return fileRoots{}, false
 	}
 	for _, p := range ps {
 		if !withinRoots(roots, p) {
 			writeError(w, http.StatusForbidden, api.ErrOutsideRoots, "path is outside the folders the file explorer shows")
-			return api.FilesRoots{}, false
+			return fileRoots{}, false
 		}
 	}
 	return roots, true
 }
 
-// withinRoots는 p가 보이는 폴더(홈, 닿을 수 있는 공유 폴더, 디스크) 가운데 하나의 안인지다.
-func withinRoots(roots api.FilesRoots, p string) bool {
+// allowedWritePaths는 allowedPaths에 더해 ps가 모두 쓸 수 있는 공유 폴더 안인지 확인한다(공유 폴더 권한 따르기의
+// 읽기 전용). 쓰기 라우트가 바꿀 곳(만들 곳, 옮기거나 지울 항목, 복사·되돌리기 대상)을 넘긴다.
+func (h *handler) allowedWritePaths(w http.ResponseWriter, r *http.Request, s auth.Session, ticket string, ps ...string) (fileRoots, bool) {
+	roots, ok := h.allowedPaths(w, r, s, ticket, ps...)
+	if !ok {
+		return roots, false
+	}
+	for _, p := range ps {
+		if readOnlyAt(roots, p) {
+			writeError(w, http.StatusForbidden, api.ErrShareReadOnly, "the shared folder privileges allow reading only")
+			return fileRoots{}, false
+		}
+	}
+	return roots, true
+}
+
+// withinRoots는 p가 보이는 폴더(홈, 닿을 수 있는 공유 폴더, 디스크) 가운데 하나의 안이고, 숨긴 공유 폴더(공유 폴더
+// 권한 따르기) 안이 아닌지다. 디스크 최상위 보기에서는 숨긴 공유 폴더가 디스크 안에 있다.
+func withinRoots(roots fileRoots, p string) bool {
 	ok := roots.Home != nil && files.Within(p, roots.Home.Path)
 	for _, sh := range roots.Shares {
 		ok = ok || (sh.Reachable && files.Within(p, sh.Path))
@@ -317,14 +384,28 @@ func withinRoots(roots api.FilesRoots, p string) bool {
 	for _, d := range roots.Disks {
 		ok = ok || files.Within(p, d.Path)
 	}
+	for _, hp := range roots.hidden {
+		ok = ok && !files.Within(p, hp)
+	}
 	return ok
+}
+
+// readOnlyAt은 p가 읽기만 허락된 공유 폴더(공유 폴더 권한 따르기) 안인지다.
+func readOnlyAt(roots fileRoots, p string) bool {
+	for _, rp := range roots.readOnly {
+		if files.Within(p, rp) {
+			return true
+		}
+	}
+	return false
 }
 
 // rootFolder는 p가 보이는 폴더(홈, 공유 폴더, 디스크) 자신이거나 그것을 품은 폴더인지다. 이런 폴더는 이름을 바꾸거나
 // 옮기거나 지우지 않는다. 권한 도우미는 자기 기준 디렉터리(홈, 마운트 지점)만 지키므로, 디스크 안의 공유 폴더는
 // 여기서 지킨다(디스크 최상위 보기에서는 공유 폴더가 디스크의 한 폴더로 보인다).
-func rootFolder(roots api.FilesRoots, p string) bool {
-	var paths []string
+func rootFolder(roots fileRoots, p string) bool {
+	// 숨긴 공유 폴더도 디스크의 한 폴더라 지킨다(그것을 품은 디스크 폴더를 지우면 함께 지워진다).
+	paths := slices.Clone(roots.hidden)
 	if roots.Home != nil {
 		paths = append(paths, roots.Home.Path)
 	}
@@ -368,21 +449,23 @@ func (h *handler) filesRoots(w http.ResponseWriter, r *http.Request, s auth.Sess
 		h.writeFilesError(w, s, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, roots)
+	writeJSON(w, http.StatusOK, roots.FilesRoots)
 }
 
 // filesList는 폴더의 목록을 열거나, 같은 세션이 연 목록이 그대로면(폴더 수정 시각이 같으면) 다시 쓴다.
 // refresh=1이면 언제나 다시 읽는다(폴더 수정 시각은 안의 파일 내용이 바뀌어도 그대로다).
 func (h *handler) filesList(w http.ResponseWriter, r *http.Request, s auth.Session, ticket string) {
 	p := r.URL.Query().Get("path")
-	if !h.allowedPath(w, r, s, ticket, p) {
+	roots, ok := h.allowedPaths(w, r, s, ticket, p)
+	if !ok {
 		return
 	}
+	shareRO := readOnlyAt(roots, p)
 	if r.URL.Query().Get("refresh") != "1" {
 		if l, ok := h.files.Find(s.ID, p); ok {
 			st, err := h.Helper.Stat(r.Context(), ticket, p)
 			if err == nil && st.Type == proto.TypeDir && st.ModTimeNs == l.DirModTimeNs {
-				writeJSON(w, http.StatusOK, listingOf(l))
+				writeJSON(w, http.StatusOK, listingOf(l, shareRO))
 				return
 			}
 		}
@@ -394,11 +477,13 @@ func (h *handler) filesList(w http.ResponseWriter, r *http.Request, s auth.Sessi
 	}
 	l := files.NewListing(files.NewID(), p, res, names)
 	h.files.Add(s.ID, l)
-	writeJSON(w, http.StatusOK, listingOf(l))
+	writeJSON(w, http.StatusOK, listingOf(l, shareRO))
 }
 
-func listingOf(l *files.Listing) api.FilesListing {
-	return api.FilesListing{ID: l.ID, Path: l.Path, Total: l.Len(), Truncated: l.Truncated, Writable: l.Writable}
+// listingOf는 목록 응답이다. shareRO면 공유 폴더 권한이 읽기만 허락하므로 파일 시스템이 허락해도 쓸 수 없다고 알린다.
+func listingOf(l *files.Listing, shareRO bool) api.FilesListing {
+	return api.FilesListing{ID: l.ID, Path: l.Path, Total: l.Len(), Truncated: l.Truncated, Writable: l.Writable && !shareRO,
+		ShareReadOnly: shareRO}
 }
 
 // parseView는 보기(정렬·방향·찾기어) 쿼리다. 잘못된 값이 있으면 false다.
@@ -531,7 +616,8 @@ func (h *handler) fillStats(ctx context.Context, ticket string, l *files.Listing
 // filesInfo는 파일 하나의 정보 패널 내용이다. 관리자에게는 그 경로가 속한 공유 폴더(OMV ACL 화면 링크)를 함께 준다.
 func (h *handler) filesInfo(w http.ResponseWriter, r *http.Request, s auth.Session, ticket string) {
 	p := r.URL.Query().Get("path")
-	if !h.allowedPath(w, r, s, ticket, p) {
+	roots, ok := h.allowedPaths(w, r, s, ticket, p)
+	if !ok {
 		return
 	}
 	in, err := h.Helper.Info(r.Context(), ticket, p)
@@ -541,8 +627,9 @@ func (h *handler) filesInfo(w http.ResponseWriter, r *http.Request, s auth.Sessi
 	}
 	out := api.FileInfo{Path: p, Name: in.Name, Type: in.Type, Size: in.Size, ModTime: in.ModTimeNs / int64(time.Millisecond),
 		Mode: in.Mode, Target: in.Target, LinkType: in.LinkType, UID: in.UID, GID: in.GID, Owner: in.Owner, Group: in.Group, ACL: in.ACL}
+	out.ShareReadOnly = readOnlyAt(roots, p)
 	if in.Access != nil {
-		out.Access = &api.FileAccess{Read: in.Access.Read, Write: in.Access.Write}
+		out.Access = &api.FileAccess{Read: in.Access.Read, Write: in.Access.Write && !out.ShareReadOnly}
 	}
 	if s.Admin {
 		best := ""
@@ -723,7 +810,7 @@ func (h *handler) filesMkdir(w http.ResponseWriter, r *http.Request, s auth.Sess
 		writeError(w, http.StatusBadRequest, api.ErrBadRequest, "invalid folder name")
 		return
 	}
-	if !h.allowedPath(w, r, s, ticket, dir) {
+	if _, ok := h.allowedWritePaths(w, r, s, ticket, dir); !ok {
 		return
 	}
 	e, err := h.Helper.Mkdir(r.Context(), ticket, req.Path)
@@ -750,7 +837,7 @@ func (h *handler) filesRename(w http.ResponseWriter, r *http.Request, s auth.Ses
 		writeError(w, http.StatusBadRequest, api.ErrBadRequest, "cannot move a folder into itself")
 		return
 	}
-	roots, ok := h.allowedPaths(w, r, s, ticket, req.From, toDir)
+	roots, ok := h.allowedWritePaths(w, r, s, ticket, req.From, toDir)
 	if !ok {
 		return
 	}
@@ -773,7 +860,7 @@ func (h *handler) filesDelete(w http.ResponseWriter, r *http.Request, s auth.Ses
 	if !decodeJSON(w, r, &req) {
 		return
 	}
-	roots, ok := h.allowedPaths(w, r, s, ticket, req.Path)
+	roots, ok := h.allowedWritePaths(w, r, s, ticket, req.Path)
 	if !ok {
 		return
 	}

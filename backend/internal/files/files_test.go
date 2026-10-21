@@ -3,6 +3,7 @@ package files
 import (
 	"encoding/json"
 	"errors"
+	"reflect"
 	"slices"
 	"testing"
 	"time"
@@ -55,7 +56,7 @@ func TestParseShares(t *testing.T) {
 	got, err := ParseShares(json.RawMessage(raw))
 	want := []api.SharedFolder{{UUID: "u4", Name: "docs", Path: "/srv/d1/docs"}, {UUID: "u5", Name: "kvm", Path: "/kvm"},
 		{UUID: "u1", Name: "미디어", Path: "/srv/d1/media"}}
-	if err != nil || !slices.Equal(got, want) {
+	if err != nil || !reflect.DeepEqual(got, want) {
 		t.Fatalf("8.1+ = %+v %v", got, err)
 	}
 	// OMV 8.0: absdirpath·status가 없으므로 마운트 지점과 상대 경로로 만든다.
@@ -64,11 +65,68 @@ func TestParseShares(t *testing.T) {
 		{"uuid":"u2","name":"nomount","reldirpath":"x/","mntent":{"dir":""}}
 	]`
 	got, err = ParseShares(json.RawMessage(raw))
-	if err != nil || !slices.Equal(got, []api.SharedFolder{{UUID: "u1", Name: "media", Path: "/srv/d1/media"}}) {
+	if err != nil || !reflect.DeepEqual(got, []api.SharedFolder{{UUID: "u1", Name: "media", Path: "/srv/d1/media"}}) {
 		t.Fatalf("8.0 = %+v %v", got, err)
 	}
 	if _, err := ParseShares(json.RawMessage(`{"total":0}`)); err == nil {
 		t.Fatal("object accepted")
+	}
+}
+
+func TestParseSharesPrivileges(t *testing.T) {
+	// 권한은 8.0부터 같은 모양이다. 모르는 종류·이름 없는 항목은 빼고, 모르는 값은 거부로 둔다.
+	raw := `[{"uuid":"u1","name":"photos","reldirpath":"photos/","mntent":{"dir":"/srv/d1"},"privileges":{"privilege":[
+		{"type":"user","name":"alice","perms":7},
+		{"type":"group","name":"family","perms":5},
+		{"type":"user","name":"bob","perms":3},
+		{"type":"role","name":"x","perms":7},
+		{"type":"user","name":"","perms":7}
+	]}},{"uuid":"u2","name":"open","reldirpath":"open/","mntent":{"dir":"/srv/d1"},"privileges":{"privilege":[]}}]`
+	got, err := ParseShares(json.RawMessage(raw))
+	want := []api.SharedFolder{
+		{UUID: "u2", Name: "open", Path: "/srv/d1/open"},
+		{UUID: "u1", Name: "photos", Path: "/srv/d1/photos", Privileges: []api.SharePrivilege{
+			{Type: "user", Name: "alice", Perms: 7}, {Type: "group", Name: "family", Perms: 5}, {Type: "user", Name: "bob", Perms: 0}}},
+	}
+	if err != nil || !reflect.DeepEqual(got, want) {
+		t.Fatalf("privileges = %+v %v", got, err)
+	}
+}
+
+func TestShareAccess(t *testing.T) {
+	privs := []api.SharePrivilege{
+		{Type: "user", Name: "alice", Perms: 7},
+		{Type: "user", Name: "carol", Perms: 5},
+		{Type: "group", Name: "family", Perms: 5},
+		{Type: "group", Name: "editors", Perms: 7},
+		{Type: "group", Name: "banned", Perms: 0},
+		{Type: "user", Name: "dave", Perms: 7},
+	}
+	for _, c := range []struct {
+		user   string
+		groups []string
+		want   Access
+	}{
+		{"alice", nil, AccessWrite},
+		{"carol", nil, AccessRead},
+		{"erin", []string{"family"}, AccessRead},
+		// 사용자 항목이 그룹 항목을 덮지 않는다(Samba의 write list가 앞선다).
+		{"carol", []string{"editors"}, AccessWrite},
+		// 거부는 언제나 앞선다.
+		{"dave", []string{"banned"}, AccessNone},
+		{"alice", []string{"family", "banned"}, AccessNone},
+		// 맞는 항목이 없으면 거부다.
+		{"frank", []string{"users"}, AccessNone},
+		// 그룹 이름과 같은 사용자 이름은 사용자 항목으로만 본다.
+		{"family", nil, AccessNone},
+	} {
+		if got := ShareAccess(privs, c.user, c.groups); got != c.want {
+			t.Errorf("%s %v = %d, want %d", c.user, c.groups, got, c.want)
+		}
+	}
+	// 정한 권한이 없으면 모두에게 열린다.
+	if ShareAccess(nil, "anyone", nil) != AccessWrite {
+		t.Fatal("no privileges")
 	}
 }
 
@@ -255,12 +313,14 @@ func TestCache(t *testing.T) {
 	if _, ok := c.Get("s2", "d"); ok {
 		t.Fatal("idle listing returned")
 	}
-	c.SetHome("s1", "/home/u")
-	if h, ok := c.Home("s1"); !ok || h != "/home/u" {
-		t.Fatal("home")
+	groups := []string{"users", "photo"}
+	c.SetIdentity("s1", Identity{Home: "/home/u", User: "u", Groups: groups})
+	groups[0] = "changed"
+	if id, ok := c.Identity("s1"); !ok || id.Home != "/home/u" || id.User != "u" || !slices.Equal(id.Groups, []string{"users", "photo"}) {
+		t.Fatalf("identity = %+v", id)
 	}
 	c.RemoveSession("s1")
-	if _, ok := c.Home("s1"); ok {
+	if _, ok := c.Identity("s1"); ok {
 		t.Fatal("home kept after session removal")
 	}
 	if _, ok := c.Find("s1", "/c"); ok {

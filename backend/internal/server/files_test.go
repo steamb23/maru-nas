@@ -7,7 +7,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"slices"
+	"reflect"
 	"strconv"
 	"strings"
 	"testing"
@@ -103,7 +103,7 @@ func TestFilesRootsAndSnapshot(t *testing.T) {
 	}
 	want := []api.SharedFolder{{UUID: "u-docs", Name: "docs", Path: e.disk + "/docs"}, {UUID: "u-kvm", Name: "kvm", Path: "/kvm"},
 		{UUID: "u-media", Name: "미디어", Path: e.disk + "/media"}}
-	if !slices.Equal(settings.Shares, want) || settings.ShowDisks {
+	if !reflect.DeepEqual(settings.Shares, want) || settings.ShowDisks {
 		t.Fatalf("settings = %+v", settings)
 	}
 	roots = decode[api.FilesRoots](t, user.do(http.MethodGet, "/api/files/roots", nil))
@@ -112,8 +112,8 @@ func TestFilesRootsAndSnapshot(t *testing.T) {
 	}
 
 	// 디스크 최상위 보기는 관리자에게만 디스크를 보인다.
-	wantStatus(t, user.do(http.MethodPut, "/api/site/files", api.FilesSettingsRequest{ShowDisks: true}), http.StatusForbidden)
-	wantStatus(t, admin.do(http.MethodPut, "/api/site/files", api.FilesSettingsRequest{ShowDisks: true}), http.StatusOK)
+	wantStatus(t, user.do(http.MethodPut, "/api/site/files", api.FilesSettingsRequest{ShowDisks: new(true)}), http.StatusForbidden)
+	wantStatus(t, admin.do(http.MethodPut, "/api/site/files", api.FilesSettingsRequest{ShowDisks: new(true)}), http.StatusOK)
 	if r := decode[api.FilesRoots](t, admin.do(http.MethodGet, "/api/files/roots", nil)); len(r.Disks) != 1 {
 		t.Fatalf("admin disks = %+v", r)
 	}
@@ -490,7 +490,7 @@ func TestFilesMkdirRenameDelete(t *testing.T) {
 
 	// 디스크 최상위 보기에서는 공유 폴더가 디스크의 한 폴더로 보이지만, 공유 폴더와 그것을 품은 디스크는 지키고
 	// 그 밖의 폴더는 다룬다.
-	wantStatus(t, admin.do(http.MethodPut, "/api/site/files", api.FilesSettingsRequest{ShowDisks: true}), http.StatusOK)
+	wantStatus(t, admin.do(http.MethodPut, "/api/site/files", api.FilesSettingsRequest{ShowDisks: new(true)}), http.StatusOK)
 	wantCode(remove(admin, e.disk+"/media", true), http.StatusConflict, api.ErrRootFolder)
 	wantCode(rename(admin, e.disk+"/docs", e.disk+"/docs2"), http.StatusConflict, api.ErrRootFolder)
 	wantCode(remove(admin, e.disk, true), http.StatusConflict, api.ErrRootFolder)
