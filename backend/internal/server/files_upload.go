@@ -52,9 +52,10 @@ func (h *handler) filesUpload(w http.ResponseWriter, r *http.Request, s auth.Ses
 }
 
 // filesUploadCheck는 올리기의 사전 확인이다. 브라우저는 PUT으로 본문을 보내기 전에 이것을 불러, 본문 없이 알 수
-// 있는 거절(세션, 보안 확인, 이름, 범위)을 먼저 받는다. 본문을 다 보낸 뒤에야 거절이 오는 프록시에서도 보안 확인
-// 대화상자를 바로 띄우기 위해서다. 같은 가드(requireFilesWrite)와 같은 검사(uploadTarget)를 거치지만 사용성을
-// 위한 것일 뿐이고, PUT은 모든 검사를 그대로 다시 한다. 도우미는 부르지 않는다(같은 이름, 쓰기 권한은 PUT이 안다).
+// 있는 거절(세션, 보안 확인, 이름, 범위)을 먼저 받는다. PUT의 거절은 남은 본문을 받은 뒤에 오므로(drainRejected)
+// 보안 확인 대화상자를 본문을 보내기 전에 띄우기 위해서다. 같은 가드(requireFilesWrite)와 같은 검사(uploadTarget)를
+// 거치지만 사용성을 위한 것일 뿐이고, PUT은 모든 검사를 그대로 다시 한다. 도우미는 부르지 않는다(같은 이름, 쓰기
+// 권한은 PUT이 안다).
 func (h *handler) filesUploadCheck(w http.ResponseWriter, r *http.Request, s auth.Session, ticket string) {
 	var req api.FilesUploadCheckRequest
 	if !decodeJSON(w, r, &req) {
@@ -76,23 +77,20 @@ func (h *handler) uploadTarget(w http.ResponseWriter, r *http.Request, s auth.Se
 	return h.allowedPath(w, r, s, ticket, dir)
 }
 
-// drainRejected는 본문이 큰 라우트(올리기)를 감싸, 본문을 다 받기 전에 오류로 답할 때 응답을 먼저 끝까지 보내고
-// 남은 본문을 읽어 버린다.
+// drainRejected는 본문이 큰 라우트(올리기)를 감싸, 본문을 다 받기 전에 오류로 답할 때 남은 본문을 먼저 받고 응답한다.
 //
 // Go 서버는 핸들러가 본문을 읽기 전에 응답하고 남은 본문이 256KiB 이상이면 본문을 버리지 않고 연결을 닫는다
 // (Connection: close, 500ms 뒤 닫기). 브라우저(HTTP/1.1)와 일부 리버스 프록시는 본문을 끝까지 보낸 뒤에야 응답을
 // 읽으므로, 닫힌 연결에 쓰다가 RST를 받는다. 그러면 Vite 프록시는 거절을 502로 바꾸고 Caddy는 응답을 늦게 주거나
-// 멈춘다. 그래서 오류 응답은 길이를 붙여 바로 보내고(응답을 일찍 읽는 프록시는 바로 넘긴다) 남은 본문을 받은 뒤
-// 연결을 닫는다.
+// 멈춘다. 그래서 남은 본문을 받은 뒤 보통의 응답처럼 답한다. 응답을 먼저 보내고 본문을 받으면(full duplex) 응답을 일찍
+// 읽는 프록시에는 빠르지만, Caddy(브라우저 쪽 HTTP/2)를 거친 Chrome에서는 그 HTTP/2 연결이 가끔 멈춰 쓰지 않는다.
+// 거절을 본문 전에 받는 것은 사전 확인(filesUploadCheck)이 맡는다.
 //
 // 세션이 있는 요청은 남은 본문을 Content-Length까지 받는다. 성공한 올리기보다 더 받지 않으며, rejectDrainIdle 동안
-// 받지 못하거나 연결이 끊기면 멈춘다. 세션이 없는 401과 길이를 모르는 본문은 rejectDrainAnon까지만 받는다.
+// 받지 못하거나 연결이 끊기면 멈춘다. 세션이 없는 401과 길이를 모르는 본문은 rejectDrainAnon까지만 받는다. 다 받지
+// 못했으면 응답 뒤에 연결을 닫는다.
 func drainRejected(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		rc := http.NewResponseController(w)
-		// HTTP/1은 응답을 쓰기 시작할 때 남은 본문을 버릴지 연결을 닫을지 정하므로 쓰기 전에 켠다. HTTP/2와
-		// httptest.ResponseRecorder는 지원하지 않는다는 오류를 주고, 그때는 그대로 둔다.
-		_ = rc.EnableFullDuplex()
 		body := &countingBody{ReadCloser: r.Body}
 		r.Body = body
 		rw := &heldError{ResponseWriter: w}
@@ -100,39 +98,25 @@ func drainRejected(next http.HandlerFunc) http.HandlerFunc {
 		if !rw.held {
 			return
 		}
-		// left는 남은 본문이다. 길이를 모르면 -1이다.
-		var left int64
-		switch {
-		case body.eof:
-		case r.ContentLength < 0:
-			left = -1
-		default:
-			left = max(r.ContentLength-body.n, 0)
+		limit := int64(rejectDrainAnon)
+		if r.ContentLength >= 0 && rw.status != http.StatusUnauthorized {
+			limit = r.ContentLength - body.n
 		}
-		limit := left
-		if left < 0 || rw.status == http.StatusUnauthorized {
-			limit = rejectDrainAnon
-			if left >= 0 {
-				limit = min(limit, left)
-			}
+		if !body.eof && limit > 0 {
+			drainBody(http.NewResponseController(w), body, limit)
 		}
-		if left != 0 {
-			// 이 연결은 응답 뒤에 닫는다. 남은 본문은 그 전에 받으므로 RST가 가지 않고, Go 트랜스포트 같은 프록시는
-			// 연결을 다시 쓸지 기다리지 않고 응답을 넘긴다.
+		if !body.done(r.ContentLength) {
+			// 남은 본문을 버리려고 더 기다리지 않는다.
 			w.Header().Set("Connection", "close")
 		}
 		w.Header().Set("Content-Length", strconv.Itoa(rw.buf.Len()))
 		w.WriteHeader(rw.status)
 		w.Write(rw.buf.Bytes())
-		if limit <= 0 {
-			return
-		}
-		rc.Flush()
-		drainBody(rc, body, limit)
 	}
 }
 
-// drainBody는 body를 limit 바이트까지 읽어 버린다. rejectDrainIdle 동안 받지 못하거나 연결이 끊기면 멈춘다.
+// drainBody는 body를 limit 바이트까지 읽어 버린다. 끝에 닿거나, rejectDrainIdle 동안 받지 못하거나, 연결이 끊기면
+// 멈춘다.
 func drainBody(rc *http.ResponseController, body io.Reader, limit int64) {
 	defer rc.SetReadDeadline(time.Time{})
 	buf := make([]byte, 32<<10)
@@ -154,6 +138,11 @@ type countingBody struct {
 	eof bool
 }
 
+// done은 본문을 끝까지 읽었는지다. length는 Content-Length(모르면 -1)다.
+func (b *countingBody) done(length int64) bool {
+	return b.eof || length >= 0 && b.n >= length
+}
+
 func (b *countingBody) Read(p []byte) (int, error) {
 	n, err := b.ReadCloser.Read(p)
 	b.n += int64(n)
@@ -163,8 +152,8 @@ func (b *countingBody) Read(p []byte) (int, error) {
 	return n, err
 }
 
-// heldError는 오류 응답(400 이상)을 바로 쓰지 않고 모아 둔다. drainRejected가 길이를 붙여 쓴다. 성공 응답은 그대로
-// 지나간다.
+// heldError는 오류 응답(400 이상)을 바로 쓰지 않고 모아 둔다. drainRejected가 남은 본문을 받은 뒤 길이를 붙여
+// 쓴다. 성공 응답은 그대로 지나간다.
 type heldError struct {
 	http.ResponseWriter
 	held   bool
