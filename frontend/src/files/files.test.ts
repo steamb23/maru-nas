@@ -56,6 +56,7 @@ import {
   retried,
   retryable,
   stopped,
+  unfinished,
   uploadAmount,
   uploadProgress,
   uploadRemaining,
@@ -262,6 +263,18 @@ describe('올리기 작업', () => {
     expect(j.files.every((f) => f.status === 'cancelled')).toBe(true)
     expect(retryable(j, false)).toBe(3)
     expect(stopped(j, new ApiError(500, 'x')).status).toBe('failed')
+  })
+
+  it('올리지 못했거나 취소한 파일이 남았는지 본다', () => {
+    let j = newUploadJob(1, '/d', files)
+    for (const i of [0, 1, 2]) j = fileFinished(fileStarted(j, i), i)
+    expect(unfinished(completed(j))).toBe(false)
+    // 마지막 파일을 올리는 중에 취소하면 그 파일이 남는다.
+    j = fileStarted(fileFinished(fileStarted(newUploadJob(1, '/d', files.slice(0, 2)), 0), 0), 1)
+    expect(unfinished(stopped(j))).toBe(true)
+    expect(unfinished(completed(fileFailed(j, 1, 'no_space')))).toBe(true)
+    // 다 올린 뒤에 취소가 늦게 오면 남은 파일이 없다.
+    expect(unfinished(stopped(fileFinished(j, 1)))).toBe(false)
   })
 
   it('올린 양은 취소한 파일을 빼고 바이트로 잰다', () => {
