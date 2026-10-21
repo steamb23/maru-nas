@@ -82,6 +82,11 @@ export function completed(job: UploadJob): UploadJob {
   return { ...job, status: job.files.some((f) => f.status === 'failed') ? 'failed' : 'done' }
 }
 
+// unfinished는 올리지 못했거나 취소한 파일이 남았는지다(다시 올릴 수 있다).
+export function unfinished(job: UploadJob): boolean {
+  return job.files.some((f) => f.status === 'failed' || f.status === 'cancelled')
+}
+
 // retryable은 다시 올릴 수 있는 파일 수다. overwrite면 같은 이름이 생겨 올리지 못한 파일(file_exists), 아니면 그 밖의
 // 실패와 취소한 파일을 센다.
 export function retryable(job: UploadJob, overwrite: boolean): number {

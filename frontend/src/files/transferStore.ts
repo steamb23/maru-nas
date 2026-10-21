@@ -5,7 +5,8 @@
 // - 작업은 종류와 관계없이 하나씩 차례로 한다(도우미의 사용자당 동시 연산 4개 안에서 목록에 자리를 남긴다). 복사는
 //   이름이 많으면 요청 여러 개로 나누고(copyJobs.ts의 copyChunks), 올리기는 파일마다 요청 하나다
 // - 작업 창은 작업이 OPEN_DELAY_MS보다 오래 걸릴 때 연다(금방 끝나는 작업에 창이 깜빡이지 않게). 모두 문제없이 끝나면
-//   스스로 닫고, 하지 못하거나 건너뛴 항목이 있으면 (금방 끝났어도) 열어 남겨 둔다
+//   스스로 닫고, 하지 못하거나 건너뛴 항목이 있거나 올리기를 취소해 다시 올릴 파일이 남았으면 (금방 끝났어도) 열어
+//   남겨 둔다
 // - 작업 창을 닫으면 남은 작업을 취소한다(복사하던 항목은 도우미가 지우고, 올리던 파일은 백엔드가 임시 파일을 지운다).
 //   창 컴포넌트의 정리 함수는 개발 모드(StrictMode)에서 마운트 직후에도 불리므로 쓰지 않고, 창 저장소에서 창이
 //   사라지는 것을 본다. 닫힌 창은 닫기 애니메이션 동안 이 목록으로 그려지므로 목록은 다음 작업을 더할 때 비운다
@@ -34,6 +35,7 @@ import {
   nextFile,
   retried,
   stopped,
+  unfinished,
   uploadAmount,
 } from './uploadJobs'
 
@@ -300,10 +302,11 @@ async function runUpload(job: UploadJob, rt: Runtime) {
   update<UploadJob>(id, (j) => completed(j))
 }
 
-// clean은 알릴 것 없이 끝난 작업인지다(다 했거나, 하지 못한 항목 없이 취소했다).
+// clean은 알릴 것 없이 끝난 작업인지다. 복사는 다 했거나 하지 못한 항목 없이 취소한 것이고, 올리기는 모든 파일을 올린
+// 것이다. 올리기를 취소했으면(작업 창의 취소, 보안 확인 취소, 세션 만료) 다시 올릴 파일이 남으므로 창에 남겨 둔다.
 function clean(j: TransferJob): boolean {
   if (j.status !== 'done' && j.status !== 'cancelled') return false
-  if (j.kind === 'upload') return j.error === null && !j.files.some((f) => f.status === 'failed')
+  if (j.kind === 'upload') return j.error === null && !unfinished(j)
   return j.failures.length === 0 && j.skipped === 0 && !j.error
 }
 
