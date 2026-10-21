@@ -612,6 +612,41 @@ func TestRunFileOps(t *testing.T) {
 	}
 }
 
+func TestRunTrashAudit(t *testing.T) {
+	e := newEnv(t, nil)
+	home := t.TempDir()
+	a, _ := e.accounts.Lookup("alice")
+	a.Home = home
+	e.accounts.set(a)
+	e.spawner.cfg.MountInfo = func() (io.ReadCloser, error) { return io.NopCloser(strings.NewReader("")), nil }
+	res := e.open("alice", false)
+	params := func(v any) json.RawMessage { b, _ := json.Marshal(v); return b }
+	run := func(action string, p any) proto.Response {
+		resp, _ := e.call(proto.Request{Op: proto.OpRun, Ticket: res.Ticket, Scope: proto.ScopeUser, Action: action, Params: params(p)}, nil)
+		if !resp.OK {
+			t.Fatalf("%s: %q", action, resp.Code)
+		}
+		return resp
+	}
+	if err := os.WriteFile(home+"/a.txt", []byte("a"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var tr proto.TrashResult
+	if err := run(proto.ActionTrash, proto.PathParams{Path: home + "/a.txt"}).Decode(&tr); err != nil {
+		t.Fatal(err)
+	}
+	run(proto.ActionTrashList, struct{}{})
+	run(proto.ActionTrashDirs, struct{}{})
+	run(proto.ActionTrashRestore, proto.TrashRestoreParams{Trash: tr.Trash, Name: tr.Name, To: home + "/b.txt"})
+	e.logs.wait(t, `action=fs.trash path="`+home+`/a.txt" result=ok`)
+	e.logs.wait(t, `action=fs.trashrestore trash="`+tr.Trash+`" name="a.txt" to="`+home+`/b.txt" result=ok`)
+	for _, action := range []string{"fs.trashlist", "fs.trashdirs"} {
+		if logs := e.logs.text(); strings.Contains(logs, "action="+action) {
+			t.Fatalf("%s logged:\n%s", action, logs)
+		}
+	}
+}
+
 func TestRunSSHKey(t *testing.T) {
 	e := newEnv(t, nil)
 	home := t.TempDir()

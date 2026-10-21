@@ -446,7 +446,7 @@ func (s *Server) run(ctx context.Context, c *net.UnixConn, req proto.Request) {
 	switch req.Action {
 	case proto.ActionRead, proto.ActionWrite:
 		timeout = streamTimeout
-	case proto.ActionRemove:
+	case proto.ActionRemove, proto.ActionTrashPurge, proto.ActionTrashEmpty:
 		timeout = removeTimeout
 	}
 	ctx, cancel := context.WithTimeout(ctx, timeout)
@@ -492,12 +492,14 @@ func (s *Server) acquireWorker(user string) (func(), error) {
 // ssh.authorize·ssh.revoke는 경로가 정해져 있으므로(~/.ssh/authorized_keys) 키 지문만 남긴다.
 var writeActions = map[string]bool{
 	proto.ActionWrite: true, proto.ActionMkdir: true, proto.ActionRename: true, proto.ActionRemove: true,
+	proto.ActionTrash: true, proto.ActionTrashRestore: true, proto.ActionTrashPurge: true, proto.ActionTrashEmpty: true,
 }
 
 // quietActions는 감사 로그에 남기지 않는 정보 읽기 연산이다. 파일 탐색기가 폴더를 열고 스크롤할 때마다
 // 여러 번 부르므로 남기면 저널이 이 줄로 덮인다. 내려받기(fs.read)와 쓰기 연산은 남긴다.
 var quietActions = map[string]bool{
 	proto.ActionList: true, proto.ActionStat: true, proto.ActionNames: true, proto.ActionStatMany: true, proto.ActionInfo: true,
+	proto.ActionTrashDirs: true, proto.ActionTrashList: true,
 }
 
 // audit은 연산 결과를 남긴다. root 범위와 쓰기 연산은 언제나, 읽기 연산은 연산과 결과만 남긴다.
@@ -521,9 +523,20 @@ func (s *Server) audit(user string, req proto.Request, code string) {
 			// upgrade.apply: 대상 커밋과 설정 이름(값은 남기지 않는다)
 			Target   string            `json:"target"`
 			Settings map[string]string `json:"settings"`
+			// 휴지통 연산: 휴지통 디렉터리와 그 안의 이름, trash.prepare의 디스크
+			Trash string `json:"trash"`
+			Name  string `json:"name"`
+			Disk  string `json:"disk"`
 		}
 		if json.Unmarshal(req.Params, &p) == nil {
 			switch {
+			case p.Trash != "":
+				detail = fmt.Sprintf(" trash=%q name=%q", p.Trash, p.Name)
+				if p.To != "" {
+					detail += fmt.Sprintf(" to=%q", p.To)
+				}
+			case p.Disk != "":
+				detail = fmt.Sprintf(" disk=%q", p.Disk)
 			case p.From != "" || p.To != "":
 				detail = fmt.Sprintf(" from=%q to=%q", p.From, p.To)
 			case p.Path != "":

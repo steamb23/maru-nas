@@ -76,13 +76,30 @@ const (
 	// ActionUpgradeApply는 대시보드에서 업그레이드의 적용 요청(대상 커밋, 설정 값)을 업그레이드 서비스의 요청
 	// 디렉터리에 쓴다(root 범위). 명령은 받지 않는다.
 	ActionUpgradeApply = "upgrade.apply"
+	// 휴지통 연산. FreeDesktop 휴지통 규격을 trash-cli의 trash-put과 같은 곳·형식으로 쓴다.
+	// ActionTrash는 파일이나 폴더를 휴지통으로 옮긴다.
+	ActionTrash = "fs.trash"
+	// ActionTrashDirs는 기준 디렉터리마다 휴지통을 쓸 수 있는지다(항목은 읽지 않는다).
+	ActionTrashDirs = "fs.trashdirs"
+	// ActionTrashList는 사용자의 모든 휴지통 항목이다.
+	ActionTrashList = "fs.trashlist"
+	// ActionTrashRestore는 휴지통 항목 하나를 정해 준 경로로 되돌린다.
+	ActionTrashRestore = "fs.trashrestore"
+	// ActionTrashPurge는 휴지통 항목 하나를 영구 삭제한다.
+	ActionTrashPurge = "fs.trashpurge"
+	// ActionTrashEmpty는 사용자의 모든 휴지통을 비운다.
+	ActionTrashEmpty = "fs.trashempty"
+	// ActionTrashPrepare는 데이터 디스크 맨 위에 모든 사용자가 함께 쓰는 휴지통 .Trash(1777)를 만든다(root 범위).
+	// 디스크 맨 위는 보통 root 소유라 사용자가 휴지통 폴더를 만들 수 없기 때문이다.
+	ActionTrashPrepare = "trash.prepare"
 )
 
 // Actions는 범위마다 실행할 수 있는 연산이다. root 연산은 여기에 타입 있는 함수로만 더한다.
 var Actions = map[string][]string{
 	ScopeUser: {ActionID, ActionList, ActionStat, ActionRead, ActionWrite, ActionMkdir, ActionRename, ActionRemove,
-		ActionNames, ActionStatMany, ActionInfo, ActionSSHAuthorize, ActionSSHRevoke},
-	ScopeRoot: {ActionID, ActionUpgradeApply},
+		ActionNames, ActionStatMany, ActionInfo, ActionSSHAuthorize, ActionSSHRevoke,
+		ActionTrash, ActionTrashDirs, ActionTrashList, ActionTrashRestore, ActionTrashPurge, ActionTrashEmpty},
+	ScopeRoot: {ActionID, ActionUpgradeApply, ActionTrashPrepare},
 }
 
 // Allowed는 scope에서 action을 실행할 수 있는지다.
@@ -147,6 +164,8 @@ const (
 	// CodeCrossDevice는 이름 바꾸기(옮기기)의 대상이 다른 기준 디렉터리나 다른 파일시스템이라는 뜻이다.
 	// 옮기기는 이름 바꾸기 하나로만 하므로 다른 디스크로는 옮길 수 없다(복사가 필요하다).
 	CodeCrossDevice = "cross_device"
+	// CodeNoTrash는 그 파일이 든 디스크에 쓸 수 있는 휴지통이 없다는 뜻이다(영구 삭제만 할 수 있다).
+	CodeNoTrash = "no_trash"
 	// CodeNoHome은 사용자 홈 디렉터리가 없거나 쓸 수 없는 경로(/)라는 뜻이다.
 	CodeNoHome = "no_home"
 	// CodeSSHStrictModes는 홈이나 ~/.ssh가 다른 사용자에게 쓰기를 허용해 sshd(StrictModes)가

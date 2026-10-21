@@ -174,3 +174,79 @@ type SSHKeyParams struct {
 	// PublicKey는 authorized_keys 형식의 ed25519 공개 키("ssh-ed25519 <base64>")다. 주석은 받지 않는다.
 	PublicKey string `json:"publicKey"`
 }
+
+// TrashResult는 fs.trash의 결과다. Trash는 넣은 휴지통 디렉터리의 절대 경로이고, 항목은 그 안의 files/<Name>,
+// info/<Name>.trashinfo다.
+type TrashResult struct {
+	Trash string `json:"trash"`
+	Name  string `json:"name"`
+}
+
+// 휴지통 종류(TrashVolume.Kind)
+const (
+	// TrashHome은 홈 휴지통(~/.local/share/Trash)이다.
+	TrashHome = "home"
+	// TrashShared는 디스크 맨 위의 .Trash/<uid>다(관리자가 만든 .Trash, sticky).
+	TrashShared = "shared"
+	// TrashOwn은 디스크 맨 위의 .Trash-<uid>다(이미 있거나 사용자가 만들 수 있다).
+	TrashOwn = "own"
+	// TrashNone은 쓸 수 있는 휴지통이 없다는 뜻이다(영구 삭제만).
+	TrashNone = "none"
+)
+
+// TrashVolume은 기준 디렉터리 하나의 휴지통이다.
+type TrashVolume struct {
+	// Top은 기준 디렉터리(홈 또는 /srv 아래 마운트 지점)다.
+	Top  string `json:"top"`
+	Kind string `json:"kind"`
+	// Shared는 디스크 맨 위에 모든 사용자가 쓰는 .Trash(sticky 폴더)가 있는지다.
+	Shared bool `json:"shared,omitempty"`
+}
+
+// TrashDirsResult는 fs.trashdirs의 결과다.
+type TrashDirsResult struct {
+	Volumes []TrashVolume `json:"volumes"`
+}
+
+// TrashItem은 휴지통 항목 하나다.
+type TrashItem struct {
+	// Trash는 휴지통 디렉터리의 절대 경로, Name은 그 안의 이름이다.
+	Trash string `json:"trash"`
+	Name  string `json:"name"`
+	// Path는 원래 경로(절대)다.
+	Path string `json:"path"`
+	// DeletedAt은 지운 시각(Unix 초)이다. trashinfo의 DeletionDate를 읽지 못하면 0이다.
+	DeletedAt int64  `json:"deletedAt"`
+	Type      string `json:"type"`
+	Size      int64  `json:"size"`
+	// ModTime은 항목의 수정 시각(Unix 초)이다.
+	ModTime int64 `json:"modTime"`
+	// BadName은 이름이나 원래 경로가 UTF-8이 아니라는 뜻이다. JSON으로 바이트를 옮길 수 없어 되돌리거나 지울 수 없다.
+	BadName bool `json:"badName,omitempty"`
+}
+
+// TrashListResult는 fs.trashlist의 결과다(지운 시각이 늦은 것부터).
+type TrashListResult struct {
+	Items []TrashItem `json:"items"`
+	// Truncated는 항목이 많아 일부만 담았는지다.
+	Truncated bool `json:"truncated"`
+}
+
+// TrashItemParams는 휴지통 항목 하나를 가리키는 인자다(fs.trashpurge). Trash는 사용자의 휴지통 디렉터리여야 한다.
+type TrashItemParams struct {
+	Trash string `json:"trash"`
+	Name  string `json:"name"`
+}
+
+// TrashRestoreParams는 fs.trashrestore의 인자다. 항목을 To(원래 경로나 같은 폴더의 새 이름)로 되돌린다.
+// To는 휴지통과 같은 기준 디렉터리 안이어야 하고(아니면 cross_device), 이미 있으면 exists다.
+type TrashRestoreParams struct {
+	Trash string `json:"trash"`
+	Name  string `json:"name"`
+	To    string `json:"to"`
+}
+
+// TrashPrepareParams는 trash.prepare의 인자다. Disk는 /srv 아래 마운트 지점(도우미의 기준 디렉터리)이다.
+type TrashPrepareParams struct {
+	Disk string `json:"disk"`
+}

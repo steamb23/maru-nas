@@ -181,6 +181,32 @@ func Serve(job Job, conn net.Conn, cfg Config) error {
 		err = sshKey(job, cfg, c)
 	case proto.ActionUpgradeApply:
 		err = reply(c, func() (any, error) { return nil, upgradeApply(job, cfg) })
+	case proto.ActionTrash:
+		err = withPath(job, c, func(p proto.PathParams) (any, error) { return trash(job, cfg, p) })
+	case proto.ActionTrashDirs:
+		err = reply(c, func() (any, error) { return trashVolumes(job, cfg) })
+	case proto.ActionTrashList:
+		err = reply(c, func() (any, error) { return trashList(job, cfg) })
+	case proto.ActionTrashRestore:
+		err = reply(c, func() (any, error) {
+			var p proto.TrashRestoreParams
+			if err := proto.DecodeParams(job.Params, &p); err != nil {
+				return nil, err
+			}
+			return trashRestore(job, cfg, p)
+		})
+	case proto.ActionTrashPurge:
+		err = reply(c, func() (any, error) {
+			var p proto.TrashItemParams
+			if err := proto.DecodeParams(job.Params, &p); err != nil {
+				return nil, err
+			}
+			return nil, trashPurge(job, cfg, p)
+		})
+	case proto.ActionTrashEmpty:
+		err = reply(c, func() (any, error) { return nil, trashEmpty(job, cfg) })
+	case proto.ActionTrashPrepare:
+		err = reply(c, func() (any, error) { return nil, trashPrepare(job, cfg) })
 	}
 	return err
 }

@@ -11,6 +11,7 @@
   3. 자기가 `/etc/passwd`·`/etc/group`·`/etc/login.defs`에서 직접 읽은 계정·그룹
 - 남는 위험(README에도 적는다): onmaru가 뚫리면 그때 로그인한 사용자의 티켓을 쓸 수 있고, 그 뒤 입력되는 비밀번호를 가로챌 수 있다. root 연산은 상승한 티켓으로 5분 동안, 정해진 목록의 연산만 가능하다
 - 대시보드에서 업그레이드(`upgrade.apply`, 아래 "대시보드에서 업그레이드")를 켜면 상승한 티켓으로 할 수 있는 일이 `id`에서 "설치된 저장소로 업그레이드"로 넓어진다. 업그레이드는 저장소에서 빌드한 코드를 root로 실행하므로 저장소 소유자 계정은 업그레이드로 root 코드를 실행할 수 있다(sudo로 `./install.sh`를 실행할 때와 같다). OMV 관리자는 원래 root와 같은 일을 할 수 있으므로 관리자에게 새로운 권한은 아니며, 끌 수 있는 선택 설정(`--no-web-upgrade`)이다
+- 디스크 휴지통 만들기(`trash.prepare`, 아래 "휴지통")는 상승한 티켓으로 `/srv` 아래 마운트 지점 맨 위에 1777(sticky) `.Trash` 폴더 하나만 만든다(경로는 받지 않고 디스크만 받는다). 그 디스크에서 모든 사용자가 자기 휴지통(`.Trash/<uid>`)을 만들 수 있게 되는 것뿐이고, sticky 비트 때문에 남의 휴지통 폴더는 지우거나 옮길 수 없다. OMV 관리자는 원래 root와 같은 일을 할 수 있으므로 새 권한은 아니다
 - 웹 터미널의 임시 SSH 키(`ssh.authorize`)는 새 권한이 아니다. 티켓을 가진 쪽은 원래 `fs.write`로 사용자 홈의 `~/.ssh/authorized_keys`를 쓸 수 있다. 그래도 키 줄은 worker가 직접 만들고(옵션을 onmaru가 정할 수 없다) ed25519 공개 키만 받는다
 - OMV 관리자는 원래 OMV RPC로 root와 같은 일을 할 수 있으므로 "OMV 관리자 + 상승 그룹 + 비밀번호 재확인"은 새 권한이 아니라 더 보수적인 겹침이다
 - 2차 인증은 도우미가 직접 확인하지 않는다. onmaru가 인증을 마친 뒤에만 대기 티켓을 활성화한다(onmaru가 정상일 때 2차 인증을 건너뛸 수 없다)
@@ -27,7 +28,7 @@
 |---|---|
 | `internal/helper/proto` | 프레임 프로토콜, 요청·응답·결과 타입, 오류 코드, 범위별 연산 목록(`Actions`) |
 | `internal/helper/daemon` | root 부모: 소켓 활성화, 상대 uid 확인, 티켓, 실패 제한, 계정·상승 정책, worker 실행, 감사 로그, 유휴 종료 |
-| `internal/helper/worker` | 자식 프로세스의 연산 구현(`id`, `fs.*`, `ssh.*`, `upgrade.apply`). 연결을 fd 3으로 받아 응답·본문을 직접 주고받는다 |
+| `internal/helper/worker` | 자식 프로세스의 연산 구현(`id`, `fs.*`, `ssh.*`, `upgrade.apply`, `trash.prepare`). 연결을 fd 3으로 받아 응답·본문을 직접 주고받는다 |
 | `internal/helper/client` | onmaru 쪽 클라이언트 |
 | `internal/helper/helperfake` | 테스트·`make dev-fake`용 가짜 도우미(진짜 데몬 + 가짜 계정·비밀번호 + 프로세스 없는 worker) |
 | `cmd/onmaru-helper` | 실행 파일(`CGO_ENABLED=0`). onmaru 웹 코드는 링크되지 않는다 |
@@ -38,8 +39,8 @@
 - 요청 머리는 모르는 필드를 거부한다. 비밀번호와 티켓이 들어 있으므로 요청을 로그에 남기지 않는다
 - 티켓 관리: `session.open`(사용자, 비밀번호, pending), `session.activate`, `session.close`, `session.reset`, `session.status`, `session.elevate`(비밀번호), `session.drop`
 - 연산: `run`(티켓, 범위 `user`|`root`, 연산, 인자, `size`). 연산 목록은 `proto.Actions`
-  - 사용자 범위: `id`(티켓 사용자의 홈 `home`도 준다), `fs.list`, `fs.stat`, `fs.read`(offset·length, 응답 뒤 스트림), `fs.write`(요청 뒤 스트림, 같은 폴더 임시 파일에 받은 뒤 이름 바꾸기), `fs.mkdir`, `fs.rename`, `fs.remove`(`recursive`), 파일 탐색기의 `fs.names`·`fs.statmany`·`fs.info`(아래 "파일 탐색기 연산"), `ssh.authorize`·`ssh.revoke`(웹 터미널의 임시 SSH 키, 아래 "임시 SSH 키")
-  - root 범위: `id`, `upgrade.apply`(대시보드에서 업그레이드의 적용 요청, 아래 "대시보드에서 업그레이드")
+  - 사용자 범위: `id`(티켓 사용자의 홈 `home`도 준다), `fs.list`, `fs.stat`, `fs.read`(offset·length, 응답 뒤 스트림), `fs.write`(요청 뒤 스트림, 같은 폴더 임시 파일에 받은 뒤 이름 바꾸기), `fs.mkdir`, `fs.rename`, `fs.remove`(`recursive`), 파일 탐색기의 `fs.names`·`fs.statmany`·`fs.info`(아래 "파일 탐색기 연산"), `ssh.authorize`·`ssh.revoke`(웹 터미널의 임시 SSH 키, 아래 "임시 SSH 키"), 휴지통의 `fs.trash`·`fs.trashdirs`·`fs.trashlist`·`fs.trashrestore`·`fs.trashpurge`·`fs.trashempty`(아래 "휴지통")
+  - root 범위: `id`, `upgrade.apply`(대시보드에서 업그레이드의 적용 요청, 아래 "대시보드에서 업그레이드"), `trash.prepare`(디스크 맨 위의 공유 휴지통 `.Trash` 만들기, 아래 "휴지통")
 - 오류는 코드만 준다(`proto.Code*`). 경로·사용자 이름 같은 세부는 도우미 로그에만 남긴다. onmaru는 코드를 HTTP 오류 코드(`api.Err*`)로 바꾼다
 
 ## 티켓과 상승
@@ -56,8 +57,8 @@
 - 부모(root)는 머리를 읽고 티켓·범위·연산 허용·상승을 확인한 뒤, `/proc/self/exe worker`를 `SysProcAttr{Credential, Setsid, Pdeathsig: SIGKILL}`, 빈 환경 변수, cwd `/`로 실행한다. 작업(`worker.Job`: 범위, 연산, 인자, 본문 크기, 사용자 이름·홈)은 stdin, 연결은 `ExtraFiles`(fd 3)로 넘긴다. 부모는 사용자 데이터를 읽거나 쓰지 않는다
 - 사용자 범위는 사용자 uid·기본 gid·보조 그룹(`os/user`, 로컬 파일)으로 강등한다. root 범위도 도우미의 보조 그룹은 넘기지 않는다. worker는 시작할 때 범위와 실제 uid가 맞는지 다시 확인한다(사용자 범위가 root로 돌면 거절)
 - 결과 코드는 종료 코드(0 성공, 2 연산 실패 + stderr `code=<코드>`, 그 밖은 실행 오류)로 부모에 알려 감사 로그에 쓴다
-- 감사 로그(journal)는 비밀번호 확인 결과, 모든 root 연산, 쓰기 연산의 경로, 내려받기(`fs.read`)의 연산·결과를 남긴다. 정보 읽기 연산(`fs.list`, `fs.stat`, `fs.names`, `fs.statmany`, `fs.info`, `daemon.quietActions`)은 파일 탐색기가 폴더를 열고 스크롤할 때마다 부르므로 남기지 않는다
-- 시간 제한: 목록·정보 30초(부모), 삭제(`fs.remove`) 10분(큰 폴더를 통째로 지우면 30초를 넘을 수 있다. 넘으면 worker를 끝내므로 일부만 지운 채 남고, 다시 지우면 이어서 지운다), 스트림 6시간(부모) + 60초 무진행(worker의 연결 마감 시각). 클라이언트는 각각 조금 더 기다린다
+- 감사 로그(journal)는 비밀번호 확인 결과, 모든 root 연산, 쓰기 연산의 경로, 내려받기(`fs.read`)의 연산·결과를 남긴다. 정보 읽기 연산(`fs.list`, `fs.stat`, `fs.names`, `fs.statmany`, `fs.info`, `fs.trashdirs`, `fs.trashlist`, `daemon.quietActions`)은 파일 탐색기가 폴더를 열고 스크롤할 때마다 부르므로 남기지 않는다. 휴지통 쓰기 연산은 휴지통 디렉터리와 이름(`trash=`, `name=`, 되돌리기는 `to=`)을, `trash.prepare`는 디스크(`disk=`)를 남긴다
+- 시간 제한: 목록·정보 30초(부모), 삭제(`fs.remove`, `fs.trashpurge`, `fs.trashempty`) 10분(큰 폴더를 통째로 지우면 30초를 넘을 수 있다. 넘으면 worker를 끝내므로 일부만 지운 채 남고, 다시 지우면 이어서 지운다), 스트림 6시간(부모) + 60초 무진행(worker의 연결 마감 시각). 클라이언트는 각각 조금 더 기다린다
 - 동시 실행: 전체 16개, 사용자당 4개. 연결은 동시 64개
 
 ## 파일 연산의 경로 정책
@@ -87,6 +88,25 @@
   - **심볼릭 링크는 권한·ACL을 보지 않는다.** `faccessat`은 마지막 구성 요소를 따라가고(`AT_SYMLINK_NOFOLLOW`는 faccessat2가 필요하다) 기준 밖 대상의 정보가 샐 수 있기 때문이다. `fs.statmany`의 `locked`도 `Lstat`이 폴더라고 한 항목만 본다(그 사이 링크로 바뀌는 경쟁은 참·거짓 하나만 새므로 받아들인다)
 - 쓰는 시스템 호출(`getdents64`, `faccessat`, `newfstatat`, `lgetxattr`)은 유닛의 `SystemCallFilter=@system-service`(`@file-system` 포함)에 들어 있어 유닛은 바꾸지 않았다
 - 셋 다 일반 연산(30초)이고 감사 로그에 남기지 않는다. onmaru 쪽은 `client.Client.Names`(머리 뒤 본문을 읽는 별도 연결)·`StatMany`·`Info`
+
+## 휴지통(fs.trash 등, trash.prepare)
+
+FreeDesktop 휴지통 규격을 trash-cli의 `trash-put`과 같은 곳·형식으로 쓴다. 그래서 서버의 `trash-list`·`trash-restore`·`trash-empty`가 같은 휴지통을 다룬다. 구현은 `worker/trash.go`.
+
+- **넣을 곳**(`fs.trash`, `chooseTrash`): 홈 기준 안의 항목은 홈과 같은 파일시스템(`st_dev`)이면 홈 휴지통(`~/.local/share/Trash`, 없으면 0700으로 만든다). 그 밖은 그 항목이 든 가장 깊은 마운트 지점(topdir, 모든 마운트에서 찾는다)의 `.Trash/<uid>`(`.Trash`가 심볼릭 링크가 아닌 sticky 폴더이고 `<uid>`가 사용자 소유일 때, 없으면 0700으로 만든다), 아니면 topdir의 `.Trash-<uid>`(없으면 0700으로 만든다)다. 둘 다 안 되면 `no_trash`
+  - `/srv` 아래 디스크의 항목은 홈과 같은 파일시스템이어도 디스크 휴지통을 쓴다. 기준 디렉터리마다 `os.Root`로 가두므로 기준 사이로는 옮기지 않기 때문이다(`trash-put`과 다른 점)
+  - 다른 디스크로 복사하지 않고 같은 `os.Root` 안에서 이름만 바꾼다. 휴지통 자신이나 그것을 품은 폴더, 기준 디렉터리 자신은 넣지 않는다
+- **이름과 trashinfo**: `info/<이름>.trashinfo`를 `O_EXCL`로 먼저 만들어 이름을 정하고(겹치거나 `files/<이름>`이 있으면 `_1`, `_2` … 1000까지), 그 이름으로 항목을 옮긴다. 옮기지 못하면 trashinfo를 지운다. 내용은 `[Trash Info]` / `Path=` / `DeletionDate=`이고, `Path`는 비예약 문자(`A-Za-z0-9-_.~`)와 `/`만 두고 나머지 바이트를 `%XX`로 쓴다(홈 휴지통은 절대 경로, 디스크 휴지통은 topdir 기준 상대 경로). `DeletionDate`는 시간대 없는 지역 시각(`2006-01-02T15:04:05`)이다. 형식은 테스트가 바이트 단위로 확인한다
+- **찾기**: `fs.trashlist`와 휴지통을 가리키는 연산은 사용자의 휴지통 디렉터리(홈 휴지통, 기준 안 마운트 지점마다 `.Trash/<uid>`와 `.Trash-<uid>`, 심볼릭 링크가 아니고 사용자 소유인 것)를 worker가 직접 찾는다. onmaru가 보낸 휴지통 경로는 그 목록과 같을 때만 받는다(`findTrashDir`)
+  - `fs.trashlist`: trashinfo와 `files/` 항목이 짝을 이룬 것만 담는다. 지운 시각이 늦은 것부터, 1만 개·결과 약 6MiB까지(`truncated`). 이름·원래 경로가 UTF-8이 아니면 `badName`이다
+  - `fs.trashdirs`: 기준 디렉터리마다 휴지통 종류(`home`, `shared`, `own`, `none`)와 공유 `.Trash` 유무다. 만들지 않고 보기만 한다(`own`은 `.Trash-<uid>`가 있거나 맨 위에 쓸 수 있을 때)
+- **되돌리기**(`fs.trashrestore`): 받은 경로(`to`)로만 되돌린다. 원래 경로를 onmaru가 보이는 폴더로 먼저 거르게 하기 위해서다(onmaru가 목록의 원래 경로나 새 이름을 보낸다). `to`는 휴지통과 같은 기준이어야 하고(아니면 `cross_device`), 있으면 `exists`, 폴더가 없으면 만든다(`trash-restore`와 같다). 옮긴 뒤 trashinfo를 지운다
+- **영구 삭제·비우기**(`fs.trashpurge`, `fs.trashempty`): `files/<이름>`(`RemoveAll`, 링크는 따라가지 않는다)을 지운 뒤 trashinfo를 지운다. 비우기는 모든 휴지통의 `files`·`info` 안을 지우고 휴지통 폴더는 둔다. 시간 제한은 삭제와 같이 10분이다
+- **디스크 휴지통 만들기**(`trash.prepare`, root 범위): OMV 데이터 디스크 맨 위는 보통 root 소유라 사용자가 `.Trash-<uid>`를 만들 수 없다. 관리자가 설정 앱에서 상승한 뒤 부르면 그 디스크 맨 위에 `.Trash`를 만들고 1777로 둔다
+  - 디스크는 `/srv` 아래 마운트 지점(도우미의 기준, 사용자 홈 제외)만 받는다. worker에는 `CAP_DAC_OVERRIDE`·`CAP_FOWNER`가 없어 root도 소유자로서만 할 수 있다(맨 위가 root 소유가 아니면 `permission_denied`)
+  - 맨 위에 사용자가 쓸 수 있는 디스크에서는 사용자가 `.Trash`를 미리 심볼릭 링크로 둘 수 있으므로, `Lstat`으로 심볼릭 링크·폴더가 아닌 것을 거절하고(`not_dir`), `O_NOFOLLOW|O_DIRECTORY`로 연 fd가 root 소유 폴더인지 다시 확인한 뒤 그 fd에 `fchmod`한다. 이미 있으면 권한만 고친다
+  - 유닛 권한은 바꾸지 않았다(`/srv`는 이미 `ReadWritePaths`이고 새 capability가 필요 없다)
+- onmaru 쪽은 `client.Client`의 `Trash`, `TrashDirs`, `TrashList`, `TrashRestore`, `TrashPurge`, `TrashEmpty`, `TrashPrepare`
 
 ## 임시 SSH 키(ssh.authorize, ssh.revoke)
 

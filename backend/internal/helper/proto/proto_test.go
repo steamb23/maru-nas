@@ -107,13 +107,14 @@ func TestAllowed(t *testing.T) {
 	if !Allowed(ScopeUser, ActionWrite) || !Allowed(ScopeRoot, ActionID) {
 		t.Fatal("allowed action rejected")
 	}
-	// root 범위에는 신원 확인과 업그레이드 요청만 있다. 파일 연산이 root로 열리면 안 된다.
+	// root 범위에는 신원 확인, 업그레이드 요청, 디스크 휴지통 만들기만 있다. 파일 연산이 root로 열리면 안 된다.
 	for _, a := range Actions[ScopeUser] {
 		if a != ActionID && Allowed(ScopeRoot, a) {
 			t.Errorf("%s allowed in root scope", a)
 		}
 	}
-	if !slices.Equal(Actions[ScopeRoot], []string{ActionID, ActionUpgradeApply}) || Allowed(ScopeUser, ActionUpgradeApply) {
+	if !slices.Equal(Actions[ScopeRoot], []string{ActionID, ActionUpgradeApply, ActionTrashPrepare}) ||
+		Allowed(ScopeUser, ActionUpgradeApply) || Allowed(ScopeUser, ActionTrashPrepare) {
 		t.Errorf("root actions %q", Actions[ScopeRoot])
 	}
 	if !Allowed(ScopeUser, ActionSSHAuthorize) || !Allowed(ScopeUser, ActionSSHRevoke) {

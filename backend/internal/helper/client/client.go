@@ -139,7 +139,8 @@ func (c *Client) run(ctx context.Context, ticket, scope, action string, params a
 		req.Params = b
 	}
 	timeout := opTimeout
-	if action == proto.ActionRemove {
+	switch action {
+	case proto.ActionRemove, proto.ActionTrashPurge, proto.ActionTrashEmpty:
 		timeout = removeTimeout
 	}
 	return c.call(ctx, req, timeout, out)
@@ -240,6 +241,49 @@ func (c *Client) Rename(ctx context.Context, ticket, from, to string) (proto.Ent
 // Remove는 파일이나 폴더를 지운다(사용자 권한). recursive가 false면 빈 폴더만 지운다.
 func (c *Client) Remove(ctx context.Context, ticket, path string, recursive bool) error {
 	return c.run(ctx, ticket, proto.ScopeUser, proto.ActionRemove, proto.RemoveParams{Path: path, Recursive: recursive}, nil)
+}
+
+// Trash는 파일이나 폴더를 휴지통으로 옮긴다(사용자 권한). 쓸 수 있는 휴지통이 없으면 no_trash다.
+func (c *Client) Trash(ctx context.Context, ticket, path string) (proto.TrashResult, error) {
+	var res proto.TrashResult
+	err := c.run(ctx, ticket, proto.ScopeUser, proto.ActionTrash, proto.PathParams{Path: path}, &res)
+	return res, err
+}
+
+// TrashDirs는 기준 디렉터리마다 휴지통을 쓸 수 있는지다(사용자 권한).
+func (c *Client) TrashDirs(ctx context.Context, ticket string) (proto.TrashDirsResult, error) {
+	var res proto.TrashDirsResult
+	err := c.run(ctx, ticket, proto.ScopeUser, proto.ActionTrashDirs, nil, &res)
+	return res, err
+}
+
+// TrashList는 사용자의 모든 휴지통 항목이다(사용자 권한).
+func (c *Client) TrashList(ctx context.Context, ticket string) (proto.TrashListResult, error) {
+	var res proto.TrashListResult
+	err := c.run(ctx, ticket, proto.ScopeUser, proto.ActionTrashList, nil, &res)
+	return res, err
+}
+
+// TrashRestore는 휴지통 항목 하나를 to로 되돌린다(사용자 권한). to가 있으면 exists다.
+func (c *Client) TrashRestore(ctx context.Context, ticket, trash, name, to string) (proto.Entry, error) {
+	var e proto.Entry
+	err := c.run(ctx, ticket, proto.ScopeUser, proto.ActionTrashRestore, proto.TrashRestoreParams{Trash: trash, Name: name, To: to}, &e)
+	return e, err
+}
+
+// TrashPurge는 휴지통 항목 하나를 영구 삭제한다(사용자 권한).
+func (c *Client) TrashPurge(ctx context.Context, ticket, trash, name string) error {
+	return c.run(ctx, ticket, proto.ScopeUser, proto.ActionTrashPurge, proto.TrashItemParams{Trash: trash, Name: name}, nil)
+}
+
+// TrashEmpty는 사용자의 모든 휴지통을 비운다(사용자 권한).
+func (c *Client) TrashEmpty(ctx context.Context, ticket string) error {
+	return c.run(ctx, ticket, proto.ScopeUser, proto.ActionTrashEmpty, nil, nil)
+}
+
+// TrashPrepare는 데이터 디스크 맨 위에 모든 사용자가 쓰는 휴지통 .Trash(1777)를 만든다(root 연산, 상승한 티켓).
+func (c *Client) TrashPrepare(ctx context.Context, ticket, disk string) error {
+	return c.run(ctx, ticket, proto.ScopeRoot, proto.ActionTrashPrepare, proto.TrashPrepareParams{Disk: disk}, nil)
 }
 
 // SSHAuthorize는 사용자의 ~/.ssh/authorized_keys에 publicKey("ssh-ed25519 <base64>")를 짧은 시간 동안
