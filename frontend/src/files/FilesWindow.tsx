@@ -443,8 +443,6 @@ export function FilesWindow({ active }: WindowViewProps) {
     }
   }
 
-  // runOp은 여러 항목 작업을 하나씩 하며 진행 배너와 중지를 보인다. 끝나면 바뀐 폴더를 알리고 하지 못한 항목을 보인다.
-  // 세션이 끝났거나 보안 확인이 필요하거나 다른 디스크라 남은 항목도 안 될 것이 확실하면 거기서 멈춘다.
   // runOp은 여러 항목 작업을 하나씩 하며 진행 배너와 중지를 보인다. 쓰기에 보안 확인이 필요하면 확인한 뒤 다시 하고,
   // 끝나면 바뀐 폴더를 알리고 하지 못한 항목을 보인다. 세션이 끝났거나(401) 확인을 취소했거나 stopOn이면 거기서 멈춘다.
   const runOp: RunOp = async (kind, items, run, opts) => {
@@ -620,9 +618,10 @@ export function FilesWindow({ active }: WindowViewProps) {
   }
 
   // 바깥(운영체제)에서 끌어 온 파일을 놓으면 그 폴더 줄이나 지금 폴더에 올린다. 폴더는 아직 올리지 못한다.
+  // 목록 자신(빈 곳, 파일 줄)은 지금 폴더이므로 폴더 줄처럼 표시하지 않고 창 전체에 표시한다.
   const dropTargetOf = (e: DragEvent<HTMLElement>): { el: HTMLElement | null; path: string | null } => {
     const el = e.target instanceof Element ? e.target.closest<HTMLElement>('[data-drop-path]') : null
-    if (el?.dataset.dropPath) return { el, path: el.dataset.dropPath }
+    if (el?.dataset.dropPath && !el.classList.contains('files-list')) return { el, path: el.dataset.dropPath }
     return { el: null, path: listing && writable ? listing.path : null }
   }
   const markDrop = (el: HTMLElement | null, list: boolean) => {

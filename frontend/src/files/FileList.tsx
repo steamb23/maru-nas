@@ -1,7 +1,7 @@
 // 파일 탐색기의 자세히 목록. 보이는 줄만 그리고(virtual.ts), 정렬·찾기를 적용한 보기에서 보이는 범위를 PAGE_SIZE줄씩
 // 받아 둔다(pageCache.ts). 아직 받지 않은 줄은 자리 표시로 그린다. 스크롤하는 동안 위치 말풍선을 보인다.
 // 여러 줄을 고를 수 있고(selection.ts), 고른 줄을 마우스·펜으로 끌어 다른 폴더(data-drop-path가 있는 줄·경로·사이드바,
-// 다른 탐색기 창 포함)에 놓으면 옮긴다.
+// 다른 탐색기 창의 목록 포함)에 놓으면 옮긴다.
 import {
   type KeyboardEvent,
   type PointerEvent,
@@ -638,7 +638,15 @@ export function FileList(props: Props) {
   const activeId = selected !== null && selected >= lay.first && selected < lay.last ? `${baseId}-r${selected}` : undefined
 
   return (
-    <div className="files-list" role="grid" aria-label={t('files.list.label')} aria-rowcount={total + 1} aria-multiselectable="true">
+    <div
+      className="files-list"
+      role="grid"
+      aria-label={t('files.list.label')}
+      aria-rowcount={total + 1}
+      aria-multiselectable="true"
+      // 다른 창에서 끌어 온 항목을 폴더 줄이 아닌 곳(빈 곳, 파일 줄)에 놓으면 이 폴더로 옮긴다.
+      data-drop-path={listing.writable ? listing.path : undefined}
+    >
       <div className="files-row header" role="row" aria-rowindex={1}>
         {COLUMNS.map((c) => (
           <span key={c.key} className={`files-cell ${c.key === 'mtime' ? 'date' : c.key}`} role="columnheader" aria-sort={sortLabel(c.key)}>

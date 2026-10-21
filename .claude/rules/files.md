@@ -77,9 +77,9 @@ paths:
 - 이름 대화상자(`NameForm`)는 `PasskeyAdd`처럼 대화상자 안에서 요청하고 실패(`ops.ts`의 `opErrorKey`)를 입력란 아래에 보인다. 처음 포커스를 받을 때 이름 바꾸기는 확장자 앞까지(`stemLength`) 고른다. 새 폴더 이름은 `find`로 "새 폴더", "새 폴더 (2)"…에서 없는 것을 고른다
 - 여러 항목 작업(삭제, 옮기기, 휴지통 넣기·되돌리기·영구 삭제·비우기, `ops.ts`의 `RunOp`)은 `runEach`로 하나씩 차례로 한다(도우미의 사용자당 동시 연산 4개 안에서 목록에 자리를 남긴다). 300ms가 지나도 끝나지 않으면 진행 배너와 "중지"(하던 항목까지 하고 멈춤)를 보이고, 하지 못한 항목은 이유별로 묶어(`groupFailures`) 알린다. 세션이 끝났거나(401) 보안 확인을 취소했거나 `stopOn`(옮기기의 `cross_device`)이면 남은 항목도 안 되므로 멈춘다
 - **끌어서 옮기기**: HTML5 끌기는 `nativeGuard`가 `dragstart`에서 막으므로 포인터로 한다(마우스·펜만. 터치는 스크롤·길게 누르기 메뉴와 겹친다). 누른 줄에서 6px 넘게 움직이면 그때 pointer capture를 잡는다(그냥 누르기의 click은 줄로 간다). 고르지 않은 줄을 끌면 그 줄 하나를 고르되 정보 패널은 열지 않는다(끄는 도중 목록 폭이 바뀌면 놓을 곳이 움직인다)
-  - 놓을 곳은 `elementFromPoint` + `[data-drop-path]`(폴더 줄, 경로 단계, 사이드바 항목, 다른 탐색기 창의 것 포함)다. 지금 폴더와, 끄는 폴더 자신·그 안은 놓을 곳이 아니다. 표시(`DROP_TARGET`)와 이름표(`.files-drag-ghost`, body에 붙이고 포인터를 받지 않음)는 렌더 없이 DOM으로 바꾼다
+  - 놓을 곳은 `elementFromPoint` + `[data-drop-path]`(폴더 줄, 경로 단계, 사이드바 항목, 다른 탐색기 창의 것 포함)다. 목록 자신(`.files-list`)도 쓸 수 있는 폴더면 그 폴더를 가리키므로, 다른 창의 빈 곳이나 파일 줄에 놓으면 그 창의 폴더로 간다(목록 둘레에 점선으로 표시). 지금 폴더와, 끄는 폴더 자신·그 안은 놓을 곳이 아니다. 표시(`DROP_TARGET`)와 이름표(`.files-drag-ghost`, body에 붙이고 포인터를 받지 않음)는 렌더 없이 DOM으로 바꾼다
   - 목록 위·아래 32px 띠에서는 스크롤하고, Esc나 창 포커스를 잃으면 취소한다. 끌기를 끝낸 뒤 따라오는 click 하나는 무시한다(Esc로 취소하면 놓기 전에 끝나므로 다음 누름까지 남긴다)
-- **바깥 파일 끌어 놓기**: `.files-content`가 `dragover`·`drop`을 받는다(`nativeGuard`는 `dragstart`만 막는다). 폴더 줄 위면 그 폴더, 아니면 지금 폴더(쓸 수 있을 때)에 `uploads.add`로 올린다. 폴더(`webkitGetAsEntry().isDirectory`)는 아직 올리지 않고 이름을 알린다
+- **바깥 파일 끌어 놓기**: `.files-content`가 `dragover`·`drop`을 받는다(`nativeGuard`는 `dragstart`만 막는다). 폴더 줄 위면 그 폴더, 아니면 지금 폴더(쓸 수 있을 때, 목록 자신의 `data-drop-path`는 폴더 줄로 보지 않는다)에 `uploads.add`로 올린다. 폴더(`webkitGetAsEntry().isDirectory`)는 아직 올리지 않고 이름을 알린다
 - **창 사이 변경 알림**(`ops.ts`의 `notifyFilesChanged`·`onFilesChanged`): 창마다 상태를 따로 두므로 모듈 저장소 대신 알림만 나눈다. 바뀐 폴더(`dirs`)를 보거나 없어진 경로(`gone`) 아래를 보는 창이 목록을 다시 열고, 없어진 파일의 정보 패널을 닫는다. 올리기가 끝날 때도 같은 알림을 쓴다
   - 같은 세션의 목록 캐시는 경로마다 하나라 여러 창이 함께 `refresh=1`로 읽으면 서로 밀어내고(410) 고르기를 잃는다. 그래서 바꾼 창(`origin`)만 바로 새로 읽고(`refreshed`), 같은 폴더를 보는 다른 창은 300ms 뒤 `refresh` 없이 그 목록을 함께 쓴다. 만든 항목 고르기(`pendingSelect`)는 `listing_expired`면 다음 목록에서 다시 찾는다
 
