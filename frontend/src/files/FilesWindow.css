@@ -245,41 +245,6 @@
   margin-top: 1px;
 }
 
-/* 날짜·크기순 정렬 준비(AC-Large-Sort) */
-.files-prepare {
-  display: flex;
-  flex: none;
-  flex-direction: column;
-  gap: 8px;
-  margin: 0 12px 8px;
-  padding: 10px 12px;
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
-  font-size: 12px;
-}
-
-.files-prepare-line {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.files-prepare-line .symbolic-icon {
-  flex: none;
-  color: var(--accent);
-}
-
-.files-prepare-line > span:nth-child(2) {
-  flex: 1;
-  line-height: 1.5;
-  word-break: keep-all;
-}
-
-.files-prepare-count {
-  color: var(--text-muted);
-  white-space: nowrap;
-}
-
 /* 목록과 정보 패널. 좁으면 정보 패널을 목록 위에 덮어 연다. */
 .files-content {
   position: relative;

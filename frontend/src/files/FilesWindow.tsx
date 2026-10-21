@@ -65,6 +65,7 @@ import {
 } from './paths'
 import { NO_SELECTION, type Selection, selectAll, selectOne, selectedCount, soleIndex } from './selection'
 import { withStepUp } from './stepUp'
+import { TaskBanner } from './TaskProgress'
 import { startCopy, startUpload } from './transferStore'
 import { checkUploads } from './uploads'
 
@@ -110,6 +111,8 @@ interface Op {
   kind: OpKind
   done: number
   total: number
+  // current는 지금 하는 항목의 이름이다(휴지통 비우기는 없다).
+  current: string | null
   shown: boolean
 }
 
@@ -454,12 +457,14 @@ export function FilesWindow({ active }: WindowViewProps) {
   const runOp: RunOp = async (kind, items, run, opts) => {
     const ctl = new AbortController()
     opCtl.current = ctl
-    setOp({ kind, done: 0, total: items.length, shown: false })
+    setOp({ kind, done: 0, total: items.length, current: null, shown: false })
     const timer = window.setTimeout(() => setOp((o) => (o ? { ...o, shown: true } : o)), OP_BANNER_MS)
     const done: (typeof items)[number][] = []
     const res = await runEach(
       items,
       async (it) => {
+        const current = kind === 'empty' ? null : opts.nameOf(it)
+        setOp((o) => (o ? { ...o, current } : o))
         try {
           await withStepUp(dialogs.scope, () => run(it))
           done.push(it)
@@ -1005,19 +1010,13 @@ export function FilesWindow({ active }: WindowViewProps) {
   }
 
   const opBanner = op?.shown && (
-    <div className="files-prepare" role="status">
-      <div className="files-prepare-line">
-        <IconImage name="dialog-information-symbolic" size={16} />
-        <span>{t(OP_KEYS[op.kind])}</span>
-        <span className="files-prepare-count">{t('files.banner.progress', { done: fmt(op.done), total: fmt(op.total) })}</span>
-        <button type="button" className="addon-button" title={t('files.ops.stopHint')} onClick={() => opCtl.current?.abort()}>
-          {t('files.ops.stop')}
-        </button>
-      </div>
-      <div className="meter" aria-hidden="true">
-        <div className="meter-fill" style={{ width: `${(op.done / Math.max(1, op.total)) * 100}%` }} />
-      </div>
-    </div>
+    <TaskBanner
+      label={t(OP_KEYS[op.kind])}
+      count={t('files.banner.progress', { done: fmt(op.done), total: fmt(op.total) })}
+      fraction={op.done / Math.max(1, op.total)}
+      current={op.current}
+      action={{ label: t('files.ops.stop'), title: t('files.ops.stopHint'), onClick: () => opCtl.current?.abort() }}
+    />
   )
 
   if (trashOpen) {
@@ -1069,19 +1068,12 @@ export function FilesWindow({ active }: WindowViewProps) {
         </p>
       )}
       {prep?.shown && (
-        <div className="files-prepare" role="status">
-          <div className="files-prepare-line">
-            <IconImage name="dialog-information-symbolic" size={16} />
-            <span>{prep.sort === 'mtime' ? t('files.banner.prepareMtime') : t('files.banner.prepareSize')}</span>
-            <span className="files-prepare-count">{t('files.banner.progress', { done: fmt(prep.filled), total: fmt(prep.total) })}</span>
-            <button type="button" className="addon-button" onClick={cancelPrepare}>
-              {t('files.banner.cancel')}
-            </button>
-          </div>
-          <div className="meter" aria-hidden="true">
-            <div className="meter-fill" style={{ width: `${(prep.filled / Math.max(1, prep.total)) * 100}%` }} />
-          </div>
-        </div>
+        <TaskBanner
+          label={prep.sort === 'mtime' ? t('files.banner.prepareMtime') : t('files.banner.prepareSize')}
+          count={t('files.banner.progress', { done: fmt(prep.filled), total: fmt(prep.total) })}
+          fraction={prep.filled / Math.max(1, prep.total)}
+          action={{ label: t('files.banner.cancel'), onClick: cancelPrepare }}
+        />
       )}
       {opBanner}
       {listError !== null && (

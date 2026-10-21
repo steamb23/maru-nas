@@ -13,6 +13,7 @@ import { kindIcon, kindOf } from './kinds'
 import { uploadErrorKey } from './messages'
 import { groupFailures, opErrorKey } from './ops'
 import { type Root, folderLabel } from './paths'
+import { ProgressMeter, TaskCurrent } from './TaskProgress'
 import { type TransferEntry, cancelTransfer, clearFinished, retryUpload, useTransferStore } from './transferStore'
 import { type UploadError, type UploadJob, retryable, uploadAmount, uploadCurrent, uploadProgress, uploadRemaining } from './uploadJobs'
 
@@ -58,22 +59,6 @@ export function TransfersWindow(_props: WindowViewProps) {
   )
 }
 
-// Meter는 진행 막대다. 양을 모르면(null) 짧은 막대가 오간다.
-function Meter({ fraction, label }: { fraction: number | null; label: string }) {
-  return (
-    <div
-      className={`meter transfer-meter${fraction === null ? ' busy' : ''}`}
-      role="progressbar"
-      aria-label={label}
-      aria-valuemin={0}
-      aria-valuemax={100}
-      aria-valuenow={fraction === null ? undefined : Math.round(fraction * 100)}
-    >
-      <div className="meter-fill" style={fraction === null ? undefined : { width: `${fraction * 100}%` }} />
-    </div>
-  )
-}
-
 function TransferRow({ entry }: { entry: TransferEntry }) {
   return entry.job.kind === 'copy' ? <CopyRow job={entry.job} roots={entry.roots} /> : <UploadRow job={entry.job} roots={entry.roots} />
 }
@@ -110,16 +95,12 @@ function CopyRow({ job, roots }: { job: CopyJob; roots: readonly Root[] }) {
   return (
     <li className={`transfer-job ${job.status}`}>
       <Head job={job} title={title} where={`${from} → ${to}`} whereTitle={`${job.dir} → ${job.target}`} icon="folder-download" />
-      {!settled(job) && <Meter fraction={progressOf(job)} label={title} />}
+      {!settled(job) && <ProgressMeter fraction={progressOf(job)} label={title} />}
       <p className="transfer-job-status">
         <span>{status}</span>
         <CopyDetail job={job} />
       </p>
-      {job.current && job.status === 'running' && (
-        <p className="transfer-job-current" title={job.current}>
-          {job.current}
-        </p>
-      )}
+      {job.current && job.status === 'running' && <TaskCurrent name={job.current} />}
       {job.error !== null && <p className="transfer-job-error">{t(opErrorKey(job.error))}</p>}
       {job.failures.length > 0 && <FailuresBody groups={groupFailures(job.failures, (n) => n)} />}
       {job.skipped > 0 && <p className="transfer-job-note">{t('files.transfers.skipped', { count: job.skipped, total: fmt(job.skipped) })}</p>}
@@ -141,16 +122,12 @@ function UploadRow({ job, roots }: { job: UploadJob; roots: readonly Root[] }) {
   return (
     <li className={`transfer-job ${job.status}`}>
       <Head job={job} title={title} where={t('files.transfers.uploadTo', { folder: to })} whereTitle={job.target} icon={kindIcon(n === 1 ? kindOf({ name: job.files[0].name, type: 'file' }) : 'file')} />
-      {!settled(job) && <Meter fraction={job.status === 'queued' ? 0 : uploadProgress(job)} label={title} />}
+      {!settled(job) && <ProgressMeter fraction={job.status === 'queued' ? 0 : uploadProgress(job)} label={title} />}
       <p className="transfer-job-status">
         <span>{t(UPLOAD_STATUS_KEYS[job.status])}</span>
         <UploadDetail job={job} />
       </p>
-      {current && n > 1 && (
-        <p className="transfer-job-current" title={current}>
-          {current}
-        </p>
-      )}
+      {current && n > 1 && <TaskCurrent name={current} />}
       {job.error !== null && <p className="transfer-job-error">{t(opErrorKey(job.error))}</p>}
       {failures.length > 0 && <FailuresBody groups={groupFailures(failures, (name) => name, 5, (err) => uploadErrorKey(err as UploadError))} />}
       {settled(job) && (again > 0 || replace > 0) && (

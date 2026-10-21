@@ -48,15 +48,13 @@
 }
 
 .transfer-job-title strong,
-.transfer-job-title span,
-.transfer-job-current {
+.transfer-job-title span {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .transfer-job-title span,
-.transfer-job-current,
 .transfer-job-detail {
   font-size: 12px;
   color: var(--text-muted);
@@ -70,7 +68,6 @@
   font-size: 13px;
 }
 
-.transfer-job-current,
 .transfer-job-error,
 .transfer-job-note {
   margin: 0;
@@ -88,32 +85,6 @@
 
 .transfer-job .files-delete {
   font-size: 13px;
-}
-
-/* 세는 중에는 양을 모르므로 짧은 막대가 오간다. */
-.transfer-meter.busy .meter-fill {
-  width: 30%;
-  animation: transfer-busy 1.2s ease-in-out infinite alternate;
-}
-
-@keyframes transfer-busy {
-  from {
-    translate: 0;
-  }
-
-  to {
-    translate: 233%;
-  }
-}
-
-:root[data-animations='off'] .transfer-meter.busy .meter-fill {
-  animation: none;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .transfer-meter.busy .meter-fill {
-    animation: none;
-  }
 }
 
 .transfer-footer {
