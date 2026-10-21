@@ -205,11 +205,22 @@ func (h *handler) filesSrvDir() string {
 	return "/srv"
 }
 
-// requireFiles는 파일 탐색기 API의 공통 조건이다: 보안 강화 정책(files), 도우미 티켓.
+// requireFiles는 파일 탐색기 읽기 API의 공통 조건이다: 보안 강화 정책(files, 쓰기에만 적용하면 건너뜀), 도우미 티켓.
 func (h *handler) requireFiles(next func(http.ResponseWriter, *http.Request, auth.Session, string)) http.HandlerFunc {
+	return h.filesGuard(false, next)
+}
+
+// requireFilesWrite는 파일 탐색기 쓰기 API(올리기, 만들기, 이름 바꾸기·옮기기, 삭제, 휴지통 연산)의 공통 조건이다.
+// 보안 강화 정책(files)을 언제나 따른다.
+func (h *handler) requireFilesWrite(next func(http.ResponseWriter, *http.Request, auth.Session, string)) http.HandlerFunc {
+	return h.filesGuard(true, next)
+}
+
+func (h *handler) filesGuard(write bool, next func(http.ResponseWriter, *http.Request, auth.Session, string)) http.HandlerFunc {
 	return h.requireSession(func(w http.ResponseWriter, r *http.Request, s auth.Session) {
-		if lvl := h.securityPolicy().Files; !satisfies(s, lvl) {
-			writeSecurityRequired(w, lvl)
+		p := h.securityPolicy()
+		if (write || p.FilesScope != api.FilesScopeWrites) && !satisfies(s, p.Files) {
+			writeSecurityRequired(w, p.Files)
 			return
 		}
 		ticket, ok := h.helperTicket(w, s)
@@ -828,6 +839,8 @@ func (h *handler) writeFilesError(w http.ResponseWriter, s auth.Session, err err
 		status, code = http.StatusConflict, api.ErrNotEmpty
 	case proto.CodeCrossDevice:
 		status, code = http.StatusConflict, api.ErrCrossDevice
+	case proto.CodeNoTrash:
+		status, code = http.StatusConflict, api.ErrNoTrash
 	default:
 		h.writeHelperError(w, s, err)
 		return

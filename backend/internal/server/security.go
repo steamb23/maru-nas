@@ -72,7 +72,23 @@ func normalizePolicy(p api.SecurityPolicy) api.SecurityPolicy {
 		log.Printf("site settings: unknown passkey login period %d, using %d days", days, passkeyLoginDayChoices[0])
 		days = passkeyLoginDayChoices[0]
 	}
-	return api.SecurityPolicy{Terminal: norm(p.Terminal), Elevation: norm(p.Elevation), Files: norm(p.Files), PasskeyLoginDays: days}
+	scope := p.FilesScope
+	switch scope {
+	case "", api.FilesScopeAll:
+		scope = api.FilesScopeAll
+	case api.FilesScopeWrites:
+	default:
+		// 모르는 값은 더 많이 막는 쪽(읽기까지)으로 본다.
+		log.Printf("site settings: unknown file explorer policy scope %q, using %s", scope, api.FilesScopeAll)
+		scope = api.FilesScopeAll
+	}
+	return api.SecurityPolicy{Terminal: norm(p.Terminal), Elevation: norm(p.Elevation), Files: norm(p.Files), FilesScope: scope,
+		PasskeyLoginDays: days}
+}
+
+// validScope는 파일 탐색기 정책의 적용 범위 값인지다. 빈 값은 all이다.
+func validScope(v string) bool {
+	return v == "" || v == api.FilesScopeAll || v == api.FilesScopeWrites
 }
 
 // passkeyLoginDays는 지금 패스키로 로그인 등록의 만료 기간(일)이다.
@@ -496,7 +512,7 @@ func (h *handler) setSecurityPolicy(w http.ResponseWriter, r *http.Request, s au
 		return
 	}
 	if req.Security == nil || !validLevel(req.Security.Terminal) || !validLevel(req.Security.Elevation) ||
-		!validLevel(req.Security.Files) || !validDays(req.Security.PasskeyLoginDays) {
+		!validLevel(req.Security.Files) || !validScope(req.Security.FilesScope) || !validDays(req.Security.PasskeyLoginDays) {
 		writeError(w, http.StatusBadRequest, api.ErrBadRequest, "invalid security policy")
 		return
 	}
@@ -508,6 +524,10 @@ func (h *handler) setSecurityPolicy(w http.ResponseWriter, r *http.Request, s au
 			need = max(need, required(pair[0]), required(pair[1]))
 		}
 	}
+	// 파일 탐색기의 적용 범위를 바꾸려면 그 단계를 거쳤어야 한다(쓰기에만 적용하면 목록·내려받기가 열린다).
+	if cur.FilesScope != next.FilesScope {
+		need = max(need, required(cur.Files), required(next.Files))
+	}
 	// 만료 기간은 비밀번호를 다시 확인한 세션만 바꾼다(빼앗은 세션이 기간을 늘리지 못하게).
 	if cur.PasskeyLoginDays != next.PasskeyLoginDays {
 		need = max(need, auth.AssurancePassword)
@@ -518,7 +538,7 @@ func (h *handler) setSecurityPolicy(w http.ResponseWriter, r *http.Request, s au
 	}
 	if !h.updateSite(w, func(v *api.SiteSettings) {
 		if next.Terminal == api.SecurityOff && next.Elevation == api.SecurityOff && next.Files == api.SecurityOff &&
-			next.PasskeyLoginDays == api.PasskeyLoginDaysDefault {
+			next.FilesScope == api.FilesScopeAll && next.PasskeyLoginDays == api.PasskeyLoginDaysDefault {
 			v.Security = nil
 		} else {
 			p := next
@@ -528,8 +548,8 @@ func (h *handler) setSecurityPolicy(w http.ResponseWriter, r *http.Request, s au
 		return
 	}
 	h.setPolicy(next)
-	log.Printf("security: policy changed: by=%q ip=%s terminal=%s elevation=%s files=%s passkey_login_days=%d", s.Username, clientIP(r),
-		next.Terminal, next.Elevation, next.Files, next.PasskeyLoginDays)
+	log.Printf("security: policy changed: by=%q ip=%s terminal=%s elevation=%s files=%s files_scope=%s passkey_login_days=%d",
+		s.Username, clientIP(r), next.Terminal, next.Elevation, next.Files, next.FilesScope, next.PasskeyLoginDays)
 	h.enforcePolicy()
 	w.WriteHeader(http.StatusNoContent)
 }

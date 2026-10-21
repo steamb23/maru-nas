@@ -857,6 +857,8 @@ function isSecurityPolicy(v: unknown): v is SecurityPolicy {
     isObj(v) &&
     isOptional(v.terminal, (x) => isOneOf(x, LEVELS)) &&
     isOptional(v.elevation, (x) => isOneOf(x, LEVELS)) &&
+    isOptional(v.files, (x) => isOneOf(x, LEVELS)) &&
+    isOptional(v.filesScope, (x) => isOneOf(x, ['all', 'writes'] as const)) &&
     isOptional(v.passkeyLoginDays, (x): x is SecurityPolicy['passkeyLoginDays'] => isNum(x))
   )
 }

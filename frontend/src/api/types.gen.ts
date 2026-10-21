@@ -1470,6 +1470,10 @@ export const ErrCrossDevice = "cross_device";
  */
 export const ErrRootFolder = "root_folder";
 /**
+ * ErrNoTrash는 그 항목이 든 디스크에 쓸 수 있는 휴지통이 없다는 뜻이다(영구 삭제만 할 수 있다).
+ */
+export const ErrNoTrash = "no_trash";
+/**
  * ErrorResponse는 2xx가 아닌 상태 코드와 함께 반환된다.
  */
 export interface ErrorResponse {
@@ -1477,7 +1481,7 @@ export interface ErrorResponse {
   /**
    * Code는 화면에서 분기할 때 쓰는 오류 종류다. 없을 수 있다.
    */
-  code?: 'invalid_credentials' | 'rate_limited' | 'challenge_failed' | 'challenge_expired' | 'omv_unavailable' | 'unauthorized' | 'bad_request' | 'rpc_forbidden' | 'admin_required' | 'plugin_missing' | 'omv_error' | 'action_busy' | 'action_failed' | 'action_timeout' | 'config_dirty' | 'image_too_large' | 'unsupported_image' | 'profile_readonly' | 'helper_unavailable' | 'helper_reauth' | 'elevation_failed' | 'elevation_not_allowed' | 'elevation_required' | 'terminal_disabled' | 'security_required' | 'factor_failed' | 'manage_required' | 'passkey_unavailable' | 'passkey_uv_unsupported' | 'security_unavailable' | 'passkey_login_unknown' | 'passkey_login_expired' | 'passkey_login_stale' | 'upgrade_disabled' | 'upgrade_busy' | 'upgrade_outdated' | 'not_found' | 'permission_denied' | 'outside_roots' | 'file_exists' | 'not_dir' | 'is_dir' | 'not_regular' | 'no_space' | 'read_only' | 'helper_busy' | 'transfer_timeout' | 'listing_expired' | 'sort_pending' | 'not_empty' | 'cross_device' | 'root_folder';
+  code?: 'invalid_credentials' | 'rate_limited' | 'challenge_failed' | 'challenge_expired' | 'omv_unavailable' | 'unauthorized' | 'bad_request' | 'rpc_forbidden' | 'admin_required' | 'plugin_missing' | 'omv_error' | 'action_busy' | 'action_failed' | 'action_timeout' | 'config_dirty' | 'image_too_large' | 'unsupported_image' | 'profile_readonly' | 'helper_unavailable' | 'helper_reauth' | 'elevation_failed' | 'elevation_not_allowed' | 'elevation_required' | 'terminal_disabled' | 'security_required' | 'factor_failed' | 'manage_required' | 'passkey_unavailable' | 'passkey_uv_unsupported' | 'security_unavailable' | 'passkey_login_unknown' | 'passkey_login_expired' | 'passkey_login_stale' | 'upgrade_disabled' | 'upgrade_busy' | 'upgrade_outdated' | 'not_found' | 'permission_denied' | 'outside_roots' | 'file_exists' | 'not_dir' | 'is_dir' | 'not_regular' | 'no_space' | 'read_only' | 'helper_busy' | 'transfer_timeout' | 'listing_expired' | 'sort_pending' | 'not_empty' | 'cross_device' | 'root_folder' | 'no_trash';
   /**
    * RetryAfterSeconds는 rate_limited일 때 다시 시도할 수 있기까지 남은 초다.
    */
@@ -1628,6 +1632,14 @@ export const SecurityPassword = "password";
  */
 export const SecurityTwoFactor = "twoFactor";
 /**
+ * 파일 탐색기 정책의 적용 범위(SecurityPolicy.FilesScope)
+ */
+export const FilesScopeAll = "all";
+/**
+ * 기능별 단계. SecurityPolicy의 값이다.
+ */
+export const FilesScopeWrites = "writes";
+/**
  * AssuranceLogin은 로그인만 한 세션이다. 로그인할 때 넣은 비밀번호는 재확인으로 치지 않는다.
  */
 export const AssuranceLogin = "login";
@@ -1662,9 +1674,14 @@ export interface SecurityPolicy {
   terminal?: 'off' | 'password' | 'twoFactor';
   elevation?: 'off' | 'password' | 'twoFactor';
   /**
-   * Files는 파일 탐색기다. 목록·내려받기 같은 읽기까지 모두 막는다(빼앗은 세션이 내려받기만 해도 정보가 샌다).
+   * Files는 파일 탐색기다. 기본으로 목록·내려받기 같은 읽기까지 모두 막는다(빼앗은 세션이 내려받기만 해도 정보가 샌다).
    */
   files?: 'off' | 'password' | 'twoFactor';
+  /**
+   * FilesScope는 Files를 어디에 적용하는지다. writes면 쓰기·삭제(올리기, 폴더 만들기, 이름 바꾸기·옮기기, 삭제,
+   * 휴지통 연산)에만 적용하고 목록·내려받기는 연다. 없으면 all이다.
+   */
+  filesScope?: 'all' | 'writes';
   /**
    * PasskeyLoginDays는 패스키로 로그인 등록의 만료 기간(일)이다. 없으면 PasskeyLoginDaysDefault다. 바꾸려면
    * 비밀번호를 다시 확인한 세션이어야 한다. 줄이면 기존 등록에도 바로 적용되고, 늘리면 새 등록부터 적용된다.
@@ -2252,6 +2269,124 @@ export interface FilesDeleteRequest {
    * Recursive면 폴더 안의 항목까지 모두 지운다. 아니면 파일과 빈 폴더만 지운다(not_empty).
    */
   recursive: boolean;
+}
+/**
+ * FilesTrashRequest는 POST /api/files/trash의 본문이다. 항목을 휴지통으로 옮긴다.
+ */
+export interface FilesTrashRequest {
+  path: string;
+}
+/**
+ * FilesTrashResult는 POST /api/files/trash의 응답이다. 넣은 휴지통과 그 안의 이름이다(되돌릴 때 쓴다).
+ */
+export interface FilesTrashResult {
+  trash: string;
+  name: string;
+}
+/**
+ * TrashVolume은 홈 폴더나 디스크 하나의 휴지통이다.
+ */
+export interface TrashVolume {
+  /**
+   * Top은 홈 폴더나 디스크(/srv 아래 마운트 지점)의 경로다. 그 안의 항목은 이 휴지통에 들어간다.
+   */
+  top: string;
+  /**
+   * Kind는 휴지통 종류다: home(홈 휴지통), shared(디스크의 .Trash/<uid>), own(디스크의 .Trash-<uid>),
+   * none(휴지통이 없어 영구 삭제만 할 수 있다).
+   */
+  kind: 'home' | 'shared' | 'own' | 'none';
+  /**
+   * Shared는 디스크 맨 위에 모든 사용자가 쓰는 .Trash가 있는지다.
+   */
+  shared: boolean;
+}
+/**
+ * FilesTrashVolumes는 GET /api/files/trash/volumes의 응답이다.
+ */
+export interface FilesTrashVolumes {
+  volumes: TrashVolume[];
+}
+/**
+ * TrashItem은 휴지통 항목 하나다.
+ */
+export interface TrashItem {
+  /**
+   * Trash는 휴지통 디렉터리, Name은 그 안의 이름이다(되돌리기·영구 삭제에 그대로 보낸다).
+   */
+  trash: string;
+  name: string;
+  /**
+   * Path는 원래 경로다.
+   */
+  path: string;
+  /**
+   * DeletedAt은 지운 시각(Unix 밀리초)이다. 모르면 0이다.
+   */
+  deletedAt: number /* int64 */;
+  type: 'dir' | 'file' | 'symlink' | 'other';
+  size: number /* int64 */;
+  /**
+   * ModTime은 수정 시각(Unix 밀리초)이다.
+   */
+  modTime: number /* int64 */;
+  /**
+   * BadName은 이름이나 원래 경로가 UTF-8이 아니라 되돌리거나 지울 수 없다는 뜻이다.
+   */
+  badName?: boolean;
+}
+/**
+ * FilesTrashList는 GET /api/files/trash의 응답이다(지운 시각이 늦은 것부터).
+ */
+export interface FilesTrashList {
+  items: TrashItem[];
+  /**
+   * Truncated는 항목이 많아 일부만 담았다는 뜻이다.
+   */
+  truncated: boolean;
+}
+/**
+ * FilesTrashRestoreRequest는 POST /api/files/trash/restore의 본문이다. 항목을 To(원래 경로나 같은 폴더의 새 이름)로
+ * 되돌린다. 응답은 되돌린 FileItem이다.
+ */
+export interface FilesTrashRestoreRequest {
+  trash: string;
+  name: string;
+  to: string;
+}
+/**
+ * FilesTrashItemRequest는 POST /api/files/trash/purge의 본문이다. 휴지통 항목 하나를 영구 삭제한다(204).
+ */
+export interface FilesTrashItemRequest {
+  trash: string;
+  name: string;
+}
+/**
+ * SiteTrashDisk는 디스크 하나의 공유 휴지통(.Trash) 상태다(관리자).
+ */
+export interface SiteTrashDisk {
+  /**
+   * Name은 디스크 이름표(라벨, 없으면 마운트 지점 이름), Path는 마운트 지점이다.
+   */
+  name: string;
+  path: string;
+  /**
+   * Shared는 디스크 맨 위에 모든 사용자가 쓰는 .Trash(1777)가 있는지다.
+   */
+  shared: boolean;
+}
+/**
+ * SiteTrashDisks는 GET·POST /api/site/files/trash의 응답이다(관리자).
+ */
+export interface SiteTrashDisks {
+  disks: SiteTrashDisk[];
+}
+/**
+ * SiteTrashPrepareRequest는 POST /api/site/files/trash의 본문이다. 그 디스크 맨 위에 .Trash(1777)를 만든다
+ * (root 권한 상승 필요).
+ */
+export interface SiteTrashPrepareRequest {
+  disk: string;
 }
 /**
  * FilesPrepareResponse는 POST /api/files/list/{id}/prepare의 응답이다. Filled가 Total이면 날짜·크기순으로 볼 수 있다.

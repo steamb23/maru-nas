@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -525,4 +526,172 @@ func TestFilesSecurityPolicy(t *testing.T) {
 	// 비밀번호를 다시 확인하면 쓸 수 있다.
 	wantStatus(t, b.do(http.MethodPost, "/api/security/verify", api.SecurityVerifyRequest{Method: api.FactorPassword, Password: "user"}), http.StatusOK)
 	wantStatus(t, b.do(http.MethodGet, "/api/files/roots", nil), http.StatusOK)
+}
+
+func TestFilesTrash(t *testing.T) {
+	e := newFilesEnv(t, envOptions{site: prefs.NewMemoryStore()})
+	e.shares(omvfake.Version85)
+	e.file("media/a.txt", "a")
+	e.file("media/sub/b.txt", "b")
+	admin := e.browser()
+	admin.login("admin", "admin")
+	decode[api.FilesSettings](t, admin.do(http.MethodPost, "/api/site/files/refresh", struct{}{}))
+	b := e.browser()
+	b.login("user", "user")
+	media, home := e.disk+"/media", e.helper.Home("user")
+	uid := strconv.Itoa(os.Getuid())
+	if err := os.WriteFile(home+"/h.txt", []byte("h"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	trash := func(p string) *httptest.ResponseRecorder {
+		return b.do(http.MethodPost, "/api/files/trash", api.FilesTrashRequest{Path: p})
+	}
+
+	// 홈은 홈 휴지통, 디스크는 맨 위의 .Trash-<uid>(공유 .Trash가 없을 때)
+	vols := decode[api.FilesTrashVolumes](t, b.do(http.MethodGet, "/api/files/trash/volumes", nil))
+	kinds := map[string]string{}
+	for _, v := range vols.Volumes {
+		kinds[v.Top] = v.Kind
+	}
+	if kinds[home] != "home" || kinds[e.disk] != "own" {
+		t.Fatalf("volumes = %+v", vols)
+	}
+	if r := decode[api.FilesTrashResult](t, trash(home+"/h.txt")); r.Trash != home+"/.local/share/Trash" || r.Name != "h.txt" {
+		t.Fatalf("home trash = %+v", r)
+	}
+	if r := decode[api.FilesTrashResult](t, trash(media+"/a.txt")); r.Trash != e.disk+"/.Trash-"+uid {
+		t.Fatalf("disk trash = %+v", r)
+	}
+	wantCode(t, trash(media), http.StatusConflict, api.ErrRootFolder)
+	wantCode(t, trash(media+"/none"), http.StatusNotFound, api.ErrNotFound)
+	wantCode(t, trash("/etc/passwd"), http.StatusForbidden, api.ErrOutsideRoots)
+
+	list := decode[api.FilesTrashList](t, b.do(http.MethodGet, "/api/files/trash", nil))
+	if len(list.Items) != 2 || list.Truncated {
+		t.Fatalf("list = %+v", list)
+	}
+	var item api.TrashItem
+	for _, it := range list.Items {
+		if it.Name == "a.txt" {
+			item = it
+		}
+	}
+	if item.Path != media+"/a.txt" || item.Type != "file" || item.Size != 1 || item.DeletedAt == 0 {
+		t.Fatalf("item = %+v", item)
+	}
+
+	// 되돌리기는 보이는 폴더 안의 경로로만 한다.
+	restore := func(to string) *httptest.ResponseRecorder {
+		return b.do(http.MethodPost, "/api/files/trash/restore", api.FilesTrashRestoreRequest{Trash: item.Trash, Name: item.Name, To: to})
+	}
+	wantCode(t, restore(e.disk+"/a.txt"), http.StatusForbidden, api.ErrOutsideRoots)
+	wantStatus(t, restore(media+"/.onmaru-upload-a"), http.StatusBadRequest)
+	e.file("media/a.txt", "taken")
+	wantCode(t, restore(media+"/a.txt"), http.StatusConflict, api.ErrFileExists)
+	rec := restore(media + "/a (2).txt")
+	wantStatus(t, rec, http.StatusOK)
+	if it := decode[api.FileItem](t, rec); it.Name != "a (2).txt" {
+		t.Fatalf("restored = %+v", it)
+	}
+	if got, _ := os.ReadFile(media + "/a (2).txt"); string(got) != "a" {
+		t.Fatalf("restored content = %q", got)
+	}
+
+	// 영구 삭제와 비우기
+	wantCode(t, b.do(http.MethodPost, "/api/files/trash/purge", api.FilesTrashItemRequest{Trash: item.Trash, Name: item.Name}),
+		http.StatusNotFound, api.ErrNotFound)
+	wantCode(t, b.do(http.MethodPost, "/api/files/trash/purge", api.FilesTrashItemRequest{Trash: media, Name: "a.txt"}),
+		http.StatusNotFound, api.ErrNotFound)
+	wantStatus(t, trash(media+"/sub"), http.StatusOK)
+	wantStatus(t, b.do(http.MethodPost, "/api/files/trash/empty", struct{}{}), http.StatusNoContent)
+	if list := decode[api.FilesTrashList](t, b.do(http.MethodGet, "/api/files/trash", nil)); len(list.Items) != 0 {
+		t.Fatalf("after empty = %+v", list.Items)
+	}
+}
+
+func TestSiteTrashPrepare(t *testing.T) {
+	e := newFilesEnv(t, envOptions{site: prefs.NewMemoryStore()})
+	e.shares(omvfake.Version85)
+	e.file("media/a.txt", "a")
+	user := e.browser()
+	user.login("user", "user")
+	wantCode(t, user.do(http.MethodGet, "/api/site/files/trash", nil), http.StatusForbidden, api.ErrAdminRequired)
+
+	b := e.browser()
+	loginTOTP(t, b)
+	decode[api.FilesSettings](t, b.do(http.MethodPost, "/api/site/files/refresh", struct{}{}))
+	disks := decode[api.SiteTrashDisks](t, b.do(http.MethodGet, "/api/site/files/trash", nil))
+	if len(disks.Disks) != 1 || disks.Disks[0].Path != e.disk || disks.Disks[0].Name != "data1" || disks.Disks[0].Shared {
+		t.Fatalf("disks = %+v", disks)
+	}
+	prepare := func(disk string) *httptest.ResponseRecorder {
+		return b.do(http.MethodPost, "/api/site/files/trash", api.SiteTrashPrepareRequest{Disk: disk})
+	}
+	wantStatus(t, prepare(e.disk+"/media"), http.StatusBadRequest)
+	// root 연산이라 권한 상승이 필요하다.
+	wantCode(t, prepare(e.disk), http.StatusForbidden, api.ErrElevationRequired)
+	wantStatus(t, b.do(http.MethodPost, "/api/helper/elevation", api.ElevationRequest{Password: "totp"}), http.StatusOK)
+	disks = decode[api.SiteTrashDisks](t, prepare(e.disk))
+	if !disks.Disks[0].Shared {
+		t.Fatalf("after prepare = %+v", disks)
+	}
+	if fi, err := os.Lstat(e.disk + "/.Trash"); err != nil || fi.Mode()&os.ModeSticky == 0 || fi.Mode().Perm() != 0o777 {
+		t.Fatalf(".Trash = %v %v", fi, err)
+	}
+	// 이제 사용자는 공유 휴지통의 자기 폴더를 쓴다.
+	r := decode[api.FilesTrashResult](t, user.do(http.MethodPost, "/api/files/trash", api.FilesTrashRequest{Path: e.disk + "/media/a.txt"}))
+	if r.Trash != e.disk+"/.Trash/"+strconv.Itoa(os.Getuid()) {
+		t.Fatalf("shared trash = %+v", r)
+	}
+}
+
+func TestFilesSecurityWritesOnly(t *testing.T) {
+	site := prefs.NewMemoryStore()
+	site.UpdateSite(func(v *api.SiteSettings) {
+		v.Security = &api.SecurityPolicy{Files: api.SecurityPassword, FilesScope: api.FilesScopeWrites}
+	})
+	e := newFilesEnv(t, envOptions{site: site})
+	b := e.browser()
+	b.login("user", "user")
+	home := e.helper.Home("user")
+	// 읽기는 열려 있고 쓰기는 막는다.
+	wantStatus(t, b.do(http.MethodGet, "/api/files/roots", nil), http.StatusOK)
+	wantStatus(t, b.do(http.MethodGet, "/api/files/list?path="+q(home), nil), http.StatusOK)
+	wantStatus(t, b.do(http.MethodGet, "/api/files/trash", nil), http.StatusOK)
+	for p, body := range map[string]any{"/api/files/mkdir": api.FilesMkdirRequest{Path: home + "/x"},
+		"/api/files/trash": api.FilesTrashRequest{Path: home + "/x"}, "/api/files/trash/empty": struct{}{}} {
+		rec := b.do(http.MethodPost, p, body)
+		wantStatus(t, rec, http.StatusForbidden)
+		if er := decode[api.ErrorResponse](t, rec); er.Code != api.ErrSecurityRequired || er.Required != api.SecurityPassword {
+			t.Fatalf("%s: %+v", p, er)
+		}
+	}
+	wantStatus(t, b.raw(http.MethodPut, "/api/files/upload?path="+q(home+"/u.txt"), "application/octet-stream", []byte("u")), http.StatusForbidden)
+	wantStatus(t, b.do(http.MethodPost, "/api/security/verify", api.SecurityVerifyRequest{Method: api.FactorPassword, Password: "user"}), http.StatusOK)
+	wantStatus(t, b.do(http.MethodPost, "/api/files/mkdir", api.FilesMkdirRequest{Path: home + "/x"}), http.StatusOK)
+}
+
+func TestFilesScopeChangeNeedsStepUp(t *testing.T) {
+	site := prefs.NewMemoryStore()
+	site.UpdateSite(func(v *api.SiteSettings) { v.Security = &api.SecurityPolicy{Files: api.SecurityPassword} })
+	e := newEnv(t, envOptions{site: site})
+	a := e.browser()
+	a.login("admin", "admin")
+	set := func(scope string) *httptest.ResponseRecorder {
+		return a.do(http.MethodPut, "/api/site/security", api.SecurityPolicyRequest{Security: &api.SecurityPolicy{
+			Terminal: api.SecurityOff, Elevation: api.SecurityOff, Files: api.SecurityPassword, FilesScope: scope}})
+	}
+	// 쓰기에만 적용하면 목록·내려받기가 열리므로 그 단계를 거친 세션만 바꾼다.
+	wantCode(t, set(api.FilesScopeWrites), http.StatusForbidden, api.ErrSecurityRequired)
+	wantStatus(t, set("reads"), http.StatusBadRequest)
+	wantStatus(t, a.do(http.MethodPost, "/api/security/verify", api.SecurityVerifyRequest{Method: api.FactorPassword, Password: "admin"}), http.StatusOK)
+	wantStatus(t, set(api.FilesScopeWrites), http.StatusNoContent)
+	if p := decode[api.SecurityPolicyResponse](t, a.do(http.MethodGet, "/api/site/security", nil)).Policy; p.FilesScope != api.FilesScopeWrites {
+		t.Fatalf("policy = %+v", p)
+	}
+	// 빈 값은 all이다.
+	wantStatus(t, set(""), http.StatusNoContent)
+	if p := decode[api.SecurityPolicyResponse](t, a.do(http.MethodGet, "/api/site/security", nil)).Policy; p.FilesScope != api.FilesScopeAll {
+		t.Fatalf("policy = %+v", p)
+	}
 }

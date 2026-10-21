@@ -8,7 +8,7 @@ export type Factor = SecurityStatus['methods'][number]
 export type Assurance = SecurityStatus['assurance']
 export type Level = NonNullable<SecurityPolicy['terminal']>
 // 보안 강화 정책의 대상(단계를 고르는 기능). 패스키로 로그인의 만료 기간은 대상이 아니다.
-export type SecurityTarget = Exclude<keyof SecurityPolicy, 'passkeyLoginDays'>
+export type SecurityTarget = Exclude<keyof SecurityPolicy, 'passkeyLoginDays' | 'filesScope'>
 
 export interface SecurityError {
   key: ParseKeys
