@@ -2323,6 +2323,42 @@ export interface FilesCopyRequest {
   to: string;
 }
 /**
+ * FilesSearchEvent는 GET /api/files/search 응답(text/event-stream)의 사건 하나다(data 줄의 JSON). 진행(Hits, Dirs)이
+ * 여러 번 오고 마지막에 Result나 Error 하나가 온다. 시작하기 전의 실패는 사건이 아니라 보통의 오류 응답이다.
+ */
+export interface FilesSearchEvent {
+  /**
+   * Hits는 앞 사건 뒤에 새로 찾은 항목이다.
+   */
+  hits?: FilesSearchHit[];
+  /**
+   * Dirs는 지금까지 읽은 폴더 수, Skipped는 읽지 못해 건너뛴 폴더 수다.
+   */
+  dirs: number /* int */;
+  skipped?: number /* int */;
+  result?: FilesSearchResult;
+  /**
+   * Error는 검색을 시작한 뒤 멈춘 오류이고, Status는 같은 오류를 응답으로 받았을 때의 HTTP 상태다.
+   */
+  error?: ErrorResponse;
+  status?: number /* int */;
+}
+/**
+ * FilesSearchHit은 찾은 항목 하나다. Path는 절대 경로, Type은 FileItem.Type과 같다(종류를 모르면 unknown).
+ */
+export interface FilesSearchHit {
+  path: string;
+  type: 'dir' | 'file' | 'symlink' | 'other' | 'unknown';
+}
+/**
+ * FilesSearchResult는 검색의 끝이다. Truncated면 찾은 항목이 상한(2000개)에 닿아 멈췄다.
+ */
+export interface FilesSearchResult {
+  dirs: number /* int */;
+  skipped?: number /* int */;
+  truncated?: boolean;
+}
+/**
  * FilesCopyEvent는 POST /api/files/copy 응답(text/event-stream)의 사건 하나다(data 줄의 JSON). Progress가 여러 번
  * 오고 마지막에 Result나 Error 하나가 온다. 시작하기 전의 실패는 사건이 아니라 보통의 오류 응답이다.
  */

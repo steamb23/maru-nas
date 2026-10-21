@@ -204,3 +204,30 @@ func TestUnavailable(t *testing.T) {
 		t.Fatal("transport error has a helper code")
 	}
 }
+
+func TestSearch(t *testing.T) {
+	c, fake := start(t)
+	ctx := context.Background()
+	res, err := c.Open(ctx, "user", "user", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tk := res.Ticket
+	home := fake.Home("user")
+	if _, err := c.Mkdir(ctx, tk, home+"/사진"); err != nil {
+		t.Fatal(err)
+	}
+	for _, p := range []string{"/사진/Trip.jpg", "/trip.txt", "/other.txt"} {
+		if _, err := c.Write(ctx, tk, home+p, false, strings.NewReader("hi"), 2); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var hits []proto.SearchHit
+	sr, err := c.Search(ctx, tk, proto.SearchParams{Path: home, Query: "trip"}, func(p proto.SearchProgress) { hits = append(hits, p.Hits...) })
+	if err != nil || sr.Dirs != 2 || sr.Truncated || len(hits) != 2 {
+		t.Fatalf("search: %+v %+v %v", sr, hits, err)
+	}
+	if _, err := c.Search(ctx, tk, proto.SearchParams{Path: home + "/trip.txt", Query: "x"}, nil); proto.CodeOf(err) != proto.CodeNotDir {
+		t.Fatalf("search in a file: %v", err)
+	}
+}

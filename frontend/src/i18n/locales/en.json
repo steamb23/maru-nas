@@ -431,6 +431,24 @@
       "sort": "Sort",
       "ascending": "Ascending",
       "descending": "Descending"
+    },
+    "search": {
+      "deep": "Search subfolders",
+      "placeholder": "Search subfolders (Enter)",
+      "label": "Search results",
+      "title": "Searching “{{query}}” in {{folder}}",
+      "running_one": "{{total}} found · folders read: {{dirs}}",
+      "running_other": "{{total}} found · folders read: {{dirs}}",
+      "done_one": "{{total}} found · folders read: {{dirs}}",
+      "done_other": "{{total}} found · folders read: {{dirs}}",
+      "stop": "Stop",
+      "again": "Search again",
+      "truncated": "There are too many matches, so only the first {{total}} are shown. Try a more specific search term.",
+      "stopped": "The search was stopped. Only the items found up to then are shown.",
+      "skipped_one": "{{total}} folder you can't read was skipped.",
+      "skipped_other": "{{total}} folders you can't read were skipped.",
+      "location": "Location",
+      "locate": "Open location"
     }
   },
   "sysinfo": {

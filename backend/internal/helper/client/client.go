@@ -413,6 +413,48 @@ func (c *Client) Copy(ctx context.Context, ticket string, p proto.CopyParams, pr
 	}
 }
 
+// Search는 p.Path 폴더와 그 아래에서 이름에 p.Query가 든 항목을 찾는다(사용자 권한). 찾은 항목과 진행은
+// progress로 받고, 시작하기 전의 실패만 오류다. ctx가 끝나면 연결을 닫고 도우미는 멈춘다.
+func (c *Client) Search(ctx context.Context, ticket string, p proto.SearchParams, progress func(proto.SearchProgress)) (proto.SearchResult, error) {
+	params, err := marshal(p)
+	if err != nil {
+		return proto.SearchResult{}, err
+	}
+	conn, err := c.dial(ctx)
+	if err != nil {
+		return proto.SearchResult{}, err
+	}
+	defer conn.Close()
+	stop := context.AfterFunc(ctx, func() { conn.Close() })
+	defer stop()
+	req := proto.Request{V: proto.Version, Op: proto.OpRun, Ticket: ticket, Scope: proto.ScopeUser, Action: proto.ActionSearch, Params: params}
+	if err := proto.WriteRequest(conn, req); err != nil {
+		return proto.SearchResult{}, fmt.Errorf("%w: %v", ErrUnavailable, err)
+	}
+	for {
+		// 도우미는 폴더를 읽을 때마다(0.25초 간격) 진행 응답을 보낸다.
+		conn.SetReadDeadline(time.Now().Add(copyIdleTimeout))
+		resp, err := proto.ReadResponse(conn)
+		if err != nil {
+			if ctx.Err() != nil {
+				return proto.SearchResult{}, ctx.Err()
+			}
+			return proto.SearchResult{}, fmt.Errorf("%w: %v", ErrUnavailable, err)
+		}
+		if !resp.Partial {
+			var res proto.SearchResult
+			if err := resp.Decode(&res); err != nil {
+				return proto.SearchResult{}, err
+			}
+			return res, nil
+		}
+		var pr proto.SearchProgress
+		if err := json.Unmarshal(resp.Result, &pr); err == nil && progress != nil {
+			progress(pr)
+		}
+	}
+}
+
 // Write는 r에서 size바이트를 읽어 path에 올린다(사용자 권한). overwrite가 false면 같은 이름이 있을 때 exists다.
 // 도우미는 다 받은 뒤에 이름을 바꾸므로 실패해도 기존 파일은 그대로다.
 func (c *Client) Write(ctx context.Context, ticket, path string, overwrite bool, r io.Reader, size int64) (proto.Entry, error) {

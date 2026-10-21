@@ -49,9 +49,12 @@ const (
 	// opTimeout은 목록·정보 같은 연산의 최대 시간, streamTimeout은 읽기·쓰기 스트림과 복사(fs.copy)의 최대 시간이다.
 	// 스트림과 복사는 worker가 진행이 멈추면(60초) 따로 끊는다. removeTimeout은 삭제(fs.remove)의 최대 시간이다.
 	// 큰 폴더를 통째로 지우면 30초를 넘을 수 있고, 시간이 지나 worker를 끝내면 일부만 지운 채 남는다.
+	// searchTimeout은 하위 폴더 검색(fs.search)의 최대 시간이다. 디스크 전체를 찾아도 끝나게 길게 두고, 화면이
+	// 멈추면(연결을 닫으면) worker도 멈춘다.
 	opTimeout     = 30 * time.Second
 	streamTimeout = 6 * time.Hour
 	removeTimeout = 10 * time.Minute
+	searchTimeout = 30 * time.Minute
 )
 
 // Config는 도우미 설정이다.
@@ -448,6 +451,8 @@ func (s *Server) run(ctx context.Context, c *net.UnixConn, req proto.Request) {
 		timeout = streamTimeout
 	case proto.ActionRemove, proto.ActionTrashPurge, proto.ActionTrashEmpty:
 		timeout = removeTimeout
+	case proto.ActionSearch:
+		timeout = searchTimeout
 	}
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
@@ -500,7 +505,7 @@ var writeActions = map[string]bool{
 // 여러 번 부르므로 남기면 저널이 이 줄로 덮인다. 내려받기(fs.read)와 쓰기 연산은 남긴다.
 var quietActions = map[string]bool{
 	proto.ActionList: true, proto.ActionStat: true, proto.ActionNames: true, proto.ActionStatMany: true, proto.ActionInfo: true,
-	proto.ActionTrashDirs: true, proto.ActionTrashList: true,
+	proto.ActionTrashDirs: true, proto.ActionTrashList: true, proto.ActionSearch: true,
 }
 
 // audit은 연산 결과를 남긴다. root 범위와 쓰기 연산은 언제나, 읽기 연산은 연산과 결과만 남긴다.

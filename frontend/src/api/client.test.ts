@@ -2,6 +2,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   ApiError,
   copyFiles,
+  fetchPreviewBytes,
+  searchFiles,
   deletePasskeyLogin,
   discardPasskeyLogin,
   enrollPasskeyLogin,
@@ -528,6 +530,53 @@ describe('copyFiles', () => {
 
     stubFetch(Response.json({ error: 'x', code: 'security_required', required: 'password' }, { status: 403 }))
     await expect(copyFiles({ dir: '/a', names: ['b'], to: '/c' }, () => {})).rejects.toMatchObject({ code: 'security_required' })
+  })
+})
+
+describe('searchFiles', () => {
+  const stream = (chunks: string[]) =>
+    new Response(
+      new ReadableStream<Uint8Array>({
+        start(c) {
+          for (const s of chunks) c.enqueue(new TextEncoder().encode(s))
+          c.close()
+        },
+      }),
+      { headers: { 'Content-Type': 'text/event-stream' } },
+    )
+
+  it('찾은 항목을 오는 대로 알리고 결과를 돌려준다', async () => {
+    const fn = stubFetch(
+      stream([
+        `data: ${JSON.stringify({ dirs: 0 })}\n\n`,
+        `data: ${JSON.stringify({ hits: [{ path: '/srv/d/a b.txt', type: 'file' }, { path: 1 }], dirs: 3, skipped: 1 })}\n\nda`,
+        `ta: ${JSON.stringify({ dirs: 5, result: { dirs: 5, truncated: true } })}\n\n`,
+      ]),
+    )
+    const seen: unknown[] = []
+    const res = await searchFiles('/srv/d', '한글 이름', (p) => seen.push(p))
+    expect(seen).toEqual([
+      { hits: [], dirs: 0, skipped: 0 },
+      { hits: [{ path: '/srv/d/a b.txt', type: 'file' }], dirs: 3, skipped: 1 },
+    ])
+    expect(res).toEqual({ dirs: 5, truncated: true })
+    expect(String(fn.mock.calls[0][0])).toMatch(/\/api\/files\/search\?path=%2Fsrv%2Fd&q=%ED%95%9C%EA%B8%80%20%EC%9D%B4%EB%A6%84$/)
+  })
+
+  it('시작한 뒤의 오류를 던진다', async () => {
+    stubFetch(stream([`data: ${JSON.stringify({ dirs: 1 })}\n\ndata: ${JSON.stringify({ error: { error: 'x', code: 'helper_busy' }, status: 429 })}\n\n`]))
+    await expect(searchFiles('/a', 'b', () => {})).rejects.toMatchObject({ status: 429, code: 'helper_busy' })
+  })
+})
+
+describe('fetchPreviewBytes', () => {
+  it('큰 파일은 앞부분만 범위로 받는다', async () => {
+    const fn = stubFetch(new Response(new Uint8Array([1, 2, 3]), { status: 206 }))
+    await expect(fetchPreviewBytes('/a.txt', 100, 3)).resolves.toEqual(new Uint8Array([1, 2, 3]))
+    expect(new Headers(fn.mock.calls[0][1]?.headers).get('Range')).toBe('bytes=0-2')
+    const small = stubFetch(new Response(new Uint8Array([1])))
+    await fetchPreviewBytes('/b.txt', 1, 3)
+    expect(new Headers(small.mock.calls[0][1]?.headers).get('Range')).toBeNull()
   })
 })
 

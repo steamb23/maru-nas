@@ -431,6 +431,24 @@
       "sort": "정렬",
       "ascending": "오름차순",
       "descending": "내림차순"
+    },
+    "search": {
+      "deep": "하위 폴더까지 찾기",
+      "placeholder": "하위 폴더까지 찾기(Enter)",
+      "label": "찾은 항목",
+      "title": "{{folder}}에서 “{{query}}” 찾기",
+      "running_other": "{{total}}개 찾음 · 폴더 {{dirs}}개 읽는 중",
+      "done_other": "{{total}}개 찾음 · 폴더 {{dirs}}개 읽음",
+      "stop": "중지",
+      "again": "다시 찾기",
+      "truncated": "찾은 항목이 많아 처음 {{total}}개만 보입니다. 찾기어를 더 자세히 적어 주세요.",
+      "stopped": "찾기를 중지했습니다. 그때까지 찾은 항목만 보입니다.",
+      "skipped_other": "읽을 권한이 없는 폴더 {{total}}개는 건너뛰었습니다.",
+      "location": "위치",
+      "locate": "위치 열기",
+      "running_one": "{{total}}개 찾음 · 폴더 {{dirs}}개 읽는 중",
+      "done_one": "{{total}}개 찾음 · 폴더 {{dirs}}개 읽음",
+      "skipped_one": "읽을 권한이 없는 폴더 {{total}}개는 건너뛰었습니다."
     }
   },
   "sysinfo": {

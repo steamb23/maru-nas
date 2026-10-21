@@ -229,6 +229,16 @@
   gap: 6px;
 }
 
+/* 찾기 범위(하위 폴더 포함). 켜면 눌린 단추로 보인다. */
+.files-search-scope[aria-pressed='true'] {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--accent);
+}
+
+.files-search-scope[aria-pressed='true']:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 24%, transparent);
+}
+
 .files-actions-fill {
   flex: 1;
 }
