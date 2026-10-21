@@ -143,7 +143,10 @@
       "unreachable": "This shared folder is on the root file system and can't be opened yet.",
       "fallback": "The shared folder list hasn't been loaded yet, so disks are shown instead. They change to shared folder names once an administrator signs in.",
       "noShares": "OMV has no shared folders. They appear here after an administrator creates one and signs in to the dashboard again.",
-      "none": "There are no folders you can view."
+      "none": "There are no folders you can view.",
+      "trash": "Trash",
+      "trashCount_one": "{{total}} item in the trash",
+      "trashCount_other": "{{total}} items in the trash"
     },
     "toolbar": {
       "back": "Back",
@@ -240,7 +243,9 @@
         "chars": "Names can't contain \"/\".",
         "tooLong": "The name is too long. Names can be up to 255 bytes in UTF-8.",
         "reserved": "Names starting with \".onmaru-upload-\" are used by files being uploaded, so they can't be used."
-      }
+      },
+      "restoreTitle": "Restore under a new name",
+      "restore": "Restore"
     },
     "delete": {
       "titleOne": "Delete \"{{name}}\"?",
@@ -248,7 +253,14 @@
       "permanent": "Items are deleted right away without going to a trash, so this can't be undone.",
       "folders": "All files and folders inside the folders are deleted too.",
       "more": "and {{total}} more",
-      "confirm": "Delete"
+      "confirm": "Delete",
+      "trashTitleOne": "Move \"{{name}}\" to the trash?",
+      "trashTitleMany": "Move {{total}} items to the trash?",
+      "trashNote": "You can restore them from the trash at any time.",
+      "noTrash": "This disk has no trash, so items are deleted right away and can't be restored. An administrator can create a disk trash in the Settings app.",
+      "purge": "Items deleted from the trash can't be restored.",
+      "permanentButton": "Delete permanently…",
+      "trashButton": "Move to trash"
     },
     "ops": {
       "deleting": "Deleting",
@@ -271,8 +283,17 @@
         "outside_roots": "The file explorer can't work with this location.",
         "bad_request": "This can't be done. You may have tried to move a folder into itself.",
         "network": "The connection was lost.",
-        "generic": "The operation failed."
-      }
+        "generic": "The operation failed.",
+        "no_trash": "This disk has no trash."
+      },
+      "trashing": "Moving to the trash",
+      "restoring": "Restoring",
+      "purging": "Deleting permanently",
+      "emptying": "Emptying the trash",
+      "trashFailed": "Some items weren't moved to the trash",
+      "restoreFailed": "Some items weren't restored",
+      "purgeFailed": "Some items weren't deleted permanently",
+      "emptyFailed": "The trash wasn't emptied"
     },
     "drag": {
       "items": "{{total}} items"
@@ -280,6 +301,30 @@
     "drop": {
       "foldersTitle": "Folders weren't uploaded",
       "folders": "Folders can't be uploaded yet, so they were skipped: {{names}}"
+    },
+    "trash": {
+      "label": "Trash items",
+      "search": "Search the trash",
+      "restore": "Restore",
+      "purge": "Delete permanently",
+      "purgeMenu": "Delete permanently…",
+      "emptyMenu": "Empty trash…",
+      "empty": "Empty",
+      "emptyTitle": "Empty the trash?",
+      "emptyMessage_one": "This permanently deletes the {{total}} item in the trash. It can't be undone.",
+      "emptyMessage_other": "This permanently deletes all {{total}} items in the trash. It can't be undone.",
+      "from": "Original location",
+      "deleted": "Date deleted",
+      "stored": "Stored in",
+      "storedHome": "{{home}} trash",
+      "storedDisk": "Trash on disk {{disk}}",
+      "note": "This is the same trash that trash-list and trash-restore use on the server. If the original location already has an item with the same name, you will be asked for a new name when restoring.",
+      "conflict": "\"{{name}}\" already exists in the original location. Restore it under a new name.",
+      "noTrash": "There is no trash for {{names}}. Items there are deleted without going to the trash, and you'll be asked again before they are. An administrator can create a disk trash in the Settings app.",
+      "truncated": "There are too many items, so only {{total}} are shown. Empty the trash or use trash-list on the server to see all of them.",
+      "emptyList": "The trash is empty.",
+      "status_one": "{{total}} item · {{size}}",
+      "status_other": "{{total}} items · {{size}}"
     },
     "info": {
       "label": "Selected file details",
@@ -633,7 +678,12 @@
       "refreshFailed": "Couldn't read the shared folder list.",
       "showDisks": "Show disk tops",
       "showDisksDesc": "Lets administrators see outside shared folders, up to the top of the disks under /srv.",
-      "saveFailed": "Couldn't save the setting."
+      "saveFailed": "Couldn't save the setting.",
+      "trashDesc": "The top of an OMV data disk is usually owned by root, so users can't create a trash there. Creating a disk trash puts a .Trash folder (1777) shared by all users at the top of the disk, and trash-put on the server uses the same trash. Creating it requires root elevation.",
+      "trashDisk": "Trash on disk {{disk}}",
+      "trashOn": "Available",
+      "trashCreate": "Create trash",
+      "trashFailed": "Couldn't create the disk trash."
     },
     "nav": "Settings sections",
     "groups": {
@@ -1000,7 +1050,8 @@
       "recoveryNeedsMethod": "Add a passkey or an authenticator app first.",
       "regenerate": "Create new codes",
       "regenerateTitle": "Create new recovery codes",
-      "regenerateMessage": "Your current recovery codes will stop working."
+      "regenerateMessage": "Your current recovery codes will stop working.",
+      "writesOnly": "{{level}} (writes and deletions only)"
     },
     "securityPolicy": {
       "intro": "Choose which check sensitive features need. The check stays with the session until it ends.",
@@ -1030,7 +1081,11 @@
       "you": "You",
       "reset": "Reset",
       "resetTitle": "Reset sign-in methods",
-      "resetMessage": "All passkeys, the authenticator app and the recovery codes of {{user}} will be removed, and their sessions will end."
+      "resetMessage": "All passkeys, the authenticator app and the recovery codes of {{user}} will be removed, and their sessions will end.",
+      "filesScope": "File explorer check scope",
+      "filesScopeDesc": "If applied to writes and deletions only, browsing folders and downloading need no check, and the check is asked only before uploading, creating, renaming, moving, deleting, and trash operations.",
+      "filesScopeAll": "Including browsing and downloads",
+      "filesScopeWrites": "Writes and deletions only"
     }
   },
   "appearance": {

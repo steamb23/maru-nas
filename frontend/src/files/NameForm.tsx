@@ -1,5 +1,5 @@
-// 폴더 만들기·이름 바꾸기 대화상자의 내용. 이름을 받아 바로 요청하고, 같은 이름이 있거나 권한이 없으면 대화상자를
-// 닫지 않고 입력란 아래에 알린다. 여는 함수는 nameDialog.tsx.
+// 폴더 만들기·이름 바꾸기·다른 이름으로 되돌리기 대화상자의 내용. 이름을 받아 바로 요청하고, 같은 이름이 있거나
+// 권한이 없으면 대화상자를 닫지 않고 입력란 아래에 알린다. 여는 함수는 nameDialog.tsx.
 import type { ParseKeys } from 'i18next'
 import { type RefObject, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -15,8 +15,24 @@ const PROBLEM_KEYS: Record<NameProblem, ParseKeys> = {
   reserved: 'files.name.errors.reserved',
 }
 
+export type NameMode = 'mkdir' | 'rename' | 'restore'
+
+const TITLE_KEYS: Record<NameMode, ParseKeys> = {
+  mkdir: 'files.name.mkdirTitle',
+  rename: 'files.name.renameTitle',
+  restore: 'files.name.restoreTitle',
+}
+
+const SUBMIT_KEYS: Record<NameMode, ParseKeys> = {
+  mkdir: 'files.name.create',
+  rename: 'files.name.rename',
+  restore: 'files.name.restore',
+}
+
 export interface NameFormProps {
-  mode: 'mkdir' | 'rename'
+  mode: NameMode
+  // message는 입력란 위의 안내다(다른 이름으로 되돌리기).
+  message?: string
   initial: string
   // selectEnd는 처음 고를 글자 수다(이름 바꾸기는 확장자를 빼고 고른다).
   selectEnd: number
@@ -27,7 +43,7 @@ export interface NameFormProps {
   onCancel: () => void
 }
 
-export function NameForm({ mode, initial, selectEnd, inputRef, submit, onDone, onCancel }: NameFormProps) {
+export function NameForm({ mode, message, initial, selectEnd, inputRef, submit, onDone, onCancel }: NameFormProps) {
   const { t } = useTranslation()
   const [name, setName] = useState(initial)
   const [busy, setBusy] = useState(false)
@@ -64,6 +80,7 @@ export function NameForm({ mode, initial, selectEnd, inputRef, submit, onDone, o
         void go()
       }}
     >
+      {message && <p className="modal-message files-name-message">{message}</p>}
       <label className="files-name-field">
         <span>{t('files.name.label')}</span>
         <input
@@ -96,7 +113,7 @@ export function NameForm({ mode, initial, selectEnd, inputRef, submit, onDone, o
           {t('dialog.cancel')}
         </button>
         <button type="submit" className="addon-button primary" disabled={busy || name === ''}>
-          {t(mode === 'mkdir' ? 'files.name.create' : 'files.name.rename')}
+          {t(SUBMIT_KEYS[mode])}
         </button>
       </div>
     </form>
@@ -104,7 +121,7 @@ export function NameForm({ mode, initial, selectEnd, inputRef, submit, onDone, o
 }
 
 // NameTitle은 대화상자 제목이다. 명령형으로 여는 대화상자라 번역 훅을 쓰는 컴포넌트로 그린다.
-export function NameTitle({ mode }: { mode: 'mkdir' | 'rename' }) {
+export function NameTitle({ mode }: { mode: NameMode }) {
   const { t } = useTranslation()
-  return <>{t(mode === 'mkdir' ? 'files.name.mkdirTitle' : 'files.name.renameTitle')}</>
+  return <>{t(TITLE_KEYS[mode])}</>
 }

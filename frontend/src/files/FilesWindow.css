@@ -454,3 +454,18 @@
 .files-failure .files-delete-list {
   margin: 6px 0 0;
 }
+
+/* 사이드바 끝의 휴지통 항목과 항목 수 */
+.files .sidebar-nav-item.files-nav-trash {
+  margin-top: 12px;
+}
+
+.files-nav-count {
+  margin-left: auto;
+  padding: 0 7px;
+  border-radius: 9px;
+  background: var(--hover-bg);
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 18px;
+}

@@ -9,25 +9,40 @@ import type { FailureGroup } from './ops'
 // DELETE_LIST는 확인 대화상자에 이름을 보이는 최대 항목 수다.
 export const DELETE_LIST = 5
 
-export function DeleteTitle({ items }: { items: readonly FileItem[] }) {
+// DeleteMode는 대화상자의 뜻이다: 휴지통으로 옮기기, 영구 삭제, 휴지통이 없는 디스크의 영구 삭제, 휴지통에서 영구 삭제.
+export type DeleteMode = 'trash' | 'permanent' | 'noTrash' | 'purge'
+
+type Named = Pick<FileItem, 'name' | 'type'>
+
+export function DeleteTitle({ items, mode }: { items: readonly Named[]; mode: DeleteMode }) {
   const { t } = useTranslation()
   const lang = useLanguage()
-  if (items.length === 1) return <>{t('files.delete.titleOne', { name: items[0].name })}</>
-  return <>{t('files.delete.titleMany', { count: items.length, total: new Intl.NumberFormat(lang).format(items.length) })}</>
+  const trash = mode === 'trash'
+  if (items.length === 1) return <>{t(trash ? 'files.delete.trashTitleOne' : 'files.delete.titleOne', { name: items[0].name })}</>
+  const total = new Intl.NumberFormat(lang).format(items.length)
+  return <>{t(trash ? 'files.delete.trashTitleMany' : 'files.delete.titleMany', { count: items.length, total })}</>
 }
 
-export function DeleteBody({ items }: { items: readonly FileItem[] }) {
+const NOTE_KEYS = {
+  trash: 'files.delete.trashNote',
+  permanent: 'files.delete.permanent',
+  noTrash: 'files.delete.noTrash',
+  purge: 'files.delete.purge',
+} as const
+
+export function DeleteBody({ items, mode }: { items: readonly Named[]; mode: DeleteMode }) {
   const { t } = useTranslation()
   const lang = useLanguage()
-  const folders = items.some((i) => i.type === 'dir')
+  // 휴지통에 넣는 폴더는 안의 항목과 함께 옮겨지므로 따로 알리지 않는다.
+  const folders = mode !== 'trash' && items.some((i) => i.type === 'dir')
   const more = items.length - DELETE_LIST
   return (
     <div className="files-delete">
       {items.length > 1 && (
         <ul className="files-delete-list">
-          {items.slice(0, DELETE_LIST).map((it) => (
-            <li key={it.name}>
-              <IconImage name={kindIcon(kindOf(it))} size={16} />
+          {items.slice(0, DELETE_LIST).map((it, i) => (
+            <li key={`${i}:${it.name}`}>
+              <IconImage name={kindIcon(kindOf({ name: it.name, type: it.type }))} size={16} />
               <span>{it.name}</span>
             </li>
           ))}
@@ -36,7 +51,7 @@ export function DeleteBody({ items }: { items: readonly FileItem[] }) {
           )}
         </ul>
       )}
-      <p>{t('files.delete.permanent')}</p>
+      <p>{t(NOTE_KEYS[mode])}</p>
       {folders && <p>{t('files.delete.folders')}</p>}
     </div>
   )

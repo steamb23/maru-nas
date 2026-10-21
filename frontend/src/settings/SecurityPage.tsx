@@ -168,9 +168,13 @@ export function SecurityPage() {
               </SettingsRow>
               {(Object.keys(TARGET_KEYS) as SecurityTarget[]).map((target) => {
                 const level = data.policy[target] ?? 'off'
+                // 파일 탐색기 확인을 쓰기·삭제에만 적용하면 함께 보인다.
+                const writesOnly = target === 'files' && level !== 'off' && data.policy.filesScope === 'writes'
                 return (
                   <SettingsRow key={target} label={t(TARGET_KEYS[target])}>
-                    <span className="settings-badge">{t(LEVEL_KEYS[level])}</span>
+                    <span className="settings-badge">
+                      {writesOnly ? t('settings.security.writesOnly', { level: t(LEVEL_KEYS[level]) }) : t(LEVEL_KEYS[level])}
+                    </span>
                   </SettingsRow>
                 )
               })}

@@ -1,12 +1,14 @@
-// 폴더 만들기·이름 바꾸기 창 범위 대화상자. 만들거나 바꾼 항목, 취소하면 null로 끝난다. 내용은 NameForm.tsx.
+// 폴더 만들기·이름 바꾸기·다른 이름으로 되돌리기 창 범위 대화상자. 만들거나 바꾼 항목, 취소하면 null로 끝난다.
+// 내용은 NameForm.tsx.
 import { createRef } from 'react'
 import type { FileItem } from '../api/types.gen'
 import { type DialogScope, openDialog } from '../shell/dialogs'
-import { NameForm, NameTitle } from './NameForm'
+import { NameForm, type NameMode, NameTitle } from './NameForm'
 import { stemLength } from './paths'
 
 export interface NameDialogOptions {
-  mode: 'mkdir' | 'rename'
+  mode: NameMode
+  message?: string
   initial: string
   // folder면 이름 전체를 고른다(이름 바꾸기).
   folder: boolean
@@ -22,6 +24,7 @@ export function askName(scope: DialogScope, opts: NameDialogOptions): Promise<Fi
     render: (ctl) => (
       <NameForm
         mode={opts.mode}
+        message={opts.message}
         initial={opts.initial}
         selectEnd={selectEnd}
         inputRef={inputRef}

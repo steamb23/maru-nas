@@ -9,6 +9,7 @@ import type { Dialogs } from '../shell/dialogPresets'
 import { askConflict } from './conflictDialog'
 import { uploadError } from './messages'
 import { joinPath, uploadNameOk } from './paths'
+import { withStepUp } from './stepUp'
 import {
   type NewUpload,
   type UploadState,
@@ -107,18 +108,21 @@ export function useUploads(dialogs: Dialogs, onUploaded: (dir: string) => void):
     controllers.current.set(next.id, ctl)
     setState((s) => started(s, next.id, Date.now()))
     let lastActivity = 0
-    uploadFile(joinPath(next.dir, next.name), file, {
-      overwrite: next.overwrite,
-      signal: ctl.signal,
-      onProgress: (sent) => {
-        setState((s) => progressed(s, next.id, sent))
-        const now = Date.now()
-        if (now - lastActivity >= ACTIVITY_MS) {
-          lastActivity = now
-          reportActivity()
-        }
-      },
-    })
+    // 보안 강화 정책이 쓰기에 확인을 요구하면 확인한 뒤 같은 파일을 다시 올린다.
+    withStepUp(dialogs.scope, () =>
+      uploadFile(joinPath(next.dir, next.name), file, {
+        overwrite: next.overwrite,
+        signal: ctl.signal,
+        onProgress: (sent) => {
+          setState((s) => progressed(s, next.id, sent))
+          const now = Date.now()
+          if (now - lastActivity >= ACTIVITY_MS) {
+            lastActivity = now
+            reportActivity()
+          }
+        },
+      }),
+    )
       .then(
         () => {
           setState((s) => finished(s, next.id))
@@ -131,7 +135,7 @@ export function useUploads(dialogs: Dialogs, onUploaded: (dir: string) => void):
         },
       )
       .finally(() => controllers.current.delete(next.id))
-  }, [state])
+  }, [state, dialogs.scope])
 
   // 창을 닫으면 그 창의 올리기를 취소한다.
   useEffect(() => {

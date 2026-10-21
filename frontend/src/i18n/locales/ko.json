@@ -143,7 +143,10 @@
       "unreachable": "루트 파일시스템의 공유 폴더라 아직 열 수 없습니다.",
       "fallback": "공유 폴더 목록을 아직 받지 못해 디스크를 대신 보입니다. 관리자가 한 번 로그인하면 공유 폴더 이름으로 바뀝니다.",
       "noShares": "OMV에 공유 폴더가 없습니다. 관리자가 공유 폴더를 만든 뒤 대시보드에 다시 로그인하면 여기에 보입니다.",
-      "none": "볼 수 있는 폴더가 없습니다."
+      "none": "볼 수 있는 폴더가 없습니다.",
+      "trash": "휴지통",
+      "trashCount_one": "휴지통 항목 {{total}}개",
+      "trashCount_other": "휴지통 항목 {{total}}개"
     },
     "toolbar": {
       "back": "뒤로",
@@ -240,7 +243,9 @@
         "chars": "이름에 \"/\"를 쓸 수 없습니다.",
         "tooLong": "이름이 너무 깁니다. UTF-8로 255바이트까지 쓸 수 있습니다.",
         "reserved": "\".onmaru-upload-\"로 시작하는 이름은 올리는 중인 파일이 쓰므로 쓸 수 없습니다."
-      }
+      },
+      "restoreTitle": "다른 이름으로 되돌리기",
+      "restore": "되돌리기"
     },
     "delete": {
       "titleOne": "\"{{name}}\"을(를) 삭제할까요?",
@@ -248,7 +253,14 @@
       "permanent": "휴지통을 거치지 않고 바로 지우므로 되돌릴 수 없습니다.",
       "folders": "폴더 안의 파일과 폴더도 모두 지웁니다.",
       "more": "외 {{total}}개",
-      "confirm": "삭제"
+      "confirm": "삭제",
+      "trashTitleOne": "\"{{name}}\"을(를) 휴지통으로 옮길까요?",
+      "trashTitleMany": "항목 {{total}}개를 휴지통으로 옮길까요?",
+      "trashNote": "휴지통에서 언제든 되돌릴 수 있습니다.",
+      "noTrash": "이 디스크에는 휴지통이 없어 바로 지우므로 되돌릴 수 없습니다. 관리자가 설정 앱에서 디스크 휴지통을 만들 수 있습니다.",
+      "purge": "휴지통에서 지우면 되돌릴 수 없습니다.",
+      "permanentButton": "영구 삭제…",
+      "trashButton": "휴지통으로 옮기기"
     },
     "ops": {
       "deleting": "삭제하는 중",
@@ -271,8 +283,17 @@
         "outside_roots": "파일 탐색기에서 다룰 수 없는 위치입니다.",
         "bad_request": "할 수 없는 작업입니다. 폴더를 그 폴더 안으로 옮기려 했을 수 있습니다.",
         "network": "연결이 끊겼습니다.",
-        "generic": "작업하지 못했습니다."
-      }
+        "generic": "작업하지 못했습니다.",
+        "no_trash": "이 디스크에는 휴지통이 없습니다."
+      },
+      "trashing": "휴지통으로 옮기는 중",
+      "restoring": "되돌리는 중",
+      "purging": "영구 삭제하는 중",
+      "emptying": "휴지통을 비우는 중",
+      "trashFailed": "휴지통으로 옮기지 못한 항목이 있습니다",
+      "restoreFailed": "되돌리지 못한 항목이 있습니다",
+      "purgeFailed": "영구 삭제하지 못한 항목이 있습니다",
+      "emptyFailed": "휴지통을 비우지 못했습니다"
     },
     "drag": {
       "items": "항목 {{total}}개"
@@ -280,6 +301,30 @@
     "drop": {
       "foldersTitle": "폴더는 올리지 않았습니다",
       "folders": "폴더는 아직 올릴 수 없어 건너뛰었습니다: {{names}}"
+    },
+    "trash": {
+      "label": "휴지통 항목",
+      "search": "휴지통에서 찾기",
+      "restore": "되돌리기",
+      "purge": "영구 삭제",
+      "purgeMenu": "영구 삭제…",
+      "emptyMenu": "휴지통 비우기…",
+      "empty": "비우기",
+      "emptyTitle": "휴지통을 비울까요?",
+      "emptyMessage_one": "휴지통의 항목 {{total}}개를 모두 영구 삭제합니다. 되돌릴 수 없습니다.",
+      "emptyMessage_other": "휴지통의 항목 {{total}}개를 모두 영구 삭제합니다. 되돌릴 수 없습니다.",
+      "from": "원래 위치",
+      "deleted": "지운 날짜",
+      "stored": "보관한 곳",
+      "storedHome": "{{home}}의 휴지통",
+      "storedDisk": "{{disk}} 디스크의 휴지통",
+      "note": "서버의 trash-list, trash-restore와 같은 휴지통을 씁니다. 원래 위치에 같은 이름이 있으면 되돌릴 때 새 이름을 묻습니다.",
+      "conflict": "원래 위치에 \"{{name}}\"이(가) 이미 있습니다. 새 이름으로 되돌립니다.",
+      "noTrash": "{{names}}에는 휴지통이 없습니다. 그곳의 항목은 휴지통을 거치지 않고 지워지며, 지우기 전에 다시 묻습니다. 관리자가 설정 앱에서 디스크 휴지통을 만들 수 있습니다.",
+      "truncated": "항목이 많아 {{total}}개만 보입니다. 휴지통을 비우거나 서버의 trash-list로 모두 볼 수 있습니다.",
+      "emptyList": "휴지통이 비어 있습니다.",
+      "status_one": "항목 {{total}}개 · {{size}}",
+      "status_other": "항목 {{total}}개 · {{size}}"
     },
     "info": {
       "label": "선택한 파일 정보",
@@ -633,7 +678,12 @@
       "refreshFailed": "공유 폴더 목록을 받지 못했습니다.",
       "showDisks": "디스크 최상위 보기",
       "showDisksDesc": "관리자에게 공유 폴더 밖, /srv 아래 디스크의 맨 위까지 보입니다.",
-      "saveFailed": "설정을 저장하지 못했습니다."
+      "saveFailed": "설정을 저장하지 못했습니다.",
+      "trashDesc": "OMV 데이터 디스크 맨 위는 보통 root 소유라 사용자가 휴지통을 만들 수 없습니다. 디스크 휴지통을 만들면 그 디스크 맨 위에 모든 사용자가 쓰는 .Trash 폴더(1777)를 두고, 서버의 trash-put도 같은 휴지통을 씁니다. 만들려면 root 권한 상승이 필요합니다.",
+      "trashDisk": "{{disk}} 디스크 휴지통",
+      "trashOn": "있음",
+      "trashCreate": "휴지통 만들기",
+      "trashFailed": "디스크 휴지통을 만들지 못했습니다."
     },
     "nav": "설정 메뉴",
     "groups": {
@@ -1000,7 +1050,8 @@
       "recoveryNeedsMethod": "먼저 패스키나 인증 앱을 등록하세요.",
       "regenerate": "새로 만들기",
       "regenerateTitle": "복구 코드 새로 만들기",
-      "regenerateMessage": "지금 가진 복구 코드는 모두 쓸 수 없게 됩니다."
+      "regenerateMessage": "지금 가진 복구 코드는 모두 쓸 수 없게 됩니다.",
+      "writesOnly": "{{level}}(쓰기·삭제에만)"
     },
     "securityPolicy": {
       "intro": "보안에 민감한 기능이 어떤 확인을 요구할지 고릅니다. 확인은 세션이 끝날 때까지 그 세션에 남습니다.",
@@ -1030,7 +1081,11 @@
       "you": "나",
       "reset": "초기화",
       "resetTitle": "로그인 수단 초기화",
-      "resetMessage": "{{user}}의 패스키, 인증 앱, 복구 코드를 모두 지우고 그 사용자의 세션을 끝냅니다."
+      "resetMessage": "{{user}}의 패스키, 인증 앱, 복구 코드를 모두 지우고 그 사용자의 세션을 끝냅니다.",
+      "filesScope": "파일 탐색기 확인 범위",
+      "filesScopeDesc": "쓰기·삭제에만 적용하면 폴더 보기와 내려받기는 확인 없이 쓰고, 올리기·만들기·이름 바꾸기·옮기기·삭제·휴지통 작업 전에만 확인합니다.",
+      "filesScopeAll": "보기와 내려받기까지",
+      "filesScopeWrites": "쓰기·삭제에만"
     }
   },
   "appearance": {

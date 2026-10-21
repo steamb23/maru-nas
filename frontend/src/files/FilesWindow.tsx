@@ -6,18 +6,22 @@
 import { type ChangeEvent, type DragEvent, useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { WindowViewProps } from '../addons/types'
+import type { ParseKeys } from 'i18next'
 import {
   ApiError,
   type RequiredLevel,
   deleteFile,
   fetchFilesRoots,
+  fetchTrash,
+  fetchTrashVolumes,
   findInListing,
   makeFolder,
   openListing,
   prepareListing,
   renameFile,
+  trashFile,
 } from '../api/client'
-import type { FileItem, FilesListing, FilesRoots } from '../api/types.gen'
+import type { FileItem, FilesListing, FilesRoots, TrashVolume } from '../api/types.gen'
 import { useAuthStore } from '../auth/store'
 import { useLanguage } from '../i18n'
 import { IconImage } from '../icons/IconImage'
@@ -29,15 +33,39 @@ import { useDialogs } from '../shell/dialogPresets'
 import { DeleteBody, DeleteTitle, FailuresBody } from './DeleteBody'
 import { DROP_TARGET, FileList, type FileListHandle, type SortKey, type View } from './FileList'
 import { InfoPane } from './InfoPane'
+import { TrashView } from './TrashView'
 import { UploadPanel } from './UploadPanel'
 import { startDownload } from './download'
 import { type History, back, canBack, canForward, current, forward, replaceCurrent, startHistory, visit } from './history'
 import { isFolderLike } from './kinds'
 import { errorKey } from './messages'
 import { askName } from './nameDialog'
-import { type FilesChange, affects, groupFailures, notifyFilesChanged, onFilesChanged, runEach } from './ops'
-import { type Root, crumbs, dirName, findRoot, joinPath, moveAllowed, numberedName, parentOf, rootsOf, within } from './paths'
+import {
+  type FilesChange,
+  type OpKind,
+  type RunOp,
+  affects,
+  groupFailures,
+  notifyFilesChanged,
+  onFilesChanged,
+  runEach,
+} from './ops'
+import {
+  type Root,
+  TRASH,
+  crumbs,
+  dirName,
+  findRoot,
+  joinPath,
+  moveAllowed,
+  numberedName,
+  parentOf,
+  rootsOf,
+  volumeOf,
+  within,
+} from './paths'
 import { NO_SELECTION, type Selection, selectAll, selectOne, selectedCount, soleIndex } from './selection'
+import { withStepUp } from './stepUp'
 import { useUploads } from './useUploads'
 
 // 창이 이보다 좁으면 사이드바를 숨기고 메뉴 단추로 덮어 연다(SidebarLayout).
@@ -77,8 +105,6 @@ interface Prepare {
   shown: boolean
 }
 
-type OpKind = 'delete' | 'move'
-
 // Op은 진행 중인 여러 항목 작업이다. 하나씩 하므로 창마다 하나만 한다.
 interface Op {
   kind: OpKind
@@ -86,6 +112,27 @@ interface Op {
   total: number
   shown: boolean
 }
+
+const OP_KEYS: Record<OpKind, ParseKeys> = {
+  delete: 'files.ops.deleting',
+  move: 'files.ops.moving',
+  trash: 'files.ops.trashing',
+  restore: 'files.ops.restoring',
+  purge: 'files.ops.purging',
+  empty: 'files.ops.emptying',
+}
+
+const OP_FAILED_KEYS: Record<OpKind, ParseKeys> = {
+  delete: 'files.ops.deleteFailed',
+  move: 'files.ops.moveFailed',
+  trash: 'files.ops.trashFailed',
+  restore: 'files.ops.restoreFailed',
+  purge: 'files.ops.purgeFailed',
+  empty: 'files.ops.emptyFailed',
+}
+
+// trashLeft는 휴지통에 넣지 못해 영구 삭제를 따로 물을 실패다(휴지통이 없는 디스크, 다른 파일시스템).
+const trashLeft = (err: unknown) => err instanceof ApiError && (err.code === 'no_trash' || err.code === 'cross_device')
 
 // hasFiles는 바깥(운영체제)에서 파일을 끌어 왔는지다.
 const hasFiles = (dt: DataTransfer) => Array.from(dt.types).includes('Files')
@@ -107,6 +154,11 @@ export function FilesWindow({ active }: WindowViewProps) {
   const [queryInput, setQueryInput] = useState('')
   const [sel, setSel] = useState<Selection>(NO_SELECTION)
   const [pane, setPane] = useState<string | null>(null)
+  // trashOpen이면 목록 대신 휴지통 보기를 보인다(둘러보던 폴더와 기록은 그대로 둔다).
+  const [trashOpen, setTrashOpen] = useState(false)
+  const [trashCount, setTrashCount] = useState<number | null>(null)
+  const [trashVersion, setTrashVersion] = useState(0)
+  const [trashReload, setTrashReload] = useState(0)
   const [op, setOp] = useState<Op | null>(null)
   // pendingSelect는 만들거나 이름을 바꾼 항목이다. 목록을 다시 받으면(listingId와 다른 목록) 그 줄을 고른다.
   const [pendingSelect, setPendingSelect] = useState<{ name: string; listingId: string } | null>(null)
@@ -211,6 +263,7 @@ export function FilesWindow({ active }: WindowViewProps) {
   useEffect(() => {
     let follow: number | undefined
     const off = onFilesChanged((c) => {
+      if (c.dirs.includes(TRASH)) setTrashVersion((v) => v + 1)
       if (pane && c.gone.some((g) => within(pane, g))) setPane(null)
       if (!path || !affects(c, path)) return
       if (c.origin !== self && c.refreshed === path) follow = window.setTimeout(() => reopen(false), FOLLOW_MS)
@@ -242,6 +295,17 @@ export function FilesWindow({ active }: WindowViewProps) {
     return () => ctl.abort()
   }, [pendingSelect, listing, view])
 
+  // 사이드바 휴지통 항목의 개수. 휴지통이 바뀌면 다시 센다.
+  useEffect(() => {
+    if (!rootsReady) return
+    const ctl = new AbortController()
+    fetchTrash(ctl.signal).then(
+      (r) => setTrashCount(r.items.length),
+      () => {},
+    )
+    return () => ctl.abort()
+  }, [rootsReady, trashVersion])
+
   // moveTo는 다른 폴더로 간다. 고른 항목·정보 패널·찾기·정렬 준비를 지우고, 날짜·크기순은 새 폴더의 정보를 다시
   // 읽어야 하므로 이름순으로 돌아간다.
   const moveTo = (next: (h: History | null) => History | null) => {
@@ -255,11 +319,27 @@ export function FilesWindow({ active }: WindowViewProps) {
     prepCtl.current?.abort()
     setPrep(null)
     setListError(null)
+    setTrashOpen(false)
     setHistory(next)
   }
   const navigate = (to: string) => {
-    if (!findRoot(roots, to) || to === path) return
+    if (!findRoot(roots, to)) return
+    if (to === path) {
+      if (trashOpen) closeTrash()
+      return
+    }
     moveTo((h) => (h ? visit(h, to) : startHistory(to)))
+  }
+  const openTrash = () => {
+    if (trashOpen) return
+    setTrashOpen(true)
+    setSel(NO_SELECTION)
+    setPane(null)
+    setQueryInput('')
+  }
+  const closeTrash = () => {
+    setTrashOpen(false)
+    setQueryInput('')
   }
   const goUp = () => {
     if (!root || !path) return
@@ -366,22 +446,22 @@ export function FilesWindow({ active }: WindowViewProps) {
 
   // runOp은 여러 항목 작업을 하나씩 하며 진행 배너와 중지를 보인다. 끝나면 바뀐 폴더를 알리고 하지 못한 항목을 보인다.
   // 세션이 끝났거나 보안 확인이 필요하거나 다른 디스크라 남은 항목도 안 될 것이 확실하면 거기서 멈춘다.
-  const runOp = async (kind: OpKind, items: readonly FileItem[], run: (item: FileItem) => Promise<unknown>, change: (done: FileItem[]) => FilesChange) => {
+  // runOp은 여러 항목 작업을 하나씩 하며 진행 배너와 중지를 보인다. 쓰기에 보안 확인이 필요하면 확인한 뒤 다시 하고,
+  // 끝나면 바뀐 폴더를 알리고 하지 못한 항목을 보인다. 세션이 끝났거나(401) 확인을 취소했거나 stopOn이면 거기서 멈춘다.
+  const runOp: RunOp = async (kind, items, run, opts) => {
     const ctl = new AbortController()
     opCtl.current = ctl
     setOp({ kind, done: 0, total: items.length, shown: false })
     const timer = window.setTimeout(() => setOp((o) => (o ? { ...o, shown: true } : o)), OP_BANNER_MS)
-    const done: FileItem[] = []
+    const done: (typeof items)[number][] = []
     const res = await runEach(
       items,
       async (it) => {
         try {
-          await run(it)
+          await withStepUp(dialogs.scope, () => run(it))
           done.push(it)
         } catch (err) {
-          if (err instanceof ApiError && (err.status === 401 || err.code === 'security_required' || err.code === 'cross_device')) {
-            ctl.abort()
-          }
+          if ((err instanceof ApiError && (err.status === 401 || err.code === 'security_required')) || opts.stopOn?.(err)) ctl.abort()
           throw err
         }
       },
@@ -392,21 +472,20 @@ export function FilesWindow({ active }: WindowViewProps) {
     if (opCtl.current === ctl) opCtl.current = null
     setOp(null)
     if (done.length > 0) {
-      const c = change(done)
+      const c = opts.change(done)
       changed(c.dirs, c.gone)
     }
-    const errs = res.failures.map((f) => f.err)
-    if (errs.some((e) => e instanceof ApiError && e.status === 401)) return
-    const security = errs.find((e) => e instanceof ApiError && e.code === 'security_required')
-    if (security instanceof ApiError) {
-      setRootsState({ try: rootsTry, status: 'security', level: security.required })
-      return
+    const kept = res.failures.filter((f) => opts.keep?.(f.err))
+    const shown = res.failures.filter(
+      (f) => !opts.keep?.(f.err) && !(f.err instanceof ApiError && (f.err.status === 401 || f.err.code === 'security_required')),
+    )
+    if (shown.length > 0) {
+      await dialogs.alert({
+        title: t(OP_FAILED_KEYS[kind]),
+        message: <FailuresBody groups={groupFailures(shown, opts.nameOf)} />,
+      })
     }
-    if (res.failures.length === 0) return
-    await dialogs.alert({
-      title: t(kind === 'delete' ? 'files.ops.deleteFailed' : 'files.ops.moveFailed'),
-      message: <FailuresBody groups={groupFailures(res.failures, (i) => i.name)} />,
-    })
+    return kept.map((f) => f.item)
   }
 
   const newFolder = async () => {
@@ -426,7 +505,7 @@ export function FilesWindow({ active }: WindowViewProps) {
         break
       }
     }
-    const made = await askName(dialogs.scope, { mode: 'mkdir', initial, folder: true, submit: (name) => makeFolder(joinPath(dir, name)) })
+    const made = await askName(dialogs.scope, { mode: 'mkdir', initial, folder: true, submit: (name) => withStepUp(dialogs.scope, () => makeFolder(joinPath(dir, name))) })
     if (!made) return
     setPendingSelect({ name: made.name, listingId: listing.id })
     changed([dir])
@@ -446,7 +525,8 @@ export function FilesWindow({ active }: WindowViewProps) {
       mode: 'rename',
       initial: item.name,
       folder: isFolderLike(item) || item.type === 'dir',
-      submit: (name) => (name === item.name ? Promise.resolve(item) : renameFile(from, joinPath(dir, name))),
+      submit: (name) =>
+        name === item.name ? Promise.resolve(item) : withStepUp(dialogs.scope, () => renameFile(from, joinPath(dir, name))),
     })
     if (!renamed || renamed.name === item.name) return
     const showing = pane === from
@@ -455,45 +535,89 @@ export function FilesWindow({ active }: WindowViewProps) {
     if (showing) setPane(joinPath(dir, renamed.name))
   }
 
-  const deleteSelection = async (s: Selection = sel) => {
+  const deleteSelection = async (s: Selection = sel, permanent = false) => {
     if (!listing || !path || !canWrite || selectedCount(s) === 0) return
     const items = await itemsOf(s)
-    if (items) await deleteItems(items)
+    if (items) await deleteItems(items, permanent)
   }
 
-  const deleteItems = async (all: readonly FileItem[]) => {
+  // trashKind는 dir이 든 디스크(또는 홈)의 휴지통 종류다. 알 수 없으면 null이고 휴지통에 넣어 본다.
+  const trashKind = async (dir: string): Promise<TrashVolume['kind'] | null> => {
+    try {
+      return volumeOf((await fetchTrashVolumes()).volumes, dir)?.kind ?? null
+    } catch {
+      return null
+    }
+  }
+
+  // deleteItems는 항목을 휴지통으로 옮긴다(permanent면 영구 삭제). 확인 대화상자에서 영구 삭제를 고를 수 있고, 지금 폴더의
+  // 디스크에 휴지통이 없으면 영구 삭제를 묻는다(시안 S-Delete).
+  const deleteItems = async (all: readonly FileItem[], permanent = false) => {
     if (!listing || !path || !canWrite) return
     const dir = path
     const items = all.filter((i) => i.state !== 'gone' && !i.badName)
     if (items.length === 0) return
+    if (permanent) return deleteForever(dir, items, 'permanent')
+    if ((await trashKind(dir)) === 'none') return deleteForever(dir, items, 'noTrash')
+    const choice = await dialogs.message({
+      title: <DeleteTitle items={items} mode="trash" />,
+      message: <DeleteBody items={items} mode="trash" />,
+      buttons: [
+        { id: 'permanent', labelKey: 'files.delete.permanentButton' },
+        { id: 'cancel', labelKey: 'dialog.cancel' },
+        { id: 'trash', labelKey: 'files.delete.trashButton', tone: 'primary' },
+      ],
+      focusId: 'trash',
+    })
+    if (choice === 'permanent') return deleteForever(dir, items, 'permanent')
+    if (choice === 'trash') await trashItems(dir, items)
+  }
+
+  // trashItems는 확인 없이 휴지통으로 옮긴다(삭제 대화상자, 휴지통으로 끌어 놓기). 넣지 못한 항목은 영구 삭제를 묻는다.
+  const trashItems = async (dir: string, items: readonly FileItem[]) => {
+    const left = await runOp('trash', items, (it) => trashFile(joinPath(dir, it.name)), {
+      nameOf: (i) => i.name,
+      change: (done) => ({ dirs: [dir, TRASH], gone: done.map((i) => joinPath(dir, i.name)) }),
+      keep: trashLeft,
+    })
+    if (left.length > 0) await deleteForever(dir, left, 'noTrash')
+  }
+
+  // deleteForever는 확인한 뒤 영구 삭제한다. 폴더(심볼릭 링크 아님)만 안까지 지우고, 종류를 모르는 항목은 비어 있지 않으면
+  // 지우지 않는다(not_empty).
+  const deleteForever = async (dir: string, items: readonly FileItem[], mode: 'permanent' | 'noTrash') => {
     const ok = await dialogs.confirm({
-      title: <DeleteTitle items={items} />,
-      message: <DeleteBody items={items} />,
+      title: <DeleteTitle items={items} mode={mode} />,
+      message: <DeleteBody items={items} mode={mode} />,
       confirmLabel: t('files.delete.confirm'),
       danger: true,
     })
     if (!ok) return
-    // 폴더(심볼릭 링크 아님)만 안까지 지운다. 종류를 모르는 항목은 비어 있지 않으면 지우지 않는다(not_empty).
-    await runOp(
-      'delete',
-      items,
-      (it) => deleteFile(joinPath(dir, it.name), it.type === 'dir'),
-      (done) => ({ dirs: [dir], gone: done.map((i) => joinPath(dir, i.name)) }),
-    )
+    await runOp('delete', items, (it) => deleteFile(joinPath(dir, it.name), it.type === 'dir'), {
+      nameOf: (i) => i.name,
+      change: (done) => ({ dirs: [dir], gone: done.map((i) => joinPath(dir, i.name)) }),
+    })
   }
 
-  // moveSelection은 고른 항목을 target 폴더로 옮긴다(끌어 놓기). 같은 이름이 있으면 그 항목은 옮기지 않는다.
+  // moveSelection은 고른 항목을 target 폴더로 옮긴다(끌어 놓기). 같은 이름이 있으면 그 항목은 옮기지 않는다. 휴지통에 놓으면
+  // 휴지통으로 옮긴다.
   const moveSelection = async (s: Selection, target: string) => {
     if (!listing || !path || !canWrite) return
     const dir = path
     const items = (await itemsOf(s))?.filter((i) => i.state !== 'gone')
-    if (!items || !moveAllowed(items.map((i) => joinPath(dir, i.name)), target)) return
-    await runOp(
-      'move',
-      items,
-      (it) => renameFile(joinPath(dir, it.name), joinPath(target, it.name)),
-      (done) => ({ dirs: [dir, target], gone: done.map((i) => joinPath(dir, i.name)) }),
-    )
+    if (!items || items.length === 0) return
+    if (target === TRASH) {
+      if ((await trashKind(dir)) === 'none') await deleteForever(dir, items, 'noTrash')
+      else await trashItems(dir, items)
+      return
+    }
+    if (!moveAllowed(items.map((i) => joinPath(dir, i.name)), target)) return
+    await runOp('move', items, (it) => renameFile(joinPath(dir, it.name), joinPath(target, it.name)), {
+      nameOf: (i) => i.name,
+      change: (done) => ({ dirs: [dir, target], gone: done.map((i) => joinPath(dir, i.name)) }),
+      // 다른 디스크면 남은 항목도 옮길 수 없다.
+      stopOn: (err) => err instanceof ApiError && err.code === 'cross_device',
+    })
   }
 
   // 바깥(운영체제)에서 끌어 온 파일을 놓으면 그 폴더 줄이나 지금 폴더에 올린다. 폴더는 아직 올리지 못한다.
@@ -667,7 +791,7 @@ export function FilesWindow({ active }: WindowViewProps) {
       type="button"
       className="sidebar-nav-item"
       data-drop-path={r.reachable ? r.path : undefined}
-      aria-current={root === r ? 'page' : undefined}
+      aria-current={!trashOpen && root === r ? 'page' : undefined}
       aria-disabled={!r.reachable || undefined}
       title={r.reachable ? r.path : t('files.nav.unreachable')}
       onClick={() => r.reachable && navigate(r.path)}
@@ -689,7 +813,7 @@ export function FilesWindow({ active }: WindowViewProps) {
           type="button"
           className="sidebar-nav-item"
           data-drop-path={r.path}
-          aria-current={root === r ? 'page' : undefined}
+          aria-current={!trashOpen && root === r ? 'page' : undefined}
           title={r.path}
           onClick={() => navigate(r.path)}
         >
@@ -701,6 +825,23 @@ export function FilesWindow({ active }: WindowViewProps) {
       {shares.map((r) => navItem(r, 'folder-remote-symbolic'))}
       {disks.length > 0 && <h3 className="files-nav-group">{t('files.nav.disks')}</h3>}
       {disks.map((r) => navItem(r, 'drive-harddisk-symbolic'))}
+      {rootsState.status === 'ready' && roots.length > 0 && (
+        <button
+          type="button"
+          className="sidebar-nav-item files-nav-trash"
+          data-drop-path={TRASH}
+          aria-current={trashOpen ? 'page' : undefined}
+          onClick={openTrash}
+        >
+          <IconImage name="user-trash-symbolic" size={16} />
+          <span>{t('files.nav.trash')}</span>
+          {trashCount ? (
+            <span className="files-nav-count" aria-label={t('files.nav.trashCount', { count: trashCount, total: fmt(trashCount) })}>
+              {fmt(trashCount)}
+            </span>
+          ) : null}
+        </button>
+      )}
       {fallback && (
         <p className="files-nav-note">
           <IconImage name="dialog-information-symbolic" size={14} />
@@ -727,8 +868,8 @@ export function FilesWindow({ active }: WindowViewProps) {
           className="files-icon-button"
           aria-label={t('files.toolbar.back')}
           title={t('files.toolbar.back')}
-          disabled={!history || !canBack(history)}
-          onClick={() => moveTo((h) => (h ? back(h) : h))}
+          disabled={!trashOpen && (!history || !canBack(history))}
+          onClick={() => (trashOpen ? closeTrash() : moveTo((h) => (h ? back(h) : h)))}
         >
           <IconImage name="go-previous-symbolic" size={16} />
         </button>
@@ -737,7 +878,7 @@ export function FilesWindow({ active }: WindowViewProps) {
           className="files-icon-button"
           aria-label={t('files.toolbar.forward')}
           title={t('files.toolbar.forward')}
-          disabled={!history || !canForward(history)}
+          disabled={trashOpen || !history || !canForward(history)}
           onClick={() => moveTo((h) => (h ? forward(h) : h))}
         >
           <IconImage name="go-next-symbolic" size={16} />
@@ -747,7 +888,7 @@ export function FilesWindow({ active }: WindowViewProps) {
           className="files-icon-button"
           aria-label={t('files.toolbar.up')}
           title={t('files.toolbar.up')}
-          disabled={!root || !path || parentOf(root, path) === null}
+          disabled={trashOpen || !root || !path || parentOf(root, path) === null}
           onClick={goUp}
         >
           <IconImage name="go-up-symbolic" size={16} />
@@ -758,13 +899,22 @@ export function FilesWindow({ active }: WindowViewProps) {
           aria-label={t('files.toolbar.refresh')}
           title={t('files.toolbar.refresh')}
           disabled={!path}
-          onClick={() => reopen(true)}
+          onClick={() => (trashOpen ? setTrashReload((n) => n + 1) : reopen(true))}
         >
           <IconImage name="view-refresh-symbolic" size={16} />
         </button>
       </div>
       <nav className="files-path" aria-label={t('files.toolbar.path')}>
-        {root &&
+        {trashOpen && (
+          <span className="files-crumb">
+            <button type="button" aria-current="page" onClick={() => setTrashReload((n) => n + 1)}>
+              <IconImage name="user-trash-symbolic" size={16} />
+              <span>{t('files.nav.trash')}</span>
+            </button>
+          </span>
+        )}
+        {!trashOpen &&
+          root &&
           path &&
           crumbs(root, path).map((c, i, all) => (
             <span key={c.path} className="files-crumb">
@@ -788,7 +938,11 @@ export function FilesWindow({ active }: WindowViewProps) {
           type="search"
           value={queryInput}
           placeholder={
-            listing && listing.total > MANY_ITEMS ? t('files.toolbar.searchMany', { total: fmt(listing.total) }) : t('files.toolbar.search')
+            trashOpen
+              ? t('files.trash.search')
+              : listing && listing.total > MANY_ITEMS
+                ? t('files.toolbar.searchMany', { total: fmt(listing.total) })
+                : t('files.toolbar.search')
           }
           aria-label={t('files.toolbar.search')}
           maxLength={255}
@@ -808,6 +962,39 @@ export function FilesWindow({ active }: WindowViewProps) {
     name: t('files.status.sortName'),
     mtime: t('files.status.sortMtime'),
     size: t('files.status.sortSize'),
+  }
+
+  const opBanner = op?.shown && (
+    <div className="files-prepare" role="status">
+      <div className="files-prepare-line">
+        <IconImage name="dialog-information-symbolic" size={16} />
+        <span>{t(OP_KEYS[op.kind])}</span>
+        <span className="files-prepare-count">{t('files.banner.progress', { done: fmt(op.done), total: fmt(op.total) })}</span>
+        <button type="button" className="addon-button" title={t('files.ops.stopHint')} onClick={() => opCtl.current?.abort()}>
+          {t('files.ops.stop')}
+        </button>
+      </div>
+      <div className="meter" aria-hidden="true">
+        <div className="meter-fill" style={{ width: `${(op.done / Math.max(1, op.total)) * 100}%` }} />
+      </div>
+    </div>
+  )
+
+  if (trashOpen) {
+    return (
+      <SidebarLayout className="files" narrowWidth={FILES_NARROW_WIDTH} navLabel={t('files.nav.label')} nav={nav} header={header}>
+        {opBanner}
+        <TrashView
+          query={view.query}
+          roots={roots}
+          dialogs={dialogs}
+          canWrite={op === null}
+          runOp={runOp}
+          changed={changed}
+          reload={trashReload}
+        />
+      </SidebarLayout>
+    )
   }
 
   return (
@@ -856,21 +1043,7 @@ export function FilesWindow({ active }: WindowViewProps) {
           </div>
         </div>
       )}
-      {op?.shown && (
-        <div className="files-prepare" role="status">
-          <div className="files-prepare-line">
-            <IconImage name="dialog-information-symbolic" size={16} />
-            <span>{op.kind === 'delete' ? t('files.ops.deleting') : t('files.ops.moving')}</span>
-            <span className="files-prepare-count">{t('files.banner.progress', { done: fmt(op.done), total: fmt(op.total) })}</span>
-            <button type="button" className="addon-button" title={t('files.ops.stopHint')} onClick={() => opCtl.current?.abort()}>
-              {t('files.ops.stop')}
-            </button>
-          </div>
-          <div className="meter" aria-hidden="true">
-            <div className="meter-fill" style={{ width: `${(op.done / Math.max(1, op.total)) * 100}%` }} />
-          </div>
-        </div>
-      )}
+      {opBanner}
       {listError !== null && (
         <p className="addon-banner files-banner" role="alert">
           {t(errorKey(listError))}
@@ -924,7 +1097,7 @@ export function FilesWindow({ active }: WindowViewProps) {
             onError={setListError}
             menuItems={menuItems}
             onRename={() => void renameSelection()}
-            onDelete={() => void deleteSelection()}
+            onDelete={(permanent) => void deleteSelection(sel, permanent)}
             canDrag={canWrite}
             onMove={(s, target) => void moveSelection(s, target)}
             focusOnMount={refocus}

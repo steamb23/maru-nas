@@ -73,9 +73,9 @@ interface Props {
   onError: (err: unknown) => void
   // menuItems는 줄(item)이나 빈 곳(null)의 메뉴다. sel은 메뉴를 연 뒤의 고르기다(고르지 않은 줄을 누르면 그 줄 하나).
   menuItems: (item: FileItem | null, sel: Selection) => readonly ContextMenuItem[]
-  // onRename·onDelete는 F2·Delete 키다(지금 고르기에 한다).
+  // onRename·onDelete는 F2·Delete 키다(지금 고르기에 한다). Shift+Delete는 permanent(휴지통을 거치지 않음)다.
   onRename: () => void
-  onDelete: () => void
+  onDelete: (permanent: boolean) => void
   // canDrag면 고른 줄을 끌어 다른 폴더로 옮길 수 있다(이 폴더에 쓸 수 있을 때). onMove는 놓은 폴더의 경로다.
   canDrag: boolean
   onMove: (sel: Selection, target: string) => void
@@ -364,7 +364,7 @@ export function FileList(props: Props) {
         props.onRename()
         break
       case 'Delete':
-        props.onDelete()
+        props.onDelete(e.shiftKey)
         break
       case 'Escape':
         if (selectedCount(selection) === 0) return

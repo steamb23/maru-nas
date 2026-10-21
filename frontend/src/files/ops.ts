@@ -57,6 +57,7 @@ const OP_ERROR_KEYS: Partial<Record<string, ParseKeys>> = {
   transfer_timeout: 'files.ops.errors.timeout',
   outside_roots: 'files.ops.errors.outside_roots',
   bad_request: 'files.ops.errors.bad_request',
+  no_trash: 'files.ops.errors.no_trash',
 }
 
 // opErrorKey는 만들기·이름 바꾸기·옮기기·삭제 실패의 문구 키다.
@@ -90,6 +91,23 @@ export function groupFailures<T>(
   }
   return [...groups.values()]
 }
+
+// OpKind는 여러 항목 작업의 종류다(진행 배너와 실패 안내의 문구).
+export type OpKind = 'delete' | 'move' | 'trash' | 'restore' | 'purge' | 'empty'
+
+export interface OpOptions<T> {
+  nameOf: (item: T) => string
+  // change는 끝낸 항목으로 다른 창에 알릴 변경이다.
+  change: (done: T[]) => FilesChange
+  // stopOn이 참인 실패면 남은 항목도 안 될 것이므로 멈춘다(다른 디스크로 옮기기 등).
+  stopOn?: (err: unknown) => boolean
+  // keep이 참인 실패는 알리지 않고 돌려준다(휴지통에 넣지 못한 항목의 영구 삭제를 따로 묻는다).
+  keep?: (err: unknown) => boolean
+}
+
+// RunOp은 여러 항목 작업을 하나씩 하는 함수다(FilesWindow가 진행 배너·보안 확인·실패 안내와 함께 준다). keep으로 남긴
+// 항목을 돌려준다.
+export type RunOp = <T>(kind: OpKind, items: readonly T[], run: (item: T) => Promise<unknown>, opts: OpOptions<T>) => Promise<T[]>
 
 // FilesChange는 한 창이 바꾼 폴더다. dirs는 안의 항목이 바뀐 폴더, gone은 없어지거나 다른 이름이 된 경로다.
 export interface FilesChange {

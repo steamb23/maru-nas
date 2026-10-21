@@ -70,6 +70,7 @@ import folderNew from '@colloid/places/symbolic/folder-new-symbolic.svg?url'
 import folderRemote from '@colloid/places/symbolic/folder-remote-symbolic.svg?url'
 import networkServer from '@colloid/places/symbolic/network-server-symbolic.svg?url'
 import userHome from '@colloid/places/symbolic/user-home-symbolic.svg?url'
+import userTrash from '@colloid/places/symbolic/user-trash-symbolic.svg?url'
 import avatarDefault from '@colloid/status/symbolic/avatar-default-symbolic.svg?url'
 import channelSecure from '@colloid/status/symbolic/channel-secure-symbolic.svg?url'
 import dialogInformation from '@colloid/status/symbolic/dialog-information-symbolic.svg?url'
@@ -138,6 +139,7 @@ export const COLLOID_ICONS = {
   'user-home-symbolic': { url: userHome, kind: 'symbolic' },
   'folder-remote-symbolic': { url: folderRemote, kind: 'symbolic' },
   'folder-new-symbolic': { url: folderNew, kind: 'symbolic' },
+  'user-trash-symbolic': { url: userTrash, kind: 'symbolic' },
   'document-edit-symbolic': { url: documentEdit, kind: 'symbolic' },
   'upload-symbolic': { url: upload, kind: 'symbolic' },
   'download-symbolic': { url: download, kind: 'symbolic' },

@@ -20,6 +20,16 @@ import type {
   FilesPage,
   FilesPrepareResponse,
   FilesRenameRequest,
+  FilesTrashItemRequest,
+  FilesTrashList,
+  FilesTrashRequest,
+  FilesTrashRestoreRequest,
+  FilesTrashResult,
+  FilesTrashVolumes,
+  SiteTrashDisks,
+  SiteTrashPrepareRequest,
+  TrashItem,
+  TrashVolume,
   FilesRoot,
   FilesRoots,
   FilesSettings,
@@ -148,6 +158,7 @@ const ERROR_CODES: readonly ErrorCode[] = [
   'not_empty',
   'cross_device',
   'root_folder',
+  'no_trash',
 ]
 
 export type RequiredLevel = NonNullable<ErrorResponse['required']>
@@ -1262,6 +1273,85 @@ export function renameFile(from: string, to: string): Promise<FileItem> {
 export async function deleteFile(path: string, recursive: boolean): Promise<void> {
   const body: FilesDeleteRequest = { path, recursive }
   await request('POST', '/files/delete', { body })
+}
+
+// 휴지통. 권한 도우미가 trash-put과 같은 곳·형식으로 다룬다(서버의 trash-list·trash-restore와 같은 휴지통).
+
+const isTrashResult = (v: unknown): v is FilesTrashResult => isObj(v) && isStr(v.trash) && isStr(v.name)
+
+const isTrashVolume = (v: unknown): v is TrashVolume =>
+  isObj(v) && isStr(v.top) && isOneOf(v.kind, ['home', 'shared', 'own', 'none'] as const) && isBool(v.shared)
+
+const isTrashItem = (v: unknown): v is TrashItem =>
+  isObj(v) &&
+  isStr(v.trash) &&
+  isStr(v.name) &&
+  isStr(v.path) &&
+  isNum(v.deletedAt) &&
+  isOneOf(v.type, FILE_TYPES) &&
+  isNum(v.size) &&
+  isNum(v.modTime) &&
+  isOptional(v.badName, isBool)
+
+// trashFile은 항목 하나를 휴지통으로 옮긴다. 그 디스크에 휴지통이 없으면 no_trash다.
+export async function trashFile(path: string): Promise<FilesTrashResult> {
+  const body: FilesTrashRequest = { path }
+  const data = await postJSON('/files/trash', { body })
+  if (!isTrashResult(data)) throw new Error('/files/trash: unexpected response shape')
+  return data
+}
+
+// fetchTrashVolumes는 홈 폴더와 디스크마다 휴지통 종류다.
+export async function fetchTrashVolumes(signal?: AbortSignal): Promise<FilesTrashVolumes> {
+  const data = await getJSON('/files/trash/volumes', { signal })
+  if (!isObj(data) || !isArrayOf(data.volumes, isTrashVolume)) throw new Error('/files/trash/volumes: unexpected response shape')
+  return { volumes: data.volumes }
+}
+
+// fetchTrash는 사용자의 모든 휴지통 항목이다(지운 시각이 늦은 것부터).
+export async function fetchTrash(signal?: AbortSignal): Promise<FilesTrashList> {
+  const data = await getJSON('/files/trash', { signal })
+  if (!isObj(data) || !isArrayOf(data.items, isTrashItem) || !isBool(data.truncated)) {
+    throw new Error('/files/trash: unexpected response shape')
+  }
+  return { items: data.items, truncated: data.truncated }
+}
+
+// restoreTrash는 휴지통 항목을 to(원래 경로나 같은 폴더의 새 이름)로 되돌린다. 있으면 file_exists다.
+export function restoreTrash(trash: string, name: string, to: string): Promise<FileItem> {
+  const body: FilesTrashRestoreRequest = { trash, name, to }
+  return fileItemFrom('/files/trash/restore', postJSON('/files/trash/restore', { body }))
+}
+
+// purgeTrash는 휴지통 항목 하나를 영구 삭제한다.
+export async function purgeTrash(trash: string, name: string): Promise<void> {
+  const body: FilesTrashItemRequest = { trash, name }
+  await request('POST', '/files/trash/purge', { body })
+}
+
+// emptyTrash는 사용자의 모든 휴지통을 비운다.
+export async function emptyTrash(): Promise<void> {
+  await request('POST', '/files/trash/empty')
+}
+
+const isSiteTrashDisk = (d: unknown): d is SiteTrashDisks['disks'][number] =>
+  isObj(d) && isStr(d.name) && isStr(d.path) && isBool(d.shared)
+
+const isSiteTrashDisks = (v: unknown): v is SiteTrashDisks => isObj(v) && isArrayOf(v.disks, isSiteTrashDisk)
+
+// fetchSiteTrash는 디스크마다 공유 휴지통(.Trash)이 있는지다(관리자).
+export async function fetchSiteTrash(signal?: AbortSignal): Promise<SiteTrashDisks> {
+  const data = await getJSON('/site/files/trash', { signal })
+  if (!isSiteTrashDisks(data)) throw new Error('/site/files/trash: unexpected response shape')
+  return data
+}
+
+// prepareSiteTrash는 디스크 맨 위에 공유 휴지통 .Trash(1777)를 만든다(관리자, root 권한 상승 필요).
+export async function prepareSiteTrash(disk: string): Promise<SiteTrashDisks> {
+  const body: SiteTrashPrepareRequest = { disk }
+  const data = await postJSON('/site/files/trash', { body })
+  if (!isSiteTrashDisks(data)) throw new Error('/site/files/trash: unexpected response shape')
+  return data
 }
 
 // fetchFileInfo는 정보 패널 내용(소유자, 그룹, 모드, ACL, 내 권한)이다.

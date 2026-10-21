@@ -37,3 +37,7 @@
   word-break: keep-all;
   overflow-wrap: anywhere;
 }
+
+.files-name-message {
+  margin-bottom: 12px;
+}

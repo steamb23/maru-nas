@@ -2,7 +2,7 @@
 // 로그인의 만료 기간, 사용자 인증 수단 초기화. 정책을 바꾸거나 초기화하기 전에 확인을 요구하면(security_required)
 // 확인한 뒤 다시 시도한다.
 import type { ParseKeys } from 'i18next'
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { formatUnit } from '../addons/common/format'
 import {
@@ -41,6 +41,8 @@ const TARGETS: readonly { id: SecurityTarget; label: ParseKeys; desc: ParseKeys 
 ]
 
 const LEVELS: readonly Level[] = ['off', 'password', 'twoFactor']
+
+type FilesScope = NonNullable<SecurityPolicy['filesScope']>
 
 type LoginDays = (typeof PASSKEY_LOGIN_DAYS)[number]
 
@@ -105,6 +107,10 @@ export function SecurityPolicyPage() {
   const setLevel = (current: SecurityPolicy, target: SecurityTarget, level: Level) =>
     void act(() => withStepUp(() => saveSecurityPolicy({ ...current, [target]: level })))
 
+  // 파일 탐색기 확인을 어디에 적용할지 바꾼다(그 단계를 거친 세션이어야 한다).
+  const setFilesScope = (current: SecurityPolicy, filesScope: FilesScope) =>
+    void act(() => withStepUp(() => saveSecurityPolicy({ ...current, filesScope })))
+
   // 만료 기간만 바꾸고 나머지는 지금 정책 그대로 보낸다(비밀번호를 다시 확인한 세션이어야 한다).
   const setLoginDays = (current: SecurityPolicy, days: LoginDays) =>
     void act(() => withStepUp(() => saveSecurityPolicy({ ...current, passkeyLoginDays: days })))
@@ -138,21 +144,37 @@ export function SecurityPolicyPage() {
             )}
             <SettingsCard>
               {TARGETS.map((x) => (
-                <SettingsRow key={x.id} label={t(x.label)} description={t(x.desc)}>
-                  <select
-                    className="settings-select"
-                    aria-label={t(x.label)}
-                    value={data.policy.policy[x.id] ?? 'off'}
-                    disabled={busy}
-                    onChange={(e) => setLevel(data.policy.policy, x.id, e.target.value as Level)}
-                  >
-                    {LEVELS.map((l) => (
-                      <option key={l} value={l}>
-                        {t(LEVEL_KEYS[l])}
-                      </option>
-                    ))}
-                  </select>
-                </SettingsRow>
+                <Fragment key={x.id}>
+                  <SettingsRow label={t(x.label)} description={t(x.desc)}>
+                    <select
+                      className="settings-select"
+                      aria-label={t(x.label)}
+                      value={data.policy.policy[x.id] ?? 'off'}
+                      disabled={busy}
+                      onChange={(e) => setLevel(data.policy.policy, x.id, e.target.value as Level)}
+                    >
+                      {LEVELS.map((l) => (
+                        <option key={l} value={l}>
+                          {t(LEVEL_KEYS[l])}
+                        </option>
+                      ))}
+                    </select>
+                  </SettingsRow>
+                  {x.id === 'files' && (data.policy.policy.files ?? 'off') !== 'off' && (
+                    <SettingsRow label={t('settings.securityPolicy.filesScope')} description={t('settings.securityPolicy.filesScopeDesc')}>
+                      <select
+                        className="settings-select"
+                        aria-label={t('settings.securityPolicy.filesScope')}
+                        value={data.policy.policy.filesScope ?? 'all'}
+                        disabled={busy}
+                        onChange={(e) => setFilesScope(data.policy.policy, e.target.value as FilesScope)}
+                      >
+                        <option value="all">{t('settings.securityPolicy.filesScopeAll')}</option>
+                        <option value="writes">{t('settings.securityPolicy.filesScopeWrites')}</option>
+                      </select>
+                    </SettingsRow>
+                  )}
+                </Fragment>
               ))}
               <SettingsRow
                 label={t('settings.securityPolicy.passkeys')}

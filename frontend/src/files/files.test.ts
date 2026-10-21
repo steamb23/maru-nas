@@ -18,6 +18,7 @@ import {
   rootsOf,
   stemLength,
   uploadNameOk,
+  volumeOf,
 } from './paths'
 import {
   NO_SELECTION,
@@ -356,5 +357,19 @@ describe('여러 항목 작업', () => {
     off()
     notifyFilesChanged(change)
     expect(got).toEqual([['/srv/d1/media']])
+  })
+})
+
+describe('휴지통 볼륨', () => {
+  it('경로가 든 가장 긴 볼륨을 고른다', () => {
+    const volumes = [
+      { top: '/home/alice', kind: 'home', shared: false },
+      { top: '/srv/d1', kind: 'none', shared: false },
+      { top: '/srv/d1/pool', kind: 'shared', shared: true },
+    ] as const
+    expect(volumeOf(volumes, '/home/alice/a.txt')?.kind).toBe('home')
+    expect(volumeOf(volumes, '/srv/d1/media/x')?.kind).toBe('none')
+    expect(volumeOf(volumes, '/srv/d1/pool/x')?.kind).toBe('shared')
+    expect(volumeOf(volumes, '/srv/d10/x')).toBeNull()
   })
 })

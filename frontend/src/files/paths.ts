@@ -1,6 +1,6 @@
 // 파일 탐색기의 경로 계산. 경로는 백엔드와 같은 절대 경로이고, 화면에는 보이는 폴더(홈, 공유 폴더, 디스크)의
 // 이름부터 그린다. DOM에 의존하지 않아 node 환경에서 테스트한다.
-import type { FilesRoots } from '../api/types.gen'
+import type { FilesRoots, TrashVolume } from '../api/types.gen'
 
 export type RootKind = 'home' | 'share' | 'disk'
 
@@ -131,4 +131,17 @@ export function moveAllowed(sources: readonly string[], target: string): boolean
   if (sources.length === 0) return false
   if (sources.every((p) => dirName(p) === target)) return false
   return !sources.some((p) => within(target, p))
+}
+
+// TRASH는 휴지통을 가리키는 표시다. 사이드바 휴지통 항목의 놓을 곳(data-drop-path)과 창 사이 변경 알림의 폴더로 쓴다.
+// 절대 경로가 아니므로 실제 경로와 겹치지 않는다.
+export const TRASH = 'trash:'
+
+// volumeOf는 path가 든 휴지통 볼륨(홈 폴더나 디스크)이다. 겹치면 가장 긴 쪽이고, 없으면 null이다.
+export function volumeOf(volumes: readonly TrashVolume[], path: string): TrashVolume | null {
+  let best: TrashVolume | null = null
+  for (const v of volumes) {
+    if (within(path, v.top) && (!best || v.top.length > best.top.length)) best = v
+  }
+  return best
 }
