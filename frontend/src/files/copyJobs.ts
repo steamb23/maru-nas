@@ -1,4 +1,4 @@
-// 파일 복사 작업의 상태와 순수 계산(copyStore.ts가 쓴다). 이름을 요청마다 나누고, 요청 여러 개의 진행을 합치고, 속도를
+// 파일 복사 작업의 상태와 순수 계산(transferStore.ts가 쓴다). 이름을 요청마다 나누고, 요청 여러 개의 진행을 합치고, 속도를
 // 잰다. DOM에 의존하지 않아 node 환경에서 테스트한다.
 import type { FilesCopyProgress, TrashVolume } from '../api/types.gen'
 import type { OpFailure } from './ops'
@@ -91,14 +91,16 @@ export function nextRate(prev: RateSample, at: number, bytes: number): RateSampl
   return { at, bytes, rate: prev.rate === null ? now : prev.rate * (1 - RATE_WEIGHT) + now * RATE_WEIGHT }
 }
 
-export type CopyStatus = 'queued' | 'running' | 'done' | 'failed' | 'cancelled'
+// TransferStatus는 파일 작업(복사, 올리기)의 상태다. failed는 하지 못한 항목이 있거나 작업 전체가 멈춘 것이다.
+export type TransferStatus = 'queued' | 'running' | 'done' | 'failed' | 'cancelled'
 
 export interface CopyJob {
+  kind: 'copy'
   id: number
   dir: string
   names: readonly string[]
   target: string
-  status: CopyStatus
+  status: TransferStatus
   // amount는 끝난 요청의 양(base)에 지금 요청의 진행을 더한 것이다. 요청이 여러 개면 뒤 요청의 양은 그 요청을 셀 때
   // 더해진다.
   amount: CopyAmount
@@ -121,6 +123,7 @@ export interface CopyJob {
 
 export function newJob(id: number, dir: string, names: readonly string[], target: string, chunks: number): CopyJob {
   return {
+    kind: 'copy',
     id,
     dir,
     names,
@@ -141,7 +144,7 @@ export function newJob(id: number, dir: string, names: readonly string[], target
 }
 
 // settled는 끝난(성공, 실패, 취소) 작업인지다.
-export function settled(job: CopyJob): boolean {
+export function settled(job: { status: TransferStatus }): boolean {
   return job.status === 'done' || job.status === 'failed' || job.status === 'cancelled'
 }
 

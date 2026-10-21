@@ -74,14 +74,16 @@ export interface FailureGroup {
 }
 
 // groupFailures는 실패를 이유별로 묶는다(이유가 처음 나온 순서). 이름은 묶음마다 앞의 limit개만 두고 more에 나머지 수를 둔다.
+// 이유의 문구 키는 keyOf가 정한다(올리기는 messages.ts의 uploadErrorKey).
 export function groupFailures<T>(
   failures: readonly OpFailure<T>[],
   nameOf: (item: T) => string,
   limit = 5,
+  keyOf: (err: unknown) => ParseKeys = opErrorKey,
 ): (FailureGroup & { more: number })[] {
   const groups = new Map<ParseKeys, FailureGroup & { more: number }>()
   for (const f of failures) {
-    const key = opErrorKey(f.err)
+    const key = keyOf(f.err)
     let g = groups.get(key)
     if (!g) {
       g = { key, names: [], more: 0 }

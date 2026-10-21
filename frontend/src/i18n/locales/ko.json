@@ -95,7 +95,7 @@
   "apps": {
     "systemInfo": "시스템 정보",
     "files": "파일",
-    "copy": "파일 복사",
+    "transfers": "파일 작업",
     "storage": "저장소",
     "network": "네트워크",
     "temperature": "온도",
@@ -303,15 +303,19 @@
       "copy": "복사",
       "trash": "휴지통으로"
     },
-    "copy": {
+    "transfers": {
       "status": {
         "queued": "기다리는 중",
         "scanning": "복사할 양을 세는 중",
-        "running": "복사하는 중",
-        "done": "복사했습니다",
-        "failed": "복사하지 못한 항목이 있습니다",
+        "copying": "복사하는 중",
+        "copied": "복사했습니다",
+        "copyFailed": "복사하지 못한 항목이 있습니다",
+        "uploading": "올리는 중",
+        "uploaded": "올렸습니다",
+        "uploadFailed": "올리지 못한 파일이 있습니다",
         "cancelled": "취소했습니다"
       },
+      "uploadTo": "{{folder}}에 올리기",
       "size": "{{done}} / {{total}}",
       "files_one": "파일 {{done}} / {{total}}개",
       "files_other": "파일 {{done}} / {{total}}개",
@@ -319,9 +323,13 @@
       "remaining": "남은 시간 약 {{time}}",
       "skipped_one": "폴더 안의 특수 파일(FIFO, 소켓, 장치) {{total}}개는 복사하지 않았습니다.",
       "skipped_other": "폴더 안의 특수 파일(FIFO, 소켓, 장치) {{total}}개는 복사하지 않았습니다.",
-      "closeHint": "이 창을 닫으면 남은 복사를 취소합니다.",
+      "retry_one": "다시 올리기({{total}}개)",
+      "retry_other": "다시 올리기({{total}}개)",
+      "overwrite_one": "덮어써서 올리기({{total}}개)",
+      "overwrite_other": "덮어써서 올리기({{total}}개)",
+      "closeHint": "이 창을 닫으면 남은 작업을 취소합니다.",
       "clear": "끝난 작업 지우기",
-      "empty": "진행 중인 복사가 없습니다."
+      "empty": "진행 중인 작업이 없습니다."
     },
     "drop": {
       "foldersTitle": "폴더는 올리지 않았습니다",
@@ -379,19 +387,6 @@
     },
     "upload": {
       "title": "올리기",
-      "inProgress": "올리기 {{total}}개 중 {{active}}개 남음",
-      "allDone": "올리기 {{total}}개 끝남",
-      "collapse": "접기",
-      "expand": "펼치기",
-      "cancel": "취소",
-      "retry": "다시 올리기",
-      "clear": "목록 비우기",
-      "done": "완료",
-      "skipped": "건너뜀",
-      "canceled": "취소함",
-      "waiting": "기다리는 중",
-      "progress": "{{sent}} / {{size}}",
-      "remaining": "약 {{time}} 남음",
       "badName": "{{name}}은(는) 올릴 수 없는 이름입니다.",
       "conflictTitle": "같은 이름의 파일이 있습니다",
       "conflictMessage": "\"{{name}}\" 파일이 이미 있습니다. 덮어쓸까요?",

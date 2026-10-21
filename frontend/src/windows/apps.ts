@@ -66,10 +66,10 @@ const SHELL_APPS = {
     // 여기서 막지 않고, 넘치면 그 창 안에 안내한다(too_many_windows).
     multiInstance: true,
   },
-  // 파일 복사 진행. 파일 탐색기에서 다른 디스크로 끌어 놓은 복사를 보인다(src/files/copyStore.ts가 연다). 창 하나에
-  // 모든 복사를 보이며, "모든 앱"과 바로가기에는 보이지 않는다(appAccess).
-  copy: {
-    titleKey: 'apps.copy',
+  // 파일 작업. 파일 탐색기의 복사와 올리기를 보인다(src/files/transferStore.ts가 연다). 창 하나에 모든 작업을
+  // 보이며, "모든 앱"과 바로가기에는 보이지 않는다(appAccess).
+  transfers: {
+    titleKey: 'apps.transfers',
     icon: 'folder-download',
     kind: 'shell',
     defaultSize: { width: 460, height: 340 },

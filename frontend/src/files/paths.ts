@@ -87,7 +87,7 @@ export function locationLabel(roots: readonly Root[], filePath: string, homeName
   return folderLabel(roots, dirName(filePath), homeName)
 }
 
-// folderLabel은 폴더 dir 자신의 위치다(locationLabel과 같은 모양, 복사 진행 창의 원본·대상).
+// folderLabel은 폴더 dir 자신의 위치다(locationLabel과 같은 모양, 파일 작업 창의 원본·대상).
 export function folderLabel(roots: readonly Root[], dir: string, homeName: string): string {
   const root = findRoot(roots, dir)
   if (!root) return dir

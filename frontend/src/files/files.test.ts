@@ -46,19 +46,20 @@ import {
   toggleAt,
 } from './selection'
 import {
-  active,
-  canceled,
-  clearFinished,
-  emptyUploads,
-  enqueue,
-  failed,
-  finished,
-  nextQueued,
-  progressed,
-  remainingSeconds,
+  completed,
+  fileFailed,
+  fileFinished,
+  fileProgressed,
+  fileStarted,
+  newUploadJob,
+  nextFile,
   retried,
-  started,
-} from './uploadQueue'
+  retryable,
+  stopped,
+  uploadAmount,
+  uploadProgress,
+  uploadRemaining,
+} from './uploadJobs'
 import { layout, MAX_SCROLL_HEIGHT, ROW_HEIGHT, indexAt, scrollHeightOf, scrollToShow, scrollTopFor, virtualOffset } from './virtual'
 
 const roots = rootsOf({
@@ -222,33 +223,59 @@ describe('종류', () => {
   })
 })
 
-describe('올리기 목록', () => {
-  it('하나씩 차례로 올리고 끝난 항목을 비운다', () => {
-    let s = enqueue(emptyUploads, [
-      { id: 1, dir: '/d', name: 'a', size: 100, overwrite: false },
-      { id: 2, dir: '/d', name: 'b', size: 50, overwrite: false },
+describe('올리기 작업', () => {
+  const files = [
+    { name: 'a', size: 100, overwrite: false },
+    { name: 'b', size: 50, overwrite: false },
+    { name: 'c', size: 50, overwrite: false },
+  ]
+
+  it('파일을 하나씩 차례로 올리고 실패한 파일만 다시 올린다', () => {
+    let j = newUploadJob(1, '/d', files)
+    expect(nextFile(j)).toBe(0)
+    j = fileProgressed(fileStarted(j, 0), 0, 150)
+    expect(j.files[0].sent).toBe(100)
+    expect(nextFile(j)).toBe(1)
+    j = fileFinished(j, 0)
+    j = fileFailed(fileStarted(j, 1), 1, 'file_exists')
+    j = fileFailed(fileStarted(j, 2), 2, 'no_space')
+    expect(nextFile(j)).toBe(-1)
+    j = completed(j)
+    expect(j.status).toBe('failed')
+    expect(retryable(j, true)).toBe(1)
+    expect(retryable(j, false)).toBe(1)
+    // 덮어쓰기는 같은 이름 때문에 올리지 못한 파일만 덮어쓴다.
+    const over = retried(j, true)
+    expect(over.status).toBe('queued')
+    expect(over.files.map((f) => [f.status, f.overwrite])).toEqual([
+      ['done', false],
+      ['queued', true],
+      ['failed', false],
     ])
-    const a = nextQueued(s)
-    expect(a?.name).toBe('a')
-    s = started(s, a!.id, 1000)
-    expect(nextQueued(s)).toBeUndefined()
-    s = progressed(s, a!.id, 150)
-    expect(s.items[0].sent).toBe(100)
-    s = finished(s, a!.id)
-    const b = nextQueued(s)!
-    s = failed(started(s, b.id, 2000), b.id, 'file_exists')
-    expect(active(s)).toBe(0)
-    s = retried(s, b.id, true)
-    expect(s.items[1]).toMatchObject({ status: 'queued', overwrite: true, error: undefined })
-    s = canceled(s, b.id)
-    expect(clearFinished(s).items).toEqual([])
+    expect(completed(fileFinished(over, 1)).status).toBe('failed')
   })
 
-  it('남은 시간은 3초가 지난 뒤 보낸 속도로 셈한다', () => {
-    let s = enqueue(emptyUploads, [{ id: 1, dir: '/d', name: 'a', size: 1000, overwrite: false }])
-    s = progressed(started(s, 1, 0), 1, 300)
-    expect(remainingSeconds(s.items[0], 2000)).toBeNull()
-    expect(remainingSeconds(s.items[0], 3000)).toBe(7)
+  it('멈추면 남은 파일을 취소하고 취소한 파일은 다시 올릴 수 있다', () => {
+    let j = fileProgressed(fileStarted(newUploadJob(1, '/d', files), 0), 0, 40)
+    j = stopped(j)
+    expect(j.status).toBe('cancelled')
+    expect(j.files.every((f) => f.status === 'cancelled')).toBe(true)
+    expect(retryable(j, false)).toBe(3)
+    expect(stopped(j, new ApiError(500, 'x')).status).toBe('failed')
+  })
+
+  it('올린 양은 취소한 파일을 빼고 바이트로 잰다', () => {
+    let j = fileFinished(fileStarted(newUploadJob(1, '/d', files), 0), 0)
+    j = { ...fileProgressed(fileStarted(j, 1), 1, 25), status: 'running' }
+    expect(uploadAmount(j)).toEqual({ bytes: 125, totalBytes: 200, files: 1, totalFiles: 3 })
+    expect(uploadProgress(j)).toBeCloseTo(0.625)
+    expect(uploadRemaining(j)).toBeNull()
+    expect(uploadRemaining({ ...j, rate: { at: 0, bytes: 0, rate: 25 } })).toBe(3)
+    const empty = newUploadJob(2, '/d', [
+      { name: 'x', size: 0, overwrite: false },
+      { name: 'y', size: 0, overwrite: false },
+    ])
+    expect(uploadProgress(fileFinished(empty, 0))).toBe(0.5)
   })
 })
 
@@ -354,6 +381,9 @@ describe('여러 항목 작업', () => {
     expect(groupFailures(failures, (n) => n, 2)).toEqual([
       { key: 'files.ops.errors.cross_device', names: ['a', 'c'], more: 1 },
       { key: 'files.ops.errors.file_exists', names: ['b'], more: 0 },
+    ])
+    expect(groupFailures([{ item: 'a', err: 'no_space' }], (n) => n, 5, () => 'files.upload.errors.no_space')).toEqual([
+      { key: 'files.upload.errors.no_space', names: ['a'], more: 0 },
     ])
     expect(opErrorKey(new TypeError('network'))).toBe('files.ops.errors.network')
     expect(opErrorKey(new ApiError(500, 'x'))).toBe('files.ops.errors.generic')
