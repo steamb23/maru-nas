@@ -285,6 +285,7 @@
       "label": "Selected file details",
       "close": "Close details",
       "download": "Download",
+      "delete": "Delete",
       "kindSize": "{{kind}} · {{size}}",
       "modified": "Date modified",
       "location": "Location",

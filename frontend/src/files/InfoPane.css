@@ -145,3 +145,10 @@
 .files-link:hover {
   text-decoration: underline;
 }
+
+/* 이름 바꾸기·삭제는 아이콘 단추로 내려받기 옆에 둔다. */
+.files-info-actions .files-info-icon {
+  flex: none;
+  width: 34px;
+  padding: 0;
+}

@@ -36,7 +36,7 @@ import { isFolderLike } from './kinds'
 import { errorKey } from './messages'
 import { askName } from './nameDialog'
 import { type FilesChange, affects, groupFailures, notifyFilesChanged, onFilesChanged, runEach } from './ops'
-import { type Root, crumbs, findRoot, joinPath, moveAllowed, numberedName, parentOf, rootsOf, within } from './paths'
+import { type Root, crumbs, dirName, findRoot, joinPath, moveAllowed, numberedName, parentOf, rootsOf, within } from './paths'
 import { NO_SELECTION, type Selection, selectAll, selectOne, selectedCount, soleIndex } from './selection'
 import { useUploads } from './useUploads'
 
@@ -434,9 +434,13 @@ export function FilesWindow({ active }: WindowViewProps) {
 
   const renameSelection = async (s: Selection = sel) => {
     if (!listing || !path || !canWrite || selectedCount(s) !== 1) return
-    const dir = path
     const [item] = (await itemsOf(s)) ?? []
-    if (!item || item.state === 'gone') return
+    if (item) await renameItem(item)
+  }
+
+  const renameItem = async (item: FileItem) => {
+    if (!listing || !path || !canWrite || item.state === 'gone' || item.badName) return
+    const dir = path
     const from = joinPath(dir, item.name)
     const renamed = await askName(dialogs.scope, {
       mode: 'rename',
@@ -453,9 +457,15 @@ export function FilesWindow({ active }: WindowViewProps) {
 
   const deleteSelection = async (s: Selection = sel) => {
     if (!listing || !path || !canWrite || selectedCount(s) === 0) return
+    const items = await itemsOf(s)
+    if (items) await deleteItems(items)
+  }
+
+  const deleteItems = async (all: readonly FileItem[]) => {
+    if (!listing || !path || !canWrite) return
     const dir = path
-    const items = (await itemsOf(s))?.filter((i) => i.state !== 'gone')
-    if (!items || items.length === 0) return
+    const items = all.filter((i) => i.state !== 'gone' && !i.badName)
+    if (items.length === 0) return
     const ok = await dialogs.confirm({
       title: <DeleteTitle items={items} />,
       message: <DeleteBody items={items} />,
@@ -923,7 +933,17 @@ export function FilesWindow({ active }: WindowViewProps) {
         ) : (
           <div className="files-list" aria-busy="true" />
         )}
-        {pane && <InfoPane path={pane} roots={roots} admin={admin} onClose={() => setPane(null)} />}
+        {pane && (
+          <InfoPane
+            path={pane}
+            roots={roots}
+            admin={admin}
+            canWrite={canWrite && dirName(pane) === path}
+            onRename={(it) => void renameItem(it)}
+            onDelete={(it) => void deleteItems([it])}
+            onClose={() => setPane(null)}
+          />
+        )}
         <UploadPanel state={uploads.state} onCancel={uploads.cancel} onRetry={uploads.retry} onClear={uploads.clear} />
       </div>
       <footer className="files-status">

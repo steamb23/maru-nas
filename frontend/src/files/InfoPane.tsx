@@ -1,10 +1,10 @@
 // 정보 패널. 파일을 눌렀을 때만 목록 오른쪽에 연다(창이 좁으면 목록 위에 덮어 연다). 종류·크기·수정한 날짜와
-// 권한(소유자, 그룹, 모드, ACL, 내 권한)을 보이고 내려받기 단추를 둔다. 관리자에게는 권한 편집 화면을 다시 만들지 않고
-// 그 파일이 든 공유 폴더의 OMV ACL 화면 링크를 둔다.
+// 권한(소유자, 그룹, 모드, ACL, 내 권한)을 보이고 내려받기·이름 바꾸기·삭제 단추를 둔다. 관리자에게는 권한 편집 화면을
+// 다시 만들지 않고 그 파일이 든 공유 폴더의 OMV ACL 화면 링크를 둔다.
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ApiError, fetchFileInfo } from '../api/client'
-import type { FileInfo } from '../api/types.gen'
+import type { FileInfo, FileItem } from '../api/types.gen'
 import { formatBytes, formatDateTime } from '../addons/common/format'
 import { useCapabilitiesStore } from '../addons/capabilities'
 import { useLanguage } from '../i18n'
@@ -19,13 +19,17 @@ interface Props {
   path: string
   roots: readonly Root[]
   admin: boolean
+  // canWrite면 이름 바꾸기·삭제 단추를 쓸 수 있다(그 파일이 든 폴더에 쓸 수 있고 다른 작업이 진행 중이 아님).
+  canWrite: boolean
+  onRename: (item: FileItem) => void
+  onDelete: (item: FileItem) => void
   onClose: () => void
 }
 
 // 상태에는 그 결과를 받은 경로를 함께 둔다. 지금 경로와 다르면 받는 중으로 본다.
 type State = { path: string } & ({ status: 'loading' } | { status: 'ready'; info: FileInfo } | { status: 'error'; err: unknown })
 
-export function InfoPane({ path, roots, admin, onClose }: Props) {
+export function InfoPane({ path, roots, admin, canWrite, onRename, onDelete, onClose }: Props) {
   const { t } = useTranslation()
   const lang = useLanguage()
   const workbench = useCapabilitiesStore((s) => Boolean(s.caps?.workbenchUrl))
@@ -60,6 +64,9 @@ export function InfoPane({ path, roots, admin, onClose }: Props) {
   }
   const accessTone = info?.access?.write ? 'ok' : ''
 
+  // item은 이름 바꾸기·삭제에 넘기는 항목이다(정보를 받은 뒤에만 단추를 쓸 수 있다).
+  const item: FileItem | null = info && { name, type: info.type, state: 'ok', linkType: info.linkType }
+
   const download = () => {
     setDownloadError(null)
     startDownload(path, name).catch((err: unknown) => {
@@ -87,6 +94,26 @@ export function InfoPane({ path, roots, admin, onClose }: Props) {
         <button type="button" className="addon-button primary" disabled={!canDownload} onClick={download}>
           <IconImage name="download-symbolic" size={16} />
           {t('files.info.download')}
+        </button>
+        <button
+          type="button"
+          className="addon-button files-info-icon"
+          aria-label={t('files.menu.rename')}
+          title={t('files.menu.rename')}
+          disabled={!canWrite || !item}
+          onClick={() => item && onRename(item)}
+        >
+          <IconImage name="document-edit-symbolic" size={16} />
+        </button>
+        <button
+          type="button"
+          className="addon-button files-info-icon"
+          aria-label={t('files.info.delete')}
+          title={t('files.info.delete')}
+          disabled={!canWrite || !item}
+          onClick={() => item && onDelete(item)}
+        >
+          <IconImage name="edit-delete-symbolic" size={16} />
         </button>
       </div>
       {downloadError !== null && (

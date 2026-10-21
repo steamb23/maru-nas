@@ -285,6 +285,7 @@
       "label": "선택한 파일 정보",
       "close": "정보 패널 닫기",
       "download": "내려받기",
+      "delete": "삭제",
       "kindSize": "{{kind}} · {{size}}",
       "modified": "수정한 날짜",
       "location": "위치",
