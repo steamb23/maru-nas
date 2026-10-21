@@ -260,7 +260,10 @@ func New(cfg Config) http.Handler {
 	mux.HandleFunc("POST /api/files/list/{id}/prepare", h.requireFiles(h.filesPrepare))
 	mux.HandleFunc("GET /api/files/info", h.requireFiles(h.filesInfo))
 	mux.HandleFunc("GET /api/files/download", h.requireFiles(h.filesDownload))
-	mux.HandleFunc("PUT /api/files/upload", h.requireFilesWrite(h.filesUpload))
+	// 올리기는 본문을 다 받기 전에 거절해도 응답을 먼저 보내고 남은 본문을 받는다(drainRejected). 사전 확인은 본문 없이
+	// 같은 가드와 검사를 거친다.
+	mux.HandleFunc("PUT /api/files/upload", drainRejected(h.requireFilesWrite(h.filesUpload)))
+	mux.HandleFunc("POST /api/files/upload/check", h.requireFilesWrite(h.filesUploadCheck))
 	mux.HandleFunc("GET /api/files/list/{id}/find", h.requireFiles(h.filesFind))
 	mux.HandleFunc("POST /api/files/mkdir", h.requireFilesWrite(h.filesMkdir))
 	mux.HandleFunc("POST /api/files/rename", h.requireFilesWrite(h.filesRename))

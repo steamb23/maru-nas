@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"mime"
 	"net/http"
 	"net/url"
 	"path"
@@ -685,41 +684,6 @@ func rfc5987(s string) string {
 		}
 	}
 	return b.String()
-}
-
-// filesUpload는 요청 본문을 파일 하나로 올린다. 본문은 메모리에 모으지 않고 도우미로 바로 흘려 보내며, 도우미가
-// 같은 폴더 임시 파일에 다 받은 뒤 이름을 바꾼다. 원시 본문(application/octet-stream)만 받는다(CSRF 보조 장치,
-// HTML 폼은 이 형식을 보낼 수 없고 다른 출처의 fetch는 preflight에서 막힌다).
-func (h *handler) filesUpload(w http.ResponseWriter, r *http.Request, s auth.Session, ticket string) {
-	mt, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
-	if err != nil || mt != "application/octet-stream" {
-		writeError(w, http.StatusUnsupportedMediaType, api.ErrBadRequest, "content type must be application/octet-stream")
-		return
-	}
-	p := r.URL.Query().Get("path")
-	dir, _, ok := splitNew(p)
-	if !ok {
-		writeError(w, http.StatusBadRequest, api.ErrBadRequest, "invalid file name")
-		return
-	}
-	if !h.allowedPath(w, r, s, ticket, dir) {
-		return
-	}
-	if r.ContentLength < 0 {
-		writeError(w, http.StatusLengthRequired, api.ErrBadRequest, "content length required")
-		return
-	}
-	overwrite := r.URL.Query().Get("overwrite") == "1"
-	e, err := h.Helper.Write(r.Context(), ticket, p, overwrite, r.Body, r.ContentLength)
-	if err != nil {
-		if r.Context().Err() != nil {
-			// 브라우저가 올리기를 취소했다. 도우미가 임시 파일을 지운다.
-			return
-		}
-		h.writeFilesError(w, s, err)
-		return
-	}
-	writeJSON(w, http.StatusOK, fileItemOf(e))
 }
 
 // fileItemOf는 도우미가 돌려준 항목을 목록 항목 형태로 바꾼다(만들기·올리기·이름 바꾸기의 응답).
