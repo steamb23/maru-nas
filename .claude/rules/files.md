@@ -5,6 +5,7 @@ paths:
   - "backend/cmd/fakeomv/files.go"
   - "frontend/src/files/**"
   - "frontend/src/settings/FilesSection.tsx"
+  - "frontend/src/viewer/**"
 ---
 
 # 파일 탐색기
@@ -13,12 +14,21 @@ paths:
 
 ## 접근과 범위
 
-- 접근은 파일 시스템 권한만 따른다. OMV 공유 폴더 권한(Privileges)은 따라 하지 않는다. 관리자도 자기 계정의 권한으로 보며, root로 둘러보는 기능은 만들지 않는다
+- 접근은 파일 시스템 권한을 따른다. OMV 공유 폴더 권한(Privileges)은 관리자가 "OMV 공유 폴더 권한 따르기"를 켰을 때만 더한다(아래 "공유 폴더 권한 따르기"). 관리자도 자기 계정의 권한으로 보며, root로 둘러보는 기능은 만들지 않는다
 - 보이는 폴더(`handler.roots`): 홈(도우미 `id`의 `home`, 세션별로 `files.Cache`에 기억) + 공유 폴더 스냅숏 + 디스크. 디스크는 스냅숏이 없을 때(`SharesUpdatedAt` 빈 값, 대체) 모두에게, 관리자가 "디스크 최상위 보기"(`SiteFiles.ShowDisks`)를 켜면 관리자에게 보인다. 스냅숏이 있는데 공유 폴더가 없으면(OMV에 공유 폴더가 없음) 디스크도 보이지 않으므로 사이드바가 그 사정을 안내한다(`files.nav.noShares`)
 - `/api/files/*`는 보이는 폴더 밖 경로를 도우미에 보내기 전에 403 `outside_roots`로 거른다(`allowedPath`). 실제 범위는 도우미가 기준 디렉터리로 다시 정한다. `/srv/` 아래가 아닌 공유 폴더(sharerootfs)는 `reachable: false`이고 열 수 없다(도우미 추가 기준 경로는 로드맵)
 - **공유 폴더 스냅숏**: `ShareMgmt.enumerateSharedFolders`는 관리자 전용이라 관리자 세션이 받아 `site.json`의 `files.shares`에 둔다. `startSession`이 관리자이고 도우미가 있으면 뒤에서(10초, 로그인 응답을 기다리게 하지 않음) 받고, 설정 앱의 "지금 받기"(`POST /api/site/files/refresh`)가 바로 받는다. 고정 메서드 호출(`sharesMethods`, `NoTouch`)이고, 성공했을 때만 바꾼다. 서버가 스스로 `site.json`을 쓰는 유일한 경우이며, 메모리(`handler.filesSite`)와 함께 바꾼다
   - 응답 해석은 `files.ParseShares`: `absdirpath`·`status`는 OMV 8.1.0부터 있으므로 없으면 `mntent.dir` + `reldirpath`로 만들고, `status`가 있고 `OK`가 아니면 뺀다(`auth-omv.md`의 "OMV 8 버전별 차이")
-- 보안 강화 정책 `files`(`api.SecurityPolicy.Files`)는 `/api/files/*` 전부(뿌리 포함)를 막는다. 적용 범위 `filesScope`가 `writes`면 읽기 라우트(`requireFiles`: 뿌리, 목록, 범위, find, prepare, 정보, 내려받기, 휴지통 목록·볼륨)는 열고 쓰기 라우트(`requireFilesWrite`: 올리기와 그 사전 확인, 만들기, 이름 바꾸기, 삭제, 복사, 휴지통 넣기·되돌리기·영구 삭제·비우기)만 막는다. 요청마다 보므로 정책을 올려도 따로 닫을 것이 없고, 이미 시작한 전송은 끝까지 간다
+- 보안 강화 정책 `files`(`api.SecurityPolicy.Files`)는 `/api/files/*` 전부(뿌리 포함)를 막는다. 적용 범위 `filesScope`가 `writes`면 읽기 라우트(`requireFiles`: 뿌리, 목록, 범위, find, prepare, 정보, 내려받기, 미리보기, 검색, 휴지통 목록·볼륨)는 열고 쓰기 라우트(`requireFilesWrite`: 올리기와 그 사전 확인, 만들기, 이름 바꾸기, 삭제, 복사, 휴지통 넣기·되돌리기·영구 삭제·비우기)만 막는다. 요청마다 보므로 정책을 올려도 따로 닫을 것이 없고, 이미 시작한 전송은 끝까지 간다
+
+## 공유 폴더 권한 따르기
+
+- 관리자 설정 `SiteFiles.FollowPrivileges`(설정 앱 서버 페이지, `PUT /api/site/files {followPrivileges}`). 켤 때는 서버가 스냅숏을 먼저 다시 받고, 받지 못하면 켜지 않는다(502). 스냅숏이 없는 대체 상태에서는 효과가 없다
+- 권한은 `enumerateSharedFolders` 응답의 `privileges.privilege[]{type, name, perms}`(8.0부터 같음)를 `ParseShares`가 스냅숏(`SharedFolder.Privileges`)에 둔다. 모르는 종류·이름 없는 항목은 빼고 모르는 값은 거부(0)로 둔다. 권한을 바꾸면 관리자가 다시 받아야 한다(로그인, "지금 받기")
+- 계산(`files.ShareAccess`)은 OMV가 Samba 설정을 만드는 규칙(`shares.j2`)과 같다: 사용자 항목과 그룹 항목을 함께 보고 거부(0)가 하나라도 맞으면 거부, 아니면 7이 있으면 쓰기, 5만 있으면 읽기, 맞는 항목이 없으면 거부. 정한 권한이 없는 공유 폴더는 모두에게 열린다. SMB 공유의 guest·read only 설정은 공유 폴더가 아니라 SMB의 것이라 보지 않는다
+- 그룹은 도우미 `id`의 그룹 이름(커널의 실제 그룹, Samba가 `@group`을 푸는 것과 같다)이고 홈과 함께 세션별로 기억한다(`files.Cache.Identity`). 로그인한 동안 바뀐 그룹은 다시 로그인해야 반영된다
+- 적용(`handler.roots`의 `fileRoots`): 거부인 공유 폴더는 사이드바에서 빼고 `hidden`에 둔다. `withinRoots`가 디스크 최상위 보기에서도 그 아래를 403 `outside_roots`로 막고, 검색 결과에서도 뺀다. `rootFolder`가 숨긴 공유 폴더도 지킨다. 읽기인 공유 폴더는 `FilesShare.ReadOnly`, 목록·정보의 `shareReadOnly`(그때 `writable`·`access.write`는 false)이고, 쓰기 라우트가 바꿀 곳을 `allowedWritePaths`로 거른다(올리기와 사전 확인, 만들기, 이름 바꾸기·옮기기 양쪽, 삭제, 휴지통 넣기, 되돌리기 대상, 복사 대상): 403 `share_read_only`. 휴지통 영구 삭제·비우기는 휴지통 디렉터리만 다루므로 거르지 않는다
+- 도우미의 범위는 바꾸지 않으므로 onmaru가 뚫리면 지켜 주지 않는다(설정 화면이 파일 시스템 권한도 함께 적용된다고 알린다)
 
 ## 목록(큰 폴더)
 
@@ -37,6 +47,19 @@ paths:
   - **본문 전 거절**: Go 서버는 핸들러가 본문을 읽기 전에 응답하고 남은 본문이 256KiB 이상이면 본문을 버리지 않고 500ms 뒤 연결을 닫는다. 브라우저(HTTP/1.1)와 일부 프록시는 본문을 끝까지 보낸 뒤에야 응답을 읽으므로 닫힌 연결에 쓰다가 RST를 받고, 거절이 502(Vite 프록시)나 늦은 응답·멈춤(Caddy)이 된다. 그래서 라우트를 `drainRejected`로 감싼다: 본문을 다 받기 전에 오류(400 이상)로 답하면 응답을 모아 두고 남은 본문을 먼저 받은 뒤 길이를 붙여 보낸다(보통의 요청·응답과 같아진다). 세션이 있으면 `Content-Length`까지(60초 무진행이면 멈춤), 세션이 없는 401과 길이를 모르는 본문은 1MiB까지만 받고, 다 받지 못하면 응답 뒤에 닫는다(`Connection: close`). 응답을 먼저 보내고 본문을 받는 방식(`EnableFullDuplex`)은 쓰지 않는다. desk-test에서 Caddy(브라우저 쪽 HTTP/2)를 거친 Chrome의 HTTP/2 연결이 가끔(12번 중 3번) 멈췄고 그 연결의 다음 요청도 막혔다. curl은 같은 경로에서 멈추지 않았다 401·보안 정책·형식·이름·범위 거절과 도우미의 도중 거절(`exists`, `permission_denied`, `no_space`)이 모두 이 경로다
   - **사전 확인**(`POST /api/files/upload/check {path}`, 204): 프록시에 따라 위 거절도 본문을 다 보낸 뒤에야 브라우저에 오므로, 프런트는 PUT 전에 본문 없이 같은 가드(`requireFilesWrite`)와 같은 검사(`uploadTarget`: 새 이름, 보이는 폴더 안)를 거친다. 도우미는 부르지 않는다(같은 이름·쓰기 권한은 PUT이 안다). 사용성을 위한 것이고 PUT은 모든 검사를 그대로 한다
 - 프런트: 탐색기 창이 고른(끌어 놓은) 파일마다 `info`로 같은 이름을 먼저 확인하고(`uploads.ts`의 `checkUploads`, 있으면 덮어쓰기·건너뛰기, 남은 파일에 같게 적용) 그 파일들을 올리기 작업 하나로 파일 작업 목록에 더한다(`startUpload`, 아래 "파일 작업"). 작업은 파일을 하나씩 XHR로 올린다(`uploadFile`, 진행률). `uploadFile`은 본문을 보내기 전에 사전 확인(`checkUpload`)을 하므로, `withStepUp`이 보안 확인 대화상자를 본문 전에 띄우고 확인 뒤 둘 다 다시 한다. 탐색기 창을 닫아도 이어진다
+
+## 미리보기
+
+- 탐색기와 따로 여는 셸 앱 `viewer`(`src/viewer/`, `apps.ts`, `appAccess`에서 숨김)다. 창 하나를 다시 쓰고, 보일 파일은 모듈 저장소 `viewerStore.ts`(`openViewer`)에 둔다(창 상태에 앱별 내용을 두지 않으므로 파일 작업처럼). 미리볼 수 있는 파일(`kinds.ts`의 `previewKind`: 브라우저가 여는 이미지·동영상·오디오, PDF, 텍스트 종류)은 두 번 누르기·Enter, 메뉴 "미리보기", 정보 패널 단추로 연다. 그 밖의 파일은 지금처럼 정보 패널이다
+- 백엔드 `GET /api/files/preview?path=`(`files_preview.go`, 읽기 라우트)는 내려받기와 같은 범위·If-Range 처리(`serveFile`)를 쓰고, 형식은 확장자 허용 목록(`previewTypes`, 프런트 `PREVIEW_EXTENSIONS`와 맞춤)에서만 정하며 목록 밖은 `text/plain; charset=utf-8`이다. `inline`, `nosniff`, `no-store`, CSP `default-src 'none'; sandbox`(SVG·HTML도 스크립트가 돌지 않는다). PDF만 브라우저 내장 뷰어가 sandbox 문서에서 열리지 않으므로 `default-src 'none'; frame-ancestors 'self'`이고 창 안 `<iframe>`으로 연다
+- 창은 먼저 `GET /api/files/info`로 세션·보안 확인·읽기 권한을 본다(미디어 요소는 오류 본문을 보이지 않는다). 텍스트는 앞 1MiB만 범위로 받아(`fetchPreviewBytes`, 크기 0이면 범위 없이) `viewer/text.ts`의 `decodeText`로 읽는다(잘린 끝 글자는 버림, NUL이 있으면 이진 파일). 동영상·오디오를 재생하는 동안 세션 활동을 30초마다 알린다
+- 내용은 도우미 `fs.read`라 감사 로그에 남는다(동영상은 탐색할 때마다 범위 요청)
+
+## 하위 폴더 검색
+
+- 찾기 칸 옆의 "하위 폴더까지 찾기"(`FilesWindow`의 `deep`)를 켜면 찾기 칸이 지금 폴더를 거르지 않고, Enter로 지금 폴더와 그 아래를 찾는다. 결과는 목록 대신 `SearchView.tsx`(이름·위치·종류, `virtual.ts`·`selection.ts`)로 보이고, 뒤로 단추·Esc·폴더 이동으로 나간다. 새로 고침은 같은 찾기어로 다시 찾는다
+- `GET /api/files/search?path=&q=`(`files_search.go`, 읽기 라우트)는 도우미 `fs.search`(`.claude/docs/helper.md`의 "하위 폴더 검색")를 부르고 찾은 항목을 오는 대로 `text/event-stream`(`api.FilesSearchEvent`, 절대 경로)으로 보낸다. 복사와 같은 사건 스트림(`eventStream`, `filesErrorEvent`)이다. 결과는 2000개까지이고 브라우저가 끊으면(중지 단추) 도우미도 멈춘다. 보이는 폴더 밖(숨긴 공유 폴더)의 항목은 빼고 보낸다
+- 결과에서는 폴더 열기, 미리보기, 내려받기, "위치 열기"(그 폴더로 가서 항목을 고름, `pendingSelect`)만 한다. 끌기·삭제는 그 폴더에서 한다
 
 ## 만들기·이름 바꾸기·옮기기·삭제
 
@@ -80,21 +103,22 @@ paths:
 
 ## 창(프런트)
 
-- `src/files/`: `FilesWindow.tsx`(사이드바·도구 막대·상태 표시줄, 상태와 이동, 만들기·이름 바꾸기·삭제·옮기기), `FileList.tsx`(가상 목록, 고르기, 끌어서 옮기기), `InfoPane.tsx`(정보 패널), `ConflictBody.tsx`·`conflictDialog.tsx`(이름 충돌), `NameForm.tsx`·`nameDialog.tsx`(이름 입력), `DeleteBody.tsx`(삭제 확인, 하지 못한 항목 안내), `TrashView.tsx`(휴지통 보기), `TransfersWindow.tsx`·`transferStore.ts`(파일 작업 창과 작업 목록), `TaskProgress.tsx`(진행 막대·지금 항목·창 안 진행 배너), `uploads.ts`(올리기 전 이름 확인), `stepUp.ts`(쓰기 요청의 보안 확인), 순수 모듈 `paths.ts`, `copyJobs.ts`, `history.ts`, `virtual.ts`, `pageCache.ts`, `kinds.ts`, `uploadJobs.ts`, `messages.ts`, `selection.ts`, `ops.ts`(Vitest `files.test.ts`)
+- `src/files/`: `FilesWindow.tsx`(사이드바·도구 막대·상태 표시줄, 상태와 이동, 만들기·이름 바꾸기·삭제·옮기기), `FileList.tsx`(가상 목록과 아이콘 보기, 고르기, 끌어서 옮기기), `SearchView.tsx`(하위 폴더 검색 결과), `viewPrefs.ts`(보기 설정 저장소), `InfoPane.tsx`(정보 패널), `ConflictBody.tsx`·`conflictDialog.tsx`(이름 충돌), `NameForm.tsx`·`nameDialog.tsx`(이름 입력), `DeleteBody.tsx`(삭제 확인, 하지 못한 항목 안내), `TrashView.tsx`(휴지통 보기), `TransfersWindow.tsx`·`transferStore.ts`(파일 작업 창과 작업 목록), `TaskProgress.tsx`(진행 막대·지금 항목·창 안 진행 배너), `uploads.ts`(올리기 전 이름 확인), `stepUp.ts`(쓰기 요청의 보안 확인), 순수 모듈 `paths.ts`, `copyJobs.ts`, `history.ts`, `virtual.ts`, `pageCache.ts`, `kinds.ts`, `uploadJobs.ts`, `messages.ts`, `selection.ts`, `ops.ts`(Vitest `files.test.ts`)
 - 셸 앱이고 창을 여러 개 연다(`multiInstance`). 상태는 창마다 컴포넌트에 두며 모듈 저장소에 두지 않는다. 권한 도우미가 없으면(`capabilities.helper`) 앱은 그대로 보이고 창 안에 못 쓰는 이유를 안내한다(`appAccess`의 `helper_missing`, `AddonUnavailable`). 도우미는 설정되어 있는데 닿지 않거나 티켓이 없으면 창이 `/api/files/roots`의 오류(`helper_unavailable`·`helper_reauth`)를 보인다
 - 시안: Design 캔버스의 AC-Main·AC-Selected(정보 패널은 파일을 눌렀을 때만, 폴더는 고르기만), AC-Large(가상 스크롤·자리 표시·위치 말풍선), AC-Large-Sort(날짜순 준비 배너), S-Locked(보안 확인), S-Fallback(대체 안내)
 - 틀은 `SidebarLayout`의 `header`(도구 막대)를 쓰고 좁은 기준은 720px다. 정보 패널은 내용 너비 640px 아래(컨테이너 쿼리)에서 목록 위에 덮는다
 - 가상 목록: 줄 높이 34px(`virtual.ts`의 `ROW_HEIGHT`, CSS `.files-row`와 맞춤), 스크롤 높이가 800만 px를 넘으면 비율로 줄인다(브라우저 요소 높이 한계). 200줄 페이지를 보기마다 캐시하고(60페이지), 스크롤이 90ms 멈춘 뒤 받는다(동시 2페이지). 받은 페이지는 `useMemo`로 만든 보기별 캐시 객체에 쌓고 `bump`로 다시 그린다. 요청을 끊는 컨트롤러는 마운트마다 effect에서 만든다(StrictMode가 정리를 한 번 더 불러도 끊긴 채 남지 않게)
 - `role="grid"` + `aria-rowcount`/`aria-rowindex`, 포커스는 스크롤 영역 하나에 두고 고른 줄을 `aria-activedescendant`로 가리킨다. 화살표·PageUp/Down·Home/End로 고르고 Enter로 열며, Backspace는 상위 폴더다. 키보드로 폴더에 들어가면 새 목록에 포커스를 돌려준다
 - 비동기 결과는 요청(뿌리 `try`, 목록 `path`, 정보 패널 `path`)과 함께 상태에 두고, 지금 요청과 다르면 받는 중으로 본다(effect 안에서 상태를 동기로 지우지 않는다, oxlint `set-state-in-effect`)
-- 시안의 아이콘 보기 전환은 아직 그리지 않는다(`ROADMAP.md`)
+- **아이콘 보기**(시안의 보기 전환): 도구 줄 오른쪽의 목록/아이콘 단추로 바꾼다. `FileList`의 `mode`가 `grid`면 칸(종류 아이콘 48px + 두 줄 이름, `.files-tile`)을 시각 행으로 묶어 같은 가상 스크롤·페이지 캐시·고르기·끌기를 쓴다(`virtual.ts`의 `gridOf`·`itemRange`·`moveKey`, 칸 너비 104px 이상으로 남는 폭을 나눔, 행 높이 108px). ←/→는 칸, ↑/↓는 행이다. 열 머리 대신 도구 줄의 정렬 메뉴를 쓰고, `role="listbox"`·`option`이다. 썸네일은 그리지 않는다
+  - 고른 보기는 사용자 설정 `PUT /api/preferences/files`(`api.FilesPrefs.View`)에 저장해 새로 여는 창의 기본값으로 쓰고(`viewPrefs.ts`), 이미 열린 다른 창은 바꾸지 않는다. 다른 폴더로 가도 보기는 그대로다
 - 쓰기 요청(이름 대화상자, `runOp`의 항목, 올리기, 휴지통 작업)은 `stepUp.ts`의 `withStepUp`으로 보낸다. `security_required`면 창을 잠그지 않고 확인 대화상자(`requestStepUp`, 동시에 막힌 요청은 대화상자 하나를 함께 쓴다)를 띄운 뒤 한 번 다시 한다. 창 전체의 확인 화면은 뿌리·목록이 막혔을 때(읽기까지 막는 정책)만 보인다
 
 ## 고르기와 작업(프런트)
 
 - **고르기**(`selection.ts`): 보기 안 자리의 구간(`spans`)과 기준(`anchor`), 위치(`focus`)다. 누르기, Ctrl(⌘)·Shift·Ctrl+Shift 누르기, Shift+화살표, Ctrl+A로 고르고 Esc나 빈 곳 누르기로 지운다. 보기·목록이 바뀌면 지운다. 받지 않은 줄까지 고를 수 있으므로 작업할 때 `FileListHandle.items`가 받은 줄은 그대로 쓰고 빠진 구간은 이름만(`names=1`, 2000개씩) 받아 채운다. 이름이 UTF-8이 아닌 항목은 경로로 가리킬 수 없어 작업에서 뺀다
 - 정보 패널은 하나만 골랐고 그 줄이 파일일 때만 연다(여러 개를 고르거나 고르기를 지우면 닫는다). 패널의 이름 바꾸기·삭제 단추는 패널의 파일에 한다
-- 메뉴(`FilesWindow`의 `menuItems`): 줄은 (하나일 때) 열기 또는 내려받기 / 이름 바꾸기(F2) / 삭제…(Delete, 여럿이면 "항목 N개 삭제…") / (파일 하나) 정보, 빈 곳은 폴더 만들기·올리기·모두 선택·새로 고침이다. 고르지 않은 줄에서 열면 그 줄 하나를 고른다. 쓸 수 없는 폴더에서는 비활성 이유로 "쓰기 권한 없음"을 보인다
+- 메뉴(`FilesWindow`의 `menuItems`): 줄은 (하나일 때) 열기 또는 (미리볼 수 있으면) 미리보기·내려받기 / 이름 바꾸기(F2) / 삭제…(Delete, 여럿이면 "항목 N개 삭제…") / (파일 하나) 정보, 빈 곳은 폴더 만들기·올리기·모두 선택·새로 고침이다. 고르지 않은 줄에서 열면 그 줄 하나를 고른다. 쓸 수 없는 폴더에서는 비활성 이유로 "쓰기 권한 없음"을 보인다
 - 이름 대화상자(`NameForm`)는 `PasskeyAdd`처럼 대화상자 안에서 요청하고 실패(`ops.ts`의 `opErrorKey`)를 입력란 아래에 보인다. 처음 포커스를 받을 때 이름 바꾸기는 확장자 앞까지(`stemLength`) 고른다. 새 폴더 이름은 `find`로 "새 폴더", "새 폴더 (2)"…에서 없는 것을 고른다
 - 여러 항목 작업(삭제, 옮기기, 휴지통 넣기·되돌리기·영구 삭제·비우기, `ops.ts`의 `RunOp`)은 `runEach`로 하나씩 차례로 한다(도우미의 사용자당 동시 연산 4개 안에서 목록에 자리를 남긴다). 300ms가 지나도 끝나지 않으면 진행 배너(지금 항목 이름과 함께)와 "중지"(하던 항목까지 하고 멈춤)를 보이고, 하지 못한 항목은 이유별로 묶어(`groupFailures`) 알린다. 세션이 끝났거나(401) 보안 확인을 취소했거나 `stopOn`이면 남은 항목도 안 되므로 멈춘다. 옮기기는 미리 알지 못한 `cross_device`(같은 기준 안의 다른 마운트)를 만나면 거기서 멈추고 그 항목부터 복사로 넘긴다
 - **끌어서 옮기기·복사하기**: HTML5 끌기는 `nativeGuard`가 `dragstart`에서 막으므로 포인터로 한다(마우스·펜만. 터치는 스크롤·길게 누르기 메뉴와 겹친다). 누른 줄에서 6px 넘게 움직이면 그때 pointer capture를 잡는다(그냥 누르기의 click은 줄로 간다). 고르지 않은 줄을 끌면 그 줄 하나를 고르되 정보 패널은 열지 않는다(끄는 도중 목록 폭이 바뀌면 놓을 곳이 움직인다)
@@ -111,9 +135,10 @@ paths:
 - Go(휴지통): `TestFilesTrash`(홈·디스크 휴지통, 볼륨 종류, 되돌리기 범위·충돌, 영구 삭제, 비우기), `TestSiteTrashPrepare`(관리자, 상승 필요, 만든 뒤 `.Trash/<uid>`), `TestFilesSecurityWritesOnly`·`TestFilesScopeChangeNeedsStepUp`(쓰기 전용 범위)
 - Go(올리기): `TestFilesUploadCheck`(가드·이름·범위, 만들지 않음), `TestDrainRejected`(남은 본문을 받는 양과 상한, 다 받으면 연결 유지, 성공·본문 뒤 오류는 그대로), `TestFilesUploadEarlyRejectNoReset`(본문을 끝까지 보내는 클라이언트가 실제 TCP에서 RST 없이 403을 받음, 루프백 버퍼보다 큰 32MiB)
 - Go(복사): `worker/copy_test.go`(다른 디스크로 파일·폴더·링크, 특수 파일 건너뛰기, 시각·실행 비트, 이름마다의 실패, 시작 전 실패, 끊으면 임시 이름 지우기), `TestFilesCopy`(사건 흐름, 같은 이름, 시작 전 오류 응답, 인자 크기)
-- Vitest: 고르기 구간, 새 이름 검사·확장자 앞 고르기, `moveAllowed`, `volumeOf`, `runEach` 중지·실패 묶기, 변경 알림, 끌어 놓기의 할 일(`dropMode`), 복사 요청 나누기·진행률·속도, 올리기 작업(차례, 다시 올리기·덮어쓰기, 멈추기, 양), 복사 응답 사건 읽기와 올리기 사전 확인(거절하면 본문을 보내지 않음, `client.test.ts`)
+- Go(3단계): `TestPreviewHeaders`·`TestFilesPreview`(형식·CSP·inline·범위), `worker/search_test.go`(찾기, 링크 안 따라감, 상한·묶음, 거절, 읽지 못한 폴더, 끊으면 멈춤), `TestFilesSearch`(사건 흐름, 시작 전 오류), `TestParseSharesPrivileges`·`TestShareAccess`(권한 해석·계산), `TestRootsFollowPrivileges`(도우미 없이 뿌리·숨김·읽기 전용), `TestFilesFollowPrivileges`(숨김 403, 읽기 전용 쓰기 거절, 디스크 최상위 보기·검색, 끄기), `TestSetFilesPrefs`
+- Vitest: 고르기 구간, 새 이름 검사·확장자 앞 고르기, 아이콘 보기 배치·키 이동, 보기 설정 저장소, `previewKind`, 텍스트 보기(`viewer.test.ts`), 검색 사건 읽기·미리보기 범위(`client.test.ts`), `moveAllowed`, `volumeOf`, `runEach` 중지·실패 묶기, 변경 알림, 끌어 놓기의 할 일(`dropMode`), 복사 요청 나누기·진행률·속도, 올리기 작업(차례, 다시 올리기·덮어쓰기, 멈추기, 양), 복사 응답 사건 읽기와 올리기 사전 확인(거절하면 본문을 보내지 않음, `client.test.ts`)
 - 브라우저(복사): 가짜 홈과 가짜 디스크는 기준 디렉터리가 달라 홈 ↔ 디스크가 복사다. 작업 창을 보려면 파일 수만 개짜리 폴더를 쓴다(큰 파일 하나는 로컬 디스크에서 금방 끝난다)
 - 브라우저(휴지통): 가짜 디스크 맨 위(`helper-root/srv/disk1`)는 개발 사용자 소유라 처음에는 `own`이다. `none`(휴지통 없음 안내)은 맨 위를 잠시 `chmod 0555`로 바꿔 보고, 디스크 휴지통 만들기는 상승할 수 있는 `totp`로 확인한다. 서버의 `trash-list --trash-dir=<휴지통>`으로 형식 호환을 볼 수 있다
-- `make dev-fake`: 가짜 OMV가 가짜 도우미 디스크(`helper-root/srv/disk1`)에 합성 파일과 공유 폴더(문서, 미디어, 사진, 폴더 없는 백업, 루트 파일시스템의 kvm)를 만든다(`cmd/fakeomv/files.go`). `FAKEFILES_LARGE=<n>`이면 사진/휴대폰 백업에 빈 파일 n개를 만든다. onmaru는 개발 전용 환경 변수 `ONMARU_DEV_FILES_SRV`(플래그·가동 설정 목록에 넣지 않음)로 그 아래 폴더를 디스크로 본다
+- `make dev-fake`: 가짜 OMV가 가짜 도우미 디스크(`helper-root/srv/disk1`)에 합성 파일과 공유 폴더(문서, 미디어, 사진, 관리, 폴더 없는 백업, 루트 파일시스템의 kvm)를 만든다(`cmd/fakeomv/files.go`). 공유 폴더 권한 따르기를 켜면 `user`에게 사진은 읽기 전용, 관리는 보이지 않는다. `FAKEFILES_LARGE=<n>`이면 사진/휴대폰 백업에 빈 파일 n개를 만든다. onmaru는 개발 전용 환경 변수 `ONMARU_DEV_FILES_SRV`(플래그·가동 설정 목록에 넣지 않음)로 그 아래 폴더를 디스크로 본다
 - 브라우저: Playwright 컨테이너는 문자셋 때문에 한글 이름 내려받기를 `download`로 저장한다(Blob도 같다). 한글 파일 이름은 실제 브라우저에서 확인한다
   - 끌어서 옮기기는 `page.mouse`(down → 여러 단계 move → up)로, 바깥 파일 끌어 놓기는 페이지 안에서 `DataTransfer`에 `File`을 넣어 `dragover`·`drop` 이벤트를 보내 확인한다

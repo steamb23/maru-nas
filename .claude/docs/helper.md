@@ -36,11 +36,11 @@
 ## 프로토콜
 
 - 연결 하나에 요청 하나. 프레임 = 4바이트 big-endian 길이 + JSON 머리, 그 뒤 머리의 `size`만큼 원시 본문. 요청 머리는 64KiB, 응답 머리는 8MiB(목록)까지다. 부모는 버퍼링 없이 머리만 읽고 본문은 worker가 읽는다
-  - 응답 머리에 `partial`이 있으면 마지막이 아닌 진행 응답이고 뒤에 응답이 더 온다(지금은 `fs.copy`만 쓴다)
+  - 응답 머리에 `partial`이 있으면 마지막이 아닌 진행 응답이고 뒤에 응답이 더 온다(`fs.copy`, `fs.search`)
 - 요청 머리는 모르는 필드를 거부한다. 비밀번호와 티켓이 들어 있으므로 요청을 로그에 남기지 않는다
 - 티켓 관리: `session.open`(사용자, 비밀번호, pending), `session.activate`, `session.close`, `session.reset`, `session.status`, `session.elevate`(비밀번호), `session.drop`
 - 연산: `run`(티켓, 범위 `user`|`root`, 연산, 인자, `size`). 연산 목록은 `proto.Actions`
-  - 사용자 범위: `id`(티켓 사용자의 홈 `home`도 준다), `fs.list`, `fs.stat`, `fs.read`(offset·length, 응답 뒤 스트림), `fs.write`(요청 뒤 스트림, 같은 폴더 임시 파일에 받은 뒤 이름 바꾸기), `fs.mkdir`, `fs.rename`, `fs.remove`(`recursive`), 파일 탐색기의 `fs.names`·`fs.statmany`·`fs.info`(아래 "파일 탐색기 연산"), `ssh.authorize`·`ssh.revoke`(웹 터미널의 임시 SSH 키, 아래 "임시 SSH 키"), 휴지통의 `fs.trash`·`fs.trashdirs`·`fs.trashlist`·`fs.trashrestore`·`fs.trashpurge`·`fs.trashempty`(아래 "휴지통"), 복사의 `fs.copy`(아래 "복사")
+  - 사용자 범위: `id`(티켓 사용자의 홈 `home`도 준다), `fs.list`, `fs.stat`, `fs.read`(offset·length, 응답 뒤 스트림), `fs.write`(요청 뒤 스트림, 같은 폴더 임시 파일에 받은 뒤 이름 바꾸기), `fs.mkdir`, `fs.rename`, `fs.remove`(`recursive`), 파일 탐색기의 `fs.names`·`fs.statmany`·`fs.info`(아래 "파일 탐색기 연산"), `ssh.authorize`·`ssh.revoke`(웹 터미널의 임시 SSH 키, 아래 "임시 SSH 키"), 휴지통의 `fs.trash`·`fs.trashdirs`·`fs.trashlist`·`fs.trashrestore`·`fs.trashpurge`·`fs.trashempty`(아래 "휴지통"), 복사의 `fs.copy`(아래 "복사"), 하위 폴더 검색의 `fs.search`(아래 "하위 폴더 검색")
   - root 범위: `id`, `upgrade.apply`(대시보드에서 업그레이드의 적용 요청, 아래 "대시보드에서 업그레이드"), `trash.prepare`(디스크 맨 위의 공유 휴지통 `.Trash` 만들기, 아래 "휴지통")
 - 오류는 코드만 준다(`proto.Code*`). 경로·사용자 이름 같은 세부는 도우미 로그에만 남긴다. onmaru는 코드를 HTTP 오류 코드(`api.Err*`)로 바꾼다
 
@@ -58,8 +58,8 @@
 - 부모(root)는 머리를 읽고 티켓·범위·연산 허용·상승을 확인한 뒤, `/proc/self/exe worker`를 `SysProcAttr{Credential, Setsid, Pdeathsig: SIGKILL}`, 빈 환경 변수, cwd `/`로 실행한다. 작업(`worker.Job`: 범위, 연산, 인자, 본문 크기, 사용자 이름·홈)은 stdin, 연결은 `ExtraFiles`(fd 3)로 넘긴다. 부모는 사용자 데이터를 읽거나 쓰지 않는다
 - 사용자 범위는 사용자 uid·기본 gid·보조 그룹(`os/user`, 로컬 파일)으로 강등한다. root 범위도 도우미의 보조 그룹은 넘기지 않는다. worker는 시작할 때 범위와 실제 uid가 맞는지 다시 확인한다(사용자 범위가 root로 돌면 거절)
 - 결과 코드는 종료 코드(0 성공, 2 연산 실패 + stderr `code=<코드>`, 그 밖은 실행 오류)로 부모에 알려 감사 로그에 쓴다
-- 감사 로그(journal)는 비밀번호 확인 결과, 모든 root 연산, 쓰기 연산의 경로, 내려받기(`fs.read`)의 연산·결과를 남긴다. 정보 읽기 연산(`fs.list`, `fs.stat`, `fs.names`, `fs.statmany`, `fs.info`, `fs.trashdirs`, `fs.trashlist`, `daemon.quietActions`)은 파일 탐색기가 폴더를 열고 스크롤할 때마다 부르므로 남기지 않는다. 휴지통 쓰기 연산은 휴지통 디렉터리와 이름(`trash=`, `name=`, 되돌리기는 `to=`)을, `trash.prepare`는 디스크(`disk=`)를, `fs.copy`는 원본 폴더·이름 수·대상 폴더(`dir=`, `names=`, `to=`, 이름은 남기지 않는다)를 남긴다
-- 시간 제한: 목록·정보 30초(부모), 삭제(`fs.remove`, `fs.trashpurge`, `fs.trashempty`) 10분(큰 폴더를 통째로 지우면 30초를 넘을 수 있다. 넘으면 worker를 끝내므로 일부만 지운 채 남고, 다시 지우면 이어서 지운다), 스트림과 복사(`fs.copy`) 6시간(부모) + 60초 무진행(worker의 연결 마감 시각). 클라이언트는 각각 조금 더 기다린다(복사는 진행 응답 사이 2분)
+- 감사 로그(journal)는 비밀번호 확인 결과, 모든 root 연산, 쓰기 연산의 경로, 내려받기(`fs.read`)의 연산·결과를 남긴다. 정보 읽기 연산(`fs.list`, `fs.stat`, `fs.names`, `fs.statmany`, `fs.info`, `fs.trashdirs`, `fs.trashlist`, `fs.search`, `daemon.quietActions`)은 파일 탐색기가 폴더를 열고 스크롤하고 찾을 때마다 부르므로 남기지 않는다. 미리보기 창의 내용도 `fs.read`라 남는다(동영상은 탐색할 때마다 범위 요청 하나씩). 휴지통 쓰기 연산은 휴지통 디렉터리와 이름(`trash=`, `name=`, 되돌리기는 `to=`)을, `trash.prepare`는 디스크(`disk=`)를, `fs.copy`는 원본 폴더·이름 수·대상 폴더(`dir=`, `names=`, `to=`, 이름은 남기지 않는다)를 남긴다
+- 시간 제한: 목록·정보 30초(부모), 삭제(`fs.remove`, `fs.trashpurge`, `fs.trashempty`) 10분(큰 폴더를 통째로 지우면 30초를 넘을 수 있다. 넘으면 worker를 끝내므로 일부만 지운 채 남고, 다시 지우면 이어서 지운다), 스트림과 복사(`fs.copy`) 6시간(부모) + 60초 무진행(worker의 연결 마감 시각), 하위 폴더 검색(`fs.search`) 30분. 클라이언트는 각각 조금 더 기다린다(복사·검색은 진행 응답 사이 2분)
 - 동시 실행: 전체 16개, 사용자당 4개. 연결은 동시 64개
 
 ## 파일 연산의 경로 정책
@@ -67,7 +67,7 @@
 - 경로는 절대·정리된 경로(`path.Clean`과 같음), NUL 없음, 4096바이트 이하
 - 기준 디렉터리 = 사용자 홈(`/`가 아닐 때) + `/srv` 아래 마운트 지점(`/proc/self/mountinfo`). `/srv` 자체와 그 안의 루트 파일시스템 디렉터리(`/srv/salt`, `/srv/pillar`)는 기준이 아니다. 가장 긴 기준을 골라 `os.OpenRoot`로 가두므로 `..`·심볼릭 링크로 기준 밖에 나갈 수 없다(`outside_roots`)
 - 실제로 열 수 있는지는 커널이 사용자 권한(소유권·ACL)으로 정한다. 기준 정책은 onmaru가 뚫렸을 때 닿는 범위를 줄이는 겹침이다
-- 공유 폴더 단위로 보이는 일은 onmaru의 파일 API(파일 탐색기)가 한다. OMV의 공유 폴더 RPC(`ShareMgmt.*`)는 모두 관리자 전용이라 일반 사용자 세션으로는 목록을 받을 수 없으므로, 관리자 세션이 받은 목록을 전역 설정(`site.json`)에 스냅숏으로 둔다. 스냅숏은 처음 보이는 폴더의 이름표일 뿐이고 도우미는 믿지 않는다(범위는 위 기준이 정한다). OMV 공유 폴더 권한(Privileges)은 SMB 같은 서비스에만 적용되므로 따르지 않는다(`ROADMAP.md`의 파일 탐색기)
+- 공유 폴더 단위로 보이는 일은 onmaru의 파일 API(파일 탐색기)가 한다. OMV의 공유 폴더 RPC(`ShareMgmt.*`)는 모두 관리자 전용이라 일반 사용자 세션으로는 목록을 받을 수 없으므로, 관리자 세션이 받은 목록을 전역 설정(`site.json`)에 스냅숏으로 둔다. 스냅숏은 처음 보이는 폴더의 이름표일 뿐이고 도우미는 믿지 않는다(범위는 위 기준이 정한다). OMV 공유 폴더 권한(Privileges)은 도우미가 따르지 않는다. 관리자가 "OMV 공유 폴더 권한 따르기"를 켜면 onmaru의 파일 API가 숨기기·읽기 전용을 더한다(`.claude/rules/files.md`의 "공유 폴더 권한 따르기"). 도우미의 범위는 그대로이므로 onmaru가 뚫리면 지켜 주지 않는다(파일 시스템 권한·ACL은 그대로 지킨다)
 - 루트 파일시스템의 공유 폴더(openmediavault-sharerootfs, 예: `/kvm`)는 기준 밖이다. 파일 탐색기에서 열려면 root가 정하는 추가 기준 경로 설정을 도우미에 더한다. onmaru가 보낸 경로는 믿지 않으므로 도우미 쪽 설정이어야 하고, 설치기가 묻고(설정 레지스트리에 설정 하나로 더한다) 유닛 템플릿의 `ReadWritePaths`에도 더한다(`ProtectSystem=strict`라 없으면 읽기 전용이다). `/`는 받지 않는다. mergerfs 풀(`/srv/mergerfs/<이름>`)은 이미 기준 안이다
 - 기준 디렉터리 자체는 지우거나 옮기거나 덮어쓸 수 없다. 이름 바꾸기는 같은 기준 안에서만 하고(다른 기준이거나, 같은 기준 안이라도 다른 파일시스템이라 `EXDEV`면 `cross_device`) 대상이 있으면 `exists`다. 공유 폴더는 기준이 아니므로 공유 폴더 자신을 지우거나 옮기지 않게 하는 일은 onmaru의 파일 API가 한다(`.claude/rules/files.md`의 `root_folder`)
 - 읽기는 일반 파일만(`O_NONBLOCK`으로 열어 FIFO에서 멈추지 않음). `fs.list`는 1만 개까지(`truncated`). umask는 0002(OMV Samba의 create mask 0664 / directory mask 0775)
@@ -120,6 +120,16 @@ FreeDesktop 휴지통 규격을 trash-cli의 `trash-put`과 같은 곳·형식�
 - 권한 비트·소유자·ACL·확장 속성은 복사하지 않는다. 올리기처럼 파일은 0666(원본에 실행 비트가 있으면 0777), 폴더는 0777에서 umask(0002)와 대상 폴더의 기본 ACL·setgid를 따른다. 수정 시각은 파일·폴더 모두 원본을 따른다
 - 받는 쪽이 연결을 끊으면 다음 진행 응답을 쓰지 못해 멈추고, 하던 항목의 임시 이름을 지운다. 이미 다 복사한 항목은 남는다. worker가 시간 제한으로 끝나면 임시 이름이 남을 수 있다(점으로 시작해 SMB 등에서는 숨겨지지만 파일 탐색기 목록에는 보인다)
 - onmaru 쪽은 `client.Client.Copy`(진행 응답을 콜백으로 넘기고 마지막 응답을 결과로 돌려준다)
+
+## 하위 폴더 검색(fs.search)
+
+파일 탐색기의 "하위 폴더까지 찾기"에 쓴다. 구현은 `worker/search.go`.
+
+- 인자: 폴더 `path`, 찾기어 `query`(UTF-8, 1~255바이트), `limit`(0이면 `proto.MaxSearch` 2000, 그보다 크면 `bad_request`). 폴더는 기준 안이어야 하고 폴더가 아니면 `not_dir`이다. 시작하기 전의 실패만 오류 응답이다
+- 그 폴더를 `os.Root`로 열고 너비 우선으로 내려가며 `fs.names`처럼 getdents로 이름과 종류만 읽는다(`readNames`, 종류를 주지 않는 파일시스템은 폴더마다 1초까지 `Lstat`). 이름을 소문자로 바꿔 찾기어가 들어 있으면 찾은 항목이다(지금 폴더 찾기와 같은 규칙). 심볼릭 링크는 찾지만 따라가지 않고, 읽지 못한 폴더는 건너뛰어 센다(`skipped`)
+- 찾은 항목은 0.25초마다 또는 256개마다 진행 응답(`partial`, 새로 찾은 항목의 `path` 안 상대 경로·종류, 읽은 폴더 수)으로 보내고, 마지막 응답에 결과(읽은·건너뛴 폴더 수, 상한에 닿았으면 `truncated`)를 담는다. 이름(또는 그 위 경로)이 UTF-8이 아니면 찾은 항목에 넣지 않는다
+- 받는 쪽이 연결을 끊으면 다음 진행 응답을 쓰지 못해 멈춘다. 읽기만 하므로 남는 것은 없다
+- onmaru 쪽은 `client.Client.Search`(진행 응답을 콜백으로 넘기고 마지막 응답을 결과로 돌려준다)
 
 ## 임시 SSH 키(ssh.authorize, ssh.revoke)
 
