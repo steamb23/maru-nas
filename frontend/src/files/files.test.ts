@@ -61,7 +61,24 @@ import {
   uploadProgress,
   uploadRemaining,
 } from './uploadJobs'
-import { layout, MAX_SCROLL_HEIGHT, ROW_HEIGHT, indexAt, scrollHeightOf, scrollToShow, scrollTopFor, virtualOffset } from './virtual'
+import {
+  GRID_PAD,
+  TILE_HEIGHT,
+  TILE_MIN_WIDTH,
+  layout,
+  MAX_SCROLL_HEIGHT,
+  ROW_HEIGHT,
+  gridOf,
+  indexAt,
+  itemRange,
+  moveKey,
+  rowsOf,
+  scrollHeightOf,
+  scrollToShow,
+  scrollTopFor,
+  virtualOffset,
+} from './virtual'
+import { createFilesPrefsStore, toLayout } from './viewPrefs'
 
 const roots = rootsOf({
   home: { name: 'alice', path: '/home/alice' },
@@ -171,6 +188,79 @@ describe('가상 스크롤', () => {
     expect(scrollToShow(5, 100, 0, 340)).toBe(0)
     expect(scrollToShow(20, 100, 0, 340)).toBe(21 * ROW_HEIGHT - 340)
     expect(scrollToShow(2, 100, 500, 340)).toBe(2 * ROW_HEIGHT)
+  })
+})
+
+describe('아이콘 보기 배치', () => {
+  it('너비에 들어가는 만큼 칸을 두고 남는 폭을 나눈다', () => {
+    expect(gridOf('list', 600)).toEqual({ cols: 1, rowHeight: ROW_HEIGHT, tileWidth: 600 - 2 * GRID_PAD })
+    const g = gridOf('grid', 5 * TILE_MIN_WIDTH + 2 * GRID_PAD + 50)
+    expect(g).toEqual({ cols: 5, rowHeight: TILE_HEIGHT, tileWidth: TILE_MIN_WIDTH + 10 })
+    // 너비를 아직 모르거나 아주 좁아도 한 칸은 둔다.
+    expect(gridOf('grid', 0).cols).toBe(1)
+  })
+
+  it('그릴 행의 칸 범위를 구한다', () => {
+    expect(rowsOf(0, 4)).toBe(0)
+    expect(rowsOf(9, 4)).toBe(3)
+    const total = 1000
+    const cols = 4
+    const lay = layout(rowsOf(total, cols), 10 * TILE_HEIGHT, 3 * TILE_HEIGHT, TILE_HEIGHT, 1)
+    expect(lay).toMatchObject({ first: 9, last: 14 })
+    expect(itemRange(lay, cols, total)).toEqual({ first: 36, last: 56 })
+    // 마지막 행은 칸 수까지만이다.
+    expect(itemRange({ ...lay, first: 249, last: 250 }, cols, 998)).toEqual({ first: 996, last: 998 })
+  })
+
+  it('방향 키로 행·칸을 옮긴다', () => {
+    expect(moveKey('ArrowRight', 3, 4, 10, 2)).toBe(4)
+    expect(moveKey('ArrowLeft', 0, 4, 10, 2)).toBe(0)
+    expect(moveKey('ArrowDown', 1, 4, 10, 2)).toBe(5)
+    // 마지막 행이 짧으면 마지막 칸으로 간다.
+    expect(moveKey('ArrowDown', 7, 4, 10, 2)).toBe(9)
+    expect(moveKey('ArrowUp', 2, 4, 10, 2)).toBe(0)
+    expect(moveKey('ArrowDown', -1, 4, 10, 2)).toBe(0)
+    expect(moveKey('PageDown', 0, 4, 100, 3)).toBe(12)
+    expect(moveKey('PageUp', 5, 4, 100, 3)).toBe(0)
+    expect(moveKey('End', 0, 4, 10, 2)).toBe(9)
+    // 목록 보기는 왼쪽·오른쪽 키를 쓰지 않는다.
+    expect(moveKey('ArrowRight', 3, 1, 10, 2)).toBeNull()
+    expect(moveKey('ArrowDown', 3, 1, 10, 2)).toBe(4)
+    expect(moveKey('ArrowDown', 0, 4, 0, 2)).toBeNull()
+  })
+})
+
+describe('보기 설정', () => {
+  it('저장된 보기를 불러오고 바꾸면 저장한다', async () => {
+    const saved: string[] = []
+    const store = createFilesPrefsStore({
+      fetchPreferences: async () => ({ files: { view: 'grid' } }),
+      saveFilesPrefs: async (p) => {
+        saved.push(p.view)
+      },
+    })
+    // 불러오기 전에는 저장하지 않는다(저장된 값을 덮어쓰지 않게).
+    store.getState().set('grid')
+    expect(saved).toEqual([])
+    await store.getState().load()
+    expect(store.getState()).toMatchObject({ status: 'ready', layout: 'grid' })
+    store.getState().set('grid')
+    store.getState().set('list')
+    await Promise.resolve()
+    expect(saved).toEqual(['list'])
+    expect(toLayout('columns')).toBe('list')
+    expect(toLayout(undefined)).toBe('list')
+  })
+
+  it('불러오지 못하면 목록 보기로 둔다', async () => {
+    const store = createFilesPrefsStore({
+      fetchPreferences: async () => {
+        throw new Error('down')
+      },
+      saveFilesPrefs: async () => {},
+    })
+    await store.getState().load()
+    expect(store.getState()).toMatchObject({ status: 'error', layout: 'list' })
   })
 })
 

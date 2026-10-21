@@ -420,6 +420,14 @@
     "security": {
       "message": "This session needs a security check before using the file explorer. Folders appear once you verify.",
       "verify": "Verify"
+    },
+    "view": {
+      "label": "View",
+      "list": "List view",
+      "grid": "Icon view",
+      "sort": "Sort",
+      "ascending": "Ascending",
+      "descending": "Descending"
     }
   },
   "sysinfo": {

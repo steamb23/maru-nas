@@ -25,6 +25,7 @@ import processStop from '@colloid/actions/symbolic/process-stop-symbolic.svg?url
 import systemLockScreen from '@colloid/actions/symbolic/system-lock-screen-symbolic.svg?url'
 import systemLogOut from '@colloid/actions/symbolic/system-log-out-symbolic.svg?url'
 import viewAppGrid from '@colloid/actions/symbolic/view-app-grid-symbolic.svg?url'
+import viewGrid from '@colloid/actions/symbolic/view-grid-symbolic.svg?url'
 import viewList from '@colloid/actions/symbolic/view-list-symbolic.svg?url'
 import viewMore from '@colloid/actions/symbolic/view-more-symbolic.svg?url'
 import viewRefresh from '@colloid/actions/symbolic/view-refresh-symbolic.svg?url'
@@ -119,6 +120,7 @@ export const COLLOID_ICONS = {
   'preferences-system-symbolic': { url: preferencesSystemSymbolic, kind: 'symbolic' },
   'system-users-symbolic': { url: systemUsers, kind: 'symbolic' },
   'view-list-symbolic': { url: viewList, kind: 'symbolic' },
+  'view-grid-symbolic': { url: viewGrid, kind: 'symbolic' },
   'utilities-system-monitor-symbolic': { url: utilitiesSystemMonitorSymbolic, kind: 'symbolic' },
   'network-server-symbolic': { url: networkServer, kind: 'symbolic' },
   'utilities-system-monitor': { url: utilitiesSystemMonitor, kind: 'color' },

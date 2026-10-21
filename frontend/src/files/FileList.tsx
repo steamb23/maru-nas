@@ -1,9 +1,10 @@
-// 파일 탐색기의 자세히 목록. 보이는 줄만 그리고(virtual.ts), 정렬·찾기를 적용한 보기에서 보이는 범위를 PAGE_SIZE줄씩
-// 받아 둔다(pageCache.ts). 아직 받지 않은 줄은 자리 표시로 그린다. 스크롤하는 동안 위치 말풍선을 보인다.
+// 파일 탐색기의 자세히 목록과 아이콘 보기. 보이는 줄(아이콘 보기는 칸의 행)만 그리고(virtual.ts), 정렬·찾기를 적용한
+// 보기에서 보이는 범위를 PAGE_SIZE줄씩 받아 둔다(pageCache.ts). 두 보기는 데이터·고르기·끌기를 함께 쓰고 배치와 그리기만 다르다. 아직 받지 않은 줄은 자리 표시로 그린다. 스크롤하는 동안 위치 말풍선을 보인다.
 // 여러 줄을 고를 수 있고(selection.ts), 고른 줄을 마우스·펜으로 끌어 다른 폴더(data-drop-path가 있는 줄·경로·사이드바,
 // 다른 탐색기 창의 목록 포함)에 놓으면 옮긴다(다른 디스크면 복사한다, 창이 dropMode로 정한다).
 import {
   type KeyboardEvent,
+  type MouseEvent,
   type PointerEvent,
   type Ref,
   type UIEvent,
@@ -38,7 +39,8 @@ import {
   selectedCount,
   toggleAt,
 } from './selection'
-import { ROW_HEIGHT, indexAt, layout, scrollToShow } from './virtual'
+import type { FilesLayout } from './viewPrefs'
+import { GRID_PAD, gridOf, indexAt, itemRange, layout, moveKey, rowsOf, scrollToShow } from './virtual'
 
 export type SortKey = 'name' | 'mtime' | 'size'
 
@@ -59,6 +61,8 @@ export interface FileListHandle {
 interface Props {
   listing: FilesListing
   view: View
+  // mode는 보기 모양이다(자세히 목록, 아이콘 보기).
+  mode: FilesLayout
   active: boolean
   selection: Selection
   // onSelection은 고르기가 바뀔 때다. item은 위치(focus) 줄의 항목이다(받지 않았으면 null).
@@ -145,13 +149,14 @@ interface CacheState {
 }
 
 export function FileList(props: Props) {
-  const { listing, view, active, selection, ref } = props
+  const { listing, view, mode, active, selection, ref } = props
   const selected = selection.focus
   const { t } = useTranslation()
   const lang = useLanguage()
   const baseId = useId()
   const scrollRef = useRef<HTMLDivElement>(null)
   const [viewHeight, setViewHeight] = useState(0)
+  const [viewWidth, setViewWidth] = useState(0)
   const [scrollTop, setScrollTop] = useState(0)
   const [, setVersion] = useState(0)
   const bump = useCallback(() => setVersion((v) => v + 1), [])
@@ -204,7 +209,10 @@ export function FileList(props: Props) {
   useLayoutEffect(() => {
     const el = scrollRef.current
     if (!el) return
-    const measure = () => setViewHeight(el.clientHeight)
+    const measure = () => {
+      setViewHeight(el.clientHeight)
+      setViewWidth(el.clientWidth)
+    }
     measure()
     const ro = new ResizeObserver(measure)
     ro.observe(el)
@@ -217,10 +225,14 @@ export function FileList(props: Props) {
     if (cache.total !== null) onTotal(cache.total)
   }, [cache.total, onTotal])
 
-  const lay = layout(total, scrollTop, viewHeight)
+  // 아이콘 보기는 칸을 행으로 묶어 행 단위로 가상 스크롤한다. 목록 보기는 한 행에 한 칸이다.
+  const grid = gridOf(mode, viewWidth)
+  const rowCount = rowsOf(total, grid.cols)
+  const lay = layout(rowCount, scrollTop, viewHeight, grid.rowHeight)
+  const range = itemRange(lay, grid.cols, total)
   // 찾기 결과 수를 모르면 첫 페이지부터 받는다.
-  const first = cache.total === null ? 0 : lay.first
-  const last = cache.total === null ? PAGE_SIZE : lay.last
+  const first = cache.total === null ? 0 : range.first
+  const last = cache.total === null ? PAGE_SIZE : range.last
 
   // 보이는 범위에서 빠진 페이지를 받는다. 스크롤이 멈출 때까지 조금 기다린다.
   useEffect(() => {
@@ -259,7 +271,7 @@ export function FileList(props: Props) {
   }, [active, first, last, listing.id, view.sort, view.desc, view.query, bump, cache])
 
   // 위치 말풍선의 이름: 받은 줄이 없으면 이름만 가볍게 받는다.
-  const bubbleIndex = indexAt(total, scrollTop, viewHeight)
+  const bubbleIndex = Math.min(Math.max(0, total - 1), indexAt(rowCount, scrollTop, viewHeight, grid.rowHeight) * grid.cols)
   const bubbleName = cache.pages.get(bubbleIndex)?.name ?? cache.names.get(bubbleIndex)
   useEffect(() => {
     if (!bubble || bubbleName !== undefined || total < BUBBLE_MIN) return
@@ -320,7 +332,7 @@ export function FileList(props: Props) {
   const reveal = (i: number) => {
     const el = scrollRef.current
     if (!el) return
-    const next = scrollToShow(i, total, el.scrollTop, el.clientHeight)
+    const next = scrollToShow(Math.floor(i / grid.cols), rowCount, el.scrollTop, el.clientHeight, grid.rowHeight)
     if (next !== el.scrollTop) el.scrollTop = next
   }
 
@@ -333,28 +345,15 @@ export function FileList(props: Props) {
   }
 
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
-    const page = Math.max(1, Math.floor(viewHeight / ROW_HEIGHT) - 1)
-    const cur = selected ?? -1
+    const pageRows = Math.max(1, Math.floor(viewHeight / grid.rowHeight) - 1)
     const mod = e.ctrlKey || e.metaKey
+    const to = moveKey(e.key, selected ?? -1, grid.cols, total, pageRows)
+    if (to !== null) {
+      select(to, e.shiftKey)
+      e.preventDefault()
+      return
+    }
     switch (e.key) {
-      case 'ArrowDown':
-        select(cur + 1, e.shiftKey)
-        break
-      case 'ArrowUp':
-        select(cur <= 0 ? 0 : cur - 1, e.shiftKey)
-        break
-      case 'PageDown':
-        select(cur + page, e.shiftKey)
-        break
-      case 'PageUp':
-        select(cur - page, e.shiftKey)
-        break
-      case 'Home':
-        select(0, e.shiftKey)
-        break
-      case 'End':
-        select(total - 1, e.shiftKey)
-        break
       case 'a':
       case 'A':
         if (!mod) return
@@ -415,6 +414,17 @@ export function FileList(props: Props) {
     return out
   }
   useImperativeHandle(ref, () => ({ items: resolveItems, reveal }))
+  const revealRef = useRef(reveal)
+  useLayoutEffect(() => {
+    revealRef.current = reveal
+  })
+  // 보기 모양을 바꾸면 위치 칸이 보이게 둔다(행 높이·칸 수가 바뀌어 스크롤 위치가 다른 항목을 가리킨다).
+  const prevMode = useRef(mode)
+  useLayoutEffect(() => {
+    if (prevMode.current === mode) return
+    prevMode.current = mode
+    if (selected !== null) revealRef.current(selected)
+  }, [mode, selected])
 
   // 끌어서 옮기기. 누른 줄에서 임계 거리를 넘게 움직이면 시작하고(그때 pointer capture를 잡아 그냥 누르기의 click은
   // 줄에 그대로 간다), 놓은 곳의 data-drop-path 폴더로 옮긴다. 터치는 스크롤·길게 누르기 메뉴와 겹쳐 끌지 않는다.
@@ -591,17 +601,31 @@ export function FileList(props: Props) {
       return props.menuItems(item, sel)
     },
   })
+  const isGrid = mode === 'grid'
+  // place는 i번째 칸의 자리다. 목록 보기는 줄(좌우는 CSS), 아이콘 보기는 행 안의 칸이다.
+  const place = (i: number) => {
+    const row = Math.floor(i / grid.cols)
+    const top = lay.top + (row - lay.first) * grid.rowHeight
+    return isGrid ? { top, left: GRID_PAD + (i % grid.cols) * grid.tileWidth, width: grid.tileWidth } : { top }
+  }
   const rows = []
-  for (let i = lay.first; i < lay.last; i++) {
+  for (let i = range.first; i < range.last; i++) {
     const item = cache.pages.get(i)
-    const top = lay.top + (i - lay.first) * ROW_HEIGHT
+    const style = place(i)
     const isSel = isSelected(selection, i)
     if (!item) {
       rows.push(
-        <div key={i} className="files-row skeleton" role="row" aria-rowindex={i + 2} aria-busy="true" style={{ top }}>
-          <span className="files-skel icon" />
-          <span className="files-skel name" style={{ width: `${40 + ((i * 37) % 30)}%` }} />
-        </div>,
+        isGrid ? (
+          <div key={i} className="files-tile skeleton" role="option" aria-selected={false} aria-busy="true" style={style}>
+            <span className="files-skel tile-icon" />
+            <span className="files-skel name" style={{ width: `${40 + ((i * 37) % 30)}%` }} />
+          </div>
+        ) : (
+          <div key={i} className="files-row skeleton" role="row" aria-rowindex={i + 2} aria-busy="true" style={style}>
+            <span className="files-skel icon" />
+            <span className="files-skel name" style={{ width: `${40 + ((i * 37) % 30)}%` }} />
+          </div>
+        ),
       )
       continue
     }
@@ -609,37 +633,53 @@ export function FileList(props: Props) {
     const pending = item.state === 'pending'
     const gone = item.state === 'gone'
     const droppable = isFolderLike(item) && !item.locked && !gone && !item.badName
-    rows.push(
-      <div
-        key={i}
-        id={`${baseId}-r${i}`}
-        data-index={i}
-        data-drop-path={droppable ? joinPath(listing.path, item.name) : undefined}
-        className={['files-row', isSel && 'selected', i === selected && 'current', (item.locked || gone || item.badName) && 'dim']
-          .filter(Boolean)
-          .join(' ')}
-        role="row"
-        aria-rowindex={i + 2}
-        aria-selected={isSel}
-        style={{ top }}
-        onClick={(e) => {
-          if (menu.openedByPress() || consumeClick()) return
-          const mod = e.ctrlKey || e.metaKey
-          if (e.shiftKey) choose(extendTo(selection, i, mod))
-          else if (mod) choose(toggleAt(selection, i))
-          else choose(selectOne(i))
-          if (e.detail === 2 && !e.shiftKey && !mod) props.onOpen(item)
-        }}
-      >
-        <span className="files-cell name" role="gridcell">
-          <span className="files-icon">
-            <IconImage name={kindIcon(kind)} size={20} />
-            {item.locked && (
-              <span className="files-lock" title={t('files.kinds.locked')}>
-                <IconImage name="system-lock-screen-symbolic" size={9} />
-              </span>
-            )}
+    const common = {
+      id: `${baseId}-r${i}`,
+      'data-index': i,
+      'data-drop-path': droppable ? joinPath(listing.path, item.name) : undefined,
+      'aria-selected': isSel,
+      style,
+      onClick: (e: MouseEvent<HTMLDivElement>) => {
+        if (menu.openedByPress() || consumeClick()) return
+        const mod = e.ctrlKey || e.metaKey
+        if (e.shiftKey) choose(extendTo(selection, i, mod))
+        else if (mod) choose(toggleAt(selection, i))
+        else choose(selectOne(i))
+        if (e.detail === 2 && !e.shiftKey && !mod) props.onOpen(item)
+      },
+    }
+    const stateClass = [isSel && 'selected', i === selected && 'current', (item.locked || gone || item.badName) && 'dim']
+    const icon = (size: number) => (
+      <span className="files-icon">
+        <IconImage name={kindIcon(kind)} size={size} />
+        {item.locked && (
+          <span className="files-lock" title={t('files.kinds.locked')}>
+            <IconImage name="system-lock-screen-symbolic" size={size > 20 ? 12 : 9} />
           </span>
+        )}
+      </span>
+    )
+    if (isGrid) {
+      rows.push(
+        <div
+          key={i}
+          {...common}
+          className={['files-tile', ...stateClass].filter(Boolean).join(' ')}
+          role="option"
+          aria-setsize={total}
+          aria-posinset={i + 1}
+          title={item.name}
+        >
+          {icon(48)}
+          <span className="files-tile-name">{item.name}</span>
+        </div>,
+      )
+      continue
+    }
+    rows.push(
+      <div key={i} {...common} className={['files-row', ...stateClass].filter(Boolean).join(' ')} role="row" aria-rowindex={i + 2}>
+        <span className="files-cell name" role="gridcell">
+          {icon(20)}
           <span className="files-name">{item.name}</span>
         </span>
         <span className="files-cell date" role="gridcell">
@@ -659,32 +699,34 @@ export function FileList(props: Props) {
     k === view.sort ? (view.desc ? 'descending' : 'ascending') : undefined
   const maxTop = Math.max(1, lay.scrollHeight - viewHeight)
   const bubbleTop = Math.min(Math.max(0, (scrollTop / maxTop) * (viewHeight - 48)), Math.max(0, viewHeight - 48))
-  const activeId = selected !== null && selected >= lay.first && selected < lay.last ? `${baseId}-r${selected}` : undefined
+  const activeId = selected !== null && selected >= range.first && selected < range.last ? `${baseId}-r${selected}` : undefined
 
   return (
     <div
-      className="files-list"
-      role="grid"
+      className={isGrid ? 'files-list grid' : 'files-list'}
+      role={isGrid ? 'listbox' : 'grid'}
       aria-label={t('files.list.label')}
-      aria-rowcount={total + 1}
+      aria-rowcount={isGrid ? undefined : total + 1}
       aria-multiselectable="true"
       // 다른 창에서 끌어 온 항목을 폴더 줄이 아닌 곳(빈 곳, 파일 줄)에 놓으면 이 폴더로 옮긴다.
       data-drop-path={listing.writable ? listing.path : undefined}
     >
-      <div className="files-row header" role="row" aria-rowindex={1}>
-        {COLUMNS.map((c) => (
-          <span key={c.key} className={`files-cell ${c.key === 'mtime' ? 'date' : c.key}`} role="columnheader" aria-sort={sortLabel(c.key)}>
-            {c.key === 'kind' ? (
-              t(c.labelKey)
-            ) : (
-              <button type="button" className={c.key === view.sort ? 'sorted' : ''} onClick={() => props.onSort(c.key as SortKey)}>
-                {t(c.labelKey)}
-                {c.key === view.sort && <span className={`files-sort ${view.desc ? 'desc' : 'asc'}`} aria-hidden="true" />}
-              </button>
-            )}
-          </span>
-        ))}
-      </div>
+      {!isGrid && (
+        <div className="files-row header" role="row" aria-rowindex={1}>
+          {COLUMNS.map((c) => (
+            <span key={c.key} className={`files-cell ${c.key === 'mtime' ? 'date' : c.key}`} role="columnheader" aria-sort={sortLabel(c.key)}>
+              {c.key === 'kind' ? (
+                t(c.labelKey)
+              ) : (
+                <button type="button" className={c.key === view.sort ? 'sorted' : ''} onClick={() => props.onSort(c.key as SortKey)}>
+                  {t(c.labelKey)}
+                  {c.key === view.sort && <span className={`files-sort ${view.desc ? 'desc' : 'asc'}`} aria-hidden="true" />}
+                </button>
+              )}
+            </span>
+          ))}
+        </div>
+      )}
       <div
         ref={scrollRef}
         className="files-scroll"
@@ -733,7 +775,7 @@ export function FileList(props: Props) {
         )}
       </div>
       {bubble && total >= BUBBLE_MIN && (
-        <div className="files-bubble" role="status" style={{ top: bubbleTop + 30 }}>
+        <div className="files-bubble" role="status" style={{ top: bubbleTop + (isGrid ? 0 : 30) }}>
           <strong>{bubbleName ?? '…'}</strong>
           <span>
             {t('files.list.position', {

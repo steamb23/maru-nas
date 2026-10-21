@@ -229,6 +229,30 @@
   gap: 6px;
 }
 
+.files-actions-fill {
+  flex: 1;
+}
+
+/* 목록·아이콘 보기 전환. 고른 보기는 눌린 단추로 보인다. */
+.files-view-toggle {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 8px;
+  background: var(--hover-bg);
+}
+
+.files-view-toggle .files-icon-button {
+  width: 28px;
+  height: 26px;
+}
+
+.files-view-toggle .files-icon-button[aria-pressed='true'] {
+  background: var(--window-bg);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.18);
+  color: var(--accent);
+}
+
 .files-banner {
   display: flex;
   flex: none;

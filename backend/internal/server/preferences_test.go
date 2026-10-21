@@ -149,6 +149,9 @@ func (failingStore) SetDrawer(string, api.DrawerPrefs) error {
 func (failingStore) SetSystemInfo(string, api.SystemInfoPrefs) error {
 	return errors.New("disk on fire")
 }
+func (failingStore) SetFiles(string, api.FilesPrefs) error {
+	return errors.New("disk on fire")
+}
 func (failingStore) UpdateAppearance(string, func(*api.AppearancePrefs)) error {
 	return errors.New("disk on fire")
 }
@@ -165,6 +168,7 @@ func TestPreferencesStoreError(t *testing.T) {
 		"/api/preferences/system-info": api.SystemInfoRequest{
 			SystemInfo: &api.SystemInfoPrefs{CPUScale: api.CPUScaleMachine, CPUGraph: api.CPUGraphOverall},
 		},
+		"/api/preferences/files": api.FilesPrefsRequest{Files: &api.FilesPrefs{View: api.FilesViewGrid}},
 	} {
 		rec := b.do(http.MethodPut, path, body)
 		wantStatus(t, rec, http.StatusInternalServerError)
@@ -398,4 +402,44 @@ func TestSetSystemInfoRejectsInvalid(t *testing.T) {
 
 	b.header.Set("Content-Type", "text/plain")
 	wantCode(t, b.do(http.MethodPut, "/api/preferences/system-info", valid), http.StatusUnsupportedMediaType, api.ErrBadRequest)
+}
+
+func TestSetFilesPrefs(t *testing.T) {
+	store := prefs.NewMemoryStore()
+	e := prefsEnv(t, store)
+	b := e.browser()
+	valid := api.FilesPrefsRequest{Files: &api.FilesPrefs{View: api.FilesViewGrid}}
+	wantCode(t, b.do(http.MethodPut, "/api/preferences/files", valid), http.StatusUnauthorized, api.ErrUnauthorized)
+	wantStatus(t, b.login("admin", "admin"), http.StatusOK)
+
+	if got := decode[api.Preferences](t, b.do(http.MethodGet, "/api/preferences", nil)); got.Files != nil {
+		t.Fatalf("new user files prefs = %+v, want none", *got.Files)
+	}
+	drawer := api.DrawerRequest{Drawer: &api.DrawerPrefs{Sort: api.DrawerSortName}}
+	wantStatus(t, b.do(http.MethodPut, "/api/preferences/drawer", drawer), http.StatusNoContent)
+	for _, view := range []string{api.FilesViewGrid, api.FilesViewList} {
+		req := api.FilesPrefsRequest{Files: &api.FilesPrefs{View: view}}
+		wantStatus(t, b.do(http.MethodPut, "/api/preferences/files", req), http.StatusNoContent)
+		got := decode[api.Preferences](t, b.do(http.MethodGet, "/api/preferences", nil))
+		if got.Files == nil || got.Files.View != view {
+			t.Fatalf("files prefs = %+v, want %s", got.Files, view)
+		}
+		if got.Drawer == nil || got.Drawer.Sort != api.DrawerSortName {
+			t.Errorf("files prefs save changed drawer: %+v", got.Drawer)
+		}
+	}
+
+	for name, body := range map[string]any{
+		"missing":      map[string]any{},
+		"null":         map[string]any{"files": nil},
+		"missing view": map[string]any{"files": map[string]any{}},
+		"unknown view": api.FilesPrefsRequest{Files: &api.FilesPrefs{View: "columns"}},
+	} {
+		if rec := b.do(http.MethodPut, "/api/preferences/files", body); rec.Code != http.StatusBadRequest {
+			t.Errorf("%s: status %d (body %s)", name, rec.Code, rec.Body.String())
+		}
+	}
+	if p, _ := store.Get("admin"); p.Files == nil || p.Files.View != api.FilesViewList {
+		t.Errorf("invalid files prefs changed the saved value: %+v", p.Files)
+	}
 }

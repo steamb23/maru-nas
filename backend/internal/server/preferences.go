@@ -243,6 +243,28 @@ func (h *handler) setSystemInfo(w http.ResponseWriter, r *http.Request, s auth.S
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// setFilesPrefs는 파일 탐색기 보기 설정 전체를 바꾼다. 다른 설정은 그대로 둔다.
+func (h *handler) setFilesPrefs(w http.ResponseWriter, r *http.Request, s auth.Session) {
+	var req api.FilesPrefsRequest
+	if !decodeJSONLimit(w, r, &req, maxPreferencesBodyBytes) {
+		return
+	}
+	if req.Files == nil {
+		writeError(w, http.StatusBadRequest, api.ErrBadRequest, "files is required")
+		return
+	}
+	if v := req.Files.View; v != api.FilesViewList && v != api.FilesViewGrid {
+		writeError(w, http.StatusBadRequest, api.ErrBadRequest, "unknown files view")
+		return
+	}
+	if err := h.Prefs.SetFiles(s.Username, *req.Files); err != nil {
+		log.Printf("preferences: write: %v", err)
+		writeError(w, http.StatusInternalServerError, "", "failed to save preferences")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // avatarImage는 로그인한 사용자의 프로필 사진을 보낸다. 자기 사진만 받는다.
 func (h *handler) avatarImage(w http.ResponseWriter, r *http.Request, s auth.Session) {
 	key, err := prefs.UserAvatar(s.Username)

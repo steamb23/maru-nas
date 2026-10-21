@@ -22,6 +22,8 @@ import type {
   FilesListing,
   FilesMkdirRequest,
   FilesPage,
+  FilesPrefs,
+  FilesPrefsRequest,
   FilesPrepareResponse,
   FilesRenameRequest,
   FilesTrashItemRequest,
@@ -454,6 +456,11 @@ export function isSystemInfoPrefs(v: unknown): v is SystemInfoPrefs {
   return isObj(v) && isStr(v.cpuScale) && isStr(v.cpuGraph)
 }
 
+// isFilesPrefs는 값이 문자열인지만 본다. 모르는 보기는 탐색기가 목록 보기로 다룬다(files/viewPrefs.ts).
+export function isFilesPrefs(v: unknown): v is FilesPrefs {
+  return isObj(v) && isStr(v.view)
+}
+
 const THEMES = ['auto', 'light', 'dark'] as const
 
 // isWallpaper는 배경 서술자의 모양을 본다. 모르는 프리셋 id는 화면이 기본 배경으로 다룬다(appearance/wallpapers.ts).
@@ -481,6 +488,7 @@ export function isPreferences(v: unknown): v is Preferences {
     isOptional(v.shortcuts, (x) => isArrayOf(x, isShortcut)) &&
     isOptional(v.drawer, isDrawerPrefs) &&
     isOptional(v.systemInfo, isSystemInfoPrefs) &&
+    isOptional(v.files, isFilesPrefs) &&
     isOptional(v.appearance, isAppearancePrefs) &&
     isOptional(v.wallpaperImage, isImageInfo) &&
     isOptional(v.avatarImage, isImageInfo)
@@ -547,6 +555,12 @@ export async function saveDrawer(drawer: DrawerPrefs): Promise<void> {
 export async function saveSystemInfoPrefs(prefs: SystemInfoPrefs): Promise<void> {
   const body: SystemInfoRequest = { systemInfo: { ...prefs } }
   await request('PUT', '/preferences/system-info', { body })
+}
+
+// saveFilesPrefs는 파일 탐색기 보기 설정 전체를 저장한다. 다른 설정은 바꾸지 않는다.
+export async function saveFilesPrefs(prefs: FilesPrefs): Promise<void> {
+  const body: FilesPrefsRequest = { files: { ...prefs } }
+  await request('PUT', '/preferences/files', { body })
 }
 
 // saveAppearance는 화면 설정 전체를 저장한다. 다른 설정은 바꾸지 않는다.
