@@ -662,8 +662,16 @@ func TestRunTrashAudit(t *testing.T) {
 	run(proto.ActionTrashList, struct{}{})
 	run(proto.ActionTrashDirs, struct{}{})
 	run(proto.ActionTrashRestore, proto.TrashRestoreParams{Trash: tr.Trash, Name: tr.Name, To: home + "/b.txt"})
+	if err := os.Mkdir(home+"/dst", 0o755); err != nil {
+		t.Fatal(err)
+	}
+	// 복사는 이름 대신 수만 남긴다(첫 응답은 진행 응답이다).
+	if resp := run(proto.ActionCopy, proto.CopyParams{Dir: home, Names: []string{"b.txt"}, To: home + "/dst"}); !resp.Partial {
+		t.Fatalf("copy first response = %+v", resp)
+	}
 	e.logs.wait(t, `action=fs.trash path="`+home+`/a.txt" result=ok`)
 	e.logs.wait(t, `action=fs.trashrestore trash="`+tr.Trash+`" name="a.txt" to="`+home+`/b.txt" result=ok`)
+	e.logs.wait(t, `action=fs.copy dir="`+home+`" names=1 to="`+home+`/dst" result=`)
 	for _, action := range []string{"fs.trashlist", "fs.trashdirs"} {
 		if logs := e.logs.text(); strings.Contains(logs, "action="+action) {
 			t.Fatalf("%s logged:\n%s", action, logs)

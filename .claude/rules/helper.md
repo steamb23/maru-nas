@@ -18,6 +18,7 @@ paths:
 - root 부모(`daemon`)는 사용자 데이터를 읽거나 쓰지 않는다. 연산은 worker 자식 프로세스가 하고, 사용자 범위는 시작 전에 사용자 uid·gid·보조 그룹으로 강등한다. worker는 범위와 실제 uid가 맞는지 스스로 다시 확인한다
 - 비밀번호 확인은 `unix_chkpwd`(`daemon.ChkPwd`)로만 한다. Go로 shadow를 직접 검증하지 않고, OMV의 webgui PAM 스택(`pam_faillock deny=3 unlock_time=0`)을 거치지 않는다. 실패 제한은 도우미의 `limiter`가 한다
 - 비밀번호·티켓은 로그·응답·테스트 픽스처에 남기지 않는다. 오류는 코드만 주고(`proto.Code*`) 세부는 도우미 로그에만 남긴다. 감사 로그는 root 연산과 쓰기 연산의 경로, 내려받기(`fs.read`)의 연산·결과만 남기고, 정보 읽기 연산(`daemon.quietActions`)은 남기지 않는다
+- 복사(`fs.copy`)는 원본·대상 기준을 각각 `os.Root`로 열고 심볼릭 링크를 따라가지 않는다. 임시 이름에 다 복사한 뒤 이름을 바꾸고, 진행 응답(`partial`)을 쓰지 못하면(onmaru가 끊음) 임시 이름을 지우고 멈춘다(`.claude/docs/helper.md`의 "복사")
 - 파일 탐색기 연산(`fs.names`, `fs.statmany`, `fs.info`)은 `os.Root` 안에서만 경로를 따라간다. 이름 인자는 `proto.ValidName`으로 검사하고, `faccessat`·`lgetxattr`처럼 마지막 구성 요소를 따라갈 수 있는 호출은 `Lstat`이 심볼릭 링크가 아니라고 한 항목에만 쓴다(`.claude/docs/helper.md`의 "파일 탐색기 연산")
 - 도우미 실행 파일은 `CGO_ENABLED=0`으로 빌드한다(`Makefile`). onmaru 웹 코드(`internal/server`, `net/http` 서버 등)를 `cmd/onmaru-helper`에 import하지 않는다. `cmd/onmaru-helper`의 `TestNoWebDependencies`가 `go list -deps`로 검사한다
 - `helperfake`는 테스트·`make dev-fake` 전용이다. 운영 바이너리(`cmd/onmaru`, `cmd/onmaru-helper`)에서 import하지 않는다. 프로세스 없이 worker를 돌리는 Spawner는 권한을 바꾸지 않으므로 운영 코드에 두지 않는다

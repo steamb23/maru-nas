@@ -1527,6 +1527,48 @@ type FilesTrashRequest struct {
 	Path string `json:"path"`
 }
 
+// FilesCopyRequest는 POST /api/files/copy의 본문이다. Dir 안의 Names(512개까지)를 To 폴더에 같은 이름으로
+// 복사한다(다른 디스크로 끌어 놓기). 원본은 그대로 두고, To에 같은 이름이 있으면 그 이름은 복사하지 않는다.
+type FilesCopyRequest struct {
+	Dir   string   `json:"dir"`
+	Names []string `json:"names"`
+	To    string   `json:"to"`
+}
+
+// FilesCopyEvent는 POST /api/files/copy 응답(text/event-stream)의 사건 하나다(data 줄의 JSON). Progress가 여러 번
+// 오고 마지막에 Result나 Error 하나가 온다. 시작하기 전의 실패는 사건이 아니라 보통의 오류 응답이다.
+type FilesCopyEvent struct {
+	Progress *FilesCopyProgress `json:"progress,omitempty"`
+	Result   *FilesCopyResult   `json:"result,omitempty"`
+	// Error는 복사를 시작한 뒤 멈춘 오류이고, Status는 같은 오류를 응답으로 받았을 때의 HTTP 상태다.
+	Error  *ErrorResponse `json:"error,omitempty"`
+	Status int            `json:"status,omitempty"`
+}
+
+// FilesCopyProgress는 복사의 진행이다. Scanning이면 아직 복사할 양을 세는 중이라 Total이 늘어난다. Files는 폴더가
+// 아닌 항목 수, Bytes는 파일 내용의 바이트 수, Current는 지금 복사하는 항목의 Dir 안 상대 경로다.
+type FilesCopyProgress struct {
+	Scanning   bool   `json:"scanning,omitempty"`
+	Files      int64  `json:"files"`
+	Bytes      int64  `json:"bytes"`
+	TotalFiles int64  `json:"totalFiles"`
+	TotalBytes int64  `json:"totalBytes"`
+	Current    string `json:"current,omitempty"`
+}
+
+// FilesCopyResult는 복사의 결과다. Skipped는 폴더 안에서 복사하지 않은 특수 파일(FIFO, 소켓, 장치)의 수다.
+type FilesCopyResult struct {
+	Copied  []string           `json:"copied"`
+	Failed  []FilesCopyFailure `json:"failed"`
+	Skipped int                `json:"skipped"`
+}
+
+// FilesCopyFailure는 복사하지 못한 이름 하나와 그 이유(ErrorResponse.Code와 같은 값)다.
+type FilesCopyFailure struct {
+	Name string `json:"name"`
+	Code string `json:"code" tstype:"NonNullable<ErrorResponse['code']>"`
+}
+
 // FilesTrashResult는 POST /api/files/trash의 응답이다. 넣은 휴지통과 그 안의 이름이다(되돌릴 때 쓴다).
 type FilesTrashResult struct {
 	Trash string `json:"trash"`

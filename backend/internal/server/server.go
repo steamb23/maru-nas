@@ -264,6 +264,7 @@ func New(cfg Config) http.Handler {
 	mux.HandleFunc("GET /api/files/list/{id}/find", h.requireFiles(h.filesFind))
 	mux.HandleFunc("POST /api/files/mkdir", h.requireFilesWrite(h.filesMkdir))
 	mux.HandleFunc("POST /api/files/rename", h.requireFilesWrite(h.filesRename))
+	mux.HandleFunc("POST /api/files/copy", h.requireFilesWrite(h.filesCopy))
 	mux.HandleFunc("POST /api/files/delete", h.requireFilesWrite(h.filesDelete))
 	mux.HandleFunc("GET /api/files/trash", h.requireFiles(h.filesTrashList))
 	mux.HandleFunc("GET /api/files/trash/volumes", h.requireFiles(h.filesTrashVolumes))

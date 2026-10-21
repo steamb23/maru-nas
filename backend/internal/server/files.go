@@ -811,8 +811,17 @@ func (h *handler) writeFilesError(w http.ResponseWriter, s auth.Session, err err
 		h.writeHelperError(w, s, err)
 		return
 	}
-	status, code := 0, ""
-	switch pe.Code {
+	status, code, ok := filesErrorCode(pe.Code)
+	if !ok {
+		h.writeHelperError(w, s, err)
+		return
+	}
+	writeError(w, status, code, strings.ReplaceAll(code, "_", " "))
+}
+
+// filesErrorCode는 도우미 파일 오류 코드의 HTTP 상태와 API 오류 코드다. 파일 오류가 아니면 ok가 false다.
+func filesErrorCode(c string) (status int, code string, ok bool) {
+	switch c {
 	case proto.CodeNotFound:
 		status, code = http.StatusNotFound, api.ErrNotFound
 	case proto.CodePermissionDenied:
@@ -842,8 +851,7 @@ func (h *handler) writeFilesError(w http.ResponseWriter, s auth.Session, err err
 	case proto.CodeNoTrash:
 		status, code = http.StatusConflict, api.ErrNoTrash
 	default:
-		h.writeHelperError(w, s, err)
-		return
+		return 0, "", false
 	}
-	writeError(w, status, code, strings.ReplaceAll(code, "_", " "))
+	return status, code, true
 }

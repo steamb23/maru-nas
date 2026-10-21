@@ -46,8 +46,8 @@ const (
 	// headerTimeout은 요청 머리를 받는 시간, replyTimeout은 부모가 응답을 쓰는 시간이다.
 	headerTimeout = 5 * time.Second
 	replyTimeout  = 5 * time.Second
-	// opTimeout은 목록·정보 같은 연산의 최대 시간, streamTimeout은 읽기·쓰기 스트림의 최대 시간이다.
-	// 스트림은 worker가 진행이 멈추면(60초) 따로 끊는다. removeTimeout은 삭제(fs.remove)의 최대 시간이다.
+	// opTimeout은 목록·정보 같은 연산의 최대 시간, streamTimeout은 읽기·쓰기 스트림과 복사(fs.copy)의 최대 시간이다.
+	// 스트림과 복사는 worker가 진행이 멈추면(60초) 따로 끊는다. removeTimeout은 삭제(fs.remove)의 최대 시간이다.
 	// 큰 폴더를 통째로 지우면 30초를 넘을 수 있고, 시간이 지나 worker를 끝내면 일부만 지운 채 남는다.
 	opTimeout     = 30 * time.Second
 	streamTimeout = 6 * time.Hour
@@ -444,7 +444,7 @@ func (s *Server) run(ctx context.Context, c *net.UnixConn, req proto.Request) {
 
 	timeout := opTimeout
 	switch req.Action {
-	case proto.ActionRead, proto.ActionWrite:
+	case proto.ActionRead, proto.ActionWrite, proto.ActionCopy:
 		timeout = streamTimeout
 	case proto.ActionRemove, proto.ActionTrashPurge, proto.ActionTrashEmpty:
 		timeout = removeTimeout
@@ -493,6 +493,7 @@ func (s *Server) acquireWorker(user string) (func(), error) {
 var writeActions = map[string]bool{
 	proto.ActionWrite: true, proto.ActionMkdir: true, proto.ActionRename: true, proto.ActionRemove: true,
 	proto.ActionTrash: true, proto.ActionTrashRestore: true, proto.ActionTrashPurge: true, proto.ActionTrashEmpty: true,
+	proto.ActionCopy: true,
 }
 
 // quietActions는 감사 로그에 남기지 않는 정보 읽기 연산이다. 파일 탐색기가 폴더를 열고 스크롤할 때마다
@@ -527,6 +528,9 @@ func (s *Server) audit(user string, req proto.Request, code string) {
 			Trash string `json:"trash"`
 			Name  string `json:"name"`
 			Disk  string `json:"disk"`
+			// fs.copy: 원본 폴더와 이름 수(이름은 남기지 않는다), 대상 폴더(To)
+			Dir   string   `json:"dir"`
+			Names []string `json:"names"`
 		}
 		if json.Unmarshal(req.Params, &p) == nil {
 			switch {
@@ -537,6 +541,8 @@ func (s *Server) audit(user string, req proto.Request, code string) {
 				}
 			case p.Disk != "":
 				detail = fmt.Sprintf(" disk=%q", p.Disk)
+			case p.Dir != "":
+				detail = fmt.Sprintf(" dir=%q names=%d to=%q", p.Dir, len(p.Names), p.To)
 			case p.From != "" || p.To != "":
 				detail = fmt.Sprintf(" from=%q to=%q", p.From, p.To)
 			case p.Path != "":

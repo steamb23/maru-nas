@@ -13,6 +13,10 @@ const (
 	MaxNamesBytes = 32 << 20
 	// MaxStatMany는 fs.statmany가 한 번에 받는 이름 수다.
 	MaxStatMany = 512
+	// MaxCopy는 fs.copy가 한 번에 받는 이름 수다. MaxCopyParams는 그 인자(JSON)의 최대 바이트 수로, 요청 머리
+	// (MaxRequest) 안에 들어가야 한다.
+	MaxCopy       = 512
+	MaxCopyParams = 56 << 10
 	// MaxNameBytes는 이름 하나의 최대 바이트 수(NAME_MAX)다.
 	MaxNameBytes = 255
 )

@@ -103,6 +103,39 @@ type RenameParams struct {
 	To   string `json:"to"`
 }
 
+// CopyParams는 fs.copy의 인자다. Names는 Dir 바로 안의 이름(경로 구분자 없음)이고, To 폴더에 같은 이름으로 복사한다.
+type CopyParams struct {
+	Dir   string   `json:"dir"`
+	Names []string `json:"names"`
+	To    string   `json:"to"`
+}
+
+// CopyProgress는 fs.copy의 진행 응답이다. Scanning이면 아직 복사할 양을 세는 중이라 Total이 늘어난다.
+// Files는 폴더가 아닌 항목(파일, 심볼릭 링크) 수, Bytes는 일반 파일 내용의 바이트 수다. Current는 지금 복사하는
+// 항목의 Dir 안 상대 경로다.
+type CopyProgress struct {
+	Scanning   bool   `json:"scanning,omitempty"`
+	Files      int64  `json:"files"`
+	Bytes      int64  `json:"bytes"`
+	TotalFiles int64  `json:"totalFiles"`
+	TotalBytes int64  `json:"totalBytes"`
+	Current    string `json:"current,omitempty"`
+}
+
+// CopyResult는 fs.copy의 결과다. Failed는 복사하지 못한 이름과 오류 코드, Skipped는 폴더 안에서 복사하지 않은
+// 특수 파일(FIFO, 소켓, 장치)의 수다.
+type CopyResult struct {
+	Copied  []string      `json:"copied"`
+	Failed  []CopyFailure `json:"failed,omitempty"`
+	Skipped int           `json:"skipped,omitempty"`
+}
+
+// CopyFailure는 복사하지 못한 이름 하나다.
+type CopyFailure struct {
+	Name string `json:"name"`
+	Code string `json:"code"`
+}
+
 // RemoveParams는 fs.remove의 인자다. Recursive가 false면 빈 폴더와 파일만 지운다.
 type RemoveParams struct {
 	Path      string `json:"path"`

@@ -89,6 +89,9 @@ const (
 	ActionTrashPurge = "fs.trashpurge"
 	// ActionTrashEmpty는 사용자의 모든 휴지통을 비운다.
 	ActionTrashEmpty = "fs.trashempty"
+	// ActionCopy는 한 폴더 안의 항목 여러 개를 다른 폴더(다른 기준 디렉터리여도 된다)로 복사한다. 진행은 Partial
+	// 응답으로 보내고, 마지막 응답에 결과를 담는다.
+	ActionCopy = "fs.copy"
 	// ActionTrashPrepare는 데이터 디스크 맨 위에 모든 사용자가 함께 쓰는 휴지통 .Trash(1777)를 만든다(root 범위).
 	// 디스크 맨 위는 보통 root 소유라 사용자가 휴지통 폴더를 만들 수 없기 때문이다.
 	ActionTrashPrepare = "trash.prepare"
@@ -98,7 +101,7 @@ const (
 var Actions = map[string][]string{
 	ScopeUser: {ActionID, ActionList, ActionStat, ActionRead, ActionWrite, ActionMkdir, ActionRename, ActionRemove,
 		ActionNames, ActionStatMany, ActionInfo, ActionSSHAuthorize, ActionSSHRevoke,
-		ActionTrash, ActionTrashDirs, ActionTrashList, ActionTrashRestore, ActionTrashPurge, ActionTrashEmpty},
+		ActionTrash, ActionTrashDirs, ActionTrashList, ActionTrashRestore, ActionTrashPurge, ActionTrashEmpty, ActionCopy},
 	ScopeRoot: {ActionID, ActionUpgradeApply, ActionTrashPrepare},
 }
 
@@ -137,6 +140,8 @@ type Response struct {
 	Result            json.RawMessage `json:"result,omitempty"`
 	// Size는 머리 뒤에 따라오는 본문의 바이트 수다(fs.read).
 	Size int64 `json:"size,omitempty"`
+	// Partial은 마지막이 아닌 진행 응답이다(fs.copy). 뒤에 응답이 더 온다.
+	Partial bool `json:"partial,omitempty"`
 }
 
 // 오류 코드(Response.Code)

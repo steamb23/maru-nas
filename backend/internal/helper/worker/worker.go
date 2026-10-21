@@ -177,6 +177,8 @@ func Serve(job Job, conn net.Conn, cfg Config) error {
 		err = rename(job, cfg, c)
 	case proto.ActionRemove:
 		err = remove(job, cfg, c)
+	case proto.ActionCopy:
+		err = copyFiles(job, cfg, c)
 	case proto.ActionSSHAuthorize, proto.ActionSSHRevoke:
 		err = sshKey(job, cfg, c)
 	case proto.ActionUpgradeApply:

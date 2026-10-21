@@ -29,6 +29,8 @@ const (
 	opTimeout = 35 * time.Second
 	// removeTimeout은 삭제(fs.remove)의 시간 제한이다(도우미의 삭제 제한 10분보다 조금 길다).
 	removeTimeout = 10*time.Minute + 5*time.Second
+	// copyIdleTimeout은 복사(fs.copy)의 진행 응답 사이를 기다리는 시간이다. 도우미는 진행이 있으면 0.25초마다 보낸다.
+	copyIdleTimeout = 2 * time.Minute
 )
 
 // Client는 도우미 클라이언트다.
@@ -367,6 +369,48 @@ func (c *Client) Read(ctx context.Context, ticket, path string, offset, length i
 		return fail(err)
 	}
 	return res, &Body{Size: resp.Size, conn: conn, left: resp.Size, stop: stop}, nil
+}
+
+// Copy는 p.Dir 안의 p.Names를 p.To 폴더로 복사한다(사용자 권한). 진행은 progress로 받는다(복사할 양을 세는
+// 동안에도 온다). 이름마다의 실패는 결과에 담기고, 시작하기 전의 실패만 오류다. ctx가 끝나면 연결을 닫고, 도우미는
+// 하던 항목의 임시 이름을 지우고 멈춘다(이미 복사한 항목은 남는다).
+func (c *Client) Copy(ctx context.Context, ticket string, p proto.CopyParams, progress func(proto.CopyProgress)) (proto.CopyResult, error) {
+	params, err := marshal(p)
+	if err != nil {
+		return proto.CopyResult{}, err
+	}
+	conn, err := c.dial(ctx)
+	if err != nil {
+		return proto.CopyResult{}, err
+	}
+	defer conn.Close()
+	stop := context.AfterFunc(ctx, func() { conn.Close() })
+	defer stop()
+	req := proto.Request{V: proto.Version, Op: proto.OpRun, Ticket: ticket, Scope: proto.ScopeUser, Action: proto.ActionCopy, Params: params}
+	if err := proto.WriteRequest(conn, req); err != nil {
+		return proto.CopyResult{}, fmt.Errorf("%w: %v", ErrUnavailable, err)
+	}
+	for {
+		conn.SetReadDeadline(time.Now().Add(copyIdleTimeout))
+		resp, err := proto.ReadResponse(conn)
+		if err != nil {
+			if ctx.Err() != nil {
+				return proto.CopyResult{}, ctx.Err()
+			}
+			return proto.CopyResult{}, fmt.Errorf("%w: %v", ErrUnavailable, err)
+		}
+		if !resp.Partial {
+			var res proto.CopyResult
+			if err := resp.Decode(&res); err != nil {
+				return proto.CopyResult{}, err
+			}
+			return res, nil
+		}
+		var pr proto.CopyProgress
+		if err := json.Unmarshal(resp.Result, &pr); err == nil && progress != nil {
+			progress(pr)
+		}
+	}
 }
 
 // Write는 r에서 size바이트를 읽어 path에 올린다(사용자 권한). overwrite가 false면 같은 이름이 있을 때 exists다.

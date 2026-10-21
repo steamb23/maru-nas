@@ -39,6 +39,7 @@ type Helper interface {
 	Mkdir(ctx context.Context, ticket, path string) (proto.Entry, error)
 	Rename(ctx context.Context, ticket, from, to string) (proto.Entry, error)
 	Remove(ctx context.Context, ticket, path string, recursive bool) error
+	Copy(ctx context.Context, ticket string, p proto.CopyParams, progress func(proto.CopyProgress)) (proto.CopyResult, error)
 	// 휴지통(files_trash.go). TrashPrepare만 root 연산이다(상승한 티켓).
 	Trash(ctx context.Context, ticket, path string) (proto.TrashResult, error)
 	TrashDirs(ctx context.Context, ticket string) (proto.TrashDirsResult, error)

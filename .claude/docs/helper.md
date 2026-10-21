@@ -36,10 +36,11 @@
 ## 프로토콜
 
 - 연결 하나에 요청 하나. 프레임 = 4바이트 big-endian 길이 + JSON 머리, 그 뒤 머리의 `size`만큼 원시 본문. 요청 머리는 64KiB, 응답 머리는 8MiB(목록)까지다. 부모는 버퍼링 없이 머리만 읽고 본문은 worker가 읽는다
+  - 응답 머리에 `partial`이 있으면 마지막이 아닌 진행 응답이고 뒤에 응답이 더 온다(지금은 `fs.copy`만 쓴다)
 - 요청 머리는 모르는 필드를 거부한다. 비밀번호와 티켓이 들어 있으므로 요청을 로그에 남기지 않는다
 - 티켓 관리: `session.open`(사용자, 비밀번호, pending), `session.activate`, `session.close`, `session.reset`, `session.status`, `session.elevate`(비밀번호), `session.drop`
 - 연산: `run`(티켓, 범위 `user`|`root`, 연산, 인자, `size`). 연산 목록은 `proto.Actions`
-  - 사용자 범위: `id`(티켓 사용자의 홈 `home`도 준다), `fs.list`, `fs.stat`, `fs.read`(offset·length, 응답 뒤 스트림), `fs.write`(요청 뒤 스트림, 같은 폴더 임시 파일에 받은 뒤 이름 바꾸기), `fs.mkdir`, `fs.rename`, `fs.remove`(`recursive`), 파일 탐색기의 `fs.names`·`fs.statmany`·`fs.info`(아래 "파일 탐색기 연산"), `ssh.authorize`·`ssh.revoke`(웹 터미널의 임시 SSH 키, 아래 "임시 SSH 키"), 휴지통의 `fs.trash`·`fs.trashdirs`·`fs.trashlist`·`fs.trashrestore`·`fs.trashpurge`·`fs.trashempty`(아래 "휴지통")
+  - 사용자 범위: `id`(티켓 사용자의 홈 `home`도 준다), `fs.list`, `fs.stat`, `fs.read`(offset·length, 응답 뒤 스트림), `fs.write`(요청 뒤 스트림, 같은 폴더 임시 파일에 받은 뒤 이름 바꾸기), `fs.mkdir`, `fs.rename`, `fs.remove`(`recursive`), 파일 탐색기의 `fs.names`·`fs.statmany`·`fs.info`(아래 "파일 탐색기 연산"), `ssh.authorize`·`ssh.revoke`(웹 터미널의 임시 SSH 키, 아래 "임시 SSH 키"), 휴지통의 `fs.trash`·`fs.trashdirs`·`fs.trashlist`·`fs.trashrestore`·`fs.trashpurge`·`fs.trashempty`(아래 "휴지통"), 복사의 `fs.copy`(아래 "복사")
   - root 범위: `id`, `upgrade.apply`(대시보드에서 업그레이드의 적용 요청, 아래 "대시보드에서 업그레이드"), `trash.prepare`(디스크 맨 위의 공유 휴지통 `.Trash` 만들기, 아래 "휴지통")
 - 오류는 코드만 준다(`proto.Code*`). 경로·사용자 이름 같은 세부는 도우미 로그에만 남긴다. onmaru는 코드를 HTTP 오류 코드(`api.Err*`)로 바꾼다
 
@@ -57,8 +58,8 @@
 - 부모(root)는 머리를 읽고 티켓·범위·연산 허용·상승을 확인한 뒤, `/proc/self/exe worker`를 `SysProcAttr{Credential, Setsid, Pdeathsig: SIGKILL}`, 빈 환경 변수, cwd `/`로 실행한다. 작업(`worker.Job`: 범위, 연산, 인자, 본문 크기, 사용자 이름·홈)은 stdin, 연결은 `ExtraFiles`(fd 3)로 넘긴다. 부모는 사용자 데이터를 읽거나 쓰지 않는다
 - 사용자 범위는 사용자 uid·기본 gid·보조 그룹(`os/user`, 로컬 파일)으로 강등한다. root 범위도 도우미의 보조 그룹은 넘기지 않는다. worker는 시작할 때 범위와 실제 uid가 맞는지 다시 확인한다(사용자 범위가 root로 돌면 거절)
 - 결과 코드는 종료 코드(0 성공, 2 연산 실패 + stderr `code=<코드>`, 그 밖은 실행 오류)로 부모에 알려 감사 로그에 쓴다
-- 감사 로그(journal)는 비밀번호 확인 결과, 모든 root 연산, 쓰기 연산의 경로, 내려받기(`fs.read`)의 연산·결과를 남긴다. 정보 읽기 연산(`fs.list`, `fs.stat`, `fs.names`, `fs.statmany`, `fs.info`, `fs.trashdirs`, `fs.trashlist`, `daemon.quietActions`)은 파일 탐색기가 폴더를 열고 스크롤할 때마다 부르므로 남기지 않는다. 휴지통 쓰기 연산은 휴지통 디렉터리와 이름(`trash=`, `name=`, 되돌리기는 `to=`)을, `trash.prepare`는 디스크(`disk=`)를 남긴다
-- 시간 제한: 목록·정보 30초(부모), 삭제(`fs.remove`, `fs.trashpurge`, `fs.trashempty`) 10분(큰 폴더를 통째로 지우면 30초를 넘을 수 있다. 넘으면 worker를 끝내므로 일부만 지운 채 남고, 다시 지우면 이어서 지운다), 스트림 6시간(부모) + 60초 무진행(worker의 연결 마감 시각). 클라이언트는 각각 조금 더 기다린다
+- 감사 로그(journal)는 비밀번호 확인 결과, 모든 root 연산, 쓰기 연산의 경로, 내려받기(`fs.read`)의 연산·결과를 남긴다. 정보 읽기 연산(`fs.list`, `fs.stat`, `fs.names`, `fs.statmany`, `fs.info`, `fs.trashdirs`, `fs.trashlist`, `daemon.quietActions`)은 파일 탐색기가 폴더를 열고 스크롤할 때마다 부르므로 남기지 않는다. 휴지통 쓰기 연산은 휴지통 디렉터리와 이름(`trash=`, `name=`, 되돌리기는 `to=`)을, `trash.prepare`는 디스크(`disk=`)를, `fs.copy`는 원본 폴더·이름 수·대상 폴더(`dir=`, `names=`, `to=`, 이름은 남기지 않는다)를 남긴다
+- 시간 제한: 목록·정보 30초(부모), 삭제(`fs.remove`, `fs.trashpurge`, `fs.trashempty`) 10분(큰 폴더를 통째로 지우면 30초를 넘을 수 있다. 넘으면 worker를 끝내므로 일부만 지운 채 남고, 다시 지우면 이어서 지운다), 스트림과 복사(`fs.copy`) 6시간(부모) + 60초 무진행(worker의 연결 마감 시각). 클라이언트는 각각 조금 더 기다린다(복사는 진행 응답 사이 2분)
 - 동시 실행: 전체 16개, 사용자당 4개. 연결은 동시 64개
 
 ## 파일 연산의 경로 정책
@@ -107,6 +108,18 @@ FreeDesktop 휴지통 규격을 trash-cli의 `trash-put`과 같은 곳·형식�
   - 맨 위에 사용자가 쓸 수 있는 디스크에서는 사용자가 `.Trash`를 미리 심볼릭 링크로 둘 수 있으므로, `Lstat`으로 심볼릭 링크·폴더가 아닌 것을 거절하고(`not_dir`), `O_NOFOLLOW|O_DIRECTORY`로 연 fd가 root 소유 폴더인지 다시 확인한 뒤 그 fd에 `fchmod`한다. 이미 있으면 권한만 고친다
   - 유닛 권한은 바꾸지 않았다(`/srv`는 이미 `ReadWritePaths`이고 새 capability가 필요 없다)
 - onmaru 쪽은 `client.Client`의 `Trash`, `TrashDirs`, `TrashList`, `TrashRestore`, `TrashPurge`, `TrashEmpty`, `TrashPrepare`
+
+## 복사(fs.copy)
+
+파일 탐색기에서 다른 디스크로 끌어 놓을 때 쓴다(같은 디스크는 `fs.rename`으로 옮긴다). 구현은 `worker/copy.go`.
+
+- 인자: 원본 폴더 `dir`, 그 바로 안의 이름 `names`(512개까지, `proto.ValidName`), 대상 폴더 `to`. 둘 다 기준 안이어야 하고 기준이 달라도 된다(원본·대상 기준을 각각 `os.Root`로 연다). `to`가 복사할 폴더 자신이거나 그 안이면 `bad_request`다. 인자 JSON은 요청 머리 안에 들어가야 한다(`proto.MaxCopyParams`, onmaru가 먼저 거른다)
+- 먼저 복사할 파일 수·크기를 세며(`scanning`), 시작하기 전의 실패(인자, 범위, 폴더가 아님)만 오류 응답이다. 그 뒤로는 0.25초마다 진행 응답(`partial`, 파일 수·바이트·전체·지금 항목의 `dir` 안 상대 경로)을 보내고, 마지막 응답에 결과(복사한 이름, 이름마다의 실패 코드, 건너뛴 특수 파일 수)를 담는다. 세다가 읽지 못한 폴더가 있으면 그 항목 전체가 실패다. 공간이 없거나(`no_space`) 읽기 전용이면 남은 이름도 같은 코드로 실패한다
+- 항목마다 대상 폴더의 임시 이름(`.onmaru-upload-<임의>.part`, 올리기와 같은 접두사)에 다 복사한 뒤 이름을 바꾼다. 파일은 하드 링크로 같은 이름이 생기지 않았는지 원자적으로 확인하고(`commit`), 폴더·링크는 바로 앞에서 다시 확인한다. 같은 이름이 있으면 `exists`이고 덮어쓰지 않는다. 실패하면 임시 이름을 지운다
+- 심볼릭 링크는 따라가지 않고 링크를 새로 만든다(대상 문자열 그대로). FIFO·소켓·장치는 맨 위 항목이면 `not_regular`, 폴더 안이면 건너뛰고 센다. 파일 내용은 32MiB씩 `io.CopyN`(가능하면 `copy_file_range`)으로 복사해 큰 파일에서도 진행 응답을 보낸다
+- 권한 비트·소유자·ACL·확장 속성은 복사하지 않는다. 올리기처럼 파일은 0666(원본에 실행 비트가 있으면 0777), 폴더는 0777에서 umask(0002)와 대상 폴더의 기본 ACL·setgid를 따른다. 수정 시각은 파일·폴더 모두 원본을 따른다
+- 받는 쪽이 연결을 끊으면 다음 진행 응답을 쓰지 못해 멈추고, 하던 항목의 임시 이름을 지운다. 이미 다 복사한 항목은 남는다. worker가 시간 제한으로 끝나면 임시 이름이 남을 수 있다(점으로 시작해 SMB 등에서는 숨겨지지만 파일 탐색기 목록에는 보인다)
+- onmaru 쪽은 `client.Client.Copy`(진행 응답을 콜백으로 넘기고 마지막 응답을 결과로 돌려준다)
 
 ## 임시 SSH 키(ssh.authorize, ssh.revoke)
 
