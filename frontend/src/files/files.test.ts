@@ -1,8 +1,35 @@
 import { describe, expect, it } from 'vitest'
+import { ApiError } from '../api/client'
 import { back, canBack, canForward, current, forward, MAX_HISTORY, replaceCurrent, startHistory, visit } from './history'
 import { extension, isFolderLike, kindOf, modeString } from './kinds'
 import { PageCache, pagesFor } from './pageCache'
-import { baseName, crumbs, dirName, findRoot, joinPath, locationLabel, parentOf, rootsOf, uploadNameOk } from './paths'
+import { affects, groupFailures, notifyFilesChanged, onFilesChanged, opErrorKey, runEach } from './ops'
+import {
+  baseName,
+  crumbs,
+  dirName,
+  findRoot,
+  joinPath,
+  locationLabel,
+  moveAllowed,
+  nameProblem,
+  numberedName,
+  parentOf,
+  rootsOf,
+  stemLength,
+  uploadNameOk,
+} from './paths'
+import {
+  NO_SELECTION,
+  extendTo,
+  isSelected,
+  selectAll,
+  selectOne,
+  selectedCount,
+  selectedIndices,
+  soleIndex,
+  toggleAt,
+} from './selection'
 import {
   active,
   canceled,
@@ -207,5 +234,127 @@ describe('올리기 목록', () => {
     s = progressed(started(s, 1, 0), 1, 300)
     expect(remainingSeconds(s.items[0], 2000)).toBeNull()
     expect(remainingSeconds(s.items[0], 3000)).toBe(7)
+  })
+})
+
+describe('고르기', () => {
+  it('누르기, Ctrl, Shift로 구간을 고른다', () => {
+    let s = selectOne(3)
+    expect(soleIndex(s)).toBe(3)
+    s = toggleAt(s, 5)
+    expect(selectedIndices(s)).toEqual([3, 5])
+    expect(soleIndex(s)).toBeNull()
+    s = toggleAt(s, 4)
+    expect(s.spans).toEqual([{ start: 3, end: 6 }])
+    s = toggleAt(s, 4)
+    expect(selectedIndices(s)).toEqual([3, 5])
+    expect(s.focus).toBe(4)
+    // Shift는 기준(마지막으로 Ctrl로 누른 자리)에서 넓히고 나머지는 지운다.
+    s = extendTo(s, 8)
+    expect(s.spans).toEqual([{ start: 4, end: 9 }])
+    s = extendTo(s, 1)
+    expect(s.spans).toEqual([{ start: 1, end: 5 }])
+    expect(s.anchor).toBe(4)
+    // Ctrl+Shift는 이미 고른 것을 남긴다.
+    s = extendTo({ ...selectOne(10), anchor: 7 }, 9, true)
+    expect(s.spans).toEqual([{ start: 7, end: 11 }])
+    expect(selectedCount(s)).toBe(4)
+    expect(isSelected(s, 6)).toBe(false)
+    expect(isSelected(s, 7)).toBe(true)
+  })
+
+  it('모두 고르기는 받지 않은 줄까지 구간 하나로 둔다', () => {
+    const s = selectAll(selectOne(2), 300_000)
+    expect(s.spans).toEqual([{ start: 0, end: 300_000 }])
+    expect(selectedCount(s)).toBe(300_000)
+    expect(s.focus).toBe(2)
+    expect(selectAll(NO_SELECTION, 0)).toBe(NO_SELECTION)
+    expect(extendTo(NO_SELECTION, 4).spans).toEqual([{ start: 4, end: 5 }])
+  })
+})
+
+describe('새 이름', () => {
+  it('올리기·만들기·바꾸기에 쓸 수 없는 이름을 가린다', () => {
+    expect(nameProblem('')).toBe('empty')
+    expect(nameProblem('..')).toBe('dots')
+    expect(nameProblem('a/b')).toBe('chars')
+    expect(nameProblem('a\0b')).toBe('chars')
+    expect(nameProblem('가'.repeat(85))).toBeNull()
+    expect(nameProblem('가'.repeat(86))).toBe('tooLong')
+    expect(nameProblem('.onmaru-upload-x')).toBe('reserved')
+    expect(nameProblem('.bashrc')).toBeNull()
+    expect(uploadNameOk(' 공백 ')).toBe(true)
+  })
+
+  it('이름 바꾸기는 확장자를 빼고 고른다', () => {
+    expect(stemLength('여름 휴가.mkv', false)).toBe(5)
+    expect(stemLength('archive.tar.gz', false)).toBe(11)
+    expect(stemLength('.bashrc', false)).toBe(7)
+    expect(stemLength('noext', false)).toBe(5)
+    expect(stemLength('폴더.d', true)).toBe(4)
+    expect(numberedName('새 폴더', 1)).toBe('새 폴더')
+    expect(numberedName('새 폴더', 3)).toBe('새 폴더 (3)')
+  })
+
+  it('옮길 수 있는 폴더를 경로 모양으로 가린다', () => {
+    const src = ['/srv/d1/media/a.mkv', '/srv/d1/media/sub']
+    expect(moveAllowed(src, '/srv/d1/media/other')).toBe(true)
+    expect(moveAllowed(src, '/srv/d1')).toBe(true)
+    expect(moveAllowed(src, '/srv/d1/media')).toBe(false)
+    expect(moveAllowed(src, '/srv/d1/media/sub')).toBe(false)
+    expect(moveAllowed(src, '/srv/d1/media/sub/inner')).toBe(false)
+    expect(moveAllowed(['/srv/d1/media/sub'], '/srv/d1/media/subway')).toBe(true)
+    expect(moveAllowed([], '/srv/d1')).toBe(false)
+  })
+})
+
+describe('여러 항목 작업', () => {
+  it('하나씩 차례로 하고 실패를 모으며 중지하면 남은 항목을 하지 않는다', async () => {
+    const seen: string[] = []
+    const ctl = new AbortController()
+    const progress: number[] = []
+    const res = await runEach(
+      ['a', 'b', 'c', 'd'],
+      async (n) => {
+        seen.push(n)
+        if (n === 'b') throw new ApiError(409, 'x', 'file_exists')
+        if (n === 'c') ctl.abort()
+      },
+      (p) => progress.push(p.done),
+      ctl.signal,
+    )
+    expect(seen).toEqual(['a', 'b', 'c'])
+    expect(progress).toEqual([1, 2, 3])
+    expect(res).toMatchObject({ done: 3, stopped: true })
+    expect(res.failures.map((f) => f.item)).toEqual(['b'])
+  })
+
+  it('실패를 이유별로 묶는다', () => {
+    const failures = [
+      { item: 'a', err: new ApiError(409, 'x', 'cross_device') },
+      { item: 'b', err: new ApiError(409, 'x', 'file_exists') },
+      { item: 'c', err: new ApiError(409, 'x', 'cross_device') },
+      { item: 'd', err: new ApiError(409, 'x', 'cross_device') },
+    ]
+    expect(groupFailures(failures, (n) => n, 2)).toEqual([
+      { key: 'files.ops.errors.cross_device', names: ['a', 'c'], more: 1 },
+      { key: 'files.ops.errors.file_exists', names: ['b'], more: 0 },
+    ])
+    expect(opErrorKey(new TypeError('network'))).toBe('files.ops.errors.network')
+    expect(opErrorKey(new ApiError(500, 'x'))).toBe('files.ops.errors.generic')
+  })
+
+  it('바뀐 폴더와 없어진 경로 아래를 보는 창에 알린다', () => {
+    const change = { dirs: ['/srv/d1/media'], gone: ['/srv/d1/media/sub'] }
+    expect(affects(change, '/srv/d1/media')).toBe(true)
+    expect(affects(change, '/srv/d1/media/sub/deep')).toBe(true)
+    expect(affects(change, '/srv/d1/media/subway')).toBe(false)
+    expect(affects(change, '/srv/d1')).toBe(false)
+    const got: string[][] = []
+    const off = onFilesChanged((c) => got.push([...c.dirs]))
+    notifyFilesChanged(change)
+    off()
+    notifyFilesChanged(change)
+    expect(got).toEqual([['/srv/d1/media']])
   })
 })

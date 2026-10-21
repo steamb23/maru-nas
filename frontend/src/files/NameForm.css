@@ -1,0 +1,39 @@
+/* 폴더 만들기·이름 바꾸기 대화상자(NameForm) */
+.files-name-form {
+  display: flex;
+  width: min(360px, 100%);
+  flex-direction: column;
+}
+
+.files-name-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.files-name-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px 8px;
+  border: 1px solid var(--window-border);
+  border-radius: 6px;
+  background: var(--window-bg);
+  color: inherit;
+  font: inherit;
+}
+
+.files-name-input:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  outline-offset: 1px;
+}
+
+.files-name-input[aria-invalid='true'] {
+  border-color: light-dark(#c5352b, #f28b82);
+}
+
+.files-name-error {
+  margin: 8px 0 0;
+  color: light-dark(#c5352b, #f28b82);
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}

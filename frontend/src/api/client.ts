@@ -14,9 +14,12 @@ import type {
   FileAccess,
   FileInfo,
   FileItem,
+  FilesDeleteRequest,
   FilesListing,
+  FilesMkdirRequest,
   FilesPage,
   FilesPrepareResponse,
+  FilesRenameRequest,
   FilesRoot,
   FilesRoots,
   FilesSettings,
@@ -142,6 +145,9 @@ const ERROR_CODES: readonly ErrorCode[] = [
   'transfer_timeout',
   'listing_expired',
   'sort_pending',
+  'not_empty',
+  'cross_device',
+  'root_folder',
 ]
 
 export type RequiredLevel = NonNullable<ErrorResponse['required']>
@@ -1216,6 +1222,44 @@ export async function prepareListing(id: string, signal?: AbortSignal): Promise<
     throw new Error('/files/list/{id}/prepare: unexpected response shape')
   }
   return { filled: data.filled, total: data.total }
+}
+
+// findInListing은 목록의 보기(정렬·찾기)에서 이름 하나의 자리다. 보기에 없으면 -1이다(만들거나 이름을 바꾼 항목 고르기).
+export async function findInListing(
+  id: string,
+  name: string,
+  view: Pick<ListingRange, 'sort' | 'desc' | 'query'>,
+  signal?: AbortSignal,
+): Promise<number> {
+  const params = new URLSearchParams({ name, sort: view.sort, order: view.desc ? 'desc' : 'asc' })
+  if (view.query) params.set('q', view.query)
+  const data = await getJSON(`/files/list/${q(id)}/find?${params}`, { signal })
+  if (!isObj(data) || !isNum(data.index)) throw new Error('/files/list/{id}/find: unexpected response shape')
+  return data.index
+}
+
+async function fileItemFrom(path: string, res: Promise<unknown>): Promise<FileItem> {
+  const data = await res
+  if (!isFileItem(data)) throw new Error(`${path}: unexpected response shape`)
+  return data
+}
+
+// makeFolder는 path에 폴더를 만든다. 같은 이름이 있으면 file_exists다.
+export function makeFolder(path: string): Promise<FileItem> {
+  const body: FilesMkdirRequest = { path }
+  return fileItemFrom('/files/mkdir', postJSON('/files/mkdir', { body }))
+}
+
+// renameFile은 이름을 바꾸거나 다른 폴더로 옮긴다(같은 디스크 안). 대상이 있으면 file_exists이고 덮어쓰지 않는다.
+export function renameFile(from: string, to: string): Promise<FileItem> {
+  const body: FilesRenameRequest = { from, to }
+  return fileItemFrom('/files/rename', postJSON('/files/rename', { body }))
+}
+
+// deleteFile은 파일이나 폴더를 지운다. 되돌릴 수 없다. recursive면 폴더 안의 항목까지 지운다.
+export async function deleteFile(path: string, recursive: boolean): Promise<void> {
+  const body: FilesDeleteRequest = { path, recursive }
+  await request('POST', '/files/delete', { body })
 }
 
 // fetchFileInfo는 정보 패널 내용(소유자, 그룹, 모드, ACL, 내 권한)이다.

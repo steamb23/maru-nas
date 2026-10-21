@@ -223,7 +223,7 @@
   padding: 4px 12px 10px;
 }
 
-.files-upload-button {
+.files-action-button {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -392,4 +392,65 @@
 .files-conflict p {
   margin: 0;
   overflow-wrap: anywhere;
+}
+
+/* 바깥에서 끌어 온 파일을 지금 폴더에 놓으려는 중이다. 폴더 줄 위에서는 그 줄만 표시한다(.files-drop-target). */
+.files-content.drop-here::after {
+  position: absolute;
+  z-index: 3;
+  inset: 4px;
+  border: 2px dashed var(--accent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+  content: '';
+  pointer-events: none;
+}
+
+/* 삭제 확인과, 여러 항목 작업에서 하지 못한 항목 안내 */
+.files-delete p {
+  margin: 0;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.files-delete p + p {
+  margin-top: 8px;
+}
+
+.files-delete-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 180px;
+  margin: 0 0 12px;
+  padding: 8px 10px;
+  overflow: auto;
+  border: 1px solid var(--window-border);
+  border-radius: 6px;
+  list-style: none;
+}
+
+.files-delete-list li {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+}
+
+.files-delete-list li > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.files-delete-list li.files-delete-more {
+  color: var(--text-muted);
+}
+
+.files-failure + .files-failure {
+  margin-top: 14px;
+}
+
+.files-failure .files-delete-list {
+  margin: 6px 0 0;
 }

@@ -2,6 +2,7 @@
 // 테이블에 import한 파일만 번들에 포함된다. 디렉터리 단위 glob을 쓰면 테마 전체가
 // 실행 파일에 들어가므로, 아이콘을 쓸 때마다 여기에 한 줄씩 추가한다.
 
+import documentEdit from '@colloid/actions/symbolic/document-edit-symbolic.svg?url'
 import documentOpen from '@colloid/actions/symbolic/document-open-symbolic.svg?url'
 import documentProperties from '@colloid/actions/symbolic/document-properties-symbolic.svg?url'
 import editCopy from '@colloid/actions/symbolic/edit-copy-symbolic.svg?url'
@@ -65,6 +66,7 @@ import xOfficeDocument from '@colloid/mimetypes/scalable/x-office-document.svg?u
 import xOfficePresentation from '@colloid/mimetypes/scalable/x-office-presentation.svg?url'
 import xOfficeSpreadsheet from '@colloid/mimetypes/scalable/x-office-spreadsheet.svg?url'
 import folder from '@colloid/places/scalable/folder.svg?url'
+import folderNew from '@colloid/places/symbolic/folder-new-symbolic.svg?url'
 import folderRemote from '@colloid/places/symbolic/folder-remote-symbolic.svg?url'
 import networkServer from '@colloid/places/symbolic/network-server-symbolic.svg?url'
 import userHome from '@colloid/places/symbolic/user-home-symbolic.svg?url'
@@ -135,6 +137,8 @@ export const COLLOID_ICONS = {
   'drive-harddisk-symbolic': { url: driveHarddiskSymbolic, kind: 'symbolic' },
   'user-home-symbolic': { url: userHome, kind: 'symbolic' },
   'folder-remote-symbolic': { url: folderRemote, kind: 'symbolic' },
+  'folder-new-symbolic': { url: folderNew, kind: 'symbolic' },
+  'document-edit-symbolic': { url: documentEdit, kind: 'symbolic' },
   'upload-symbolic': { url: upload, kind: 'symbolic' },
   'download-symbolic': { url: download, kind: 'symbolic' },
   'dialog-information-symbolic': { url: dialogInformation, kind: 'symbolic' },

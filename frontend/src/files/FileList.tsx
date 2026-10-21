@@ -1,11 +1,16 @@
 // 파일 탐색기의 자세히 목록. 보이는 줄만 그리고(virtual.ts), 정렬·찾기를 적용한 보기에서 보이는 범위를 PAGE_SIZE줄씩
 // 받아 둔다(pageCache.ts). 아직 받지 않은 줄은 자리 표시로 그린다. 스크롤하는 동안 위치 말풍선을 보인다.
+// 여러 줄을 고를 수 있고(selection.ts), 고른 줄을 마우스·펜으로 끌어 다른 폴더(data-drop-path가 있는 줄·경로·사이드바,
+// 다른 탐색기 창 포함)에 놓으면 옮긴다.
 import {
   type KeyboardEvent,
+  type PointerEvent,
+  type Ref,
   type UIEvent,
   useCallback,
   useEffect,
   useId,
+  useImperativeHandle,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -19,8 +24,19 @@ import { useLanguage } from '../i18n'
 import { IconImage } from '../icons/IconImage'
 import type { ContextMenuItem } from '../shell/contextMenu'
 import { useContextMenuTrigger } from '../shell/useContextMenuTrigger'
-import { KIND_KEYS, kindIcon, kindOf } from './kinds'
+import { KIND_KEYS, isFolderLike, kindIcon, kindOf } from './kinds'
 import { PAGE_SIZE, PageCache } from './pageCache'
+import { joinPath, within } from './paths'
+import {
+  NO_SELECTION,
+  type Selection,
+  extendTo,
+  isSelected,
+  selectAll,
+  selectOne,
+  selectedCount,
+  toggleAt,
+} from './selection'
 import { ROW_HEIGHT, indexAt, layout, scrollToShow } from './virtual'
 
 export type SortKey = 'name' | 'mtime' | 'size'
@@ -31,12 +47,21 @@ export interface View {
   query: string
 }
 
+// FileListHandle은 창이 목록에 시키는 일이다.
+export interface FileListHandle {
+  // items는 고른 자리의 항목이다(앞에서부터). 받지 않은 줄은 이름만 받아 채운다(정보 없이 state가 pending).
+  items: (sel: Selection) => Promise<FileItem[]>
+  // reveal은 index 줄이 보이게 스크롤한다.
+  reveal: (index: number) => void
+}
+
 interface Props {
   listing: FilesListing
   view: View
   active: boolean
-  selected: number | null
-  onSelect: (index: number | null, item: FileItem | null) => void
+  selection: Selection
+  // onSelection은 고르기가 바뀔 때다. item은 위치(focus) 줄의 항목이다(받지 않았으면 null).
+  onSelection: (sel: Selection, item: FileItem | null) => void
   // onOpen은 두 번 누르기·Enter다(폴더면 들어가고 파일이면 정보 패널).
   onOpen: (item: FileItem) => void
   onUp: () => void
@@ -46,10 +71,18 @@ interface Props {
   onExpired: () => void
   onSortPending: () => void
   onError: (err: unknown) => void
-  menuItems: (item: FileItem) => readonly ContextMenuItem[]
+  // menuItems는 줄(item)이나 빈 곳(null)의 메뉴다. sel은 메뉴를 연 뒤의 고르기다(고르지 않은 줄을 누르면 그 줄 하나).
+  menuItems: (item: FileItem | null, sel: Selection) => readonly ContextMenuItem[]
+  // onRename·onDelete는 F2·Delete 키다(지금 고르기에 한다).
+  onRename: () => void
+  onDelete: () => void
+  // canDrag면 고른 줄을 끌어 다른 폴더로 옮길 수 있다(이 폴더에 쓸 수 있을 때). onMove는 놓은 폴더의 경로다.
+  canDrag: boolean
+  onMove: (sel: Selection, target: string) => void
   // focusOnMount면 처음 그릴 때 목록에 포커스한다(키보드로 폴더에 들어간 뒤). 한 뒤 onFocused를 부른다.
   focusOnMount?: boolean
   onFocused?: () => void
+  ref?: Ref<FileListHandle>
 }
 
 // MAX_PARALLEL은 동시에 받는 페이지 수다(도우미의 사용자당 동시 연산 4개 안).
@@ -59,6 +92,34 @@ const FETCH_DELAY_MS = 90
 // BUBBLE_MIN은 위치 말풍선을 보이는 최소 항목 수, BUBBLE_HIDE_MS는 스크롤이 멈춘 뒤 말풍선을 숨기기까지의 시간이다.
 const BUBBLE_MIN = 300
 const BUBBLE_HIDE_MS = 900
+// NAMES_LIMIT는 고른 줄의 이름만 한 번에 받는 수다(백엔드 filesNamesLimit).
+const NAMES_LIMIT = 2000
+// DRAG_THRESHOLD는 누른 줄에서 이만큼(px) 움직여야 끌기로 보는 거리다. DRAG_EDGE는 끄는 동안 목록 위·아래 가장자리에서
+// 스크롤하는 띠의 높이, DRAG_FOLDERS는 놓을 수 없는 곳(자기 안)을 가리려고 보는 고른 폴더의 최대 수다.
+const DRAG_THRESHOLD = 6
+const DRAG_EDGE = 32
+const DRAG_FOLDERS = 20_000
+// DROP_TARGET은 끄는 동안 놓을 곳에 붙이는 클래스다. 다른 창의 요소에도 붙으므로 렌더 없이 요소에 직접 둔다.
+export const DROP_TARGET = 'files-drop-target'
+
+// Drag는 누른 뒤 끌기가 시작되기 전후의 상태다.
+interface Drag {
+  pointerId: number
+  x: number
+  y: number
+  index: number
+  started: boolean
+  sel: Selection
+  // folders는 끄는 줄 가운데 받은 폴더의 경로다(그 안에는 놓을 수 없다).
+  folders: string[]
+  ghost: HTMLElement | null
+  target: HTMLElement | null
+  targetPath: string | null
+  lastX: number
+  lastY: number
+  raf: number | undefined
+  cleanup: () => void
+}
 
 const COLUMNS: readonly { key: SortKey | 'kind'; labelKey: 'files.columns.name' | 'files.columns.modified' | 'files.columns.size' | 'files.columns.kind' }[] = [
   { key: 'name', labelKey: 'files.columns.name' },
@@ -76,7 +137,8 @@ interface CacheState {
 }
 
 export function FileList(props: Props) {
-  const { listing, view, active, selected } = props
+  const { listing, view, active, selection, ref } = props
+  const selected = selection.focus
   const { t } = useTranslation()
   const lang = useLanguage()
   const baseId = useId()
@@ -242,38 +304,53 @@ export function FileList(props: Props) {
     [],
   )
 
-  // select는 index 줄을 고르고 보이게 스크롤한다.
-  const select = (index: number) => {
-    const i = Math.min(Math.max(0, index), total - 1)
-    if (i < 0) return
-    props.onSelect(i, cache.pages.get(i) ?? null)
+  // choose는 고르기를 바꾼다. 위치 줄의 항목을 함께 알린다.
+  const choose = (sel: Selection) => {
+    props.onSelection(sel, sel.focus === null ? null : (cache.pages.get(sel.focus) ?? null))
+  }
+
+  const reveal = (i: number) => {
     const el = scrollRef.current
     if (!el) return
     const next = scrollToShow(i, total, el.scrollTop, el.clientHeight)
     if (next !== el.scrollTop) el.scrollTop = next
   }
 
+  // select는 index 줄로 옮겨 고르고(extend면 기준부터 넓히고) 보이게 스크롤한다.
+  const select = (index: number, extend: boolean) => {
+    const i = Math.min(Math.max(0, index), total - 1)
+    if (i < 0) return
+    choose(extend ? extendTo(selection, i) : selectOne(i))
+    reveal(i)
+  }
+
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     const page = Math.max(1, Math.floor(viewHeight / ROW_HEIGHT) - 1)
     const cur = selected ?? -1
+    const mod = e.ctrlKey || e.metaKey
     switch (e.key) {
       case 'ArrowDown':
-        select(cur + 1)
+        select(cur + 1, e.shiftKey)
         break
       case 'ArrowUp':
-        select(cur <= 0 ? 0 : cur - 1)
+        select(cur <= 0 ? 0 : cur - 1, e.shiftKey)
         break
       case 'PageDown':
-        select(cur + page)
+        select(cur + page, e.shiftKey)
         break
       case 'PageUp':
-        select(cur - page)
+        select(cur - page, e.shiftKey)
         break
       case 'Home':
-        select(0)
+        select(0, e.shiftKey)
         break
       case 'End':
-        select(total - 1)
+        select(total - 1, e.shiftKey)
+        break
+      case 'a':
+      case 'A':
+        if (!mod) return
+        choose(selectAll(selection, total))
         break
       case 'Enter': {
         const item = selected !== null ? cache.pages.get(selected) : undefined
@@ -283,10 +360,194 @@ export function FileList(props: Props) {
       case 'Backspace':
         props.onUp()
         break
+      case 'F2':
+        props.onRename()
+        break
+      case 'Delete':
+        props.onDelete()
+        break
+      case 'Escape':
+        if (selectedCount(selection) === 0) return
+        choose(NO_SELECTION)
+        break
       default:
         return
     }
     e.preventDefault()
+  }
+
+  // resolveItems는 고른 자리의 항목이다. 받은 줄은 그대로 쓰고, 빠진 구간은 이름만 NAMES_LIMIT개씩 받는다.
+  const resolveItems = async (sel: Selection): Promise<FileItem[]> => {
+    const c = cache
+    const out: FileItem[] = []
+    for (const span of sel.spans) {
+      for (let start = span.start; start < span.end; start += NAMES_LIMIT) {
+        const end = Math.min(span.end, start + NAMES_LIMIT)
+        const chunk: FileItem[] = []
+        for (let i = start; i < end; i++) {
+          const it = c.pages.get(i)
+          if (!it) break
+          chunk.push(it)
+        }
+        if (chunk.length === end - start) {
+          out.push(...chunk)
+          continue
+        }
+        const res = await fetchListingRange(listing.id, {
+          offset: start,
+          limit: end - start,
+          sort: view.sort,
+          desc: view.desc,
+          query: view.query,
+          namesOnly: true,
+        })
+        res.items.forEach((it, k) => out.push(c.pages.get(start + k) ?? it))
+      }
+    }
+    return out
+  }
+  useImperativeHandle(ref, () => ({ items: resolveItems, reveal }))
+
+  // 끌어서 옮기기. 누른 줄에서 임계 거리를 넘게 움직이면 시작하고(그때 pointer capture를 잡아 그냥 누르기의 click은
+  // 줄에 그대로 간다), 놓은 곳의 data-drop-path 폴더로 옮긴다. 터치는 스크롤·길게 누르기 메뉴와 겹쳐 끌지 않는다.
+  const dragRef = useRef<Drag | null>(null)
+  // suppressClick은 끌기를 끝낸 뒤 따라오는 click 하나를 무시하게 한다(놓은 자리의 줄을 고르거나 고르기를 지우지 않게).
+  // Esc로 취소하면 놓기 전에 끝나므로 다음 click까지 남긴다. 다음 누름에서 지운다(click이 오지 않은 경우).
+  const suppressClick = useRef(false)
+  const consumeClick = () => {
+    if (!suppressClick.current) return false
+    suppressClick.current = false
+    return true
+  }
+
+  const hitTest = (d: Drag) => {
+    const el = document.elementFromPoint(d.lastX, d.lastY)?.closest<HTMLElement>('[data-drop-path]') ?? null
+    const p = el?.dataset.dropPath ?? null
+    const ok = p !== null && p !== listing.path && !d.folders.some((f) => within(p, f))
+    const next = ok ? el : null
+    if (next === d.target) return
+    d.target?.classList.remove(DROP_TARGET)
+    next?.classList.add(DROP_TARGET)
+    d.target = next
+    d.targetPath = ok ? p : null
+  }
+
+  const startDrag = (d: Drag, e: PointerEvent<HTMLDivElement>) => {
+    const item = cache.pages.get(d.index)
+    if (!item) {
+      dragRef.current = null
+      return
+    }
+    d.started = true
+    d.sel = isSelected(selection, d.index) ? selection : selectOne(d.index)
+    // 항목 없이 알려 정보 패널을 열지 않는다(끄는 도중 목록 폭이 바뀌면 놓을 곳이 움직인다).
+    if (d.sel !== selection) props.onSelection(d.sel, null)
+    const count = selectedCount(d.sel)
+    let seen = 0
+    for (const span of d.sel.spans) {
+      for (let i = span.start; i < span.end && seen < DRAG_FOLDERS; i++, seen++) {
+        const it = cache.pages.get(i)
+        if (it && isFolderLike(it)) d.folders.push(joinPath(listing.path, it.name))
+      }
+    }
+    e.currentTarget.setPointerCapture(e.pointerId)
+    menu.cancelLongPress()
+    const ghost = document.createElement('div')
+    ghost.className = 'files-drag-ghost'
+    ghost.textContent =
+      count === 1 ? item.name : t('files.drag.items', { count, total: new Intl.NumberFormat(lang).format(count) })
+    document.body.append(ghost)
+    d.ghost = ghost
+    const onKey = (ev: globalThis.KeyboardEvent) => {
+      if (ev.key !== 'Escape') return
+      ev.preventDefault()
+      endDrag(false)
+    }
+    const onBlur = () => endDrag(false)
+    window.addEventListener('keydown', onKey, true)
+    window.addEventListener('blur', onBlur)
+    // 목록 위·아래 가장자리에 있으면 스크롤한다(큰 폴더에서 아래쪽 폴더에 놓을 수 있게).
+    const tick = () => {
+      const el = scrollRef.current
+      if (el && dragRef.current === d) {
+        const r = el.getBoundingClientRect()
+        let dy = 0
+        if (d.lastX >= r.left && d.lastX <= r.right) {
+          if (d.lastY < r.top + DRAG_EDGE && d.lastY > r.top - DRAG_EDGE) dy = -Math.ceil((r.top + DRAG_EDGE - d.lastY) / 3)
+          else if (d.lastY > r.bottom - DRAG_EDGE && d.lastY < r.bottom + DRAG_EDGE) dy = Math.ceil((d.lastY - r.bottom + DRAG_EDGE) / 3)
+        }
+        if (dy !== 0) {
+          el.scrollTop += dy
+          hitTest(d)
+        }
+        d.raf = requestAnimationFrame(tick)
+      }
+    }
+    d.raf = requestAnimationFrame(tick)
+    d.cleanup = () => {
+      window.removeEventListener('keydown', onKey, true)
+      window.removeEventListener('blur', onBlur)
+      if (d.raf !== undefined) cancelAnimationFrame(d.raf)
+      d.target?.classList.remove(DROP_TARGET)
+      d.ghost?.remove()
+    }
+    moveDrag(d, e.clientX, e.clientY)
+  }
+
+  const moveDrag = (d: Drag, x: number, y: number) => {
+    d.lastX = x
+    d.lastY = y
+    if (d.ghost) d.ghost.style.transform = `translate(${x + 14}px, ${y + 12}px)`
+    hitTest(d)
+  }
+
+  // endDrag는 끌기를 끝낸다. drop이면 놓은 곳으로 옮긴다.
+  const endDrag = (drop: boolean) => {
+    const d = dragRef.current
+    dragRef.current = null
+    if (!d?.started) return
+    d.cleanup()
+    suppressClick.current = true
+    if (drop && d.targetPath) propsRef.current.onMove(d.sel, d.targetPath)
+  }
+  const endDragRef = useRef(endDrag)
+  useLayoutEffect(() => {
+    endDragRef.current = endDrag
+  })
+  useEffect(() => () => endDragRef.current(false), [])
+
+  const pressStart = (e: PointerEvent<HTMLDivElement>) => {
+    if (!props.canDrag || e.button !== 0 || e.pointerType === 'touch' || e.shiftKey || e.ctrlKey || e.metaKey) return
+    const i = rowIndexOf(e.target)
+    const item = i === null ? undefined : cache.pages.get(i)
+    if (i === null || !item || item.badName || item.state === 'gone') return
+    dragRef.current = {
+      pointerId: e.pointerId,
+      x: e.clientX,
+      y: e.clientY,
+      index: i,
+      started: false,
+      sel: NO_SELECTION,
+      folders: [],
+      ghost: null,
+      target: null,
+      targetPath: null,
+      lastX: e.clientX,
+      lastY: e.clientY,
+      raf: undefined,
+      cleanup: () => {},
+    }
+  }
+  const pressMove = (e: PointerEvent<HTMLDivElement>) => {
+    const d = dragRef.current
+    if (!d || d.pointerId !== e.pointerId) return
+    if (d.started) moveDrag(d, e.clientX, e.clientY)
+    else if (Math.hypot(e.clientX - d.x, e.clientY - d.y) >= DRAG_THRESHOLD) startDrag(d, e)
+  }
+  const pressEnd = (e: PointerEvent<HTMLDivElement>, drop: boolean) => {
+    if (dragRef.current?.pointerId !== e.pointerId) return
+    if (dragRef.current.started) endDrag(drop)
+    else dragRef.current = null
   }
 
   // 메뉴를 연 줄. 우클릭·길게 누르기는 누른 줄, 키보드(메뉴 키)는 고른 줄이다.
@@ -298,17 +559,19 @@ export function FileList(props: Props) {
   const menu = useContextMenuTrigger({
     items: () => {
       const i = menuIndex.current
-      const item = i === null ? undefined : cache.pages.get(i)
-      if (i === null || !item) return []
-      props.onSelect(i, item)
-      return props.menuItems(item)
+      if (i === null) return props.menuItems(null, selection)
+      const item = cache.pages.get(i)
+      if (!item) return []
+      const sel = isSelected(selection, i) ? { ...selection, focus: i } : selectOne(i)
+      choose(sel)
+      return props.menuItems(item, sel)
     },
   })
   const rows = []
   for (let i = lay.first; i < lay.last; i++) {
     const item = cache.pages.get(i)
     const top = lay.top + (i - lay.first) * ROW_HEIGHT
-    const isSel = i === selected
+    const isSel = isSelected(selection, i)
     if (!item) {
       rows.push(
         <div key={i} className="files-row skeleton" role="row" aria-rowindex={i + 2} aria-busy="true" style={{ top }}>
@@ -321,20 +584,27 @@ export function FileList(props: Props) {
     const kind = kindOf(item)
     const pending = item.state === 'pending'
     const gone = item.state === 'gone'
+    const droppable = isFolderLike(item) && !item.locked && !gone && !item.badName
     rows.push(
       <div
         key={i}
         id={`${baseId}-r${i}`}
         data-index={i}
-        className={['files-row', isSel && 'selected', (item.locked || gone || item.badName) && 'dim'].filter(Boolean).join(' ')}
+        data-drop-path={droppable ? joinPath(listing.path, item.name) : undefined}
+        className={['files-row', isSel && 'selected', i === selected && 'current', (item.locked || gone || item.badName) && 'dim']
+          .filter(Boolean)
+          .join(' ')}
         role="row"
         aria-rowindex={i + 2}
         aria-selected={isSel}
         style={{ top }}
         onClick={(e) => {
-          if (menu.openedByPress()) return
-          props.onSelect(i, item)
-          if (e.detail === 2) props.onOpen(item)
+          if (menu.openedByPress() || consumeClick()) return
+          const mod = e.ctrlKey || e.metaKey
+          if (e.shiftKey) choose(extendTo(selection, i, mod))
+          else if (mod) choose(toggleAt(selection, i))
+          else choose(selectOne(i))
+          if (e.detail === 2 && !e.shiftKey && !mod) props.onOpen(item)
         }}
       >
         <span className="files-cell name" role="gridcell">
@@ -368,7 +638,7 @@ export function FileList(props: Props) {
   const activeId = selected !== null && selected >= lay.first && selected < lay.last ? `${baseId}-r${selected}` : undefined
 
   return (
-    <div className="files-list" role="grid" aria-label={t('files.list.label')} aria-rowcount={total + 1}>
+    <div className="files-list" role="grid" aria-label={t('files.list.label')} aria-rowcount={total + 1} aria-multiselectable="true">
       <div className="files-row header" role="row" aria-rowindex={1}>
         {COLUMNS.map((c) => (
           <span key={c.key} className={`files-cell ${c.key === 'mtime' ? 'date' : c.key}`} role="columnheader" aria-sort={sortLabel(c.key)}>
@@ -389,17 +659,34 @@ export function FileList(props: Props) {
         tabIndex={0}
         aria-activedescendant={activeId}
         onScroll={onScroll}
+        onClick={(e) => {
+          // 빈 곳을 누르면 고르기를 지운다.
+          if (consumeClick() || menu.openedByPress() || rowIndexOf(e.target) !== null) return
+          if (selectedCount(selection) > 0) choose(NO_SELECTION)
+        }}
         onContextMenu={(e) => {
           menuIndex.current = rowIndexOf(e.target)
           menu.handlers.onContextMenu(e)
         }}
         onPointerDown={(e) => {
+          suppressClick.current = false
           menuIndex.current = rowIndexOf(e.target)
           menu.handlers.onPointerDown(e)
+          pressStart(e)
         }}
-        onPointerMove={(e) => menu.handlers.onPointerMove(e)}
-        onPointerUp={(e) => menu.handlers.onPointerUp(e)}
-        onPointerCancel={(e) => menu.handlers.onPointerCancel(e)}
+        onPointerMove={(e) => {
+          menu.handlers.onPointerMove(e)
+          pressMove(e)
+        }}
+        onPointerUp={(e) => {
+          menu.handlers.onPointerUp(e)
+          pressEnd(e, true)
+        }}
+        onPointerCancel={(e) => {
+          menu.handlers.onPointerCancel(e)
+          pressEnd(e, false)
+        }}
+        onLostPointerCapture={(e) => pressEnd(e, false)}
         onKeyDown={(e) => {
           menuIndex.current = selected
           menu.handlers.onKeyDown(e)

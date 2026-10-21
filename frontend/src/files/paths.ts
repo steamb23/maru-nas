@@ -92,18 +92,43 @@ export function locationLabel(roots: readonly Root[], filePath: string, homeName
     .join(' / ')
 }
 
-// UPLOAD_PREFIX는 도우미가 올리는 중인 임시 파일에 쓰는 이름 접두사다. 이 이름으로는 올릴 수 없다.
+// UPLOAD_PREFIX는 도우미가 올리는 중인 임시 파일에 쓰는 이름 접두사다. 이 이름으로는 올리거나 만들거나 바꿀 수 없다.
 const UPLOAD_PREFIX = '.onmaru-upload-'
 
-// uploadNameOk는 올릴 파일 이름으로 쓸 수 있는지다(백엔드·도우미와 같은 검사).
+// NameProblem은 새 이름(올리기, 폴더 만들기, 이름 바꾸기)으로 쓸 수 없는 이유다.
+export type NameProblem = 'empty' | 'dots' | 'chars' | 'tooLong' | 'reserved'
+
+// nameProblem은 새 이름으로 쓸 수 없는 이유다. 쓸 수 있으면 null이다(백엔드·도우미와 같은 검사).
+export function nameProblem(name: string): NameProblem | null {
+  if (name === '') return 'empty'
+  if (name === '.' || name === '..') return 'dots'
+  if (name.includes('/') || name.includes('\0')) return 'chars'
+  if (new TextEncoder().encode(name).length > 255) return 'tooLong'
+  if (name.startsWith(UPLOAD_PREFIX)) return 'reserved'
+  return null
+}
+
+// uploadNameOk는 올릴 파일 이름으로 쓸 수 있는지다.
 export function uploadNameOk(name: string): boolean {
-  return (
-    name !== '' &&
-    name !== '.' &&
-    name !== '..' &&
-    !name.includes('/') &&
-    !name.includes('\0') &&
-    new TextEncoder().encode(name).length <= 255 &&
-    !name.startsWith(UPLOAD_PREFIX)
-  )
+  return nameProblem(name) === null
+}
+
+// stemLength는 이름 바꾸기에서 처음 고를 글자 수다. 파일은 마지막 확장자를 빼고(앞의 점으로 시작하는 이름은 전체),
+// 폴더는 전체다.
+export function stemLength(name: string, folder: boolean): number {
+  const dot = name.lastIndexOf('.')
+  return folder || dot <= 0 ? name.length : dot
+}
+
+// numberedName은 같은 이름이 있을 때 붙여 볼 n번째 이름이다: "새 폴더", "새 폴더 (2)", "새 폴더 (3)" …
+export function numberedName(base: string, n: number): string {
+  return n <= 1 ? base : `${base} (${n})`
+}
+
+// moveAllowed는 sources(옮길 경로)를 target 폴더로 옮길 수 있는지 경로 모양으로만 본다. 모두 이미 그 폴더에 있거나,
+// 어느 하나가 target 자신이거나 그 위(폴더를 자기 안으로)면 옮길 수 없다. 다른 디스크인지는 서버가 정한다.
+export function moveAllowed(sources: readonly string[], target: string): boolean {
+  if (sources.length === 0) return false
+  if (sources.every((p) => dirName(p) === target)) return false
+  return !sources.some((p) => within(target, p))
 }

@@ -249,3 +249,35 @@
     display: none;
   }
 }
+
+/* 키보드 위치 줄(Ctrl로 고르기에서 뺀 줄일 수 있다). 목록에 키보드 포커스가 있을 때만 테두리를 보인다. */
+.files-scroll:focus-visible .files-row.current {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 70%, transparent);
+}
+
+/* 끌어 놓을 곳(폴더 줄, 경로 단계, 사이드바 항목, 다른 탐색기 창의 것 포함). 렌더 없이 요소에 직접 붙인다(DROP_TARGET).
+   선택 상태·hover 배경보다 앞서도록 명시도를 맞추고 뒤에 둔다. */
+.files-drop-target.files-drop-target,
+.files-spacer .files-row.files-drop-target:not(.skeleton) {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+/* 끄는 항목을 따라다니는 이름표. body에 붙이고 포인터를 받지 않는다(놓을 곳은 elementFromPoint로 찾는다). */
+.files-drag-ghost {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 10000;
+  max-width: 280px;
+  padding: 4px 10px;
+  overflow: hidden;
+  border-radius: 6px;
+  background: var(--accent);
+  box-shadow: 0 4px 14px rgb(0 0 0 / 0.25);
+  color: #fff;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  pointer-events: none;
+}

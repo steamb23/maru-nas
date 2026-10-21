@@ -154,7 +154,8 @@
       "search": "Search this folder",
       "searchMany": "Search {{total}} items",
       "upload": "Upload",
-      "uploadDenied": "You don't have permission to write to this folder."
+      "uploadDenied": "You don't have permission to write to this folder.",
+      "newFolder": "New folder"
     },
     "columns": {
       "name": "Name",
@@ -166,7 +167,8 @@
       "items_one": "{{total}} item",
       "items_other": "{{total}} items",
       "shown": "Showing {{total}} items (truncated)",
-      "selected": "1 selected",
+      "selected_one": "{{total}} selected",
+      "selected_other": "{{total}} selected",
       "sortName": "By name",
       "sortMtime": "By date",
       "sortSize": "By size",
@@ -214,7 +216,70 @@
     "menu": {
       "open": "Open",
       "download": "Download",
-      "info": "Details"
+      "info": "Details",
+      "newFolder": "New folder",
+      "upload": "Upload",
+      "selectAll": "Select all",
+      "rename": "Rename",
+      "renameKey": "F2",
+      "delete": "Delete…",
+      "deleteMany": "Delete {{total}} items…",
+      "deleteKey": "Delete",
+      "readOnly": "No write permission"
+    },
+    "name": {
+      "label": "Name",
+      "mkdirTitle": "New folder",
+      "renameTitle": "Rename",
+      "newFolder": "New folder",
+      "create": "Create",
+      "rename": "Rename",
+      "errors": {
+        "empty": "Enter a name.",
+        "dots": "\".\" and \"..\" can't be used as names.",
+        "chars": "Names can't contain \"/\".",
+        "tooLong": "The name is too long. Names can be up to 255 bytes in UTF-8.",
+        "reserved": "Names starting with \".onmaru-upload-\" are used by files being uploaded, so they can't be used."
+      }
+    },
+    "delete": {
+      "titleOne": "Delete \"{{name}}\"?",
+      "titleMany": "Delete {{total}} items?",
+      "permanent": "Items are deleted right away without going to a trash, so this can't be undone.",
+      "folders": "All files and folders inside the folders are deleted too.",
+      "more": "and {{total}} more",
+      "confirm": "Delete"
+    },
+    "ops": {
+      "deleting": "Deleting",
+      "moving": "Moving",
+      "stop": "Stop",
+      "stopHint": "Stops after finishing the current item.",
+      "deleteFailed": "Some items weren't deleted",
+      "moveFailed": "Some items weren't moved",
+      "errors": {
+        "not_found": "The item doesn't exist. It may already have been deleted or renamed.",
+        "permission_denied": "You don't have permission.",
+        "file_exists": "An item with the same name already exists.",
+        "cross_device": "Items can't be moved to a different disk.",
+        "root_folder": "Folders shown in the sidebar (home folder, shared folders, disks) can't be renamed, moved, or deleted.",
+        "not_empty": "The folder isn't empty, so it wasn't deleted. Refresh the list and try again.",
+        "read_only": "The file system is read-only.",
+        "no_space": "There isn't enough disk space.",
+        "helper_busy": "Too many operations are running at once. Try again in a moment.",
+        "timeout": "It took too long and was stopped. Try again to continue with the remaining items.",
+        "outside_roots": "The file explorer can't work with this location.",
+        "bad_request": "This can't be done. You may have tried to move a folder into itself.",
+        "network": "The connection was lost.",
+        "generic": "The operation failed."
+      }
+    },
+    "drag": {
+      "items": "{{total}} items"
+    },
+    "drop": {
+      "foldersTitle": "Folders weren't uploaded",
+      "folders": "Folders can't be uploaded yet, so they were skipped: {{names}}"
     },
     "info": {
       "label": "Selected file details",
