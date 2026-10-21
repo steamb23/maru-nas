@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 
 	"onmaru/backend/internal/helper/proto"
@@ -162,8 +163,11 @@ func TestSearchCancel(t *testing.T) {
 	searchReportEvery, searchBatch = 0, 1
 	t.Cleanup(func() { searchReportEvery, searchBatch = every, batch })
 	e := newEnv(t)
-	for i := range 50 {
-		e.file(filepath.Join(e.home, fmt.Sprintf("d%d", i), "hit.txt"), "")
+	// 진행 응답이 소켓 버퍼(수백 KiB)를 넘어야 검색이 끝나기 전에 쓰기가 막히고, 연결을 닫으면 그 쓰기가 실패한다.
+	// 응답이 버퍼에 다 들어가면 받는 쪽이 닫기 전에 검색이 끝나 버린다.
+	long := strings.Repeat("h", 200)
+	for i := range 4000 {
+		e.file(filepath.Join(e.home, fmt.Sprintf("hit-%s-%d", long, i)), "")
 	}
 	client, server := socketPair(t)
 	job := e.job
