@@ -274,7 +274,8 @@ async function runUpload(job: UploadJob, rt: Runtime) {
     const f = cur.files[i]
     update<UploadJob>(id, (j) => fileStarted(j, i))
     try {
-      // 보안 강화 정책이 쓰기에 확인을 요구하면 확인한 뒤 같은 파일을 다시 올린다.
+      // 보안 강화 정책이 쓰기에 확인을 요구하면 확인한 뒤 같은 파일을 다시 올린다. uploadFile이 본문을 보내기 전에
+      // 사전 확인을 하므로 대화상자는 본문을 보내기 전에 뜬다.
       await withStepUp(() => liveScope(rt.scope), () =>
         uploadFile(joinPath(job.target, f.name), file, {
           overwrite: f.overwrite,

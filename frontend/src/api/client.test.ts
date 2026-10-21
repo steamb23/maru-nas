@@ -27,6 +27,7 @@ import {
   saveWidgets,
   sendActivity,
   setUnauthorizedHandler,
+  uploadFile,
 } from './client'
 
 const valid = {
@@ -527,5 +528,73 @@ describe('copyFiles', () => {
 
     stubFetch(Response.json({ error: 'x', code: 'security_required', required: 'password' }, { status: 403 }))
     await expect(copyFiles({ dir: '/a', names: ['b'], to: '/c' }, () => {})).rejects.toMatchObject({ code: 'security_required' })
+  })
+})
+
+describe('uploadFile', () => {
+  // FakeXHR는 보낸 요청을 기록하고 올린 파일 항목으로 답하는 XHR이다.
+  class FakeXHR {
+    static sent: { method: string; url: string }[] = []
+    method = ''
+    url = ''
+    status = 0
+    responseText = ''
+    upload: { onprogress: ((e: { loaded: number }) => void) | null } = { onprogress: null }
+    onload: (() => void) | null = null
+    onerror: (() => void) | null = null
+    onabort: (() => void) | null = null
+    open(method: string, url: string) {
+      this.method = method
+      this.url = url
+    }
+    setRequestHeader() {}
+    abort() {
+      this.onabort?.()
+    }
+    send() {
+      FakeXHR.sent.push({ method: this.method, url: this.url })
+      this.status = 200
+      this.responseText = JSON.stringify({ name: 'a b.txt', type: 'file', state: 'ok', size: 3 })
+      queueMicrotask(() => this.onload?.())
+    }
+  }
+  const opts = () => ({ overwrite: true, onProgress: () => {}, signal: new AbortController().signal })
+
+  it('본문을 보내기 전에 사전 확인을 한다', async () => {
+    FakeXHR.sent = []
+    vi.stubGlobal('XMLHttpRequest', FakeXHR)
+    const fn = stubFetch(new Response(null, { status: 204 }))
+    await expect(uploadFile('/home/u/a b.txt', new Blob(['abc']), opts())).resolves.toMatchObject({ name: 'a b.txt' })
+    const [url, init] = fn.mock.calls[0]
+    expect(url).toMatch(/\/api\/files\/upload\/check$/)
+    expect(init?.method).toBe('POST')
+    expect(JSON.parse(String(init?.body))).toEqual({ path: '/home/u/a b.txt' })
+    expect(FakeXHR.sent).toHaveLength(1)
+    expect(FakeXHR.sent[0].method).toBe('PUT')
+    expect(FakeXHR.sent[0].url).toMatch(/\/api\/files\/upload\?path=%2Fhome%2Fu%2Fa%20b\.txt&overwrite=1$/)
+  })
+
+  it('사전 확인이 거절하면 본문을 보내지 않는다', async () => {
+    FakeXHR.sent = []
+    vi.stubGlobal('XMLHttpRequest', FakeXHR)
+    stubFetch(Response.json({ error: 'x', code: 'security_required', required: 'password' }, { status: 403 }))
+    await expect(uploadFile('/home/u/a.txt', new Blob(['abc']), opts())).rejects.toMatchObject({
+      status: 403,
+      code: 'security_required',
+      required: 'password',
+    })
+    expect(FakeXHR.sent).toHaveLength(0)
+  })
+
+  it('사전 확인의 401은 로그인 화면으로 보낸다', async () => {
+    FakeXHR.sent = []
+    vi.stubGlobal('XMLHttpRequest', FakeXHR)
+    stubFetch(unauthorized())
+    const onUnauthorized = vi.fn()
+    const off = setUnauthorizedHandler(onUnauthorized)
+    await expect(uploadFile('/home/u/a.txt', new Blob(['abc']), opts())).rejects.toMatchObject({ status: 401 })
+    off()
+    expect(onUnauthorized).toHaveBeenCalledOnce()
+    expect(FakeXHR.sent).toHaveLength(0)
   })
 })
