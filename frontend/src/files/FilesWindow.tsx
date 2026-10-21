@@ -31,11 +31,9 @@ import type { ContextMenuItem } from '../shell/contextMenu'
 import { useDialogs } from '../shell/dialogPresets'
 import { DeleteBody, DeleteTitle, FailuresBody } from './DeleteBody'
 import { dropMode } from './copyJobs'
-import { startCopy } from './copyStore'
 import { DROP_TARGET, FileList, type FileListHandle, type SortKey, type View } from './FileList'
 import { InfoPane } from './InfoPane'
 import { TrashView } from './TrashView'
-import { UploadPanel } from './UploadPanel'
 import { startDownload } from './download'
 import { type History, back, canBack, canForward, current, forward, replaceCurrent, startHistory, visit } from './history'
 import { isFolderLike } from './kinds'
@@ -67,7 +65,8 @@ import {
 } from './paths'
 import { NO_SELECTION, type Selection, selectAll, selectOne, selectedCount, soleIndex } from './selection'
 import { withStepUp } from './stepUp'
-import { useUploads } from './useUploads'
+import { startCopy, startUpload } from './transferStore'
+import { checkUploads } from './uploads'
 
 // 창이 이보다 좁으면 사이드바를 숨기고 메뉴 단추로 덮어 연다(SidebarLayout).
 const FILES_NARROW_WIDTH = 720
@@ -192,7 +191,6 @@ export function FilesWindow({ active }: WindowViewProps) {
     if (path && affects(c, path)) c.refreshed = path
     notifyFilesChanged(c)
   }
-  const uploads = useUploads(dialogs, (dir) => changed([dir]))
 
   // 처음 보이는 폴더. 보안 확인이 필요하면 확인 단추를 보인다.
   useEffect(() => {
@@ -607,15 +605,22 @@ export function FilesWindow({ active }: WindowViewProps) {
   // dropModeFor는 고른 항목을 target에 놓을 때 할 일이다(끄는 이름표, null이면 놓을 수 없다).
   const dropModeFor = (target: string) => (path ? dropMode(volumes, path, target, TRASH, writable) : null)
 
-  // desktopBounds는 이 창이 놓인 데스크톱 영역의 크기다(복사 진행 창을 열 자리).
+  // desktopBounds는 이 창이 놓인 데스크톱 영역의 크기다(파일 작업 창을 열 자리).
   const desktopBounds = () => {
     const area = contentRef.current?.closest('.desktop-area')
     return area ? { width: area.clientWidth, height: area.clientHeight } : { width: window.innerWidth, height: window.innerHeight }
   }
 
-  // copyItems는 항목을 target 폴더에 복사한다. 복사는 복사 진행 창(copyStore)이 이어서 하므로 이 창은 기다리지 않는다.
+  // copyItems는 항목을 target 폴더에 복사한다. 복사는 파일 작업 목록(transferStore)이 이어서 하므로 이 창은 기다리지 않는다.
   const copyItems = (dir: string, items: readonly FileItem[], target: string) => {
     startCopy({ dir, names: items.map((i) => i.name), target, roots, scope: dialogs.scope, bounds: desktopBounds() })
+  }
+
+  // uploadFiles는 파일을 dir에 올린다. 같은 이름을 먼저 확인하고, 올리기는 파일 작업 목록이 이어서 한다(이 창을 닫아도
+  // 이어진다).
+  const uploadFiles = async (dir: string, picked: readonly File[]) => {
+    const uploads = await checkUploads(dialogs, t, dir, picked)
+    startUpload({ target: dir, uploads, roots, scope: dialogs.scope, bounds: desktopBounds() })
   }
 
   // moveSelection은 고른 항목을 target 폴더로 옮긴다(끌어 놓기). 다른 디스크면 옮기지 않고 복사한다. 같은 이름이 있으면 그
@@ -695,7 +700,7 @@ export function FilesWindow({ active }: WindowViewProps) {
       if (entry?.isDirectory) folders.push(entry.name)
       else if (f) files.push(f)
     }
-    if (files.length > 0) void uploads.add(target.path, files)
+    if (files.length > 0) void uploadFiles(target.path, files)
     if (folders.length > 0) {
       void dialogs.alert({ title: t('files.drop.foldersTitle'), message: t('files.drop.folders', { names: folders.join(', ') }) })
     }
@@ -787,7 +792,7 @@ export function FilesWindow({ active }: WindowViewProps) {
   const onPick = (e: ChangeEvent<HTMLInputElement>) => {
     const picked = Array.from(e.currentTarget.files ?? [])
     e.currentTarget.value = ''
-    if (path && picked.length > 0) uploads.add(path, picked)
+    if (path && picked.length > 0) void uploadFiles(path, picked)
   }
 
   const verify = async () => {
@@ -1154,7 +1159,6 @@ export function FilesWindow({ active }: WindowViewProps) {
             onClose={() => setPane(null)}
           />
         )}
-        <UploadPanel state={uploads.state} onCancel={uploads.cancel} onRetry={uploads.retry} onClear={uploads.clear} />
       </div>
       <footer className="files-status">
         {listing && (

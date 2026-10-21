@@ -1,7 +1,7 @@
 // 파일 탐색기의 오류 문구 키. DOM에 의존하지 않아 node 환경에서 테스트한다.
 import type { ParseKeys } from 'i18next'
 import { ApiError } from '../api/client'
-import type { UploadItem } from './uploadQueue'
+import type { UploadError } from './uploadJobs'
 
 const ERROR_KEYS: Partial<Record<string, ParseKeys>> = {
   not_found: 'files.errors.not_found',
@@ -33,12 +33,12 @@ const UPLOAD_KEYS: Partial<Record<string, ParseKeys>> = {
 }
 
 // uploadErrorKey는 올리기 실패의 문구 키다.
-export function uploadErrorKey(error: UploadItem['error']): ParseKeys {
+export function uploadErrorKey(error: UploadError | undefined): ParseKeys {
   return (error && UPLOAD_KEYS[error]) ?? 'files.upload.errors.unknown'
 }
 
 // uploadError는 올리기 실패를 목록에 둘 이유로 바꾼다.
-export function uploadError(err: unknown): NonNullable<UploadItem['error']> {
+export function uploadError(err: unknown): UploadError {
   if (err instanceof ApiError) return err.code ?? 'unknown'
   if (err instanceof TypeError) return 'network'
   return 'unknown'

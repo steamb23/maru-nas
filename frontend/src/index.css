@@ -74,10 +74,9 @@
 @import './files/FilesWindow.css';
 @import './files/FileList.css';
 @import './files/InfoPane.css';
-@import './files/UploadPanel.css';
 @import './files/NameForm.css';
 @import './files/TrashView.css';
-@import './files/CopyWindow.css';
+@import './files/TransfersWindow.css';
 
 /* 설정 앱. 애드온 공통 클래스(.addon-button 등)를 함께 쓰므로 그 뒤에 둔다. */
 @import './settings/SettingsWindow.css';

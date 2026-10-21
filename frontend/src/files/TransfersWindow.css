@@ -1,12 +1,12 @@
-/* 파일 복사 진행 창(CopyWindow). 작업 목록이 남은 높이를 채워 스크롤하고, 아래에 안내와 끝난 작업 지우기를 둔다. */
-.copy-window {
+/* 파일 작업 창(TransfersWindow). 작업 목록이 남은 높이를 채워 스크롤하고, 아래에 안내와 끝난 작업 지우기를 둔다. */
+.transfer-window {
   display: flex;
   flex-direction: column;
   height: 100%;
   min-height: 0;
 }
 
-.copy-jobs {
+.transfer-jobs {
   flex: 1;
   min-height: 0;
   margin: 0;
@@ -15,7 +15,7 @@
   list-style: none;
 }
 
-.copy-empty {
+.transfer-empty {
   flex: 1;
   margin: 0;
   padding: 24px 16px;
@@ -23,46 +23,46 @@
   text-align: center;
 }
 
-.copy-job {
+.transfer-job {
   display: flex;
   flex-direction: column;
   gap: 6px;
   padding: 10px 0;
 }
 
-.copy-job + .copy-job {
+.transfer-job + .transfer-job {
   border-top: 1px solid var(--window-border);
 }
 
-.copy-job-head {
+.transfer-job-head {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-.copy-job-title {
+.transfer-job-title {
   display: flex;
   flex: 1;
   flex-direction: column;
   min-width: 0;
 }
 
-.copy-job-title strong,
-.copy-job-title span,
-.copy-job-current {
+.transfer-job-title strong,
+.transfer-job-title span,
+.transfer-job-current {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.copy-job-title span,
-.copy-job-current,
-.copy-job-detail {
+.transfer-job-title span,
+.transfer-job-current,
+.transfer-job-detail {
   font-size: 12px;
   color: var(--text-muted);
 }
 
-.copy-job-status {
+.transfer-job-status {
   display: flex;
   flex-wrap: wrap;
   gap: 4px 10px;
@@ -70,33 +70,33 @@
   font-size: 13px;
 }
 
-.copy-job-current,
-.copy-job-error,
-.copy-job-note {
+.transfer-job-current,
+.transfer-job-error,
+.transfer-job-note {
   margin: 0;
 }
 
-.copy-job-error {
+.transfer-job-error {
   font-size: 13px;
   color: light-dark(#b3261e, #f2b8b5);
 }
 
-.copy-job-note {
+.transfer-job-note {
   font-size: 12px;
   color: var(--text-muted);
 }
 
-.copy-job .files-delete {
+.transfer-job .files-delete {
   font-size: 13px;
 }
 
 /* 세는 중에는 양을 모르므로 짧은 막대가 오간다. */
-.copy-meter.busy .meter-fill {
+.transfer-meter.busy .meter-fill {
   width: 30%;
-  animation: copy-busy 1.2s ease-in-out infinite alternate;
+  animation: transfer-busy 1.2s ease-in-out infinite alternate;
 }
 
-@keyframes copy-busy {
+@keyframes transfer-busy {
   from {
     translate: 0;
   }
@@ -106,17 +106,17 @@
   }
 }
 
-:root[data-animations='off'] .copy-meter.busy .meter-fill {
+:root[data-animations='off'] .transfer-meter.busy .meter-fill {
   animation: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .copy-meter.busy .meter-fill {
+  .transfer-meter.busy .meter-fill {
     animation: none;
   }
 }
 
-.copy-footer {
+.transfer-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -125,4 +125,11 @@
   border-top: 1px solid var(--window-border);
   font-size: 12px;
   color: var(--text-muted);
+}
+
+.transfer-job-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
 }

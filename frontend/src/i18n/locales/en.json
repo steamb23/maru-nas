@@ -95,7 +95,7 @@
   "apps": {
     "systemInfo": "System Information",
     "files": "Files",
-    "copy": "File copy",
+    "transfers": "File tasks",
     "storage": "Storage",
     "network": "Network",
     "temperature": "Temperature",
@@ -303,15 +303,19 @@
       "copy": "Copy",
       "trash": "To the trash"
     },
-    "copy": {
+    "transfers": {
       "status": {
         "queued": "Waiting",
         "scanning": "Counting what to copy",
-        "running": "Copying",
-        "done": "Copied",
-        "failed": "Some items weren't copied",
+        "copying": "Copying",
+        "copied": "Copied",
+        "copyFailed": "Some items weren't copied",
+        "uploading": "Uploading",
+        "uploaded": "Uploaded",
+        "uploadFailed": "Some files weren't uploaded",
         "cancelled": "Cancelled"
       },
+      "uploadTo": "Upload to {{folder}}",
       "size": "{{done}} of {{total}}",
       "files_one": "{{done}} of {{total}} file",
       "files_other": "{{done}} of {{total}} files",
@@ -319,9 +323,13 @@
       "remaining": "About {{time}} left",
       "skipped_one": "{{total}} special file (FIFO, socket, or device) in the folders wasn't copied.",
       "skipped_other": "{{total}} special files (FIFOs, sockets, or devices) in the folders weren't copied.",
-      "closeHint": "Closing this window cancels the remaining copies.",
+      "retry_one": "Upload {{total}} file again",
+      "retry_other": "Upload {{total}} files again",
+      "overwrite_one": "Replace and upload {{total}} file",
+      "overwrite_other": "Replace and upload {{total}} files",
+      "closeHint": "Closing this window cancels the remaining tasks.",
       "clear": "Clear finished",
-      "empty": "No copies in progress."
+      "empty": "No tasks in progress."
     },
     "drop": {
       "foldersTitle": "Folders weren't uploaded",
@@ -379,19 +387,6 @@
     },
     "upload": {
       "title": "Uploads",
-      "inProgress": "{{active}} of {{total}} uploads left",
-      "allDone": "{{total}} uploads finished",
-      "collapse": "Collapse",
-      "expand": "Expand",
-      "cancel": "Cancel",
-      "retry": "Upload again",
-      "clear": "Clear list",
-      "done": "Done",
-      "skipped": "Skipped",
-      "canceled": "Canceled",
-      "waiting": "Waiting",
-      "progress": "{{sent}} / {{size}}",
-      "remaining": "About {{time}} left",
       "badName": "{{name}} can't be uploaded with this name.",
       "conflictTitle": "A file with this name exists",
       "conflictMessage": "\"{{name}}\" already exists. Replace it?",

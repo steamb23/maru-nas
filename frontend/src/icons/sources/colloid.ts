@@ -129,7 +129,7 @@ export const COLLOID_ICONS = {
   'org.gnome.DiskUtility': { url: gnomeDiskUtility, kind: 'color' },
   'drive-harddisk': { url: driveHarddisk, kind: 'color' },
   folder: { url: folder, kind: 'color' },
-  // 파일 복사 진행 창(폴더로 들어가는 화살표)
+  // 파일 작업 창의 복사(폴더로 들어가는 화살표)
   'folder-download': { url: folderDownload, kind: 'color' },
   'preferences-system': { url: preferencesSystem, kind: 'color' },
   'utilities-terminal': { url: utilitiesTerminal, kind: 'color' },

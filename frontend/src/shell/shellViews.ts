@@ -7,8 +7,8 @@ import type { WindowViewProps } from '../addons/types'
 import type { ShellAppId } from '../windows/apps'
 
 export const SHELL_VIEWS: Record<ShellAppId, ComponentType<WindowViewProps>> = {
-  copy: lazyView(() => import('../files/CopyWindow'), (m) => m.CopyWindow),
   files: lazyView(() => import('../files/FilesWindow'), (m) => m.FilesWindow),
   settings: lazyView(() => import('../settings/SettingsWindow'), (m) => m.SettingsWindow),
   terminal: lazyView(() => import('../terminal/TerminalWindow'), (m) => m.TerminalWindow),
+  transfers: lazyView(() => import('../files/TransfersWindow'), (m) => m.TransfersWindow),
 }
