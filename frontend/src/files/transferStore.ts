@@ -11,7 +11,8 @@
 //   창 컴포넌트의 정리 함수는 개발 모드(StrictMode)에서 마운트 직후에도 불리므로 쓰지 않고, 창 저장소에서 창이
 //   사라지는 것을 본다. 닫힌 창은 닫기 애니메이션 동안 이 목록으로 그려지므로 목록은 다음 작업을 더할 때 비운다
 // - 작업하는 동안은 세션 활동으로 알리고(입력 없이도 로그아웃되지 않게) 페이지를 떠나려 하면 경고한다
-// - 보안 확인 대화상자는 작업을 더한 탐색기 창에 띄우고, 그 창이 닫혔으면 작업 창, 그것도 없으면 바탕화면에 띄운다
+// - 보안 확인 대화상자는 작업을 더한 탐색기 창에 띄우고, 그 창이 닫혔으면 작업 창, 그것도 없으면 바탕화면에 띄운다.
+//   띄울 곳은 확인이 필요해진 때 고른다
 import { create } from 'zustand'
 import { ApiError, copyFiles, uploadFile } from '../api/client'
 import { reportActivity } from '../auth/activity'
@@ -180,6 +181,7 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
 }
 
 // liveScope는 보안 확인 대화상자를 띄울 곳이다. 작업을 더한 창이 닫혔으면 작업 창, 그것도 없으면 바탕화면이다.
+// 요청을 시작할 때가 아니라 확인이 필요해진 때 부르도록 withStepUp에 함수로 넘긴다(그사이 창이 닫힐 수 있다).
 function liveScope(scope: DialogScope): DialogScope {
   const { outlets } = useDialogStore.getState()
   if (outlets.includes(scopeId(scope))) return scope
@@ -220,7 +222,7 @@ async function runCopy(job: CopyJob, rt: Runtime) {
   for (const [i, names] of chunks.entries()) {
     if (rt.ctl.signal.aborted) break
     try {
-      const res = await withStepUp(liveScope(rt.scope), () =>
+      const res = await withStepUp(() => liveScope(rt.scope), () =>
         copyFiles(
           { dir: job.dir, names: [...names], to: job.target },
           (p) =>
@@ -273,7 +275,7 @@ async function runUpload(job: UploadJob, rt: Runtime) {
     update<UploadJob>(id, (j) => fileStarted(j, i))
     try {
       // 보안 강화 정책이 쓰기에 확인을 요구하면 확인한 뒤 같은 파일을 다시 올린다.
-      await withStepUp(liveScope(rt.scope), () =>
+      await withStepUp(() => liveScope(rt.scope), () =>
         uploadFile(joinPath(job.target, f.name), file, {
           overwrite: f.overwrite,
           signal: rt.ctl.signal,

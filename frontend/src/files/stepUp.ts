@@ -9,13 +9,16 @@ import type { DialogScope } from '../shell/dialogs'
 let pending: Promise<unknown> | null = null
 
 // withStepUp은 fn을 하고, 보안 확인이 필요하다는 답이면 확인한 뒤 한 번 더 한다. 확인을 취소하면 원래 오류를 던진다.
-export async function withStepUp<T>(scope: DialogScope, fn: () => Promise<T>): Promise<T> {
+// scope가 함수면 확인이 필요해진 때 불러 대화상자를 띄울 곳을 고른다. 요청이 오래 걸리는 사이에 그 창이 닫힐 수 있는
+// 파일 작업 목록(transferStore.ts)이 쓴다. 올리기는 프록시를 거치면 본문을 다 보낸 뒤에야 거절을 받기도 한다.
+export async function withStepUp<T>(scope: DialogScope | (() => DialogScope), fn: () => Promise<T>): Promise<T> {
   try {
     return await fn()
   } catch (err) {
     if (!(err instanceof ApiError && err.code === 'security_required')) throw err
     // 확인하면 바뀐 보안 상태, 취소하면 null이다.
-    pending ??= requestStepUp(scope, { level: err.required, target: 'files' }).finally(() => {
+    const where = typeof scope === 'function' ? scope() : scope
+    pending ??= requestStepUp(where, { level: err.required, target: 'files' }).finally(() => {
       pending = null
     })
     if (!(await pending)) throw err
