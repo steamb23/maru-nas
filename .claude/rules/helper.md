@@ -29,6 +29,7 @@ paths:
 ## 테스트
 
 - root 없이 테스트한다. 데몬은 가짜 계정·`Verifier`·프로세스 없는 Spawner로, 실행 경로(`ExecSpawner`)는 테스트 실행 파일을 worker로 띄워(자기 uid, 보조 그룹 그대로) 확인한다(`daemon_test.go`의 `TestMain`)
+  - 테스트는 자기 uid를 도우미의 클라이언트 uid로 쓰는데 도우미는 root 클라이언트를 거부한다. 그래서 root로 돌면(클라우드 세션) 도우미를 띄우는 테스트(`helperfake`, 데몬 `newEnv`)는 건너뛴다. 새 테스트 준비 함수도 같은 검사를 두고, 이 영역은 일반 사용자로 도는 CI와 로컬에서 확인한다
 - `unix_chkpwd` 래퍼는 인자·stdin을 확인하는 가짜 스크립트로 시험한다. 실제 비밀번호를 쓰지 않는다
 - worker 파일 연산은 임시 디렉터리와 합성 mountinfo로 시험한다(심볼릭 링크 탈출, FIFO, 기준 삭제 거부 포함)
 - 서버 테스트는 `envOptions{helper: true}`(helperfake)로 로그인 티켓·2차 인증·상승 API를 시험한다

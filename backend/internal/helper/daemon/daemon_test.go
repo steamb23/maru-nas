@@ -212,6 +212,10 @@ func newEnv(t *testing.T, mod func(*Config)) *env {
 	if mod != nil {
 		mod(&cfg)
 	}
+	// New는 root 클라이언트 uid를 거부한다. root로 돌면(클라우드 세션) 자기 uid를 클라이언트로 쓰는 테스트는 건너뛴다.
+	if cfg.ClientUID == 0 {
+		t.Skip("the helper rejects a root client; run as a normal user")
+	}
 	srv, err := New(cfg)
 	if err != nil {
 		t.Fatal(err)
@@ -667,6 +671,9 @@ func TestWorkerLimit(t *testing.T) {
 }
 
 func TestIdleExit(t *testing.T) {
+	if os.Getuid() == 0 {
+		t.Skip("the helper rejects a root client; run as a normal user")
+	}
 	sock := filepath.Join(t.TempDir(), "h.sock")
 	srv, err := New(Config{
 		ClientUID: os.Getuid(), Accounts: newFakeAccounts(), Verifier: &fakeVerifier{}, Spawner: &localSpawner{},

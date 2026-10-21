@@ -28,6 +28,10 @@ type testEnv struct {
 
 func newTestEnv(t *testing.T, opts sshfake.Options) *testEnv {
 	t.Helper()
+	// helperfake는 자기 uid를 클라이언트 uid로 쓰는데 도우미는 root 클라이언트를 거부한다(클라우드 세션은 root로 돈다).
+	if os.Getuid() == 0 {
+		t.Skip("the helper rejects a root client; run as a normal user")
+	}
 	dir := t.TempDir()
 	h, err := helperfake.Start(filepath.Join(dir, "helper.sock"), filepath.Join(dir, "root"), helperfake.DefaultUsers(),
 		helperfake.Options{FailDelay: -1, Logf: func(string, ...any) {}})
