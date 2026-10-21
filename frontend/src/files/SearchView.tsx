@@ -28,6 +28,8 @@ interface Props {
   search: Search
   roots: readonly Root[]
   admin: boolean
+  // followPrivileges면 OMV 공유 폴더 권한도 함께 따른다(정보 패널의 안내 문구).
+  followPrivileges: boolean
   // onFolder는 폴더를 연다. onLocate는 항목이 든 폴더를 열고 그 항목을 고른다.
   onFolder: (path: string) => void
   onLocate: (path: string) => void
@@ -37,6 +39,8 @@ interface Props {
   onSecurity: (level?: RequiredLevel) => void
   // onRetry는 같은 찾기어로 다시 찾는다.
   onRetry: () => void
+  // onClose는 검색 결과에서 나간다(고른 항목이 없을 때의 Esc).
+  onClose: () => void
 }
 
 type State = { key: string } & (
@@ -48,7 +52,7 @@ type State = { key: string } & (
 // itemOf는 찾은 항목을 목록 항목 모양으로 바꾼다(종류·아이콘 계산과 열기에 쓴다). 링크 대상의 종류는 모른다.
 const itemOf = (h: FilesSearchHit): FileItem => ({ name: baseName(h.path), type: h.type, state: 'ok' })
 
-export function SearchView({ search, roots, admin, onFolder, onLocate, onPreview, onDownload, onSecurity, onRetry }: Props) {
+export function SearchView({ search, roots, admin, followPrivileges, onFolder, onLocate, onPreview, onDownload, onSecurity, onRetry, onClose }: Props) {
   const { t } = useTranslation()
   const lang = useLanguage()
   const baseId = useId()
@@ -180,8 +184,9 @@ export function SearchView({ search, roots, admin, onFolder, onLocate, onPreview
     if (e.key === 'Enter' && sel.focus !== null && hits[sel.focus]) {
       open(hits[sel.focus])
       e.preventDefault()
-    } else if (e.key === 'Escape' && selectedCount(sel) > 0) {
-      choose(NO_SELECTION)
+    } else if (e.key === 'Escape') {
+      if (selectedCount(sel) > 0) choose(NO_SELECTION)
+      else onClose()
       e.preventDefault()
     }
   }
@@ -386,6 +391,7 @@ export function SearchView({ search, roots, admin, onFolder, onLocate, onPreview
             path={pane}
             roots={roots}
             admin={admin}
+            followPrivileges={followPrivileges}
             canWrite={false}
             onRename={() => {}}
             onDelete={() => {}}

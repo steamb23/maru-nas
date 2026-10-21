@@ -63,6 +63,22 @@
   font-weight: 400;
 }
 
+/* 보안 확인이 필요해 정보를 받지 못했을 때 */
+.files-info-security {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin: 16px 16px 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+.files-info-security p {
+  margin: 0;
+}
+
 .files-info-list {
   display: grid;
   grid-template-columns: 76px minmax(0, 1fr);

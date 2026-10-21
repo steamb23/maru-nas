@@ -1482,6 +1482,8 @@ type FilesRoots struct {
 	Fallback bool `json:"fallback"`
 	// SharesUpdatedAt은 스냅숏을 받은 시각(RFC 3339)이다.
 	SharesUpdatedAt string `json:"sharesUpdatedAt,omitempty"`
+	// FollowPrivileges는 OMV 공유 폴더 권한 따르기가 적용되고 있다는 뜻이다(켜져 있고 스냅숏이 있을 때).
+	FollowPrivileges bool `json:"followPrivileges,omitempty"`
 }
 
 // FilesRoot는 사이드바 항목 하나다.

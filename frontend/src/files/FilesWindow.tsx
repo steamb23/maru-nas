@@ -293,6 +293,7 @@ export function FilesWindow({ active }: WindowViewProps) {
 
   const listing = listingState.status === 'ready' ? listingState.listing : null
   const roots = rootsState.status === 'ready' ? rootsState.roots : []
+  const followPrivileges = rootsState.status === 'ready' && rootsState.info.followPrivileges === true
   const root = path ? findRoot(roots, path) : null
 
   // 이 창이나 다른 창이 폴더 안을 바꾸면 그 폴더를 보는 창이 목록을 다시 연다. 없어진 파일의 정보 패널은 닫는다.
@@ -1204,12 +1205,14 @@ export function FilesWindow({ active }: WindowViewProps) {
           search={search}
           roots={roots}
           admin={admin}
+          followPrivileges={followPrivileges}
           onFolder={navigate}
           onLocate={locate}
           onPreview={preview}
           onDownload={downloadPath}
           onSecurity={(level) => void searchSecurity(level)}
           onRetry={retrySearch}
+          onClose={closeSearch}
         />
       </SidebarLayout>
     )
@@ -1362,6 +1365,7 @@ export function FilesWindow({ active }: WindowViewProps) {
             path={pane}
             roots={roots}
             admin={admin}
+            followPrivileges={followPrivileges}
             canWrite={canWrite && dirName(pane) === path}
             onRename={(it) => void renameItem(it)}
             onDelete={(it) => void deleteItems([it])}

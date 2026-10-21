@@ -298,6 +298,7 @@ func (h *handler) roots(ctx context.Context, s auth.Session, ticket string) (fil
 		out.Home = &api.FilesRoot{Name: path.Base(id.Home), Path: id.Home}
 	}
 	follow := site.FollowPrivileges && site.SharesUpdatedAt != ""
+	out.FollowPrivileges = follow
 	for _, sh := range site.Shares {
 		access := files.AccessWrite
 		if follow {

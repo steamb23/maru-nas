@@ -1157,7 +1157,8 @@ export function isFilesRoots(v: unknown): v is FilesRoots {
     isArrayOf(v.shares, isFilesShare) &&
     isArrayOf(v.disks, isFilesRoot) &&
     isBool(v.fallback) &&
-    isOptional(v.sharesUpdatedAt, isStr)
+    isOptional(v.sharesUpdatedAt, isStr) &&
+    isOptional(v.followPrivileges, isBool)
   )
 }
 

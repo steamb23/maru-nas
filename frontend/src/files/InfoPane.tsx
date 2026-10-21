@@ -9,6 +9,8 @@ import { formatBytes, formatDateTime } from '../addons/common/format'
 import { useCapabilitiesStore } from '../addons/capabilities'
 import { useLanguage } from '../i18n'
 import { IconImage } from '../icons/IconImage'
+import { requestStepUp } from '../security/stepUpDialog'
+import { useDialogs } from '../shell/dialogPresets'
 import { openWorkbenchRoute } from '../shell/launchApp'
 import { startDownload } from './download'
 import { KIND_KEYS, type PreviewKind, kindIcon, kindOf, modeString, previewKind } from './kinds'
@@ -19,6 +21,8 @@ interface Props {
   path: string
   roots: readonly Root[]
   admin: boolean
+  // followPrivileges면 OMV 공유 폴더 권한도 함께 따른다(안내 문구가 달라진다).
+  followPrivileges: boolean
   // canWrite면 이름 바꾸기·삭제 단추를 쓸 수 있다(그 파일이 든 폴더에 쓸 수 있고 다른 작업이 진행 중이 아님).
   canWrite: boolean
   onRename: (item: FileItem) => void
@@ -28,27 +32,34 @@ interface Props {
   onClose: () => void
 }
 
-// 상태에는 그 결과를 받은 경로를 함께 둔다. 지금 경로와 다르면 받는 중으로 본다.
-type State = { path: string } & ({ status: 'loading' } | { status: 'ready'; info: FileInfo } | { status: 'error'; err: unknown })
+// 상태에는 그 결과를 받은 경로와 시도를 함께 둔다. 지금 경로·시도와 다르면 받는 중으로 본다.
+type State = { path: string; attempt: number } & ({ status: 'loading' } | { status: 'ready'; info: FileInfo } | { status: 'error'; err: unknown })
 
-export function InfoPane({ path, roots, admin, canWrite, onRename, onDelete, onPreview, onClose }: Props) {
+export function InfoPane({ path, roots, admin, followPrivileges, canWrite, onRename, onDelete, onPreview, onClose }: Props) {
   const { t } = useTranslation()
   const lang = useLanguage()
   const workbench = useCapabilitiesStore((s) => Boolean(s.caps?.workbenchUrl))
-  const [result, setState] = useState<State>({ path: '', status: 'loading' })
+  const dialogs = useDialogs()
+  const [result, setState] = useState<State>({ path: '', attempt: 0, status: 'loading' })
+  // attempt는 보안 확인 뒤 다시 받을 때 올린다.
+  const [attempt, setAttempt] = useState(0)
   const [downloadFailure, setDownloadError] = useState<{ path: string; err: unknown } | null>(null)
 
   useEffect(() => {
     const ctl = new AbortController()
     fetchFileInfo(path, ctl.signal).then(
-      (info) => setState({ path, status: 'ready', info }),
+      (info) => setState({ path, attempt, status: 'ready', info }),
       (err: unknown) => {
-        if (!ctl.signal.aborted) setState({ path, status: 'error', err })
+        if (!ctl.signal.aborted) setState({ path, attempt, status: 'error', err })
       },
     )
     return () => ctl.abort()
-  }, [path])
-  const state: State = result.path === path ? result : { path, status: 'loading' }
+  }, [path, attempt])
+  const state: State = result.path === path && result.attempt === attempt ? result : { path, attempt, status: 'loading' }
+  const security = state.status === 'error' && state.err instanceof ApiError && state.err.code === 'security_required' ? state.err : null
+  const verify = async () => {
+    if (await requestStepUp(dialogs.scope, { level: security?.required, target: 'files' })) setAttempt((n) => n + 1)
+  }
   const downloadError = downloadFailure?.path === path ? downloadFailure.err : null
 
   const name = path.slice(path.lastIndexOf('/') + 1)
@@ -135,7 +146,15 @@ export function InfoPane({ path, roots, admin, canWrite, onRename, onDelete, onP
           {t(errorKey(downloadError))}
         </p>
       )}
-      {state.status === 'error' && (
+      {security && (
+        <div className="files-info-security">
+          <p>{t('files.info.security')}</p>
+          <button type="button" className="addon-button primary" onClick={() => void verify()}>
+            {t('files.security.verify')}
+          </button>
+        </div>
+      )}
+      {state.status === 'error' && !security && (
         <p className="addon-banner files-info-error" role="alert">
           {state.err instanceof ApiError && state.err.code ? t(errorKey(state.err)) : t('files.info.loadFailed')}
         </p>
@@ -169,7 +188,7 @@ export function InfoPane({ path, roots, admin, canWrite, onRename, onDelete, onP
             <dd>{info.acl === undefined ? t('files.info.unknown') : info.acl ? t('files.info.aclYes') : t('files.info.aclNo')}</dd>
           </dl>
           <div className="files-info-note">
-            <p>{t('files.info.note')}</p>
+            <p>{t(followPrivileges ? 'files.info.noteFollow' : 'files.info.note')}</p>
             {admin && workbench && info.shareUuid && (
               <button
                 type="button"

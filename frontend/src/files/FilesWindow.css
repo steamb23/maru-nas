@@ -118,10 +118,14 @@
   align-items: center;
 }
 
-/* 앞 단계는 줄어들고 지금 폴더는 끝까지 보이게 한다. */
+/* 앞 단계는 줄어들고 지금 폴더는 끝까지 보이게 한다. 단계가 하나뿐이면 경로 칸을 다 쓴다. */
 .files-crumb:last-child {
   flex: none;
   max-width: 60%;
+}
+
+.files-crumb:only-child {
+  max-width: 100%;
 }
 
 .files-crumb button {
@@ -207,7 +211,12 @@
   }
 }
 
+/* 하위 폴더 찾기 단추가 자리를 차지하므로 아주 좁으면 찾기 칸을 더 줄여 경로가 보이게 한다. */
 @container (max-width: 440px) {
+  .files-search {
+    width: 112px;
+  }
+
   .files-toolbar-buttons .files-icon-button:nth-child(2),
   .files-toolbar-buttons .files-icon-button:nth-child(4) {
     display: none;
