@@ -11,4 +11,5 @@ export const SHELL_VIEWS: Record<ShellAppId, ComponentType<WindowViewProps>> = {
   settings: lazyView(() => import('../settings/SettingsWindow'), (m) => m.SettingsWindow),
   terminal: lazyView(() => import('../terminal/TerminalWindow'), (m) => m.TerminalWindow),
   transfers: lazyView(() => import('../files/TransfersWindow'), (m) => m.TransfersWindow),
+  viewer: lazyView(() => import('../viewer/ViewerWindow'), (m) => m.ViewerWindow),
 }

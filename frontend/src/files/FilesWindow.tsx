@@ -37,7 +37,8 @@ import { InfoPane } from './InfoPane'
 import { TrashView } from './TrashView'
 import { startDownload } from './download'
 import { type History, back, canBack, canForward, current, forward, replaceCurrent, startHistory, visit } from './history'
-import { isFolderLike } from './kinds'
+import { type PreviewKind, isFolderLike, previewKind } from './kinds'
+import { openViewer } from '../viewer/viewerStore'
 import { errorKey } from './messages'
 import { askName } from './nameDialog'
 import {
@@ -463,9 +464,17 @@ export function FilesWindow({ active }: WindowViewProps) {
       dialogs.alert({ title: item.name, message: t('files.list.lockedFolder') })
       return
     }
-    if (isFolderLike(item)) navigate(joinPath(path, item.name))
+    if (isFolderLike(item)) {
+      navigate(joinPath(path, item.name))
+      return
+    }
+    // 미리볼 수 있는 파일은 미리보기 창에 연다. 그 밖의 파일은 정보 패널이다.
+    const kind = previewKind(item)
+    if (kind) preview(joinPath(path, item.name), item.name, kind)
     else if (item.state !== 'gone') setPane(joinPath(path, item.name))
   }
+
+  const preview = (p: string, name: string, kind: PreviewKind) => openViewer({ path: p, name, kind }, desktopBounds())
 
   const onSelection = (s: Selection, item: FileItem | null) => {
     setSel(s)
@@ -804,6 +813,16 @@ export function FilesWindow({ active }: WindowViewProps) {
       if (isFolderLike(item) || item.type === 'dir') {
         out.push({ kind: 'action', id: 'open', labelKey: 'files.menu.open', disabled: item.locked, onSelect: () => openItem(item) })
       } else {
+        const kind = previewKind(item)
+        if (kind && path) {
+          out.push({
+            kind: 'action',
+            id: 'preview',
+            labelKey: 'files.menu.preview',
+            icon: 'view-reveal-symbolic',
+            onSelect: () => preview(joinPath(path, item.name), item.name, kind),
+          })
+        }
         out.push({
           kind: 'action',
           id: 'download',
@@ -838,7 +857,7 @@ export function FilesWindow({ active }: WindowViewProps) {
     if (count === 1 && !(isFolderLike(item) || item.type === 'dir')) {
       out.push(
         { kind: 'separator', id: 'sep' },
-        { kind: 'action', id: 'info', labelKey: 'files.menu.info', disabled: !usable, onSelect: () => openItem(item) },
+        { kind: 'action', id: 'info', labelKey: 'files.menu.info', disabled: !usable, onSelect: () => path && setPane(joinPath(path, item.name)) },
       )
     }
     return out
@@ -1236,6 +1255,7 @@ export function FilesWindow({ active }: WindowViewProps) {
             canWrite={canWrite && dirName(pane) === path}
             onRename={(it) => void renameItem(it)}
             onDelete={(it) => void deleteItems([it])}
+            onPreview={(kind) => preview(pane, pane.slice(pane.lastIndexOf('/') + 1), kind)}
             onClose={() => setPane(null)}
           />
         )}

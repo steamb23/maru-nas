@@ -25,6 +25,7 @@ import processStop from '@colloid/actions/symbolic/process-stop-symbolic.svg?url
 import systemLockScreen from '@colloid/actions/symbolic/system-lock-screen-symbolic.svg?url'
 import systemLogOut from '@colloid/actions/symbolic/system-log-out-symbolic.svg?url'
 import viewAppGrid from '@colloid/actions/symbolic/view-app-grid-symbolic.svg?url'
+import viewReveal from '@colloid/actions/symbolic/view-reveal-symbolic.svg?url'
 import viewGrid from '@colloid/actions/symbolic/view-grid-symbolic.svg?url'
 import viewList from '@colloid/actions/symbolic/view-list-symbolic.svg?url'
 import viewMore from '@colloid/actions/symbolic/view-more-symbolic.svg?url'
@@ -34,6 +35,7 @@ import windowClose from '@colloid/actions/symbolic/window-close-symbolic.svg?url
 import windowMaximize from '@colloid/actions/symbolic/window-maximize-symbolic.svg?url'
 import windowMinimize from '@colloid/actions/symbolic/window-minimize-symbolic.svg?url'
 import windowRestore from '@colloid/actions/symbolic/window-restore-symbolic.svg?url'
+import accessoriesDocumentViewer from '@colloid/apps/scalable/accessories-document-viewer.svg?url'
 import gnomeDiskUtility from '@colloid/apps/scalable/org.gnome.DiskUtility.svg?url'
 import preferencesSystemNetworkEthernet from '@colloid/apps/scalable/preferences-system-network-ethernet.svg?url'
 import preferencesSystemNetworkServer from '@colloid/apps/scalable/preferences-system-network-server.svg?url'
@@ -121,6 +123,7 @@ export const COLLOID_ICONS = {
   'system-users-symbolic': { url: systemUsers, kind: 'symbolic' },
   'view-list-symbolic': { url: viewList, kind: 'symbolic' },
   'view-grid-symbolic': { url: viewGrid, kind: 'symbolic' },
+  'view-reveal-symbolic': { url: viewReveal, kind: 'symbolic' },
   'utilities-system-monitor-symbolic': { url: utilitiesSystemMonitorSymbolic, kind: 'symbolic' },
   'network-server-symbolic': { url: networkServer, kind: 'symbolic' },
   'utilities-system-monitor': { url: utilitiesSystemMonitor, kind: 'color' },
@@ -135,6 +138,7 @@ export const COLLOID_ICONS = {
   'folder-download': { url: folderDownload, kind: 'color' },
   'preferences-system': { url: preferencesSystem, kind: 'color' },
   'utilities-terminal': { url: utilitiesTerminal, kind: 'color' },
+  'accessories-document-viewer': { url: accessoriesDocumentViewer, kind: 'color' },
   'go-previous-symbolic': { url: goPrevious, kind: 'symbolic' },
   'go-next-symbolic': { url: goNext, kind: 'symbolic' },
   'go-up-symbolic': { url: goUp, kind: 'symbolic' },

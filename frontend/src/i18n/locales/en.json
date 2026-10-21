@@ -104,7 +104,8 @@
     "services": "Services",
     "workbench": "OMV Workbench",
     "settings": "Settings",
-    "terminal": "Terminal"
+    "terminal": "Terminal",
+    "viewer": "Preview"
   },
   "terminal": {
     "connecting": "Connecting to the SSH server as {{user}}…",
@@ -229,7 +230,8 @@
       "delete": "Delete…",
       "deleteMany": "Delete {{total}} items…",
       "deleteKey": "Delete",
-      "readOnly": "No write permission"
+      "readOnly": "No write permission",
+      "preview": "Preview"
     },
     "name": {
       "label": "Name",
@@ -383,7 +385,8 @@
       "aclNo": "No",
       "note": "The file explorer follows file system permissions only. OMV shared folder privileges apply only to SMB and FTP.",
       "editAcl": "Edit ACL in OMV",
-      "loadFailed": "Couldn't load the details."
+      "loadFailed": "Couldn't load the details.",
+      "preview": "Preview"
     },
     "upload": {
       "title": "Uploads",
@@ -1232,5 +1235,15 @@
       "leftoverSignaled": "Your browser was asked to remove this passkey.",
       "leftoverManual": "This passkey for {{rpId}} cannot be used. Remove it from your passkey provider."
     }
+  },
+  "viewer": {
+    "empty": "Open a file in the file explorer to see it here.",
+    "actualSize": "Actual size",
+    "fit": "Fit to window",
+    "imageFailed": "This image can't be shown. The browser may not support the format, or the file may be damaged.",
+    "mediaFailed": "This file can't be played. The browser may not support its codec. Download it and open it in another program.",
+    "pdfFailed": "This PDF can't be shown. Download it to open it.",
+    "binary": "This file isn't text, so its contents can't be shown.",
+    "truncated": "This file is large, so only the first {{size}} is shown."
   }
 }

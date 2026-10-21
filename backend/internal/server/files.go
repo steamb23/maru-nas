@@ -562,6 +562,26 @@ func (h *handler) filesDownload(w http.ResponseWriter, r *http.Request, s auth.S
 	if !h.allowedPath(w, r, s, ticket, p) {
 		return
 	}
+	h.serveFile(w, r, s, ticket, p, fileHeaders{
+		contentType: "application/octet-stream",
+		disposition: contentDisposition("attachment", path.Base(p)),
+		csp:         sandboxCSP,
+	})
+}
+
+// sandboxCSP는 파일 내용을 문서로 열어도 스크립트·하위 자원을 쓰지 못하게 하는 CSP다.
+const sandboxCSP = "default-src 'none'; sandbox"
+
+// fileHeaders는 serveFile이 내용에 붙이는 머리다(내려받기와 미리보기가 다르다).
+type fileHeaders struct {
+	contentType string
+	disposition string
+	csp         string
+}
+
+// serveFile은 파일 내용을 fs.read로 흘려 보낸다. 범위 하나(재개·동영상 탐색)와 ETag If-Range만 지원하고,
+// 여러 범위는 200 전체다.
+func (h *handler) serveFile(w http.ResponseWriter, r *http.Request, s auth.Session, ticket, p string, fh fileHeaders) {
 	var offset, length int64
 	partial := false
 	if rh := r.Header.Get("Range"); rh != "" {
@@ -589,10 +609,10 @@ func (h *handler) filesDownload(w http.ResponseWriter, r *http.Request, s auth.S
 	}
 	defer body.Close()
 	hd := w.Header()
-	hd.Set("Content-Type", "application/octet-stream")
-	hd.Set("Content-Disposition", contentDisposition(path.Base(p)))
+	hd.Set("Content-Type", fh.contentType)
+	hd.Set("Content-Disposition", fh.disposition)
 	hd.Set("X-Content-Type-Options", "nosniff")
-	hd.Set("Content-Security-Policy", "default-src 'none'; sandbox")
+	hd.Set("Content-Security-Policy", fh.csp)
 	hd.Set("Cache-Control", "private, no-store")
 	hd.Set("Accept-Ranges", "bytes")
 	hd.Set("ETag", etagOf(res.FileSize, res.ModTimeNs))
@@ -605,7 +625,7 @@ func (h *handler) filesDownload(w http.ResponseWriter, r *http.Request, s auth.S
 	}
 	w.WriteHeader(status)
 	if _, err := io.Copy(w, body); err != nil && r.Context().Err() == nil {
-		log.Printf("files: download user=%q: %v", s.Username, err)
+		log.Printf("files: read user=%q: %v", s.Username, err)
 	}
 }
 
@@ -659,9 +679,9 @@ func parseRange(h string, size int64) (offset, length int64, ok, satisfiable boo
 	return start, end - start + 1, true, true
 }
 
-// contentDisposition은 내려받을 파일 이름이다. ASCII가 아닌 글자는 filename*(RFC 5987)에 담고, filename에는
-// 바꿔 쓴 ASCII 이름을 둔다.
-func contentDisposition(name string) string {
+// contentDisposition은 kind(attachment, inline)와 파일 이름이다. ASCII가 아닌 글자는 filename*(RFC 5987)에 담고,
+// filename에는 바꿔 쓴 ASCII 이름을 둔다.
+func contentDisposition(kind, name string) string {
 	var ascii strings.Builder
 	for _, r := range name {
 		if r < 0x20 || r >= 0x7f || r == '"' || r == '\\' {
@@ -670,7 +690,7 @@ func contentDisposition(name string) string {
 			ascii.WriteRune(r)
 		}
 	}
-	return `attachment; filename="` + ascii.String() + `"; filename*=UTF-8''` + rfc5987(name)
+	return kind + `; filename="` + ascii.String() + `"; filename*=UTF-8''` + rfc5987(name)
 }
 
 func rfc5987(s string) string {
