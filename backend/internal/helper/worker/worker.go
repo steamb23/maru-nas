@@ -287,6 +287,10 @@ func toError(err error) *proto.Error {
 	if errors.As(err, &pe) {
 		return pe
 	}
+	var ce connError
+	if errors.As(err, &ce) {
+		return proto.NewError(proto.CodeCanceled)
+	}
 	code := proto.CodeInternal
 	switch {
 	case isEscape(err):

@@ -33,6 +33,8 @@ describe('appAccess', () => {
     expect(appAccess(null, 'files')).toEqual({ visible: true, notice: null })
     expect(appAccess(caps([]), 'files')).toEqual({ visible: true, notice: 'helper_missing' })
     expect(appAccess({ ...caps([]), helper: true }, 'files')).toEqual({ visible: true, notice: null })
+    // 파일 복사 진행 창은 탐색기가 여는 창이라 아이콘을 두지 않는다.
+    expect(appAccess(null, 'copy')).toEqual({ visible: false, notice: null })
   })
 
   it('웹 터미널은 관리자가 허용했을 때만 보인다(받기 전에는 숨긴다)', () => {

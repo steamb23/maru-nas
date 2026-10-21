@@ -95,6 +95,7 @@
   "apps": {
     "systemInfo": "System Information",
     "files": "Files",
+    "copy": "File copy",
     "storage": "Storage",
     "network": "Network",
     "temperature": "Temperature",
@@ -281,6 +282,7 @@
         "helper_busy": "Too many operations are running at once. Try again in a moment.",
         "timeout": "It took too long and was stopped. Try again to continue with the remaining items.",
         "outside_roots": "The file explorer can't work with this location.",
+        "not_regular": "It isn't a regular file (FIFO, socket, or device), so it can't be copied.",
         "bad_request": "This can't be done. You may have tried to move a folder into itself.",
         "network": "The connection was lost.",
         "generic": "The operation failed.",
@@ -296,7 +298,30 @@
       "emptyFailed": "The trash wasn't emptied"
     },
     "drag": {
-      "items": "{{total}} items"
+      "items": "{{total}} items",
+      "move": "Move",
+      "copy": "Copy",
+      "trash": "To the trash"
+    },
+    "copy": {
+      "status": {
+        "queued": "Waiting",
+        "scanning": "Counting what to copy",
+        "running": "Copying",
+        "done": "Copied",
+        "failed": "Some items weren't copied",
+        "cancelled": "Cancelled"
+      },
+      "size": "{{done}} of {{total}}",
+      "files_one": "{{done}} of {{total}} file",
+      "files_other": "{{done}} of {{total}} files",
+      "rate": "{{size}}/s",
+      "remaining": "About {{time}} left",
+      "skipped_one": "{{total}} special file (FIFO, socket, or device) in the folders wasn't copied.",
+      "skipped_other": "{{total}} special files (FIFOs, sockets, or devices) in the folders weren't copied.",
+      "closeHint": "Closing this window cancels the remaining copies.",
+      "clear": "Clear finished",
+      "empty": "No copies in progress."
     },
     "drop": {
       "foldersTitle": "Folders weren't uploaded",

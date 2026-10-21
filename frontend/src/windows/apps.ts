@@ -66,6 +66,15 @@ const SHELL_APPS = {
     // 여기서 막지 않고, 넘치면 그 창 안에 안내한다(too_many_windows).
     multiInstance: true,
   },
+  // 파일 복사 진행. 파일 탐색기에서 다른 디스크로 끌어 놓은 복사를 보인다(src/files/copyStore.ts가 연다). 창 하나에
+  // 모든 복사를 보이며, "모든 앱"과 바로가기에는 보이지 않는다(appAccess).
+  copy: {
+    titleKey: 'apps.copy',
+    icon: 'folder-download',
+    kind: 'shell',
+    defaultSize: { width: 460, height: 340 },
+    minSize: { width: 360, height: 220 },
+  },
   // 설정. 화면(테마·바탕화면) 같은 사용자 설정과 관리자의 전역 설정, 정보 페이지를 둔다(src/settings).
   settings: {
     titleKey: 'apps.settings',

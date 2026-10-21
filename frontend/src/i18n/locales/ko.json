@@ -95,6 +95,7 @@
   "apps": {
     "systemInfo": "시스템 정보",
     "files": "파일",
+    "copy": "파일 복사",
     "storage": "저장소",
     "network": "네트워크",
     "temperature": "온도",
@@ -281,6 +282,7 @@
         "helper_busy": "동시에 실행 중인 작업이 많습니다. 잠시 뒤 다시 시도하세요.",
         "timeout": "시간이 너무 오래 걸려 멈췄습니다. 다시 시도하면 남은 항목을 이어서 처리합니다.",
         "outside_roots": "파일 탐색기에서 다룰 수 없는 위치입니다.",
+        "not_regular": "일반 파일이 아니라(FIFO, 소켓, 장치) 복사할 수 없습니다.",
         "bad_request": "할 수 없는 작업입니다. 폴더를 그 폴더 안으로 옮기려 했을 수 있습니다.",
         "network": "연결이 끊겼습니다.",
         "generic": "작업하지 못했습니다.",
@@ -296,7 +298,30 @@
       "emptyFailed": "휴지통을 비우지 못했습니다"
     },
     "drag": {
-      "items": "항목 {{total}}개"
+      "items": "항목 {{total}}개",
+      "move": "옮기기",
+      "copy": "복사",
+      "trash": "휴지통으로"
+    },
+    "copy": {
+      "status": {
+        "queued": "기다리는 중",
+        "scanning": "복사할 양을 세는 중",
+        "running": "복사하는 중",
+        "done": "복사했습니다",
+        "failed": "복사하지 못한 항목이 있습니다",
+        "cancelled": "취소했습니다"
+      },
+      "size": "{{done}} / {{total}}",
+      "files_one": "파일 {{done}} / {{total}}개",
+      "files_other": "파일 {{done}} / {{total}}개",
+      "rate": "{{size}}/s",
+      "remaining": "남은 시간 약 {{time}}",
+      "skipped_one": "폴더 안의 특수 파일(FIFO, 소켓, 장치) {{total}}개는 복사하지 않았습니다.",
+      "skipped_other": "폴더 안의 특수 파일(FIFO, 소켓, 장치) {{total}}개는 복사하지 않았습니다.",
+      "closeHint": "이 창을 닫으면 남은 복사를 취소합니다.",
+      "clear": "끝난 작업 지우기",
+      "empty": "진행 중인 복사가 없습니다."
     },
     "drop": {
       "foldersTitle": "폴더는 올리지 않았습니다",

@@ -1,5 +1,19 @@
 import { describe, expect, it } from 'vitest'
 import { ApiError } from '../api/client'
+import {
+  MAX_NAMES,
+  MAX_NAMES_JSON,
+  NO_AMOUNT,
+  addAmount,
+  copyChunks,
+  dropMode,
+  durationOf,
+  goJSONLength,
+  newJob,
+  nextRate,
+  progressOf,
+  remainingSeconds as copyRemaining,
+} from './copyJobs'
 import { back, canBack, canForward, current, forward, MAX_HISTORY, replaceCurrent, startHistory, visit } from './history'
 import { extension, isFolderLike, kindOf, modeString } from './kinds'
 import { PageCache, pagesFor } from './pageCache'
@@ -371,5 +385,63 @@ describe('휴지통 볼륨', () => {
     expect(volumeOf(volumes, '/srv/d1/media/x')?.kind).toBe('none')
     expect(volumeOf(volumes, '/srv/d1/pool/x')?.kind).toBe('shared')
     expect(volumeOf(volumes, '/srv/d10/x')).toBeNull()
+  })
+})
+
+describe('복사 작업', () => {
+  const volumes = [
+    { top: '/home/u', kind: 'home', shared: false },
+    { top: '/srv/d1', kind: 'own', shared: false },
+    { top: '/srv/d2', kind: 'none', shared: false },
+  ] as const
+
+  it('다른 디스크면 복사하고, 쓸 수 없는 폴더에서는 같은 디스크로 옮기지 않는다', () => {
+    expect(dropMode(volumes, '/srv/d1/a', '/srv/d1/b', 'trash:', true)).toBe('move')
+    expect(dropMode(volumes, '/srv/d1/a', '/srv/d2', 'trash:', true)).toBe('copy')
+    expect(dropMode(volumes, '/home/u/x', '/srv/d1/a', 'trash:', false)).toBe('copy')
+    expect(dropMode(volumes, '/srv/d1/a', '/srv/d1/b', 'trash:', false)).toBeNull()
+    expect(dropMode(volumes, '/srv/d1/a', 'trash:', 'trash:', true)).toBe('trash')
+    expect(dropMode(volumes, '/srv/d1/a', 'trash:', 'trash:', false)).toBeNull()
+    // 볼륨을 모르면 옮겨 본다.
+    expect(dropMode(null, '/srv/d1/a', '/srv/d2', 'trash:', true)).toBe('move')
+  })
+
+  it('Go JSON 길이로 이름을 요청마다 나눈다', () => {
+    expect(goJSONLength('abc')).toBe(5)
+    expect(goJSONLength('가')).toBe(5)
+    expect(goJSONLength('a"<\n')).toBe(2 + 1 + 2 + 6 + 6)
+    expect(goJSONLength('😀')).toBe(6)
+    const many = Array.from({ length: MAX_NAMES * 2 + 1 }, (_, i) => `f${i}`)
+    expect(copyChunks(many).map((c) => c.length)).toEqual([MAX_NAMES, MAX_NAMES, 1])
+    const long = Array.from({ length: 300 }, (_, i) => `${'가'.repeat(80)}${i}`)
+    const chunks = copyChunks(long)
+    expect(chunks.length).toBeGreaterThan(1)
+    expect(chunks.flat()).toEqual(long)
+    for (const c of chunks) expect(c.reduce((n, x) => n + goJSONLength(x) + 1, 2)).toBeLessThanOrEqual(MAX_NAMES_JSON)
+    expect(copyChunks([])).toEqual([])
+  })
+
+  it('요청 여러 개의 진행을 합치고 속도와 남은 시간을 잰다', () => {
+    const p = { files: 1, bytes: 50, totalFiles: 2, totalBytes: 100 }
+    expect(addAmount(NO_AMOUNT, p)).toEqual(p)
+    const job = { ...newJob(1, '/a', ['x'], '/b', 1), status: 'running' as const, scanning: false, amount: p }
+    expect(progressOf(job)).toBe(0.5)
+    expect(progressOf({ ...job, scanning: true })).toBeNull()
+    // 둘째 요청의 절반: (1 + 0.5) / 2
+    const base = { files: 4, bytes: 400, totalFiles: 4, totalBytes: 400 }
+    expect(progressOf({ ...job, chunks: 2, chunk: 1, base, amount: addAmount(base, p) })).toBe(0.75)
+    // 내용이 없는 파일만 있으면 파일 수로 잰다.
+    expect(progressOf({ ...job, amount: { files: 1, bytes: 0, totalFiles: 4, totalBytes: 0 } })).toBe(0.25)
+
+    const r0 = { at: 1000, bytes: 0, rate: null }
+    expect(nextRate(r0, 1200, 100)).toBe(r0)
+    const r1 = nextRate(r0, 2000, 1000)
+    expect(r1).toEqual({ at: 2000, bytes: 1000, rate: 1000 })
+    expect(nextRate(r1, 3000, 3000).rate).toBeCloseTo(1000 * 0.7 + 2000 * 0.3)
+    expect(copyRemaining({ ...job, rate: { at: 0, bytes: 0, rate: 10 } })).toBe(5)
+    expect(copyRemaining({ ...job, chunks: 2, rate: { at: 0, bytes: 0, rate: 10 } })).toBeNull()
+    expect(durationOf(5.2)).toEqual({ unit: 'second', value: 6 })
+    expect(durationOf(61)).toEqual({ unit: 'minute', value: 2 })
+    expect(durationOf(5400)).toEqual({ unit: 'hour', value: 1.5 })
   })
 })

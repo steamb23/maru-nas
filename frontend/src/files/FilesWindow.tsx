@@ -30,6 +30,8 @@ import { SidebarLayout } from '../shell/SidebarLayout'
 import type { ContextMenuItem } from '../shell/contextMenu'
 import { useDialogs } from '../shell/dialogPresets'
 import { DeleteBody, DeleteTitle, FailuresBody } from './DeleteBody'
+import { dropMode } from './copyJobs'
+import { startCopy } from './copyStore'
 import { DROP_TARGET, FileList, type FileListHandle, type SortKey, type View } from './FileList'
 import { InfoPane } from './InfoPane'
 import { TrashView } from './TrashView'
@@ -156,6 +158,8 @@ export function FilesWindow({ active }: WindowViewProps) {
   // trashOpen이면 목록 대신 휴지통 보기를 보인다(둘러보던 폴더와 기록은 그대로 둔다).
   const [trashOpen, setTrashOpen] = useState(false)
   const [trashCount, setTrashCount] = useState<number | null>(null)
+  // volumes는 홈 폴더와 디스크(도우미의 기준 디렉터리)다. 끌어 놓을 곳이 다른 디스크면 옮기지 않고 복사한다.
+  const [volumes, setVolumes] = useState<readonly TrashVolume[] | null>(null)
   const [trashVersion, setTrashVersion] = useState(0)
   const [trashReload, setTrashReload] = useState(0)
   const [op, setOp] = useState<Op | null>(null)
@@ -174,6 +178,7 @@ export function FilesWindow({ active }: WindowViewProps) {
   const listRef = useRef<FileListHandle>(null)
   // dropRow는 바깥 파일을 끄는 동안 놓을 곳으로 표시한 폴더 줄이다.
   const dropRow = useRef<HTMLElement | null>(null)
+  const contentRef = useRef<HTMLDivElement>(null)
   // self는 변경 알림에서 이 창을 가리킨다.
   const [self] = useState(() => Symbol('files-window'))
 
@@ -294,12 +299,15 @@ export function FilesWindow({ active }: WindowViewProps) {
     return () => ctl.abort()
   }, [pendingSelect, listing, view])
 
-  // 사이드바 휴지통 항목의 개수. 휴지통이 바뀌면 다시 센다(항목 정보는 읽지 않는 가벼운 요청).
+  // 사이드바 휴지통 항목의 개수와 볼륨. 휴지통이 바뀌면 다시 센다(항목 정보는 읽지 않는 가벼운 요청).
   useEffect(() => {
     if (!rootsReady) return
     const ctl = new AbortController()
     fetchTrashVolumes(ctl.signal).then(
-      (r) => setTrashCount(r.items),
+      (r) => {
+        setTrashCount(r.items)
+        setVolumes(r.volumes)
+      },
       () => {},
     )
     return () => ctl.abort()
@@ -596,25 +604,54 @@ export function FilesWindow({ active }: WindowViewProps) {
     })
   }
 
-  // moveSelection은 고른 항목을 target 폴더로 옮긴다(끌어 놓기). 같은 이름이 있으면 그 항목은 옮기지 않는다. 휴지통에 놓으면
-  // 휴지통으로 옮긴다.
+  // dropModeFor는 고른 항목을 target에 놓을 때 할 일이다(끄는 이름표, null이면 놓을 수 없다).
+  const dropModeFor = (target: string) => (path ? dropMode(volumes, path, target, TRASH, writable) : null)
+
+  // desktopBounds는 이 창이 놓인 데스크톱 영역의 크기다(복사 진행 창을 열 자리).
+  const desktopBounds = () => {
+    const area = contentRef.current?.closest('.desktop-area')
+    return area ? { width: area.clientWidth, height: area.clientHeight } : { width: window.innerWidth, height: window.innerHeight }
+  }
+
+  // copyItems는 항목을 target 폴더에 복사한다. 복사는 복사 진행 창(copyStore)이 이어서 하므로 이 창은 기다리지 않는다.
+  const copyItems = (dir: string, items: readonly FileItem[], target: string) => {
+    startCopy({ dir, names: items.map((i) => i.name), target, roots, scope: dialogs.scope, bounds: desktopBounds() })
+  }
+
+  // moveSelection은 고른 항목을 target 폴더로 옮긴다(끌어 놓기). 다른 디스크면 옮기지 않고 복사한다. 같은 이름이 있으면 그
+  // 항목은 옮기거나 복사하지 않는다. 휴지통에 놓으면 휴지통으로 옮긴다.
   const moveSelection = async (s: Selection, target: string) => {
-    if (!listing || !path || !canWrite) return
+    if (!listing || !path || op !== null) return
     const dir = path
     const items = (await itemsOf(s))?.filter((i) => i.state !== 'gone')
     if (!items || items.length === 0) return
     if (target === TRASH) {
+      if (!writable) return
       if ((await trashKind(dir)) === 'none') await deleteForever(dir, items, 'noTrash')
       else await trashItems(dir, items)
       return
     }
     if (!moveAllowed(items.map((i) => joinPath(dir, i.name)), target)) return
-    await runOp('move', items, (it) => renameFile(joinPath(dir, it.name), joinPath(target, it.name)), {
+    let vols = volumes
+    if (!vols) {
+      try {
+        vols = (await fetchTrashVolumes()).volumes
+        setVolumes(vols)
+      } catch {
+        // 모르면 옮겨 보고, 다른 디스크면 그때 복사로 바꾼다.
+      }
+    }
+    const mode = dropMode(vols, dir, target, TRASH, writable)
+    if (mode === 'copy') return copyItems(dir, items, target)
+    if (mode !== 'move') return
+    const left = await runOp('move', items, (it) => renameFile(joinPath(dir, it.name), joinPath(target, it.name)), {
       nameOf: (i) => i.name,
       change: (done) => ({ dirs: [dir, target], gone: done.map((i) => joinPath(dir, i.name)) }),
-      // 다른 디스크면 남은 항목도 옮길 수 없다.
+      // 다른 디스크(같은 디스크 안의 다른 마운트 포함)면 남은 항목도 옮길 수 없으므로 거기서부터 복사한다.
       stopOn: (err) => err instanceof ApiError && err.code === 'cross_device',
+      keep: (err) => err instanceof ApiError && err.code === 'cross_device',
     })
+    if (left.length > 0) copyItems(dir, items.slice(items.indexOf(left[0])), target)
   }
 
   // 바깥(운영체제)에서 끌어 온 파일을 놓으면 그 폴더 줄이나 지금 폴더에 올린다. 폴더는 아직 올리지 못한다.
@@ -1048,6 +1085,7 @@ export function FilesWindow({ active }: WindowViewProps) {
         </p>
       )}
       <div
+        ref={contentRef}
         className={['files-content', pane && 'with-pane', dropList && 'drop-here'].filter(Boolean).join(' ')}
         onDragOver={onDragOver}
         onDragLeave={onDragLeave}
@@ -1096,7 +1134,8 @@ export function FilesWindow({ active }: WindowViewProps) {
             menuItems={menuItems}
             onRename={() => void renameSelection()}
             onDelete={(permanent) => void deleteSelection(sel, permanent)}
-            canDrag={canWrite}
+            canDrag={op === null}
+            dropMode={dropModeFor}
             onMove={(s, target) => void moveSelection(s, target)}
             focusOnMount={refocus}
             onFocused={() => setRefocus(false)}

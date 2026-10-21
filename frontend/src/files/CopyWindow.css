@@ -1,0 +1,128 @@
+/* 파일 복사 진행 창(CopyWindow). 작업 목록이 남은 높이를 채워 스크롤하고, 아래에 안내와 끝난 작업 지우기를 둔다. */
+.copy-window {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.copy-jobs {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: 8px 12px;
+  overflow: auto;
+  list-style: none;
+}
+
+.copy-empty {
+  flex: 1;
+  margin: 0;
+  padding: 24px 16px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.copy-job {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 0;
+}
+
+.copy-job + .copy-job {
+  border-top: 1px solid var(--window-border);
+}
+
+.copy-job-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.copy-job-title {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.copy-job-title strong,
+.copy-job-title span,
+.copy-job-current {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.copy-job-title span,
+.copy-job-current,
+.copy-job-detail {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.copy-job-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin: 0;
+  font-size: 13px;
+}
+
+.copy-job-current,
+.copy-job-error,
+.copy-job-note {
+  margin: 0;
+}
+
+.copy-job-error {
+  font-size: 13px;
+  color: light-dark(#b3261e, #f2b8b5);
+}
+
+.copy-job-note {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.copy-job .files-delete {
+  font-size: 13px;
+}
+
+/* 세는 중에는 양을 모르므로 짧은 막대가 오간다. */
+.copy-meter.busy .meter-fill {
+  width: 30%;
+  animation: copy-busy 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes copy-busy {
+  from {
+    translate: 0;
+  }
+
+  to {
+    translate: 233%;
+  }
+}
+
+:root[data-animations='off'] .copy-meter.busy .meter-fill {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .copy-meter.busy .meter-fill {
+    animation: none;
+  }
+}
+
+.copy-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--window-border);
+  font-size: 12px;
+  color: var(--text-muted);
+}

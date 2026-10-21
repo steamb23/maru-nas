@@ -287,15 +287,37 @@
   top: 0;
   left: 0;
   z-index: 10000;
-  max-width: 280px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 320px;
   padding: 4px 10px;
-  overflow: hidden;
   border-radius: 6px;
   background: var(--accent);
   box-shadow: 0 4px 14px rgb(0 0 0 / 0.25);
   color: #fff;
   font-size: 13px;
-  text-overflow: ellipsis;
   white-space: nowrap;
   pointer-events: none;
+}
+
+.files-drag-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 놓으면 할 일(옮기기, 복사, 휴지통으로). 다른 디스크로 복사할 때는 원본이 남는다는 것을 알 수 있게 바탕을 바꾼다. */
+.files-drag-mode {
+  flex: none;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgb(255 255 255 / 0.22);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.files-drag-ghost[data-mode='copy'] .files-drag-mode {
+  background: #fff;
+  color: var(--accent);
 }

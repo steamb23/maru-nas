@@ -117,6 +117,11 @@ func copyFiles(job Job, cfg Config, c idleConn) error {
 	}
 	failed := map[string]string{}
 	for _, n := range p.Names {
+		// 대상에 같은 이름이 있으면 세지 않는다(복사하지 않을 양이 전체에 들어가지 않게).
+		if _, err := k.dst.Lstat(path.Join(to.rel, n)); err == nil {
+			failed[n] = proto.CodeExists
+			continue
+		}
 		if err := k.scan(path.Join(from.rel, n)); err != nil {
 			var ce connError
 			if errors.As(err, &ce) {

@@ -142,9 +142,13 @@ func TestCopyFailures(t *testing.T) {
 		t.Fatal(err)
 	}
 	src, dst := filepath.Join(e.disk, "src"), filepath.Join(e.disk2, "dst")
-	_, resp, err := e.copyRun(proto.CopyParams{Dir: src, Names: []string{"a.txt", "missing", "fifo", "b.txt"}, To: dst})
+	progress, resp, err := e.copyRun(proto.CopyParams{Dir: src, Names: []string{"a.txt", "missing", "fifo", "b.txt"}, To: dst})
 	if err != nil || !resp.OK {
 		t.Fatalf("copy: code %q, err %v", resp.Code, err)
+	}
+	// 대상에 이미 있는 a.txt는 세지 않는다.
+	if last := progress[len(progress)-1]; last.TotalFiles != 1 || last.TotalBytes != 1 || last.Bytes != 1 {
+		t.Fatalf("last progress = %+v", last)
 	}
 	var res proto.CopyResult
 	if err := resp.Decode(&res); err != nil {
@@ -208,8 +212,8 @@ func TestCopyCancel(t *testing.T) {
 		}
 	}
 	client.Close()
-	if err := <-errc; err == nil {
-		t.Fatal("copy finished after the connection closed")
+	if err := <-errc; Code(err) != proto.CodeCanceled {
+		t.Fatalf("copy after the connection closed: %v", err)
 	}
 	if _, err := os.Lstat(filepath.Join(e.disk, "big.bin")); !os.IsNotExist(err) {
 		t.Fatalf("partial copy visible: %v", err)

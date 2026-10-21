@@ -66,6 +66,7 @@ import xOfficeDocument from '@colloid/mimetypes/scalable/x-office-document.svg?u
 import xOfficePresentation from '@colloid/mimetypes/scalable/x-office-presentation.svg?url'
 import xOfficeSpreadsheet from '@colloid/mimetypes/scalable/x-office-spreadsheet.svg?url'
 import folder from '@colloid/places/scalable/folder.svg?url'
+import folderDownload from '@colloid/places/scalable/folder-download.svg?url'
 import folderNew from '@colloid/places/symbolic/folder-new-symbolic.svg?url'
 import folderRemote from '@colloid/places/symbolic/folder-remote-symbolic.svg?url'
 import networkServer from '@colloid/places/symbolic/network-server-symbolic.svg?url'
@@ -128,6 +129,8 @@ export const COLLOID_ICONS = {
   'org.gnome.DiskUtility': { url: gnomeDiskUtility, kind: 'color' },
   'drive-harddisk': { url: driveHarddisk, kind: 'color' },
   folder: { url: folder, kind: 'color' },
+  // 파일 복사 진행 창(폴더로 들어가는 화살표)
+  'folder-download': { url: folderDownload, kind: 'color' },
   'preferences-system': { url: preferencesSystem, kind: 'color' },
   'utilities-terminal': { url: utilitiesTerminal, kind: 'color' },
   'go-previous-symbolic': { url: goPrevious, kind: 'symbolic' },

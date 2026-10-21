@@ -56,6 +56,7 @@ const OP_ERROR_KEYS: Partial<Record<string, ParseKeys>> = {
   helper_busy: 'files.ops.errors.helper_busy',
   transfer_timeout: 'files.ops.errors.timeout',
   outside_roots: 'files.ops.errors.outside_roots',
+  not_regular: 'files.ops.errors.not_regular',
   bad_request: 'files.ops.errors.bad_request',
   no_trash: 'files.ops.errors.no_trash',
 }

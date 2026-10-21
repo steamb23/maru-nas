@@ -18,7 +18,7 @@ paths:
 - `/api/files/*`는 보이는 폴더 밖 경로를 도우미에 보내기 전에 403 `outside_roots`로 거른다(`allowedPath`). 실제 범위는 도우미가 기준 디렉터리로 다시 정한다. `/srv/` 아래가 아닌 공유 폴더(sharerootfs)는 `reachable: false`이고 열 수 없다(도우미 추가 기준 경로는 로드맵)
 - **공유 폴더 스냅숏**: `ShareMgmt.enumerateSharedFolders`는 관리자 전용이라 관리자 세션이 받아 `site.json`의 `files.shares`에 둔다. `startSession`이 관리자이고 도우미가 있으면 뒤에서(10초, 로그인 응답을 기다리게 하지 않음) 받고, 설정 앱의 "지금 받기"(`POST /api/site/files/refresh`)가 바로 받는다. 고정 메서드 호출(`sharesMethods`, `NoTouch`)이고, 성공했을 때만 바꾼다. 서버가 스스로 `site.json`을 쓰는 유일한 경우이며, 메모리(`handler.filesSite`)와 함께 바꾼다
   - 응답 해석은 `files.ParseShares`: `absdirpath`·`status`는 OMV 8.1.0부터 있으므로 없으면 `mntent.dir` + `reldirpath`로 만들고, `status`가 있고 `OK`가 아니면 뺀다(`auth-omv.md`의 "OMV 8 버전별 차이")
-- 보안 강화 정책 `files`(`api.SecurityPolicy.Files`)는 `/api/files/*` 전부(뿌리 포함)를 막는다. 적용 범위 `filesScope`가 `writes`면 읽기 라우트(`requireFiles`: 뿌리, 목록, 범위, find, prepare, 정보, 내려받기, 휴지통 목록·볼륨)는 열고 쓰기 라우트(`requireFilesWrite`: 올리기, 만들기, 이름 바꾸기, 삭제, 휴지통 넣기·되돌리기·영구 삭제·비우기)만 막는다. 요청마다 보므로 정책을 올려도 따로 닫을 것이 없고, 이미 시작한 전송은 끝까지 간다
+- 보안 강화 정책 `files`(`api.SecurityPolicy.Files`)는 `/api/files/*` 전부(뿌리 포함)를 막는다. 적용 범위 `filesScope`가 `writes`면 읽기 라우트(`requireFiles`: 뿌리, 목록, 범위, find, prepare, 정보, 내려받기, 휴지통 목록·볼륨)는 열고 쓰기 라우트(`requireFilesWrite`: 올리기, 만들기, 이름 바꾸기, 삭제, 복사, 휴지통 넣기·되돌리기·영구 삭제·비우기)만 막는다. 요청마다 보므로 정책을 올려도 따로 닫을 것이 없고, 이미 시작한 전송은 끝까지 간다
 
 ## 목록(큰 폴더)
 
@@ -41,10 +41,22 @@ paths:
 - 라우트: `POST /api/files/mkdir {path}`, `POST /api/files/rename {from, to}`(이름 바꾸기, 끌어 놓기의 옮기기), `POST /api/files/delete {path, recursive}`(204). JSON 본문만 받고(CSRF 보조 장치) 도우미의 `fs.mkdir`·`fs.rename`·`fs.remove`를 부른다. 만들거나 바꾼 항목은 `fileItemOf`로 돌려준다
 - **보이는 폴더 지키기**(`rootFolder`): 도우미는 자기 기준 디렉터리(홈, `/srv` 아래 마운트 지점)만 지키고 공유 폴더는 지키지 않는다. 그래서 onmaru가 보이는 폴더(홈, 스냅숏의 공유 폴더 전부, 디스크) 자신이거나 그것을 품은 경로의 이름 바꾸기·옮기기·삭제를 409 `root_folder`로 막는다(디스크 최상위 보기에서는 공유 폴더가 디스크의 한 폴더로 보인다). 스냅숏이 없는 대체 상태에서는 공유 폴더를 모르므로 파일 시스템 권한(디스크 맨 위는 보통 root 소유)에 맡긴다
 - 새 이름(`splitNew`, `newNameOK`)은 올리기와 같은 검사(`proto.ValidName`, UTF-8, `.onmaru-upload-` 접두사 금지)를 거친다. 폴더를 자기 안으로 옮기는 요청(`to`가 `from` 안)과 같은 경로는 400이다. 프런트도 같은 검사(`paths.ts`의 `nameProblem`, `moveAllowed`)를 먼저 한다
-- 옮기기는 이름 바꾸기 하나다. 다른 기준 디렉터리나 다른 파일시스템이면 도우미가 `cross_device`(409)를 주고 복사하지 않는다. 대상이 있으면 덮어쓰지 않는다(`file_exists`)
+- 옮기기는 이름 바꾸기 하나다. 다른 기준 디렉터리나 다른 파일시스템이면 도우미가 `cross_device`(409)를 주고 복사하지 않는다. 대상이 있으면 덮어쓰지 않는다(`file_exists`). 다른 디스크로 끌어 놓으면 아래 "복사"를 쓴다
 - `POST /api/files/delete`는 SMB 휴지통(`.recycle`)을 거치지 않는 영구 삭제다(삭제의 기본은 아래 "휴지통"). `recursive`는 목록에서 폴더(`type`이 `dir`, 심볼릭 링크 아님)인 항목에만 보내고, 그 밖의 항목이 실제로는 비어 있지 않은 폴더면 `not_empty`(409)다. 목록이 낡아 파일로 보인 폴더를 통째로 지우지 않게 하기 위해서다. 도우미는 `fs.remove`를 10분까지 기다리고, 넘으면 일부만 지운 채 `transfer_timeout`이다(다시 지우면 이어서 지운다)
 - `GET /api/files/list/{id}/find?name=&sort=&order=&q=`는 보기에서 그 이름의 자리다(`Listing.IndexOf`, 없으면 -1). 만들거나 이름을 바꾼 뒤 다시 받은 목록에서 그 줄을 고를 때 쓰며 도우미를 부르지 않는다
 - 바꾼 뒤 프런트는 목록을 `refresh=1`로 다시 연다. 폴더 mtime이 거친 파일시스템에서도 낡은 목록을 다시 쓰지 않게 하기 위해서다
+
+## 복사
+
+- 다른 디스크(도우미의 기준 디렉터리. 홈과 `/srv` 아래 마운트 지점마다 하나, 휴지통 볼륨의 `top`과 같다)로 끌어 놓으면 옮기지 않고 복사한다. 원본은 그대로 둔다
+- `POST /api/files/copy {dir, names, to}`(`internal/server/files_copy.go`, 쓰기 라우트): `dir` 안의 이름(512개까지, 새 이름과 같은 검사)을 `to`에 같은 이름으로 복사한다. 이름이 `to`를 품으면(폴더를 자기 안으로) 400이고, 인자 JSON이 도우미 요청 머리에 들어가지 않으면 400이다. 도우미 `fs.copy`(`.claude/docs/helper.md`의 "복사")가 하고, 진행은 요청이 열려 있는 동안 `text/event-stream`(`data:` 줄마다 `api.FilesCopyEvent`, `X-Accel-Buffering: no`)으로 보낸다. 서버에 백그라운드 작업은 없다
+  - 시작하기 전의 실패(보안 정책, 범위, 대상이 폴더가 아님)는 보통의 오류 응답이라 `withStepUp`이 그대로 받는다. 첫 진행 뒤에 멈추면 마지막 사건이 `error`(보통의 응답이었다면 받았을 오류와 HTTP 상태, `writeFilesError`를 메모리에 받아 만든다)다. 이름마다의 실패는 결과의 `failed`(API 오류 코드)에 담긴다
+  - 브라우저가 요청을 끊으면 도우미 연결이 닫히고, 도우미는 하던 항목의 임시 이름을 지우고 멈춘다(이미 복사한 항목은 남는다)
+- 프런트(`copyStore.ts`, 계산은 `copyJobs.ts`): 탐색기 창이 `startCopy`로 작업을 더하고 복사 진행 창(셸 앱 `copy`, `CopyWindow.tsx`)이 그린다. 탐색기 창마다 상태를 따로 두는 원칙의 예외로 모듈 저장소에 둔다(복사는 그 창을 닫아도 이어지고 진행 창 하나에 모인다)
+  - 작업은 하나씩 차례로 하고, 이름이 많으면 512개·JSON 40KiB(`goJSONLength`, Go가 쓰는 길이의 상한)씩 요청을 나눈다(`copyChunks`). 진행률은 요청이 하나면 바이트, 여럿이면 끝난 요청 수에 지금 요청의 비율을 더한다. 속도는 0.5초 간격 지수 평활이고 남은 시간은 요청이 하나일 때만 보인다
+  - 진행 창은 복사가 400ms를 넘을 때 열고(앱 목록·바로가기에는 보이지 않는다, `appAccess`), 모두 문제없이 끝나면 스스로 닫는다. 하지 못한 항목·건너뛴 특수 파일·멈춘 오류가 있으면 (금방 끝났어도) 열어 둔다. 진행 창을 닫으면 남은 작업을 취소한다(창 저장소를 구독한다. 닫기 애니메이션 동안 목록이 그대로 보이게 목록은 다음 작업을 더할 때 비운다). 세션 만료(401)와 보안 확인 취소는 알리지 않고 취소로 둔다
+  - 요청이 끝날 때마다 대상 폴더를 변경 알림으로 알리고, 취소·실패 뒤에는 2초 뒤 한 번 더 알린다(도우미가 연결이 끊긴 것을 안 뒤에 임시 이름을 지우므로)
+  - 복사하는 동안 세션 활동을 30초마다 알리고 `beforeunload`로 경고한다(올리기와 같다)
 
 ## 휴지통
 
@@ -59,7 +71,7 @@ paths:
 
 ## 창(프런트)
 
-- `src/files/`: `FilesWindow.tsx`(사이드바·도구 막대·상태 표시줄, 상태와 이동, 만들기·이름 바꾸기·삭제·옮기기), `FileList.tsx`(가상 목록, 고르기, 끌어서 옮기기), `InfoPane.tsx`(정보 패널), `UploadPanel.tsx`, `ConflictBody.tsx`·`conflictDialog.tsx`(이름 충돌), `NameForm.tsx`·`nameDialog.tsx`(이름 입력), `DeleteBody.tsx`(삭제 확인, 하지 못한 항목 안내), `TrashView.tsx`(휴지통 보기), `stepUp.ts`(쓰기 요청의 보안 확인), 순수 모듈 `paths.ts`, `history.ts`, `virtual.ts`, `pageCache.ts`, `kinds.ts`, `uploadQueue.ts`, `messages.ts`, `selection.ts`, `ops.ts`(Vitest `files.test.ts`)
+- `src/files/`: `FilesWindow.tsx`(사이드바·도구 막대·상태 표시줄, 상태와 이동, 만들기·이름 바꾸기·삭제·옮기기), `FileList.tsx`(가상 목록, 고르기, 끌어서 옮기기), `InfoPane.tsx`(정보 패널), `UploadPanel.tsx`, `ConflictBody.tsx`·`conflictDialog.tsx`(이름 충돌), `NameForm.tsx`·`nameDialog.tsx`(이름 입력), `DeleteBody.tsx`(삭제 확인, 하지 못한 항목 안내), `TrashView.tsx`(휴지통 보기), `CopyWindow.tsx`·`copyStore.ts`(복사 진행 창과 작업 목록), `stepUp.ts`(쓰기 요청의 보안 확인), 순수 모듈 `paths.ts`, `copyJobs.ts`, `history.ts`, `virtual.ts`, `pageCache.ts`, `kinds.ts`, `uploadQueue.ts`, `messages.ts`, `selection.ts`, `ops.ts`(Vitest `files.test.ts`)
 - 셸 앱이고 창을 여러 개 연다(`multiInstance`). 상태는 창마다 컴포넌트에 두며 모듈 저장소에 두지 않는다. 권한 도우미가 없으면(`capabilities.helper`) 앱은 그대로 보이고 창 안에 못 쓰는 이유를 안내한다(`appAccess`의 `helper_missing`, `AddonUnavailable`). 도우미는 설정되어 있는데 닿지 않거나 티켓이 없으면 창이 `/api/files/roots`의 오류(`helper_unavailable`·`helper_reauth`)를 보인다
 - 시안: Design 캔버스의 AC-Main·AC-Selected(정보 패널은 파일을 눌렀을 때만, 폴더는 고르기만), AC-Large(가상 스크롤·자리 표시·위치 말풍선), AC-Large-Sort(날짜순 준비 배너), S-Menu(올리기 목록), S-Locked(보안 확인), S-Fallback(대체 안내)
 - 틀은 `SidebarLayout`의 `header`(도구 막대)를 쓰고 좁은 기준은 720px다. 정보 패널은 내용 너비 640px 아래(컨테이너 쿼리)에서 목록 위에 덮는다
@@ -75,9 +87,10 @@ paths:
 - 정보 패널은 하나만 골랐고 그 줄이 파일일 때만 연다(여러 개를 고르거나 고르기를 지우면 닫는다). 패널의 이름 바꾸기·삭제 단추는 패널의 파일에 한다
 - 메뉴(`FilesWindow`의 `menuItems`): 줄은 (하나일 때) 열기 또는 내려받기 / 이름 바꾸기(F2) / 삭제…(Delete, 여럿이면 "항목 N개 삭제…") / (파일 하나) 정보, 빈 곳은 폴더 만들기·올리기·모두 선택·새로 고침이다. 고르지 않은 줄에서 열면 그 줄 하나를 고른다. 쓸 수 없는 폴더에서는 비활성 이유로 "쓰기 권한 없음"을 보인다
 - 이름 대화상자(`NameForm`)는 `PasskeyAdd`처럼 대화상자 안에서 요청하고 실패(`ops.ts`의 `opErrorKey`)를 입력란 아래에 보인다. 처음 포커스를 받을 때 이름 바꾸기는 확장자 앞까지(`stemLength`) 고른다. 새 폴더 이름은 `find`로 "새 폴더", "새 폴더 (2)"…에서 없는 것을 고른다
-- 여러 항목 작업(삭제, 옮기기, 휴지통 넣기·되돌리기·영구 삭제·비우기, `ops.ts`의 `RunOp`)은 `runEach`로 하나씩 차례로 한다(도우미의 사용자당 동시 연산 4개 안에서 목록에 자리를 남긴다). 300ms가 지나도 끝나지 않으면 진행 배너와 "중지"(하던 항목까지 하고 멈춤)를 보이고, 하지 못한 항목은 이유별로 묶어(`groupFailures`) 알린다. 세션이 끝났거나(401) 보안 확인을 취소했거나 `stopOn`(옮기기의 `cross_device`)이면 남은 항목도 안 되므로 멈춘다
-- **끌어서 옮기기**: HTML5 끌기는 `nativeGuard`가 `dragstart`에서 막으므로 포인터로 한다(마우스·펜만. 터치는 스크롤·길게 누르기 메뉴와 겹친다). 누른 줄에서 6px 넘게 움직이면 그때 pointer capture를 잡는다(그냥 누르기의 click은 줄로 간다). 고르지 않은 줄을 끌면 그 줄 하나를 고르되 정보 패널은 열지 않는다(끄는 도중 목록 폭이 바뀌면 놓을 곳이 움직인다)
+- 여러 항목 작업(삭제, 옮기기, 휴지통 넣기·되돌리기·영구 삭제·비우기, `ops.ts`의 `RunOp`)은 `runEach`로 하나씩 차례로 한다(도우미의 사용자당 동시 연산 4개 안에서 목록에 자리를 남긴다). 300ms가 지나도 끝나지 않으면 진행 배너와 "중지"(하던 항목까지 하고 멈춤)를 보이고, 하지 못한 항목은 이유별로 묶어(`groupFailures`) 알린다. 세션이 끝났거나(401) 보안 확인을 취소했거나 `stopOn`이면 남은 항목도 안 되므로 멈춘다. 옮기기는 미리 알지 못한 `cross_device`(같은 기준 안의 다른 마운트)를 만나면 거기서 멈추고 그 항목부터 복사로 넘긴다
+- **끌어서 옮기기·복사하기**: HTML5 끌기는 `nativeGuard`가 `dragstart`에서 막으므로 포인터로 한다(마우스·펜만. 터치는 스크롤·길게 누르기 메뉴와 겹친다). 누른 줄에서 6px 넘게 움직이면 그때 pointer capture를 잡는다(그냥 누르기의 click은 줄로 간다). 고르지 않은 줄을 끌면 그 줄 하나를 고르되 정보 패널은 열지 않는다(끄는 도중 목록 폭이 바뀌면 놓을 곳이 움직인다)
   - 놓을 곳은 `elementFromPoint` + `[data-drop-path]`(폴더 줄, 경로 단계, 사이드바 항목, 다른 탐색기 창의 것 포함)다. 목록 자신(`.files-list`)도 쓸 수 있는 폴더면 그 폴더를 가리키므로, 다른 창의 빈 곳이나 파일 줄에 놓으면 그 창의 폴더로 간다(목록 둘레에 점선으로 표시). 지금 폴더와, 끄는 폴더 자신·그 안은 놓을 곳이 아니다. 표시(`DROP_TARGET`)와 이름표(`.files-drag-ghost`, body에 붙이고 포인터를 받지 않음)는 렌더 없이 DOM으로 바꾼다
+  - 놓으면 할 일은 창의 `dropMode`(`copyJobs.ts`)가 정하고 이름표에 "옮기기"·"복사"·"휴지통으로"로 보인다. 원본 폴더와 대상이 다른 디스크(휴지통 볼륨의 `top`이 다름)면 복사, 같으면 옮기기다. 옮기기·휴지통은 원본 폴더에 쓸 수 있어야 하므로 읽기 전용 폴더에서도 끌 수 있지만 다른 디스크로만 놓인다. 볼륨을 받지 못했으면 옮겨 본다
   - 목록 위·아래 32px 띠에서는 스크롤하고, Esc나 창 포커스를 잃으면 취소한다. 끌기를 끝낸 뒤 따라오는 click 하나는 무시한다(Esc로 취소하면 놓기 전에 끝나므로 다음 누름까지 남긴다)
 - **바깥 파일 끌어 놓기**: `.files-content`가 `dragover`·`drop`을 받는다(`nativeGuard`는 `dragstart`만 막는다). 폴더 줄 위면 그 폴더, 아니면 지금 폴더(쓸 수 있을 때, 목록 자신의 `data-drop-path`는 폴더 줄로 보지 않는다)에 `uploads.add`로 올린다. 폴더(`webkitGetAsEntry().isDirectory`)는 아직 올리지 않고 이름을 알린다
 - **창 사이 변경 알림**(`ops.ts`의 `notifyFilesChanged`·`onFilesChanged`): 창마다 상태를 따로 두므로 모듈 저장소 대신 알림만 나눈다. 바뀐 폴더(`dirs`)를 보거나 없어진 경로(`gone`) 아래를 보는 창이 목록을 다시 열고, 없어진 파일의 정보 패널을 닫는다. 올리기가 끝날 때도 같은 알림을 쓴다
@@ -87,7 +100,9 @@ paths:
 
 - Go: `internal/files`(정렬, 스냅숏 해석 8.0·8.1+, 보기·찾기·자리, 캐시 상한·유휴), `internal/server/files_test.go`(`envOptions{files: true}`가 가짜 도우미 디스크를 디스크·`FilesSrvDir`로 둔다: 뿌리·스냅숏·관리자 로그인 갱신, 범위 밖 403, 목록·범위·prepare·find·410, 내려받기 헤더·Range·If-Range, 올리기 형식·길이·이름·덮어쓰기, 만들기·이름 바꾸기·옮기기(같은 디스크, 홈으로는 `cross_device`)·삭제(`not_empty`)와 `root_folder`(디스크 최상위 보기 포함), 보안 정책)
 - Go(휴지통): `TestFilesTrash`(홈·디스크 휴지통, 볼륨 종류, 되돌리기 범위·충돌, 영구 삭제, 비우기), `TestSiteTrashPrepare`(관리자, 상승 필요, 만든 뒤 `.Trash/<uid>`), `TestFilesSecurityWritesOnly`·`TestFilesScopeChangeNeedsStepUp`(쓰기 전용 범위)
-- Vitest: 고르기 구간, 새 이름 검사·확장자 앞 고르기, `moveAllowed`, `volumeOf`, `runEach` 중지·실패 묶기, 변경 알림
+- Go(복사): `worker/copy_test.go`(다른 디스크로 파일·폴더·링크, 특수 파일 건너뛰기, 시각·실행 비트, 이름마다의 실패, 시작 전 실패, 끊으면 임시 이름 지우기), `TestFilesCopy`(사건 흐름, 같은 이름, 시작 전 오류 응답, 인자 크기)
+- Vitest: 고르기 구간, 새 이름 검사·확장자 앞 고르기, `moveAllowed`, `volumeOf`, `runEach` 중지·실패 묶기, 변경 알림, 끌어 놓기의 할 일(`dropMode`), 복사 요청 나누기·진행률·속도, 복사 응답 사건 읽기(`client.test.ts`)
+- 브라우저(복사): 가짜 홈과 가짜 디스크는 기준 디렉터리가 달라 홈 ↔ 디스크가 복사다. 진행 창을 보려면 파일 수만 개짜리 폴더를 쓴다(큰 파일 하나는 로컬 디스크에서 금방 끝난다)
 - 브라우저(휴지통): 가짜 디스크 맨 위(`helper-root/srv/disk1`)는 개발 사용자 소유라 처음에는 `own`이다. `none`(휴지통 없음 안내)은 맨 위를 잠시 `chmod 0555`로 바꿔 보고, 디스크 휴지통 만들기는 상승할 수 있는 `totp`로 확인한다. 서버의 `trash-list --trash-dir=<휴지통>`으로 형식 호환을 볼 수 있다
 - `make dev-fake`: 가짜 OMV가 가짜 도우미 디스크(`helper-root/srv/disk1`)에 합성 파일과 공유 폴더(문서, 미디어, 사진, 폴더 없는 백업, 루트 파일시스템의 kvm)를 만든다(`cmd/fakeomv/files.go`). `FAKEFILES_LARGE=<n>`이면 사진/휴대폰 백업에 빈 파일 n개를 만든다. onmaru는 개발 전용 환경 변수 `ONMARU_DEV_FILES_SRV`(플래그·가동 설정 목록에 넣지 않음)로 그 아래 폴더를 디스크로 본다
 - 브라우저: Playwright 컨테이너는 문자셋 때문에 한글 이름 내려받기를 `download`로 저장한다(Blob도 같다). 한글 파일 이름은 실제 브라우저에서 확인한다

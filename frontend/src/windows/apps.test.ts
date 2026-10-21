@@ -50,7 +50,7 @@ describe('애드온 앱', () => {
     const windowAddons = Object.values(MANIFESTS)
       .filter((m) => 'window' in m.views)
       .map((m) => m.id)
-    expect(APP_IDS).toEqual([...windowAddons, 'files', 'terminal', 'settings', 'workbench'])
+    expect(APP_IDS).toEqual([...windowAddons, 'files', 'terminal', 'copy', 'settings', 'workbench'])
   })
 })
 

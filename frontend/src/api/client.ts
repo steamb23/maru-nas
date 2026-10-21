@@ -14,6 +14,10 @@ import type {
   FileAccess,
   FileInfo,
   FileItem,
+  FilesCopyFailure,
+  FilesCopyProgress,
+  FilesCopyRequest,
+  FilesCopyResult,
   FilesDeleteRequest,
   FilesListing,
   FilesMkdirRequest,
@@ -1273,6 +1277,89 @@ export function renameFile(from: string, to: string): Promise<FileItem> {
 export async function deleteFile(path: string, recursive: boolean): Promise<void> {
   const body: FilesDeleteRequest = { path, recursive }
   await request('POST', '/files/delete', { body })
+}
+
+// 복사(다른 디스크로 끌어 놓기). 권한 도우미가 복사하고, 진행은 요청이 열려 있는 동안 text/event-stream으로 온다.
+
+// parseCopyEvents는 받은 글자 buffer에서 끝난 사건(빈 줄로 끝나는 블록의 data 줄)을 꺼내고 남은 글자를 돌려준다.
+// JSON이 아닌 사건은 건너뛴다.
+export function parseCopyEvents(buffer: string): { events: unknown[]; rest: string } {
+  const events: unknown[] = []
+  const blocks = buffer.replaceAll('\r\n', '\n').split('\n\n')
+  const rest = blocks.pop() ?? ''
+  for (const block of blocks) {
+    const data = block
+      .split('\n')
+      .filter((line) => line.startsWith('data:'))
+      .map((line) => line.slice(5).replace(/^ /, ''))
+      .join('\n')
+    if (data === '') continue
+    try {
+      events.push(JSON.parse(data))
+    } catch {
+      // 프록시가 끼워 넣은 것 등
+    }
+  }
+  return { events, rest }
+}
+
+const isCopyProgress = (v: unknown): v is FilesCopyProgress =>
+  isObj(v) &&
+  isNum(v.files) &&
+  isNum(v.bytes) &&
+  isNum(v.totalFiles) &&
+  isNum(v.totalBytes) &&
+  isOptional(v.scanning, isBool) &&
+  isOptional(v.current, isStr)
+
+// copyResultOf는 결과 모양을 확인한다. 모르는 실패 코드는 helper_unavailable로 둔다.
+function copyResultOf(v: unknown): FilesCopyResult | null {
+  if (!isObj(v) || !isArrayOf(v.copied, isStr) || !Array.isArray(v.failed) || !isNum(v.skipped)) return null
+  const failed: FilesCopyFailure[] = []
+  for (const f of v.failed as unknown[]) {
+    if (!isObj(f) || !isStr(f.name)) return null
+    failed.push({ name: f.name, code: ERROR_CODES.includes(f.code as ErrorCode) ? (f.code as ErrorCode) : 'helper_unavailable' })
+  }
+  return { copied: v.copied, failed, skipped: v.skipped }
+}
+
+// copyFiles는 req.dir 안의 이름들을 req.to 폴더에 같은 이름으로 복사한다. 진행은 onProgress로 받는다. 시작하기 전의
+// 실패와, 시작한 뒤 멈춘 실패는 ApiError로 던지고, 이름마다의 실패는 결과의 failed에 담긴다. signal로 끊으면
+// 서버와 도우미가 하던 항목을 지우고 멈춘다(이미 복사한 항목은 남는다).
+export async function copyFiles(
+  req: FilesCopyRequest,
+  onProgress: (p: FilesCopyProgress) => void,
+  signal?: AbortSignal,
+): Promise<FilesCopyResult> {
+  const res = await request('POST', '/files/copy', { body: req, signal })
+  if (!res.body) throw new Error('/files/copy: no response body')
+  const reader = res.body.pipeThrough(new TextDecoderStream()).getReader()
+  let buffer = ''
+  try {
+    for (;;) {
+      const { value, done } = await reader.read()
+      if (done) break
+      const parsed = parseCopyEvents(buffer + value)
+      buffer = parsed.rest
+      for (const ev of parsed.events) {
+        if (!isObj(ev)) continue
+        if (isCopyProgress(ev.progress)) {
+          onProgress(ev.progress)
+          continue
+        }
+        const result = copyResultOf(ev.result)
+        if (result) return result
+        if (isObj(ev.error)) {
+          const status = isNum(ev.status) && ev.status >= 400 ? ev.status : 503
+          if (status === 401) onUnauthorized?.()
+          throw apiErrorOf('/files/copy', status, ev.error)
+        }
+      }
+    }
+  } finally {
+    reader.releaseLock()
+  }
+  throw new TypeError('/files/copy: stream ended before the result')
 }
 
 // 휴지통. 권한 도우미가 trash-put과 같은 곳·형식으로 다룬다(서버의 trash-list·trash-restore와 같은 휴지통).

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   ApiError,
+  copyFiles,
   deletePasskeyLogin,
   discardPasskeyLogin,
   enrollPasskeyLogin,
@@ -17,6 +18,7 @@ import {
   isSecurityStatus,
   login,
   logout,
+  parseCopyEvents,
   passkeyLoginOptions,
   passkeyLoginUnlock,
   runAddonAction,
@@ -464,5 +466,66 @@ describe('패스키로 로그인', () => {
     await expect(discardPasskeyLogin()).resolves.toBeUndefined()
     expect(fn.mock.calls[0][0]).toMatch(/\/api\/login\/passkey\/finish$/)
     expect(JSON.parse(String(fn.mock.calls[0][1]?.body))).toEqual({ discard: true })
+  })
+})
+
+describe('copyFiles', () => {
+  // stream은 SSE 글자를 조각마다 보내는 응답이다(사건이 조각 사이에서 끊긴다).
+  const stream = (chunks: string[]) =>
+    new Response(
+      new ReadableStream<Uint8Array>({
+        start(c) {
+          for (const s of chunks) c.enqueue(new TextEncoder().encode(s))
+          c.close()
+        },
+      }),
+      { headers: { 'Content-Type': 'text/event-stream' } },
+    )
+  const progress = { files: 1, bytes: 10, totalFiles: 2, totalBytes: 20 }
+
+  it('사건을 조각에 걸쳐 읽는다', () => {
+    const first = parseCopyEvents('data: {"a":1}\n\ndata: {"b"')
+    expect(first.events).toEqual([{ a: 1 }])
+    expect(first.rest).toBe('data: {"b"')
+    const second = parseCopyEvents(first.rest + ':2}\r\n\r\n: comment\n\ndata: not json\n\n')
+    expect(second.events).toEqual([{ b: 2 }])
+    expect(second.rest).toBe('')
+  })
+
+  it('진행을 알리고 결과를 돌려준다', async () => {
+    const fn = stubFetch(
+      stream([
+        `data: ${JSON.stringify({ progress: { ...progress, scanning: true } })}\n`,
+        `\ndata: ${JSON.stringify({ progress })}\n\nda`,
+        `ta: ${JSON.stringify({ result: { copied: ['a'], failed: [{ name: 'b', code: 'file_exists' }, { name: 'c', code: 'nope' }], skipped: 1 } })}\n\n`,
+      ]),
+    )
+    const seen: unknown[] = []
+    const res = await copyFiles({ dir: '/srv/d/a', names: ['a', 'b', 'c'], to: '/home/u' }, (p) => seen.push(p))
+    expect(seen).toEqual([{ ...progress, scanning: true }, progress])
+    expect(res).toEqual({
+      copied: ['a'],
+      failed: [
+        { name: 'b', code: 'file_exists' },
+        { name: 'c', code: 'helper_unavailable' },
+      ],
+      skipped: 1,
+    })
+    const init = fn.mock.calls[0][1]
+    expect(init?.method).toBe('POST')
+    expect(JSON.parse(String(init?.body))).toEqual({ dir: '/srv/d/a', names: ['a', 'b', 'c'], to: '/home/u' })
+  })
+
+  it('시작한 뒤의 오류와 끊긴 응답을 던진다', async () => {
+    stubFetch(stream([`data: ${JSON.stringify({ progress })}\n\ndata: ${JSON.stringify({ error: { error: 'x', code: 'no_space' }, status: 507 })}\n\n`]))
+    const err = await copyFiles({ dir: '/a', names: ['b'], to: '/c' }, () => {}).catch((e: unknown) => e)
+    expect(err).toBeInstanceOf(ApiError)
+    expect(err).toMatchObject({ status: 507, code: 'no_space' })
+
+    stubFetch(stream([`data: ${JSON.stringify({ progress })}\n\n`]))
+    await expect(copyFiles({ dir: '/a', names: ['b'], to: '/c' }, () => {})).rejects.toBeInstanceOf(TypeError)
+
+    stubFetch(Response.json({ error: 'x', code: 'security_required', required: 'password' }, { status: 403 }))
+    await expect(copyFiles({ dir: '/a', names: ['b'], to: '/c' }, () => {})).rejects.toMatchObject({ code: 'security_required' })
   })
 })

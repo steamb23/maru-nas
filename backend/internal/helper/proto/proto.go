@@ -171,6 +171,9 @@ const (
 	CodeCrossDevice = "cross_device"
 	// CodeNoTrash는 그 파일이 든 디스크에 쓸 수 있는 휴지통이 없다는 뜻이다(영구 삭제만 할 수 있다).
 	CodeNoTrash = "no_trash"
+	// CodeCanceled는 받는 쪽이 연결을 끊어 연산을 멈췄다는 뜻이다(fs.copy의 진행 응답을 쓰지 못함). 응답으로는 가지
+	// 않고 감사 로그에만 남는다.
+	CodeCanceled = "canceled"
 	// CodeNoHome은 사용자 홈 디렉터리가 없거나 쓸 수 없는 경로(/)라는 뜻이다.
 	CodeNoHome = "no_home"
 	// CodeSSHStrictModes는 홈이나 ~/.ssh가 다른 사용자에게 쓰기를 허용해 sshd(StrictModes)가

@@ -1,7 +1,7 @@
 // 파일 탐색기의 자세히 목록. 보이는 줄만 그리고(virtual.ts), 정렬·찾기를 적용한 보기에서 보이는 범위를 PAGE_SIZE줄씩
 // 받아 둔다(pageCache.ts). 아직 받지 않은 줄은 자리 표시로 그린다. 스크롤하는 동안 위치 말풍선을 보인다.
 // 여러 줄을 고를 수 있고(selection.ts), 고른 줄을 마우스·펜으로 끌어 다른 폴더(data-drop-path가 있는 줄·경로·사이드바,
-// 다른 탐색기 창의 목록 포함)에 놓으면 옮긴다.
+// 다른 탐색기 창의 목록 포함)에 놓으면 옮긴다(다른 디스크면 복사한다, 창이 dropMode로 정한다).
 import {
   type KeyboardEvent,
   type PointerEvent,
@@ -24,6 +24,7 @@ import { useLanguage } from '../i18n'
 import { IconImage } from '../icons/IconImage'
 import type { ContextMenuItem } from '../shell/contextMenu'
 import { useContextMenuTrigger } from '../shell/useContextMenuTrigger'
+import type { DropMode } from './copyJobs'
 import { KIND_KEYS, isFolderLike, kindIcon, kindOf } from './kinds'
 import { PAGE_SIZE, PageCache } from './pageCache'
 import { joinPath, within } from './paths'
@@ -76,8 +77,10 @@ interface Props {
   // onRename·onDelete는 F2·Delete 키다(지금 고르기에 한다). Shift+Delete는 permanent(휴지통을 거치지 않음)다.
   onRename: () => void
   onDelete: (permanent: boolean) => void
-  // canDrag면 고른 줄을 끌어 다른 폴더로 옮길 수 있다(이 폴더에 쓸 수 있을 때). onMove는 놓은 폴더의 경로다.
+  // canDrag면 고른 줄을 끌 수 있다. dropMode는 놓을 곳(data-drop-path)에서 할 일이고 null이면 놓을 수 없다(이 폴더에 쓸
+  // 수 없으면 같은 디스크로는 옮기지 못한다). onMove는 놓은 곳의 경로다.
   canDrag: boolean
+  dropMode: (target: string) => DropMode | null
   onMove: (sel: Selection, target: string) => void
   // focusOnMount면 처음 그릴 때 목록에 포커스한다(키보드로 폴더에 들어간 뒤). 한 뒤 onFocused를 부른다.
   focusOnMount?: boolean
@@ -99,6 +102,9 @@ const NAMES_LIMIT = 2000
 const DRAG_THRESHOLD = 6
 const DRAG_EDGE = 32
 const DRAG_FOLDERS = 20_000
+// DROP_KEYS는 끄는 이름표에 보이는, 놓으면 할 일이다.
+const DROP_KEYS = { move: 'files.drag.move', copy: 'files.drag.copy', trash: 'files.drag.trash' } as const
+
 // DROP_TARGET은 끄는 동안 놓을 곳에 붙이는 클래스다. 다른 창의 요소에도 붙으므로 렌더 없이 요소에 직접 둔다.
 export const DROP_TARGET = 'files-drop-target'
 
@@ -113,6 +119,8 @@ interface Drag {
   // folders는 끄는 줄 가운데 받은 폴더의 경로다(그 안에는 놓을 수 없다).
   folders: string[]
   ghost: HTMLElement | null
+  // mode는 지금 놓을 곳에서 할 일이다(이름표에 보인다).
+  mode: DropMode | null
   target: HTMLElement | null
   targetPath: string | null
   lastX: number
@@ -423,13 +431,23 @@ export function FileList(props: Props) {
   const hitTest = (d: Drag) => {
     const el = document.elementFromPoint(d.lastX, d.lastY)?.closest<HTMLElement>('[data-drop-path]') ?? null
     const p = el?.dataset.dropPath ?? null
-    const ok = p !== null && p !== listing.path && !d.folders.some((f) => within(p, f))
-    const next = ok ? el : null
-    if (next === d.target) return
-    d.target?.classList.remove(DROP_TARGET)
-    next?.classList.add(DROP_TARGET)
-    d.target = next
-    d.targetPath = ok ? p : null
+    const mode = p !== null && p !== listing.path && !d.folders.some((f) => within(p, f)) ? propsRef.current.dropMode(p) : null
+    const next = mode ? el : null
+    if (next !== d.target) {
+      d.target?.classList.remove(DROP_TARGET)
+      next?.classList.add(DROP_TARGET)
+      d.target = next
+      d.targetPath = mode ? p : null
+    }
+    if (mode !== d.mode) {
+      d.mode = mode
+      const label = d.ghost?.querySelector<HTMLElement>('.files-drag-mode')
+      if (label) {
+        label.textContent = mode ? t(DROP_KEYS[mode]) : ''
+        label.hidden = mode === null
+      }
+      if (d.ghost) d.ghost.dataset.mode = mode ?? ''
+    }
   }
 
   const startDrag = (d: Drag, e: PointerEvent<HTMLDivElement>) => {
@@ -454,8 +472,13 @@ export function FileList(props: Props) {
     menu.cancelLongPress()
     const ghost = document.createElement('div')
     ghost.className = 'files-drag-ghost'
-    ghost.textContent =
-      count === 1 ? item.name : t('files.drag.items', { count, total: new Intl.NumberFormat(lang).format(count) })
+    const name = document.createElement('span')
+    name.className = 'files-drag-name'
+    name.textContent = count === 1 ? item.name : t('files.drag.items', { count, total: new Intl.NumberFormat(lang).format(count) })
+    const mode = document.createElement('span')
+    mode.className = 'files-drag-mode'
+    mode.hidden = true
+    ghost.append(name, mode)
     document.body.append(ghost)
     d.ghost = ghost
     const onKey = (ev: globalThis.KeyboardEvent) => {
@@ -530,6 +553,7 @@ export function FileList(props: Props) {
       sel: NO_SELECTION,
       folders: [],
       ghost: null,
+      mode: null,
       target: null,
       targetPath: null,
       lastX: e.clientX,
