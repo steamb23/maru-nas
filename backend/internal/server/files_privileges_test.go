@@ -147,7 +147,7 @@ func TestRootsFollowPrivileges(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(roots.Shares) != 2 || roots.Shares[0].Name != "photos" || !roots.Shares[0].ReadOnly || roots.Shares[1].ReadOnly {
+	if len(roots.Shares) != 2 || roots.Shares[0].Name != "photos" || !roots.Shares[0].ReadOnly || roots.Shares[1].ReadOnly || !roots.FollowPrivileges {
 		t.Fatalf("shares = %+v", roots.Shares)
 	}
 	// 디스크 최상위 보기라도 숨긴 공유 폴더 안은 보이는 폴더가 아니고, 그것을 품은 폴더는 지킨다.
@@ -166,11 +166,11 @@ func TestRootsFollowPrivileges(t *testing.T) {
 
 	// 끄거나 스냅숏이 없으면 권한을 보지 않는다.
 	h.filesSite.v.FollowPrivileges = false
-	if r, _ := h.roots(context.Background(), s, "ticket"); len(r.Shares) != 3 || len(r.hidden) != 0 || len(r.readOnly) != 0 {
+	if r, _ := h.roots(context.Background(), s, "ticket"); len(r.Shares) != 3 || len(r.hidden) != 0 || len(r.readOnly) != 0 || r.FollowPrivileges {
 		t.Fatalf("roots when off = %+v", r)
 	}
 	h.filesSite.v.FollowPrivileges, h.filesSite.v.SharesUpdatedAt = true, ""
-	if r, _ := h.roots(context.Background(), s, "ticket"); len(r.hidden) != 0 {
+	if r, _ := h.roots(context.Background(), s, "ticket"); len(r.hidden) != 0 || r.FollowPrivileges {
 		t.Fatalf("roots without a snapshot = %+v", r)
 	}
 }

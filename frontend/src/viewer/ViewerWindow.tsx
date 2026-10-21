@@ -105,7 +105,7 @@ function ViewerBody({ target }: { target: ViewerTarget }) {
     body = (
       <div className="viewer-center">
         <IconImage name="security-high-symbolic" size={40} />
-        <p>{t('files.security.message')}</p>
+        <p>{t('viewer.security')}</p>
         <button type="button" className="addon-button primary" onClick={verify}>
           {t('files.security.verify')}
         </button>

@@ -388,6 +388,8 @@
       "aclYes": "Yes",
       "aclNo": "No",
       "note": "The file explorer follows file system permissions only. OMV shared folder privileges apply only to SMB and FTP.",
+      "noteFollow": "The file explorer follows both file system permissions and OMV shared folder privileges.",
+      "security": "Verify to see the details.",
       "editAcl": "Edit ACL in OMV",
       "loadFailed": "Couldn't load the details.",
       "preview": "Preview"
@@ -441,7 +443,7 @@
       "deep": "Search subfolders",
       "placeholder": "Search subfolders (Enter)",
       "label": "Search results",
-      "title": "Searching “{{query}}” in {{folder}}",
+      "title": "Search for “{{query}}” in {{folder}}",
       "running_one": "{{total}} found · folders read: {{dirs}}",
       "running_other": "{{total}} found · folders read: {{dirs}}",
       "done_one": "{{total}} found · folders read: {{dirs}}",
@@ -724,7 +726,7 @@
     "files": {
       "title": "File explorer",
       "shares": "Shared folder list",
-      "sharesDesc": "Regular user sessions can't read the OMV shared folder list, so the list read when an administrator signs in is kept as labels. What can actually be opened is decided by file system permissions.",
+      "sharesDesc": "Regular user sessions can't read the OMV shared folder list, so the list read when an administrator signs in is kept as labels. File system permissions decide what can actually be opened, and you can also apply OMV shared folder privileges below.",
       "sharesState_one": "{{count}} shared folder · read {{time}}",
       "sharesState_other": "{{count}} shared folders · read {{time}}",
       "sharesNone": "Not read yet.",
@@ -1271,6 +1273,7 @@
     "mediaFailed": "This file can't be played. The browser may not support its codec. Download it and open it in another program.",
     "pdfFailed": "This PDF can't be shown. Download it to open it.",
     "binary": "This file isn't text, so its contents can't be shown.",
-    "truncated": "This file is large, so only the first {{size}} is shown."
+    "truncated": "This file is large, so only the first {{size}} is shown.",
+    "security": "This session needs a security check before previewing files."
   }
 }

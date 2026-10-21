@@ -28,6 +28,7 @@ paths:
 - 계산(`files.ShareAccess`)은 OMV가 Samba 설정을 만드는 규칙(`shares.j2`)과 같다: 사용자 항목과 그룹 항목을 함께 보고 거부(0)가 하나라도 맞으면 거부, 아니면 7이 있으면 쓰기, 5만 있으면 읽기, 맞는 항목이 없으면 거부. 정한 권한이 없는 공유 폴더는 모두에게 열린다. SMB 공유의 guest·read only 설정은 공유 폴더가 아니라 SMB의 것이라 보지 않는다
 - 그룹은 도우미 `id`의 그룹 이름(커널의 실제 그룹, Samba가 `@group`을 푸는 것과 같다)이고 홈과 함께 세션별로 기억한다(`files.Cache.Identity`). 로그인한 동안 바뀐 그룹은 다시 로그인해야 반영된다
 - 적용(`handler.roots`의 `fileRoots`): 거부인 공유 폴더는 사이드바에서 빼고 `hidden`에 둔다. `withinRoots`가 디스크 최상위 보기에서도 그 아래를 403 `outside_roots`로 막고, 검색 결과에서도 뺀다. `rootFolder`가 숨긴 공유 폴더도 지킨다. 읽기인 공유 폴더는 `FilesShare.ReadOnly`, 목록·정보의 `shareReadOnly`(그때 `writable`·`access.write`는 false)이고, 쓰기 라우트가 바꿀 곳을 `allowedWritePaths`로 거른다(올리기와 사전 확인, 만들기, 이름 바꾸기·옮기기 양쪽, 삭제, 휴지통 넣기, 되돌리기 대상, 복사 대상): 403 `share_read_only`. 휴지통 영구 삭제·비우기는 휴지통 디렉터리만 다루므로 거르지 않는다
+- 적용 중인지(켜져 있고 스냅숏이 있음)는 뿌리 응답의 `FilesRoots.FollowPrivileges`로 알리고, 정보 패널이 안내 문구(`files.info.noteFollow`)를 그에 맞춘다
 - 도우미의 범위는 바꾸지 않으므로 onmaru가 뚫리면 지켜 주지 않는다(설정 화면이 파일 시스템 권한도 함께 적용된다고 알린다)
 
 ## 목록(큰 폴더)
@@ -57,7 +58,7 @@ paths:
 
 ## 하위 폴더 검색
 
-- 찾기 칸 옆의 "하위 폴더까지 찾기"(`FilesWindow`의 `deep`)를 켜면 찾기 칸이 지금 폴더를 거르지 않고, Enter로 지금 폴더와 그 아래를 찾는다. 결과는 목록 대신 `SearchView.tsx`(이름·위치·종류, `virtual.ts`·`selection.ts`)로 보이고, 뒤로 단추·Esc·폴더 이동으로 나간다. 새로 고침은 같은 찾기어로 다시 찾는다
+- 찾기 칸 옆의 "하위 폴더까지 찾기"(`FilesWindow`의 `deep`)를 켜면 찾기 칸이 지금 폴더를 거르지 않고, Enter로 지금 폴더와 그 아래를 찾는다. 결과는 목록 대신 `SearchView.tsx`(이름·위치·종류, `virtual.ts`·`selection.ts`)로 보이고, 뒤로 단추·Esc(찾기 칸, 또는 고른 항목이 없는 결과 목록)·폴더 이동으로 나간다. 새로 고침은 같은 찾기어로 다시 찾는다
 - `GET /api/files/search?path=&q=`(`files_search.go`, 읽기 라우트)는 도우미 `fs.search`(`.claude/docs/helper.md`의 "하위 폴더 검색")를 부르고 찾은 항목을 오는 대로 `text/event-stream`(`api.FilesSearchEvent`, 절대 경로)으로 보낸다. 복사와 같은 사건 스트림(`eventStream`, `filesErrorEvent`)이다. 결과는 2000개까지이고 브라우저가 끊으면(중지 단추) 도우미도 멈춘다. 보이는 폴더 밖(숨긴 공유 폴더)의 항목은 빼고 보낸다
 - 결과에서는 폴더 열기, 미리보기, 내려받기, "위치 열기"(그 폴더로 가서 항목을 고름, `pendingSelect`)만 한다. 끌기·삭제는 그 폴더에서 한다
 
@@ -110,9 +111,9 @@ paths:
 - 가상 목록: 줄 높이 34px(`virtual.ts`의 `ROW_HEIGHT`, CSS `.files-row`와 맞춤), 스크롤 높이가 800만 px를 넘으면 비율로 줄인다(브라우저 요소 높이 한계). 200줄 페이지를 보기마다 캐시하고(60페이지), 스크롤이 90ms 멈춘 뒤 받는다(동시 2페이지). 받은 페이지는 `useMemo`로 만든 보기별 캐시 객체에 쌓고 `bump`로 다시 그린다. 요청을 끊는 컨트롤러는 마운트마다 effect에서 만든다(StrictMode가 정리를 한 번 더 불러도 끊긴 채 남지 않게)
 - `role="grid"` + `aria-rowcount`/`aria-rowindex`, 포커스는 스크롤 영역 하나에 두고 고른 줄을 `aria-activedescendant`로 가리킨다. 화살표·PageUp/Down·Home/End로 고르고 Enter로 열며, Backspace는 상위 폴더다. 키보드로 폴더에 들어가면 새 목록에 포커스를 돌려준다
 - 비동기 결과는 요청(뿌리 `try`, 목록 `path`, 정보 패널 `path`)과 함께 상태에 두고, 지금 요청과 다르면 받는 중으로 본다(effect 안에서 상태를 동기로 지우지 않는다, oxlint `set-state-in-effect`)
-- **아이콘 보기**(시안의 보기 전환): 도구 줄 오른쪽의 목록/아이콘 단추로 바꾼다. `FileList`의 `mode`가 `grid`면 칸(종류 아이콘 48px + 두 줄 이름, `.files-tile`)을 시각 행으로 묶어 같은 가상 스크롤·페이지 캐시·고르기·끌기를 쓴다(`virtual.ts`의 `gridOf`·`itemRange`·`moveKey`, 칸 너비 104px 이상으로 남는 폭을 나눔, 행 높이 108px). ←/→는 칸, ↑/↓는 행이다. 열 머리 대신 도구 줄의 정렬 메뉴를 쓰고, `role="listbox"`·`option`이다. 썸네일은 그리지 않는다
+- **아이콘 보기**(시안의 보기 전환): 도구 줄 오른쪽의 목록/아이콘 단추로 바꾼다. `FileList`의 `mode`가 `grid`면 칸(종류 아이콘 48px + 두 줄 이름, `.files-tile`)을 시각 행으로 묶어 같은 가상 스크롤·페이지 캐시·고르기·끌기를 쓴다(`virtual.ts`의 `gridOf`·`itemRange`·`moveKey`, 칸 너비 104px 이상으로 남는 폭을 나눔, 행 높이 108px). ←/→는 칸, ↑/↓는 행이다. 닫힌 정보 패널은 파일을 고르고 400ms 뒤에 연다(`GRID_PANE_DELAY_MS`, 패널이 열리면 칸이 다시 배치되어 두 번 누르기가 빗나가므로). 열 머리 대신 도구 줄의 정렬 메뉴를 쓰고, `role="listbox"`·`option`이다. 썸네일은 그리지 않는다
   - 고른 보기는 사용자 설정 `PUT /api/preferences/files`(`api.FilesPrefs.View`)에 저장해 새로 여는 창의 기본값으로 쓰고(`viewPrefs.ts`), 이미 열린 다른 창은 바꾸지 않는다. 다른 폴더로 가도 보기는 그대로다
-- 쓰기 요청(이름 대화상자, `runOp`의 항목, 올리기, 휴지통 작업)은 `stepUp.ts`의 `withStepUp`으로 보낸다. `security_required`면 창을 잠그지 않고 확인 대화상자(`requestStepUp`, 동시에 막힌 요청은 대화상자 하나를 함께 쓴다)를 띄운 뒤 한 번 다시 한다. 창 전체의 확인 화면은 뿌리·목록이 막혔을 때(읽기까지 막는 정책)만 보인다
+- 쓰기 요청(이름 대화상자, `runOp`의 항목, 올리기, 휴지통 작업)은 `stepUp.ts`의 `withStepUp`으로 보낸다. `security_required`면 창을 잠그지 않고 확인 대화상자(`requestStepUp`, 동시에 막힌 요청은 대화상자 하나를 함께 쓴다)를 띄운 뒤 한 번 다시 한다. 창 전체의 확인 화면은 뿌리·목록이 막혔을 때(읽기까지 막는 정책)만 보인다. 정보 패널·미리보기 창·검색은 각자 `security_required`를 받으면 확인 단추(검색은 대화상자)를 보이고 확인 뒤 다시 받는다
 
 ## 고르기와 작업(프런트)
 
