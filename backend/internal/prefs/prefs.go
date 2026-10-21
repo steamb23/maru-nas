@@ -26,6 +26,8 @@ type Store interface {
 	SetDrawer(username string, drawer api.DrawerPrefs) error
 	// SetSystemInfo는 시스템 정보 창 설정만 바꾼다. 다른 설정은 그대로 둔다. 검사는 호출하는 쪽이 한다.
 	SetSystemInfo(username string, sysinfo api.SystemInfoPrefs) error
+	// SetFiles는 파일 탐색기 보기 설정만 바꾼다. 다른 설정은 그대로 둔다. 검사는 호출하는 쪽이 한다.
+	SetFiles(username string, files api.FilesPrefs) error
 	// UpdateAppearance는 화면 설정만 바꾼다. apply는 지금 값(저장한 적 없으면 빈 값)을 받아 고친다.
 	// 읽기부터 쓰기까지 잠그므로 조건부 변경(올린 이미지를 지울 때 그 이미지를 가리키던 배경 지우기 등)에도 쓴다.
 	UpdateAppearance(username string, apply func(*api.AppearancePrefs)) error
@@ -77,6 +79,11 @@ func (m *MemoryStore) SetSystemInfo(username string, sysinfo api.SystemInfoPrefs
 	return nil
 }
 
+func (m *MemoryStore) SetFiles(username string, files api.FilesPrefs) error {
+	m.update(username, func(p *api.Preferences) { p.Files = &files })
+	return nil
+}
+
 func (m *MemoryStore) UpdateAppearance(username string, apply func(*api.AppearancePrefs)) error {
 	m.update(username, func(p *api.Preferences) { p.Appearance = applyAppearance(p.Appearance, apply) })
 	return nil
@@ -106,6 +113,10 @@ func clonePrefs(p api.Preferences) api.Preferences {
 	if p.SystemInfo != nil {
 		s := *p.SystemInfo
 		p.SystemInfo = &s
+	}
+	if p.Files != nil {
+		f := *p.Files
+		p.Files = &f
 	}
 	p.Appearance = cloneAppearance(p.Appearance)
 	return p

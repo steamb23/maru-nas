@@ -79,6 +79,10 @@ func (s *FileStore) SetSystemInfo(username string, sysinfo api.SystemInfoPrefs) 
 	return s.update(username, func(p *api.Preferences) { p.SystemInfo = &sysinfo })
 }
 
+func (s *FileStore) SetFiles(username string, files api.FilesPrefs) error {
+	return s.update(username, func(p *api.Preferences) { p.Files = &files })
+}
+
 func (s *FileStore) UpdateAppearance(username string, apply func(*api.AppearancePrefs)) error {
 	return s.update(username, func(p *api.Preferences) { p.Appearance = applyAppearance(p.Appearance, apply) })
 }

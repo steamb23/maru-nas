@@ -358,3 +358,35 @@ func TestFileStoreDoesNotStoreImageInfo(t *testing.T) {
 		t.Errorf("file = %s", b)
 	}
 }
+
+func TestStoreFiles(t *testing.T) {
+	for name, s := range stores(t) {
+		t.Run(name, func(t *testing.T) {
+			if p, _ := s.Get("alice"); p.Files != nil {
+				t.Fatalf("new user files prefs: %+v", *p.Files)
+			}
+			if err := s.SetDrawer("alice", api.DrawerPrefs{Sort: api.DrawerSortName}); err != nil {
+				t.Fatal(err)
+			}
+			want := api.FilesPrefs{View: api.FilesViewGrid}
+			if err := s.SetFiles("alice", want); err != nil {
+				t.Fatal(err)
+			}
+			p, err := s.Get("alice")
+			if err != nil || p.Files == nil || *p.Files != want {
+				t.Fatalf("after set: %+v, %v", p.Files, err)
+			}
+			if p.Drawer == nil || p.Drawer.Sort != api.DrawerSortName {
+				t.Errorf("files prefs save dropped drawer: %+v", p.Drawer)
+			}
+			// 돌려준 값을 바꿔도 저장값은 그대로다.
+			p.Files.View = "changed"
+			if p, _ := s.Get("alice"); *p.Files != want {
+				t.Errorf("stored files prefs changed: %+v", *p.Files)
+			}
+			if p, _ := s.Get("bob"); p.Files != nil {
+				t.Errorf("bob sees %+v", *p.Files)
+			}
+		})
+	}
+}

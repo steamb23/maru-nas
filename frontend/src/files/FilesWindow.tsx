@@ -27,7 +27,8 @@ import { IconImage } from '../icons/IconImage'
 import type { IconName } from '../icons/resolver'
 import { requestStepUp } from '../security/stepUpDialog'
 import { SidebarLayout } from '../shell/SidebarLayout'
-import type { ContextMenuItem } from '../shell/contextMenu'
+import type { ContextMenuAction, ContextMenuItem } from '../shell/contextMenu'
+import { useContextMenuStore } from '../shell/contextMenuStore'
 import { useDialogs } from '../shell/dialogPresets'
 import { DeleteBody, DeleteTitle, FailuresBody } from './DeleteBody'
 import { dropMode } from './copyJobs'
@@ -68,6 +69,7 @@ import { withStepUp } from './stepUp'
 import { TaskBanner } from './TaskProgress'
 import { startCopy, startUpload } from './transferStore'
 import { checkUploads } from './uploads'
+import { type FilesLayout, useFilesPrefsStore } from './viewPrefs'
 
 // 창이 이보다 좁으면 사이드바를 숨기고 메뉴 단추로 덮어 연다(SidebarLayout).
 const FILES_NARROW_WIDTH = 720
@@ -181,6 +183,11 @@ export function FilesWindow({ active }: WindowViewProps) {
   // dropRow는 바깥 파일을 끄는 동안 놓을 곳으로 표시한 폴더 줄이다.
   const dropRow = useRef<HTMLElement | null>(null)
   const contentRef = useRef<HTMLDivElement>(null)
+  // layoutChoice는 이 창에서 고른 보기다. 고르기 전에는 저장된 보기(새 창의 기본값)를 따른다.
+  const [layoutChoice, setLayoutChoice] = useState<FilesLayout | null>(null)
+  const savedLayout = useFilesPrefsStore((s) => (s.status === 'ready' ? s.layout : 'list'))
+  const layout = layoutChoice ?? savedLayout
+  const sortButton = useRef<HTMLButtonElement>(null)
   // self는 변경 알림에서 이 창을 가리킨다.
   const [self] = useState(() => Symbol('files-window'))
 
@@ -194,6 +201,10 @@ export function FilesWindow({ active }: WindowViewProps) {
     if (path && affects(c, path)) c.refreshed = path
     notifyFilesChanged(c)
   }
+
+  useEffect(() => {
+    void useFilesPrefsStore.getState().load()
+  }, [])
 
   // 처음 보이는 폴더. 보안 확인이 필요하면 확인 단추를 보인다.
   useEffect(() => {
@@ -401,6 +412,45 @@ export function FilesWindow({ active }: WindowViewProps) {
       return
     }
     startPrepare(key, true)
+  }
+
+  const chooseLayout = (next: FilesLayout) => {
+    setLayoutChoice(next)
+    useFilesPrefsStore.getState().set(next)
+  }
+
+  // openSortMenu는 아이콘 보기의 정렬 메뉴다(목록 보기는 열 머리로 정렬한다).
+  const openSortMenu = (viaKeyboard: boolean) => {
+    const el = sortButton.current
+    if (!el) return
+    const r = el.getBoundingClientRect()
+    const keys: readonly [SortKey, ParseKeys][] = [
+      ['name', 'files.columns.name'],
+      ['mtime', 'files.columns.modified'],
+      ['size', 'files.columns.size'],
+    ]
+    const setDesc = (d: boolean) => {
+      if (d !== view.desc) onSort(view.sort)
+    }
+    const sortKey = prep?.sort ?? view.sort
+    const desc = prep?.desc ?? view.desc
+    const items: ContextMenuItem[] = [
+      ...keys.map(
+        ([key, labelKey]): ContextMenuAction => ({
+          kind: 'action',
+          id: key,
+          labelKey,
+          checked: key === sortKey,
+          onSelect: () => {
+            if (key !== sortKey) onSort(key)
+          },
+        }),
+      ),
+      { kind: 'separator', id: 'sep' },
+      { kind: 'action', id: 'asc', labelKey: 'files.view.ascending', checked: !desc, disabled: prep !== null, onSelect: () => setDesc(false) },
+      { kind: 'action', id: 'desc', labelKey: 'files.view.descending', checked: desc, disabled: prep !== null, onSelect: () => setDesc(true) },
+    ]
+    useContextMenuStore.getState().openAt({ x: r.left, y: r.bottom + 4 }, items, viaKeyboard)
   }
 
   const openItem = (item: FileItem) => {
@@ -1060,6 +1110,43 @@ export function FilesWindow({ active }: WindowViewProps) {
           {t('files.toolbar.newFolder')}
         </button>
         <input ref={fileInput} type="file" multiple hidden onChange={onPick} />
+        <span className="files-actions-fill" />
+        {layout === 'grid' && (
+          <button
+            ref={sortButton}
+            type="button"
+            className="files-icon-button"
+            aria-label={t('files.view.sort')}
+            title={t('files.view.sort')}
+            aria-haspopup="menu"
+            disabled={!listing}
+            onClick={(e) => openSortMenu(e.detail === 0)}
+          >
+            <IconImage name="view-sort-ascending-symbolic" size={16} />
+          </button>
+        )}
+        <div className="files-view-toggle" role="group" aria-label={t('files.view.label')}>
+          <button
+            type="button"
+            className="files-icon-button"
+            aria-label={t('files.view.list')}
+            title={t('files.view.list')}
+            aria-pressed={layout === 'list'}
+            onClick={() => chooseLayout('list')}
+          >
+            <IconImage name="view-list-symbolic" size={16} />
+          </button>
+          <button
+            type="button"
+            className="files-icon-button"
+            aria-label={t('files.view.grid')}
+            title={t('files.view.grid')}
+            aria-pressed={layout === 'grid'}
+            onClick={() => chooseLayout('grid')}
+          >
+            <IconImage name="view-grid-symbolic" size={16} />
+          </button>
+        </div>
       </div>
       {listing?.truncated && (
         <p className="addon-banner notice files-banner" role="status">
@@ -1114,6 +1201,7 @@ export function FilesWindow({ active }: WindowViewProps) {
             ref={listRef}
             listing={listing}
             view={view}
+            mode={layout}
             active={active}
             selection={sel}
             onSelection={onSelection}

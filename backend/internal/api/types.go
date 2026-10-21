@@ -471,6 +471,8 @@ type Preferences struct {
 	Drawer *DrawerPrefs `json:"drawer,omitempty"`
 	// SystemInfo는 시스템 정보 창의 보기 설정이다. 한 번도 저장하지 않았으면 없다(프론트가 기본값을 쓴다).
 	SystemInfo *SystemInfoPrefs `json:"systemInfo,omitempty"`
+	// Files는 파일 탐색기의 보기 설정이다. 한 번도 저장하지 않았으면 없다(프론트가 기본값을 쓴다).
+	Files *FilesPrefs `json:"files,omitempty"`
 	// Appearance는 화면 설정(테마, 바탕화면 등)이다. 없거나 비어 있는 값은 관리자가 정한 기본 화면을 따른다.
 	Appearance *AppearancePrefs `json:"appearance,omitempty"`
 	// WallpaperImage는 이 사용자가 올린 바탕화면 이미지의 정보다. 올리지 않았으면 없다.
@@ -627,6 +629,25 @@ type SystemInfoPrefs struct {
 // SystemInfoRequest는 PUT /api/preferences/system-info의 요청 본문이다.
 type SystemInfoRequest struct {
 	SystemInfo *SystemInfoPrefs `json:"systemInfo"`
+}
+
+// 파일 탐색기의 보기 모양. FilesPrefs.View에 들어간다.
+const (
+	// FilesViewList는 자세히 목록(이름·수정한 날짜·크기·종류 열)이다.
+	FilesViewList = "list"
+	// FilesViewGrid는 아이콘 보기(종류 아이콘과 이름의 칸)다.
+	FilesViewGrid = "grid"
+)
+
+// FilesPrefs는 파일 탐색기의 보기 설정이다. 새로 여는 탐색기 창이 이 보기로 시작한다.
+type FilesPrefs struct {
+	// View는 FilesView* 중 하나다. 프론트는 모르는 값이면 list를 쓴다.
+	View string `json:"view"`
+}
+
+// FilesPrefsRequest는 PUT /api/preferences/files의 요청 본문이다.
+type FilesPrefsRequest struct {
+	Files *FilesPrefs `json:"files"`
 }
 
 // Shortcut은 바탕화면 바로가기 하나다. 지금은 앱만 가리킨다. 폴더나 OMV 페이지를 가리키는

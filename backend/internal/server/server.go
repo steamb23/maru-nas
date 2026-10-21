@@ -302,6 +302,7 @@ func New(cfg Config) http.Handler {
 	mux.HandleFunc("PUT /api/preferences/shortcuts", h.requireSession(h.setShortcuts))
 	mux.HandleFunc("PUT /api/preferences/drawer", h.requireSession(h.setDrawer))
 	mux.HandleFunc("PUT /api/preferences/system-info", h.requireSession(h.setSystemInfo))
+	mux.HandleFunc("PUT /api/preferences/files", h.requireSession(h.setFilesPrefs))
 	mux.HandleFunc("PUT /api/preferences/appearance", h.requireSession(h.setAppearance))
 	mux.HandleFunc("GET /api/preferences/wallpaper-image", h.requireSession(h.wallpaperImage))
 	mux.HandleFunc("PUT /api/preferences/wallpaper-image", h.requireSession(h.putWallpaperImage))

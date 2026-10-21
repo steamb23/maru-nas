@@ -420,6 +420,14 @@
     "security": {
       "message": "이 세션은 파일 탐색기를 쓰기 전에 보안 확인이 필요합니다. 본인 확인을 마치면 폴더를 보입니다.",
       "verify": "확인"
+    },
+    "view": {
+      "label": "보기",
+      "list": "목록 보기",
+      "grid": "아이콘 보기",
+      "sort": "정렬",
+      "ascending": "오름차순",
+      "descending": "내림차순"
     }
   },
   "sysinfo": {
