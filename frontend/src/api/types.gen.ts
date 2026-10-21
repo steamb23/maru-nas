@@ -2244,6 +2244,16 @@ export interface FilesFindResponse {
   index: number /* int */;
 }
 /**
+ * FilesUploadCheckRequest는 POST /api/files/upload/check의 본문이다. PUT /api/files/upload로 본문을 보내기 전에
+ * 보안 확인·세션·이름·범위처럼 본문 없이 알 수 있는 거절을 먼저 받는다. 통과하면 응답 본문 없이 204다.
+ */
+export interface FilesUploadCheckRequest {
+  /**
+   * Path는 올릴 파일의 절대 경로다.
+   */
+  path: string;
+}
+/**
  * FilesMkdirRequest는 POST /api/files/mkdir의 본문이다. 응답은 만든 폴더의 FileItem이다.
  */
 export interface FilesMkdirRequest {
