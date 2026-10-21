@@ -35,7 +35,7 @@ OMV 8의 모든 버전을 지원한다. OMV 패키지(`packages.openmediavault.o
 
 - **`Session.login` 응답**: `status`와 2차 인증(`Session.verify`)은 8.5.0(Issue #2235)에서 생겼다. 8.4 이하는 `{"authenticated": true, "username", "permissions", "sessionid"}`이고 실패는 똑같이 HTTP 400이다. 백엔드는 `status`가 없고 `authenticated`가 true이면 `authenticated` 상태로 바꿔 같은 흐름을 탄다(`omv.loginResult`). 8.5의 verify 응답에도 `authenticated`가 들어 있을 수 있으므로 옛 형식은 `status`가 없는 것으로 판단한다
 - **8.5.0-1의 `Session.authenticate`**: 이 한 릴리스만 `login`을 `authenticate`로 바꿨고 8.5.0-2에서 되돌렸다. 지원하지 않는다
-- **`ShareMgmt.enumerateSharedFolders`**(파일 탐색기의 공유 폴더 스냅숏, 관리자 전용): 항목의 `absdirpath`와 `status`(`OK`, `ENOENT`, `ENOTDIR`, `ENOENT_DB_MNTENT`)는 8.1.0에서 생겼다. 8.0은 `mntent.dir` + `reldirpath`로 경로를 만들고 폴더가 있는지는 모른다(`files.ParseShares`). 항목의 공유 폴더 권한(`privileges.privilege[]{type, name, perms}`, 파일 탐색기의 공유 폴더 권한 따르기)은 8.0부터 같다 워크벤치의 ACL 화면 라우트(`storage/shared-folders/acl/<uuid>`)는 8.0부터 같다
+- **`ShareMgmt.enumerateSharedFolders`**(파일 탐색기의 공유 폴더 스냅숏, 관리자 전용): 항목의 `absdirpath`와 `status`(`OK`, `ENOENT`, `ENOTDIR`, `ENOENT_DB_MNTENT`)는 8.1.0에서 생겼다. 8.0은 `mntent.dir` + `reldirpath`로 경로를 만들고 폴더가 있는지는 모른다(`files.ParseShares`). 항목의 공유 폴더 권한(`privileges.privilege[]{type, name, perms}`, 파일 탐색기의 공유 폴더 권한 따르기)은 8.0부터 같다. 워크벤치의 ACL 화면 라우트(`storage/shared-folders/acl/<uuid>`)는 8.0부터 같다
 - **`WebGui.getAutoLogoutSettings`**: 8.2.0에서 생겼다. 8.0·8.1에서는 HTTP 404(없는 메서드, `rpc/rpc.inc`)라 `Probe`가 세션은 살아 있고 timeout은 모른다고 본다. 이때 브라우저에 남은 시간을 주지 않고 만료는 확인 주기의 Probe(401)로 안다
 
 ## 인증 설계
