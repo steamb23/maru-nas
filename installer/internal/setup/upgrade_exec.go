@@ -87,8 +87,8 @@ func lookupOwner(name string) (ownerAccount, error) {
 	if err != nil {
 		return ownerAccount{}, err
 	}
-	uid, err1 := strconv.Atoi(u.Uid)
-	gid, err2 := strconv.Atoi(u.Gid)
+	uid, err1 := parseID(u.Uid)
+	gid, err2 := parseID(u.Gid)
 	if err1 != nil || err2 != nil {
 		return ownerAccount{}, errors.New("unsupported uid/gid of " + name)
 	}
@@ -101,11 +101,25 @@ func lookupOwner(name string) (ownerAccount, error) {
 		return ownerAccount{}, err
 	}
 	for _, id := range ids {
-		if g, err := strconv.Atoi(id); err == nil {
+		if g, err := parseID(id); err == nil {
 			a.Groups = append(a.Groups, g)
 		}
 	}
 	return a, nil
+}
+
+// parseID는 uid·gid 문자열을 0부터 2^31-1까지만 읽는다. Atoi로 받으면 4294967296 같은 값이
+// root 검사를 지난 뒤 syscall.Credential의 uint32에서 0으로 잘린다. 2^31 이상은 uid_t를 부호 있는
+// 값으로 다루는 도구가 많아 계정에 쓰지 않는 범위이므로 함께 거부한다(32비트 int에도 그대로 담긴다).
+func parseID(s string) (int, error) {
+	v, err := strconv.ParseInt(s, 10, 32)
+	if err != nil {
+		return 0, err
+	}
+	if v < 0 {
+		return 0, errors.New("negative id")
+	}
+	return int(v), nil
 }
 
 // path는 가짜 루트(테스트) 아래의 경로다. 저장소와 임시 디렉터리는 실제 경로를 그대로 쓴다.

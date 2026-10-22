@@ -898,6 +898,20 @@ func TestParseUIDRange(t *testing.T) {
 	}
 }
 
+func TestParseID(t *testing.T) {
+	for s, want := range map[string]int{"0": 0, "1000": 1000, "2147483647": 2147483647} {
+		if got, err := parseID(s); err != nil || got != want {
+			t.Errorf("parseID(%q) = %d, %v", s, got, err)
+		}
+	}
+	// uid_t보다 큰 값이 uint32로 잘려 0(root)이 되지 않게 거부한다
+	for _, s := range []string{"4294967296", "2147483648", "-1", "", "1e3"} {
+		if _, err := parseID(s); err == nil {
+			t.Errorf("parseID(%q) accepted", s)
+		}
+	}
+}
+
 func TestValidNames(t *testing.T) {
 	for _, ok := range []string{"alice", "john.doe", "user_1", "a-b", "Admin"} {
 		if !ValidUserName(ok) {
