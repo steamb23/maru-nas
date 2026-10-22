@@ -58,10 +58,10 @@ func (SystemAccounts) Lookup(name string) (Account, error) {
 	if u.Username != name {
 		return Account{}, ErrNoAccount
 	}
-	uid, err1 := strconv.Atoi(u.Uid)
-	gid, err2 := strconv.Atoi(u.Gid)
+	uid, err1 := parseID(u.Uid)
+	gid, err2 := parseID(u.Gid)
 	if err1 != nil || err2 != nil {
-		return Account{}, errors.New("non-numeric uid or gid")
+		return Account{}, errors.New("invalid uid or gid")
 	}
 	ids, err := u.GroupIds()
 	if err != nil {
@@ -69,7 +69,7 @@ func (SystemAccounts) Lookup(name string) (Account, error) {
 	}
 	acc := Account{Name: name, UID: uid, GID: gid, Home: u.HomeDir, Groups: []int{gid}}
 	for _, s := range ids {
-		g, err := strconv.Atoi(s)
+		g, err := parseID(s)
 		if err != nil || g == gid {
 			continue
 		}
@@ -87,11 +87,25 @@ func (SystemAccounts) GroupID(name string) (int, bool, error) {
 		}
 		return 0, false, err
 	}
-	gid, err := strconv.Atoi(g.Gid)
+	gid, err := parseID(g.Gid)
 	if err != nil {
 		return 0, false, err
 	}
 	return gid, true, nil
+}
+
+// parseID는 uid·gid 문자열을 0부터 2^31-1까지만 읽는다. Atoi로 받으면 4294967296 같은 값이
+// root 검사를 지난 뒤 syscall.Credential의 uint32에서 0으로 잘린다. 2^31 이상은 uid_t를 부호 있는
+// 값으로 다루는 도구가 많아 계정에 쓰지 않는 범위이므로 함께 거부한다(32비트 int에도 그대로 담긴다).
+func parseID(s string) (int, error) {
+	v, err := strconv.ParseInt(s, 10, 32)
+	if err != nil {
+		return 0, err
+	}
+	if v < 0 {
+		return 0, errors.New("negative id")
+	}
+	return int(v), nil
 }
 
 func (a SystemAccounts) UIDRange() (int, int) {
