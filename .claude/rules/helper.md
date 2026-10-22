@@ -10,7 +10,7 @@ paths:
 
 # 권한 도우미
 
-설계·위협 모델·연산 추가 절차는 `.claude/docs/helper.md`. 사용자 설명은 `README.md`의 "권한 도우미".
+설계·위협 모델·연산 추가 절차는 `.claude/docs/helper.md`. 사용자 설명은 `docs/helper.md`.
 
 - 도우미는 root로 돈다. maru(클라이언트)가 보낸 사용자 이름·그룹·정책을 믿지 않는다. 믿는 것은 상대 uid(`SO_PEERCRED`), 자기가 발급한 티켓, 자기가 읽은 `/etc/passwd`·`/etc/group`·`/etc/login.defs`뿐이다
 - 임의 명령·셸 실행 연산을 만들지 않는다. root 연산은 `proto.Actions[ScopeRoot]`의 타입 있는 연산으로만 더하고, 브라우저가 보낸 값이 exec 인자로 그대로 가지 않게 한다. 지금 root 연산은 `id`, `upgrade.apply`(대시보드에서 업그레이드의 적용 요청, 대상 커밋과 설정 이름·값만 받는다), `trash.prepare`(디스크 맨 위에 1777 `.Trash` 만들기, `/srv` 아래 마운트 지점만 받고 심볼릭 링크를 따라가지 않는다)다. 웹 터미널은 도우미가 아니라 sshd를 거친다
@@ -23,7 +23,7 @@ paths:
 - 파일 탐색기 연산(`fs.names`, `fs.statmany`, `fs.info`)은 `os.Root` 안에서만 경로를 따라간다. 이름 인자는 `proto.ValidName`으로 검사하고, `faccessat`·`lgetxattr`처럼 마지막 구성 요소를 따라갈 수 있는 호출은 `Lstat`이 심볼릭 링크가 아니라고 한 항목에만 쓴다(`.claude/docs/helper.md`의 "파일 탐색기 연산")
 - 도우미 실행 파일은 `CGO_ENABLED=0`으로 빌드한다(`Makefile`). maru 웹 코드(`internal/server`, `net/http` 서버 등)를 `cmd/maru-helper`에 import하지 않는다. `cmd/maru-helper`의 `TestNoWebDependencies`가 `go list -deps`로 검사한다
 - `helperfake`는 테스트·`make dev-fake` 전용이다. 운영 바이너리(`cmd/maru`, `cmd/maru-helper`)에서 import하지 않는다. 프로세스 없이 worker를 돌리는 Spawner는 권한을 바꾸지 않으므로 운영 코드에 두지 않는다
-- 유닛의 권한(`CapabilityBoundingSet`, `ReadWritePaths` 등)은 연산이 실제로 필요한 만큼만 둔다. 늘리면 설치기의 유닛 템플릿(`installer/internal/setup/templates/maru-helper.service.tmpl`)과 골든(`.claude/rules/installer.md`), `README.md`의 보안 설계, `.claude/docs/helper.md`를 함께 고친다
+- 유닛의 권한(`CapabilityBoundingSet`, `ReadWritePaths` 등)은 연산이 실제로 필요한 만큼만 둔다. 늘리면 설치기의 유닛 템플릿(`installer/internal/setup/templates/maru-helper.service.tmpl`)과 골든(`.claude/rules/installer.md`), `.claude/docs/helper.md`를 함께 고치고, 사용자에게 보이는 영향(쓸 수 있는 경로 등)이 바뀌면 `docs/helper.md`도 고친다
 - maru 쪽: 티켓은 `auth.Session.HelperTicket`에만 두고 응답에 넣지 않는다. 세션 삭제 훅이 폐기하므로 세션을 지우는 새 경로를 만들어도 따로 닫지 않는다. 2차 인증을 마친 대기는 `ClaimPending`으로 꺼낸다(`DeletePending`은 티켓을 폐기한다)
 - 상승 API는 관리자 전용(`requireAdmin`)이다. root 권한이 필요한 화면은 `elevation_required`를 받으면 `requestElevation`(`shell/elevationDialog.tsx`)으로 상승한 뒤 다시 시도한다
 - 보안 강화 정책(`security.elevation`)을 채우지 못한 세션의 상승은 도우미를 부르기 전에 403 `security_required`로 막는다. `ElevationForm`이 확인(`requestStepUp`) 뒤 같은 비밀번호로 다시 시도한다. 확인은 maru가 하고 도우미에 넣지 않는다(`.claude/rules/security.md`)
