@@ -2,7 +2,7 @@ package setup
 
 import "maru/backend/config"
 
-// 설치 경로. 바꾸면 README.md의 설치 설명, 리버스 프록시 예시, 유닛 템플릿(templates/)도 함께 본다.
+// 설치 경로. 바꾸면 README.md의 빠른 시작, docs/install.md·docs/reverse-proxy.md, 유닛 템플릿(templates/)도 함께 본다.
 const (
 	serviceName = "maru"
 	binDst      = "/usr/local/bin/maru"

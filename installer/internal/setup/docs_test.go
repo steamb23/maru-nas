@@ -6,10 +6,10 @@ import (
 	"testing"
 )
 
-// README.md의 설치 옵션 표(| `--...` 로 시작하는 줄)에 레지스트리의 모든 설정 옵션과 설치기 옵션이 있어야 한다.
-// 설정을 더하면 README의 표도 함께 고친다.
-func TestReadmeListsEveryOption(t *testing.T) {
-	data, err := os.ReadFile("../../../README.md")
+// docs/install-options.md의 옵션 표(| `--...` 로 시작하는 줄)에 레지스트리의 모든 설정 옵션과 설치기 옵션이 있어야 한다.
+// 설정을 더하면 그 표도 함께 고친다.
+func TestDocsListEveryOption(t *testing.T) {
+	data, err := os.ReadFile("../../../docs/install-options.md")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -32,7 +32,7 @@ func TestReadmeListsEveryOption(t *testing.T) {
 	}
 	for _, flag := range want {
 		if !strings.Contains(table, "`"+flag+"`") && !strings.Contains(table, "`"+flag+" ") {
-			t.Errorf("README.md option table misses %s", flag)
+			t.Errorf("docs/install-options.md option table misses %s", flag)
 		}
 	}
 }
