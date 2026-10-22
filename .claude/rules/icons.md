@@ -20,12 +20,12 @@ paths:
 - 앱을 나타내는 아이콘(`getApp(id).icon`: "모든 앱" 타일, 바탕화면 바로가기, 작업표시줄, 제목 표시줄)은 `IconImage`에 `app`을 준다. 메뉴·위젯 머리글 등 다른 자리에서는 주지 않는다(`appRadius`가 이때만 적용된다)
 - 컬러 아이콘(폴더·앱·파일 형식, 브랜드 로고)은 `<img>`로 그대로, 단색 `-symbolic` 아이콘은 CSS `mask-image` 또는 인라인 SVG + `fill: currentColor`로 색을 입힌다(`IconImage`). `<img>`로 넣으면 색을 바꿀 수 없다
 
-## 온마루 로고
+## 마루 NAS 로고
 
-- 온마루 자신의 로고는 테마 아이콘도 제3자 에셋도 아니므로 리졸버와 `vendor/icons/`에 넣지 않고 `frontend/src/assets/logo/`에 둔다. 쓰는 곳에서 `?url`로 직접 import한다
+- 마루 NAS 자신의 로고는 테마 아이콘도 제3자 에셋도 아니므로 리졸버와 `vendor/icons/`에 넣지 않고 `frontend/src/assets/logo/`에 둔다. 쓰는 곳에서 `?url`로 직접 import한다
   - `maru.svg`(둥근 타일): 실제로 쓰는 로고. favicon(`index.html`)
   - `maru-square.svg`(각진 타일): 그림은 같고 타일 모서리만 각지다. 각진 자리가 필요할 때를 위해 보관한다. 두 파일은 한 문서에 함께 넣어도 겹치지 않게 id 접두사가 다르다
-  - `maru-lockup.svg`(묶음 로고): 로고 오른쪽에 "온마루"(온은 Light에 파랑, 마루는 Bold)와 그 아래 "Onmaru"를 둔다. README 머리, 로그인 화면 제목, 설정의 정보 페이지에 쓴다. 글꼴은 Pretendard(SIL OFL 1.1)이고 글자를 윤곽선 path로 바꿔 넣었으므로 글꼴 파일은 저장소에 두지 않는다. 글자색은 `prefers-color-scheme`을 따른다. 고칠 때는 글꼴에서 윤곽선을 다시 뽑아 같은 배치(파일 주석)로 만든다
+  - `maru-lockup.svg`(묶음 로고): 로고 오른쪽 한 줄에 "마루"(Bold)와 "NAS"(SemiBold, 파랑)를 두고, "마루" 아래에 로마자 표기 "Maru"를 둔다. README 머리, 로그인 화면 제목, 설정의 정보 페이지에 쓴다. 글꼴은 Pretendard(SIL OFL 1.1)이고 글자를 윤곽선 path로 바꿔 넣었으므로 글꼴 파일은 저장소에 두지 않는다. 글자색은 `prefers-color-scheme`을 따른다. 고칠 때는 글꼴에서 윤곽선을 다시 뽑아 같은 배치(파일 주석)로 만든다
 - 64칸 격자에 4칸 단위로 그렸다(NAS 디스크 베이 3단이 16px에서도 한 픽셀 줄로 갈린다). 그래서 16px의 배수(16·32·48·64·80…)로 그려야 선이 정수 픽셀에 맞는다
 
 ## 제3자 에셋

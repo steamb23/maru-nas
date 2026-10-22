@@ -48,7 +48,7 @@ export const InstalledStateDir = "/var/lib/maru";
  */
 export const InstallRecordFormat = 1;
 /**
- * InstallRecord는 지금 설치된 온마루다(InstallRecordFile).
+ * InstallRecord는 지금 설치된 마루 NAS다(InstallRecordFile).
  * 업그레이드가 잘못 판단하지 않게, 설치기가 확인하지 못한 값은 빈 값으로 둔다.
  */
 export interface InstallRecord {

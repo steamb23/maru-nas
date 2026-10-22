@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "Onmaru"
+    "title": "Maru NAS"
   },
   "login": {
     "sessionExpired": "Je sessie is verlopen. Log opnieuw in.",
@@ -310,12 +310,12 @@
       "notRecorded": "Niet vastgelegd",
       "loadFailed": "De versie-informatie kan niet worden geladen.",
       "license": "Licentie",
-      "licenseText": "Onmaru is vrije software, verspreid onder de GNU General Public License v3.0.",
+      "licenseText": "Maru NAS is vrije software, verspreid onder de GNU General Public License v3.0.",
       "notices": "Opensourcevermeldingen",
-      "noticesIntro": "Onmaru bevat de volgende software en middelen van derden.",
+      "noticesIntro": "Maru NAS bevat de volgende software en middelen van derden.",
       "notes": {
         "omvLogo": "Alleen gebruikt om naar openmediavault zelf te verwijzen. Dit betekent geen goedkeuring of verbondenheid.",
-        "pretendard": "Gebruikt voor de letters in het Onmaru-logo, omgezet naar contouren.",
+        "pretendard": "Gebruikt voor de letters in het Maru NAS-logo, omgezet naar contouren.",
         "go": "Standaardbibliotheek die in de backend is gecompileerd.",
         "xterm": "Tekent het scherm van de webterminal.",
         "goX": "SSH-client van de webterminal, in de backend gecompileerd.",
@@ -378,7 +378,7 @@
       "intro": "Geldt voor gebruikers die in de scherminstellingen geen eigen thema of achtergrond hebben gekozen."
     },
     "server": {
-      "intro": "Instellingen waarmee Onmaru draait. De waarden in het eerste gedeelte kun je hier wijzigen; de rest stel je in het instellingenbestand van de server in.",
+      "intro": "Instellingen waarmee Maru NAS draait. De waarden in het eerste gedeelte kun je hier wijzigen; de rest stel je in het instellingenbestand van de server in.",
       "loadFailed": "De serverinstellingen kunnen niet worden geladen.",
       "saveFailed": "De instelling kon niet worden opgeslagen.",
       "invalid": "De waarde heeft geen geldige indeling.",

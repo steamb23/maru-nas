@@ -1,6 +1,6 @@
 # Written by maru install.sh
 [Unit]
-Description=Onmaru privileged helper
+Description=Maru NAS privileged helper
 Requires=maru-helper.socket
 After=maru-helper.socket
 

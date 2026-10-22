@@ -33,7 +33,7 @@ const (
 	// maxPasskeyName은 패스키 이름의 최대 글자 수다.
 	maxPasskeyName = 64
 	// rpName은 패스키 등록 창에 보이는 이름이다(브랜드 이름이라 현지화하지 않는다).
-	rpName = "Onmaru"
+	rpName = "Maru NAS"
 )
 
 // knownTransports는 저장하는 연결 방식이다(WebAuthn AuthenticatorTransport).

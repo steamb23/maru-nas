@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "Onmaru"
+    "title": "Maru NAS"
   },
   "login": {
     "sessionExpired": "Sesja wygasła. Zaloguj się ponownie.",
@@ -322,12 +322,12 @@
       "notRecorded": "Nie zapisano",
       "loadFailed": "Nie udało się wczytać informacji o wersji.",
       "license": "Licencja",
-      "licenseText": "Onmaru to wolne oprogramowanie rozpowszechniane na licencji GNU General Public License v3.0.",
+      "licenseText": "Maru NAS to wolne oprogramowanie rozpowszechniane na licencji GNU General Public License v3.0.",
       "notices": "Informacje o oprogramowaniu open source",
-      "noticesIntro": "Onmaru zawiera następujące oprogramowanie i zasoby innych firm.",
+      "noticesIntro": "Maru NAS zawiera następujące oprogramowanie i zasoby innych firm.",
       "notes": {
         "omvLogo": "Używane wyłącznie do wskazania samego openmediavault. Nie oznacza poparcia ani powiązania.",
-        "pretendard": "Użyty w napisie logo Onmaru, zamienionym na kontury.",
+        "pretendard": "Użyty w napisie logo Maru NAS, zamienionym na kontury.",
         "go": "Biblioteka standardowa skompilowana w backendzie.",
         "xterm": "Rysuje ekran terminala webowego.",
         "goX": "Klient SSH terminala webowego, skompilowany w backendzie.",
@@ -390,7 +390,7 @@
       "intro": "Dotyczy użytkowników, którzy nie wybrali własnego motywu ani tapety w ustawieniach ekranu."
     },
     "server": {
-      "intro": "Ustawienia, z którymi działa Onmaru. Wartości w pierwszej sekcji można zmienić tutaj, a pozostałe ustawia się w pliku konfiguracyjnym serwera.",
+      "intro": "Ustawienia, z którymi działa Maru NAS. Wartości w pierwszej sekcji można zmienić tutaj, a pozostałe ustawia się w pliku konfiguracyjnym serwera.",
       "loadFailed": "Nie udało się wczytać ustawień serwera.",
       "saveFailed": "Nie udało się zapisać ustawienia.",
       "invalid": "Wartość ma nieprawidłowy format.",

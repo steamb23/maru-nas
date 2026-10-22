@@ -515,7 +515,7 @@ export function isAboutResponse(v: unknown): v is AboutResponse {
   )
 }
 
-// fetchAbout은 온마루 버전과 빌드 정보다(설정의 정보 페이지).
+// fetchAbout은 마루 NAS 버전과 빌드 정보다(설정의 정보 페이지).
 export async function fetchAbout(signal?: AbortSignal): Promise<AboutResponse> {
   const data = await getJSON('/about', { signal })
   if (!isAboutResponse(data)) throw new Error('/about: unexpected response shape')

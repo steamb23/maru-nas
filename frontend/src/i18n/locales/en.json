@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "Onmaru"
+    "title": "Maru NAS"
   },
   "login": {
     "sessionExpired": "Your session has expired. Please sign in again.",
@@ -51,11 +51,11 @@
     "retry": "Reconnect now"
   },
   "restart": {
-    "title": "Restarting Onmaru",
+    "title": "Restarting Maru NAS",
     "installing": "Installing the new version. The sign-in screen appears once the restart is done.",
-    "waiting": "Waiting to reconnect to Onmaru…",
+    "waiting": "Waiting to reconnect to Maru NAS…",
     "elapsed": "Elapsed {{time}}",
-    "stuck": "Onmaru hasn't come back. Run ./install.sh in the repository over SSH to recover. The log is in journalctl -u maru-upgrade."
+    "stuck": "Maru NAS hasn't come back. Run ./install.sh in the repository over SSH to recover. The log is in journalctl -u maru-upgrade."
   },
   "desktop": {
     "label": "Desktop",
@@ -774,12 +774,12 @@
       "notRecorded": "Not recorded",
       "loadFailed": "Couldn't load the version information.",
       "license": "License",
-      "licenseText": "Onmaru is free software distributed under the GNU General Public License v3.0.",
+      "licenseText": "Maru NAS is free software distributed under the GNU General Public License v3.0.",
       "notices": "Open source notices",
-      "noticesIntro": "Onmaru includes the following third-party software and assets.",
+      "noticesIntro": "Maru NAS includes the following third-party software and assets.",
       "notes": {
         "omvLogo": "Used only to refer to openmediavault itself. This does not imply endorsement.",
-        "pretendard": "Used for the lettering in the Onmaru logo, converted to outlines.",
+        "pretendard": "Used for the lettering in the Maru NAS logo, converted to outlines.",
         "go": "Standard library compiled into the backend.",
         "xterm": "Draws the screen of the web terminal.",
         "goX": "SSH client of the web terminal, compiled into the backend.",
@@ -846,7 +846,7 @@
       "intro": "Applied to users who haven't chosen their own theme or wallpaper in Screen settings."
     },
     "server": {
-      "intro": "Settings that Onmaru runs with. The values in the first section can be changed here; the rest are set in the server's settings file.",
+      "intro": "Settings that Maru NAS runs with. The values in the first section can be changed here; the rest are set in the server's settings file.",
       "loadFailed": "Couldn't load the server settings.",
       "saveFailed": "Couldn't save the setting.",
       "invalid": "The value isn't in a valid format.",
@@ -893,7 +893,7 @@
     },
     "helper": {
       "title": "Privileged helper",
-      "desc": "A separate service running as root lets Onmaru act with your own Linux account and, after you enter your password again, with root rights for a few minutes.",
+      "desc": "A separate service running as root lets Maru NAS act with your own Linux account and, after you enter your password again, with root rights for a few minutes.",
       "status": "Status",
       "state": {
         "disabled": "Not installed",
@@ -904,7 +904,7 @@
       },
       "stateDesc": {
         "disabled": "Run ./install.sh --reinstall again and choose to install the helper.",
-        "unavailable": "Onmaru can't reach the helper. Check systemctl status maru-helper.socket on the server.",
+        "unavailable": "Maru NAS can't reach the helper. Check systemctl status maru-helper.socket on the server.",
         "none": "The helper didn't accept this account when you signed in (for example a system account, or it was unreachable). Signing in again retries.",
         "reauth": "The helper restarted and no longer knows this session. Sign out and sign in again.",
         "active": "This session can use the helper."
@@ -922,7 +922,7 @@
       "loadFailed": "Couldn't load the helper status."
     },
     "update": {
-      "intro": "Check the git repository Onmaru was installed from for a new version, and upgrade to it.",
+      "intro": "Check the git repository Maru NAS was installed from for a new version, and upgrade to it.",
       "loadFailed": "Couldn't load the upgrade status.",
       "current": "Installed version",
       "version": "Version",
@@ -954,7 +954,7 @@
       "log": "Log",
       "checkFailed": "The check failed ({{stage}})",
       "checkFailedDesc": "Nothing was changed. The full log is in journalctl -u maru-upgrade.",
-      "latest": "Onmaru is up to date.",
+      "latest": "Maru NAS is up to date.",
       "outdated": "The installation changed after this check. Check again.",
       "newVersion": "New version",
       "source": "From",
@@ -979,14 +979,14 @@
       "notes": "After upgrading",
       "notesAfter": "After upgrading, please do the following.",
       "applyTitle": "Upgrade",
-      "applyDesc": "You need to enter your password again. When the upgrade finishes, Onmaru restarts and everyone is signed out.",
+      "applyDesc": "You need to enter your password again. When the upgrade finishes, Maru NAS restarts and everyone is signed out.",
       "apply": "Upgrade",
-      "confirmTitle": "Upgrade Onmaru?",
+      "confirmTitle": "Upgrade Maru NAS?",
       "confirmMessage": "The new version is built and installed, and everyone is signed out when it finishes. Check the commit list before you continue.",
       "cannotElevate": "This account can't elevate to root. Sign in with an account in both openmediavault-admin and the elevation group (sudo by default).",
       "noHelperTicket": "This session cannot use the privileged helper. Sign out and sign in again with a Linux account.",
       "applying": "Upgrading",
-      "applyingDesc": "When it finishes, Onmaru restarts, and this page reloads once it reconnects.",
+      "applyingDesc": "When it finishes, Maru NAS restarts, and this page reloads once it reconnects.",
       "applyWaiting": "Upgrade requested. Waiting for it to start…",
       "requestedBy": "Started by {{user}} at {{time}}.",
       "applied": "Upgraded to {{version}}",

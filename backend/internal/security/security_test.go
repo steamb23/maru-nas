@@ -87,15 +87,19 @@ func TestNewTOTPSecret(t *testing.T) {
 }
 
 func TestTOTPURI(t *testing.T) {
-	u, err := url.Parse(TOTPURI(rfcSecret, "alice@nas"))
+	raw := TOTPURI(rfcSecret, "alice@nas")
+	if !strings.HasPrefix(raw, "otpauth://totp/Maru%20NAS:alice@nas?") || !strings.Contains(raw, "issuer=Maru%20NAS") {
+		t.Errorf("raw uri %s", raw)
+	}
+	u, err := url.Parse(raw)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if u.Scheme != "otpauth" || u.Host != "totp" || u.Path != "/Onmaru:alice@nas" {
+	if u.Scheme != "otpauth" || u.Host != "totp" || u.Path != "/Maru NAS:alice@nas" {
 		t.Errorf("uri %v", u)
 	}
 	q := u.Query()
-	if q.Get("secret") != rfcSecret || q.Get("issuer") != "Onmaru" || q.Get("digits") != "6" || q.Get("period") != "30" {
+	if q.Get("secret") != rfcSecret || q.Get("issuer") != "Maru NAS" || q.Get("digits") != "6" || q.Get("period") != "30" {
 		t.Errorf("query %v", q)
 	}
 }

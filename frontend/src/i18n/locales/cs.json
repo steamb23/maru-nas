@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "Onmaru"
+    "title": "Maru NAS"
   },
   "login": {
     "sessionExpired": "Platnost relace vypršela. Přihlaste se znovu.",
@@ -322,12 +322,12 @@
       "notRecorded": "Nezaznamenáno",
       "loadFailed": "Informace o verzi se nepodařilo načíst.",
       "license": "Licence",
-      "licenseText": "Onmaru je svobodný software šířený pod licencí GNU General Public License v3.0.",
+      "licenseText": "Maru NAS je svobodný software šířený pod licencí GNU General Public License v3.0.",
       "notices": "Upozornění k open source",
-      "noticesIntro": "Onmaru obsahuje následující software a prostředky třetích stran.",
+      "noticesIntro": "Maru NAS obsahuje následující software a prostředky třetích stran.",
       "notes": {
         "omvLogo": "Používá se jen k označení samotného openmediavault. Neznamená to podporu ani spojení.",
-        "pretendard": "Použito pro písmo v logu Onmaru, převedené na obrysy.",
+        "pretendard": "Použito pro písmo v logu Maru NAS, převedené na obrysy.",
         "go": "Standardní knihovna zkompilovaná do backendu.",
         "xterm": "Vykresluje obrazovku webového terminálu.",
         "goX": "Klient SSH webového terminálu, zkompilovaný do backendu.",
@@ -390,7 +390,7 @@
       "intro": "Platí pro uživatele, kteří si v nastavení obrazovky nevybrali vlastní motiv ani pozadí."
     },
     "server": {
-      "intro": "Nastavení, se kterým Onmaru běží. Hodnoty v první části lze změnit zde, ostatní se nastavují v konfiguračním souboru serveru.",
+      "intro": "Nastavení, se kterým Maru NAS běží. Hodnoty v první části lze změnit zde, ostatní se nastavují v konfiguračním souboru serveru.",
       "loadFailed": "Nastavení serveru se nepodařilo načíst.",
       "saveFailed": "Nastavení se nepodařilo uložit.",
       "invalid": "Hodnota nemá platný formát.",

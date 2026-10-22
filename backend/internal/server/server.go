@@ -353,7 +353,7 @@ func (h *handler) capabilities(w http.ResponseWriter, _ *http.Request, s auth.Se
 	writeJSON(w, http.StatusOK, resp)
 }
 
-// aboutInfo는 온마루 버전과 빌드 정보다. 로그인한 사용자는 누구나 본다.
+// aboutInfo는 마루 NAS 버전과 빌드 정보다. 로그인한 사용자는 누구나 본다.
 // OMV 버전·코드명은 관리자에게만 준다. OMV도 System.getInformation에서 version을 관리자에게만 준다.
 // 실행 중에 OMV를 업그레이드할 수 있으므로 시작할 때 읽어 둔 h.about에 넣지 않고 요청마다 채운다.
 func (h *handler) aboutInfo(w http.ResponseWriter, _ *http.Request, s auth.Session) {

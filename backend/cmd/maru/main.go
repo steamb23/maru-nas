@@ -1,4 +1,4 @@
-// maru는 온마루(Onmaru) 대시보드의 백엔드다.
+// maru는 마루 NAS 대시보드의 백엔드다.
 package main
 
 import (

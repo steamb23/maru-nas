@@ -1,6 +1,6 @@
 # Written by maru install.sh
 [Unit]
-Description=Onmaru dashboard for openmediavault
+Description=Maru NAS dashboard for openmediavault
 After=network.target
 Wants=maru-helper.socket
 After=maru-helper.socket

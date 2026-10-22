@@ -154,7 +154,7 @@ func TestPasskeyRegisterAndVerify(t *testing.T) {
 
 	pk := newFakePasskey(t)
 	opts := b.passkeyOptions(api.PasskeyRegister)
-	if opts.User.Name != "user" || opts.RPName != "Onmaru" || len(opts.Credentials) != 0 {
+	if opts.User.Name != "user" || opts.RPName != "Maru NAS" || len(opts.Credentials) != 0 {
 		t.Fatalf("options = %+v", opts)
 	}
 	wantCode(t, b.do(http.MethodPost, "/api/security/passkeys", api.PasskeyRegisterRequest{Name: " ", Credential: pk.create(opts)}),

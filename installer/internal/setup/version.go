@@ -16,7 +16,7 @@ const (
 	requireNode = "^20.19.0 || >=22.12.0"
 )
 
-// version은 X.Y.Z 버전이다(온마루 0.y.z, Node.js).
+// version은 X.Y.Z 버전이다(마루 NAS 0.y.z, Node.js).
 type version [3]int
 
 // parseVersion은 X.Y.Z(앞의 v 허용)를 읽는다. 숫자 세 개가 아니면(꼬리표 포함) false다.

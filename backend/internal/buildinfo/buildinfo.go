@@ -1,4 +1,4 @@
-// Package buildinfo는 온마루 버전(config.Version)과 실행 파일의 빌드 정보를 준다.
+// Package buildinfo는 마루 NAS 버전(config.Version)과 실행 파일의 빌드 정보를 준다.
 package buildinfo
 
 import (

@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "Onmaru"
+    "title": "Maru NAS"
   },
   "login": {
     "sessionExpired": "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.",
@@ -310,12 +310,12 @@
       "notRecorded": "Nicht erfasst",
       "loadFailed": "Die Versionsinformationen konnten nicht geladen werden.",
       "license": "Lizenz",
-      "licenseText": "Onmaru ist freie Software und wird unter der GNU General Public License v3.0 verbreitet.",
+      "licenseText": "Maru NAS ist freie Software und wird unter der GNU General Public License v3.0 verbreitet.",
       "notices": "Open-Source-Hinweise",
-      "noticesIntro": "Onmaru enthält die folgende Software und folgende Assets von Drittanbietern.",
+      "noticesIntro": "Maru NAS enthält die folgende Software und folgende Assets von Drittanbietern.",
       "notes": {
         "omvLogo": "Wird nur verwendet, um auf openmediavault selbst zu verweisen. Dies bedeutet keine Billigung oder Partnerschaft.",
-        "pretendard": "Für die Schrift im Onmaru-Logo verwendet und in Konturen umgewandelt.",
+        "pretendard": "Für die Schrift im Maru-NAS-Logo verwendet und in Konturen umgewandelt.",
         "go": "Standardbibliothek, die in das Backend kompiliert ist.",
         "xterm": "Zeichnet den Bildschirm des Webterminals.",
         "goX": "SSH-Client des Webterminals, in das Backend kompiliert.",
@@ -378,7 +378,7 @@
       "intro": "Gilt für Benutzer, die in den Darstellungseinstellungen kein eigenes Design und keinen eigenen Hintergrund gewählt haben."
     },
     "server": {
-      "intro": "Einstellungen, mit denen Onmaru läuft. Die Werte im ersten Abschnitt können hier geändert werden; die übrigen werden in der Einstellungsdatei des Servers festgelegt.",
+      "intro": "Einstellungen, mit denen Maru NAS läuft. Die Werte im ersten Abschnitt können hier geändert werden; die übrigen werden in der Einstellungsdatei des Servers festgelegt.",
       "loadFailed": "Die Servereinstellungen konnten nicht geladen werden.",
       "saveFailed": "Die Einstellung konnte nicht gespeichert werden.",
       "invalid": "Der Wert hat kein gültiges Format.",

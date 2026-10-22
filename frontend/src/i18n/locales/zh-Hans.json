@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "Onmaru"
+    "title": "Maru NAS"
   },
   "login": {
     "sessionExpired": "会话已过期，请重新登录。",
@@ -304,12 +304,12 @@
       "notRecorded": "未记录",
       "loadFailed": "无法加载版本信息。",
       "license": "许可证",
-      "licenseText": "Onmaru 是依据 GNU General Public License v3.0 发布的自由软件。",
+      "licenseText": "Maru NAS 是依据 GNU General Public License v3.0 发布的自由软件。",
       "notices": "开源声明",
-      "noticesIntro": "Onmaru 包含以下第三方软件和素材。",
+      "noticesIntro": "Maru NAS 包含以下第三方软件和素材。",
       "notes": {
         "omvLogo": "仅用于指代 openmediavault 本身，并不表示认可或合作关系。",
-        "pretendard": "用于 Onmaru 标志中的文字，已转换为轮廓。",
+        "pretendard": "用于 Maru NAS 标志中的文字，已转换为轮廓。",
         "go": "后端可执行文件中包含其标准库。",
         "xterm": "绘制网页终端的屏幕。",
         "goX": "网页终端的 SSH 客户端，已编译进后端可执行文件。",
@@ -372,7 +372,7 @@
       "intro": "应用于未在显示设置中选择主题或壁纸的用户。"
     },
     "server": {
-      "intro": "Onmaru 运行所用的设置。第一部分的值可以在此更改，其余的在服务器的配置文件中设置。",
+      "intro": "Maru NAS 运行所用的设置。第一部分的值可以在此更改，其余的在服务器的配置文件中设置。",
       "loadFailed": "无法加载服务器设置。",
       "saveFailed": "无法保存设置。",
       "invalid": "值的格式不正确。",

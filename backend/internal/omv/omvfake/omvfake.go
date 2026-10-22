@@ -74,7 +74,7 @@ func DefaultUsers() []User {
 	}
 }
 
-// Version은 흉내 낼 OMV 8 버전대다. 온마루가 쓰는 RPC의 동작이 달라지는 경계만 나눈다.
+// Version은 흉내 낼 OMV 8 버전대다. 마루 NAS가 쓰는 RPC의 동작이 달라지는 경계만 나눈다.
 // 경계는 OMV 패키지 소스(var/www/openmediavault/rpc/session.inc, engined/rpc/webgui.inc)로 확인했다.
 type Version int
 

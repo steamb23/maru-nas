@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "Onmaru"
+    "title": "Maru NAS"
   },
   "login": {
     "sessionExpired": "Votre session a expiré. Veuillez vous reconnecter.",
@@ -316,12 +316,12 @@
       "notRecorded": "Non enregistré",
       "loadFailed": "Impossible de charger les informations de version.",
       "license": "Licence",
-      "licenseText": "Onmaru est un logiciel libre distribué sous la licence GNU General Public License v3.0.",
+      "licenseText": "Maru NAS est un logiciel libre distribué sous la licence GNU General Public License v3.0.",
       "notices": "Mentions open source",
-      "noticesIntro": "Onmaru inclut les logiciels et ressources tiers suivants.",
+      "noticesIntro": "Maru NAS inclut les logiciels et ressources tiers suivants.",
       "notes": {
         "omvLogo": "Utilisé uniquement pour désigner openmediavault lui-même. Cela n'implique aucune approbation ni affiliation.",
-        "pretendard": "Utilisée pour le lettrage du logo Onmaru, convertie en contours.",
+        "pretendard": "Utilisée pour le lettrage du logo Maru NAS, convertie en contours.",
         "go": "Bibliothèque standard compilée dans le backend.",
         "xterm": "Dessine l'écran du terminal web.",
         "goX": "Client SSH du terminal web, compilé dans le backend.",
@@ -384,7 +384,7 @@
       "intro": "S'applique aux utilisateurs qui n'ont pas choisi leur propre thème ou fond d'écran dans les paramètres d'affichage."
     },
     "server": {
-      "intro": "Paramètres avec lesquels Onmaru s'exécute. Les valeurs de la première section peuvent être modifiées ici ; les autres se définissent dans le fichier de configuration du serveur.",
+      "intro": "Paramètres avec lesquels Maru NAS s'exécute. Les valeurs de la première section peuvent être modifiées ici ; les autres se définissent dans le fichier de configuration du serveur.",
       "loadFailed": "Impossible de charger les paramètres du serveur.",
       "saveFailed": "Impossible d'enregistrer le paramètre.",
       "invalid": "Le format de la valeur n'est pas valide.",

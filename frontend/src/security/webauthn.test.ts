@@ -60,11 +60,11 @@ describe('creationOptions', () => {
   it('등록 옵션으로 바꾼다', () => {
     const o = creationOptions({
       ...assertOpts,
-      rpName: 'Onmaru',
+      rpName: 'Maru NAS',
       user: { id: 'BwcH', name: 'alice', displayName: 'alice' },
       algorithms: [-7, -8, -257],
     })
-    expect(o.rp).toEqual({ id: 'desk.example.lan', name: 'Onmaru' })
+    expect(o.rp).toEqual({ id: 'desk.example.lan', name: 'Maru NAS' })
     expect(Array.from(new Uint8Array(o.user.id as ArrayBuffer))).toEqual([7, 7, 7])
     expect(o.pubKeyCredParams.map((p) => p.alg)).toEqual([-7, -8, -257])
     expect(o.attestation).toBe('none')

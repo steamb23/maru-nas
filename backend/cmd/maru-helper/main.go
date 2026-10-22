@@ -1,4 +1,4 @@
-// maru-helper는 온마루의 권한 도우미다. root로 돌며, maru가 로그인한 사용자의 권한이나
+// maru-helper는 마루 NAS의 권한 도우미다. root로 돌며, maru가 로그인한 사용자의 권한이나
 // (비밀번호를 다시 확인한 관리자의) root 권한으로 정해진 연산을 실행하게 해 준다.
 //
 // systemd 소켓 활성화(maru-helper.socket)로 실행하는 것이 기본이다. 설계와 보안 경계는

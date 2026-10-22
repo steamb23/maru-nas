@@ -794,7 +794,7 @@ type ProfileSaveResponse struct {
 
 // AboutResponse는 GET /api/about의 응답이다. 설정 앱의 정보 페이지가 보여 준다.
 type AboutResponse struct {
-	// Version은 온마루 버전이다.
+	// Version은 마루 NAS 버전이다.
 	Version string `json:"version"`
 	// Revision은 빌드한 git 커밋(전체 해시)이다. go run이나 저장소 밖 빌드에는 없다.
 	Revision string `json:"revision,omitempty"`

@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "Onmaru"
+    "title": "Maru NAS"
   },
   "login": {
     "sessionExpired": "A sua sessão expirou. Inicie sessão novamente.",
@@ -316,12 +316,12 @@
       "notRecorded": "Não registado",
       "loadFailed": "Não foi possível carregar as informações da versão.",
       "license": "Licença",
-      "licenseText": "O Onmaru é software livre distribuído nos termos da GNU General Public License v3.0.",
+      "licenseText": "O Maru NAS é software livre distribuído nos termos da GNU General Public License v3.0.",
       "notices": "Avisos de código aberto",
-      "noticesIntro": "O Onmaru inclui o seguinte software e recursos de terceiros.",
+      "noticesIntro": "O Maru NAS inclui o seguinte software e recursos de terceiros.",
       "notes": {
         "omvLogo": "Utilizado apenas para designar o próprio openmediavault. Não implica aprovação nem afiliação.",
-        "pretendard": "Utilizada nas letras do logótipo do Onmaru, convertidas em contornos.",
+        "pretendard": "Utilizada nas letras do logótipo do Maru NAS, convertidas em contornos.",
         "go": "Biblioteca padrão compilada no backend.",
         "xterm": "Desenha o ecrã do terminal web.",
         "goX": "Cliente SSH do terminal web, compilado no backend.",
@@ -384,7 +384,7 @@
       "intro": "Aplica-se aos utilizadores que não escolheram o seu próprio tema ou imagem de fundo nas definições de ecrã."
     },
     "server": {
-      "intro": "Definições com que o Onmaru é executado. Os valores da primeira secção podem ser alterados aqui; os restantes são definidos no ficheiro de configuração do servidor.",
+      "intro": "Definições com que o Maru NAS é executado. Os valores da primeira secção podem ser alterados aqui; os restantes são definidos no ficheiro de configuração do servidor.",
       "loadFailed": "Não foi possível carregar as definições do servidor.",
       "saveFailed": "Não foi possível guardar a definição.",
       "invalid": "O valor não tem um formato válido.",

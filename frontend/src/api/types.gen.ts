@@ -1167,7 +1167,7 @@ export interface ProfileSaveResponse {
  */
 export interface AboutResponse {
   /**
-   * Version은 온마루 버전이다.
+   * Version은 마루 NAS 버전이다.
    */
   version: string;
   /**

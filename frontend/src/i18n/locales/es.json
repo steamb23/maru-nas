@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "Onmaru"
+    "title": "Maru NAS"
   },
   "login": {
     "sessionExpired": "Tu sesión ha caducado. Vuelve a iniciar sesión.",
@@ -316,12 +316,12 @@
       "notRecorded": "No registrado",
       "loadFailed": "No se pudo cargar la información de la versión.",
       "license": "Licencia",
-      "licenseText": "Onmaru es software libre distribuido bajo la GNU General Public License v3.0.",
+      "licenseText": "Maru NAS es software libre distribuido bajo la GNU General Public License v3.0.",
       "notices": "Avisos de código abierto",
-      "noticesIntro": "Onmaru incluye el siguiente software y recursos de terceros.",
+      "noticesIntro": "Maru NAS incluye el siguiente software y recursos de terceros.",
       "notes": {
         "omvLogo": "Se usa solo para referirse a openmediavault. No implica respaldo ni afiliación.",
-        "pretendard": "Se usa para las letras del logotipo de Onmaru, convertidas en contornos.",
+        "pretendard": "Se usa para las letras del logotipo de Maru NAS, convertidas en contornos.",
         "go": "Biblioteca estándar compilada en el backend.",
         "xterm": "Dibuja la pantalla de la terminal web.",
         "goX": "Cliente SSH de la terminal web, compilado en el backend.",
@@ -384,7 +384,7 @@
       "intro": "Se aplica a los usuarios que no han elegido su propio tema o fondo en la configuración de pantalla."
     },
     "server": {
-      "intro": "Ajustes con los que se ejecuta Onmaru. Los valores de la primera sección se pueden cambiar aquí; el resto se define en el archivo de configuración del servidor.",
+      "intro": "Ajustes con los que se ejecuta Maru NAS. Los valores de la primera sección se pueden cambiar aquí; el resto se define en el archivo de configuración del servidor.",
       "loadFailed": "No se pudo cargar la configuración del servidor.",
       "saveFailed": "No se pudo guardar el ajuste.",
       "invalid": "El valor no tiene un formato válido.",

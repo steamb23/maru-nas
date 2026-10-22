@@ -1,4 +1,4 @@
-// Package setup은 온마루 설치기다. 설정 레지스트리(settings.go)와 설치·제거 단계(steps.go)로 install.sh가 하던 일을 한다.
+// Package setup은 마루 NAS 설치기다. 설정 레지스트리(settings.go)와 설치·제거 단계(steps.go)로 install.sh가 하던 일을 한다.
 //
 //	./install.sh                    1단계: 설정을 묻고 실행한 계정으로 빌드한다(일반 사용자 또는 root만 있는 환경의 root).
 //	                                이미 설치되어 있으면 설치된 설정으로 업그레이드한다(mode.go)

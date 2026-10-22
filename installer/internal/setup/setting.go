@@ -27,7 +27,7 @@ const (
 type EnvFileID int
 
 const (
-	// OnmaruEnv는 /etc/default/maru다.
+	// MaruEnv는 /etc/default/maru다.
 	MaruEnv EnvFileID = iota
 	// HelperEnv는 /etc/default/maru-helper다. 도우미를 설치할 때만 쓴다.
 	HelperEnv

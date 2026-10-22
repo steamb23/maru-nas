@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
-  <!-- 온마루 로고(각진 타일). maru.svg와 그림이 같고 타일 클립과 안쪽 가장자리 음영의 라운딩만 없다.
+  <!-- 마루 NAS 로고(각진 타일). maru.svg와 그림이 같고 타일 클립과 안쪽 가장자리 음영의 라운딩만 없다.
        한 문서에 함께 넣어도 겹치지 않도록 id 접두사를 따로 쓴다 -->
   <defs>
     <clipPath id="maru-sq-tile"><rect x="4" y="4" width="56" height="56"/></clipPath>

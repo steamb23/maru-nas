@@ -173,7 +173,7 @@ func TestSecurityTOTPEnrollAndVerify(t *testing.T) {
 		t.Fatalf("manage = %+v", st)
 	}
 	setup := decode[api.TOTPSetupResponse](t, b.do(http.MethodPost, "/api/security/totp/setup", struct{}{}))
-	if setup.Secret == "" || !strings.HasPrefix(setup.URI, "otpauth://totp/Onmaru:user?") {
+	if setup.Secret == "" || !strings.HasPrefix(setup.URI, "otpauth://totp/Maru%20NAS:user?") {
 		t.Fatalf("setup = %+v", setup)
 	}
 	wantCode(t, b.do(http.MethodPost, "/api/security/totp", api.TOTPConfirmRequest{Code: "000000"}), http.StatusBadRequest, api.ErrFactorFailed)

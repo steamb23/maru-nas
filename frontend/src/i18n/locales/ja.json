@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "Onmaru"
+    "title": "Maru NAS"
   },
   "login": {
     "sessionExpired": "セッションの有効期限が切れました。もう一度サインインしてください。",
@@ -304,12 +304,12 @@
       "notRecorded": "記録なし",
       "loadFailed": "バージョン情報を読み込めませんでした。",
       "license": "ライセンス",
-      "licenseText": "Onmaru は GNU General Public License v3.0 のもとで配布されるフリーソフトウェアです。",
+      "licenseText": "Maru NAS は GNU General Public License v3.0 のもとで配布されるフリーソフトウェアです。",
       "notices": "オープンソースの告知",
-      "noticesIntro": "Onmaru には次のサードパーティのソフトウェアと素材が含まれています。",
+      "noticesIntro": "Maru NAS には次のサードパーティのソフトウェアと素材が含まれています。",
       "notes": {
         "omvLogo": "openmediavault そのものを指す場合にのみ使用しています。保証や提携を意味するものではありません。",
-        "pretendard": "Onmaru ロゴの文字に使用し、アウトラインに変換しています。",
+        "pretendard": "Maru NAS ロゴの文字に使用し、アウトラインに変換しています。",
         "go": "バックエンドの実行ファイルに標準ライブラリが含まれています。",
         "xterm": "Web ターミナルの画面を描画します。",
         "goX": "Web ターミナルの SSH クライアントです。バックエンドの実行ファイルに含まれています。",
@@ -372,7 +372,7 @@
       "intro": "画面の設定でテーマや壁紙を選んでいないユーザーに適用されます。"
     },
     "server": {
-      "intro": "Onmaru の動作設定です。最初のセクションの値はここで変更でき、残りはサーバーの設定ファイルで設定します。",
+      "intro": "Maru NAS の動作設定です。最初のセクションの値はここで変更でき、残りはサーバーの設定ファイルで設定します。",
       "loadFailed": "サーバーの設定を読み込めませんでした。",
       "saveFailed": "設定を保存できませんでした。",
       "invalid": "値の形式が正しくありません。",

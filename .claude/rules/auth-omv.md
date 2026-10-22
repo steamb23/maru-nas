@@ -31,7 +31,7 @@ OMV 공식 저장소 소스(2026-10 기준)에서 확인한 내용이다. OMV �
 
 ## OMV 8 버전별 차이
 
-OMV 8의 모든 버전을 지원한다. OMV 패키지(`packages.openmediavault.org/public/pool/main/o/openmediavault/`)를 버전별로 풀어 온마루가 쓰는 RPC를 비교했고(2026-10), 아래만 다르다. 나머지 메서드는 8.0부터 의미가 같고 set 스키마(`rpc.*`)도 같다. 새 RPC를 쓰면 옛 버전 소스에도 있는지 같은 방법으로 확인한다. `omvfake.Version`(`SetVersion`, 개발 서버는 `FAKEOMV_VERSION`)이 이 경계를 흉내 낸다
+OMV 8의 모든 버전을 지원한다. OMV 패키지(`packages.openmediavault.org/public/pool/main/o/openmediavault/`)를 버전별로 풀어 마루 NAS가 쓰는 RPC를 비교했고(2026-10), 아래만 다르다. 나머지 메서드는 8.0부터 의미가 같고 set 스키마(`rpc.*`)도 같다. 새 RPC를 쓰면 옛 버전 소스에도 있는지 같은 방법으로 확인한다. `omvfake.Version`(`SetVersion`, 개발 서버는 `FAKEOMV_VERSION`)이 이 경계를 흉내 낸다
 
 - **`Session.login` 응답**: `status`와 2차 인증(`Session.verify`)은 8.5.0(Issue #2235)에서 생겼다. 8.4 이하는 `{"authenticated": true, "username", "permissions", "sessionid"}`이고 실패는 똑같이 HTTP 400이다. 백엔드는 `status`가 없고 `authenticated`가 true이면 `authenticated` 상태로 바꿔 같은 흐름을 탄다(`omv.loginResult`). 8.5의 verify 응답에도 `authenticated`가 들어 있을 수 있으므로 옛 형식은 `status`가 없는 것으로 판단한다
 - **8.5.0-1의 `Session.authenticate`**: 이 한 릴리스만 `login`을 `authenticate`로 바꿨고 8.5.0-2에서 되돌렸다. 지원하지 않는다

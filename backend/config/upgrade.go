@@ -31,7 +31,7 @@ const (
 // InstallRecordFormat은 InstallRecord의 형식 번호다. 필드를 빼거나 뜻을 바꾸면 올린다.
 const InstallRecordFormat = 1
 
-// InstallRecord는 지금 설치된 온마루다(InstallRecordFile).
+// InstallRecord는 지금 설치된 마루 NAS다(InstallRecordFile).
 // 업그레이드가 잘못 판단하지 않게, 설치기가 확인하지 못한 값은 빈 값으로 둔다.
 type InstallRecord struct {
 	Format int `json:"format"`

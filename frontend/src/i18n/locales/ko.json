@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "온마루"
+    "title": "마루 NAS"
   },
   "login": {
     "sessionExpired": "세션이 만료되었습니다. 다시 로그인하세요.",
@@ -51,11 +51,11 @@
     "retry": "지금 다시 연결"
   },
   "restart": {
-    "title": "온마루를 다시 시작하는 중",
+    "title": "마루 NAS를 다시 시작하는 중",
     "installing": "새 버전을 설치하고 있습니다. 다시 시작이 끝나면 로그인 화면이 나옵니다.",
-    "waiting": "온마루에 다시 연결되기를 기다리고 있습니다…",
+    "waiting": "마루 NAS에 다시 연결되기를 기다리고 있습니다…",
     "elapsed": "{{time}} 지남",
-    "stuck": "온마루가 다시 시작되지 않습니다. SSH로 저장소에서 ./install.sh를 실행해 복구하세요. 로그는 journalctl -u maru-upgrade에서 볼 수 있습니다."
+    "stuck": "마루 NAS가 다시 시작되지 않습니다. SSH로 저장소에서 ./install.sh를 실행해 복구하세요. 로그는 journalctl -u maru-upgrade에서 볼 수 있습니다."
   },
   "desktop": {
     "label": "바탕화면",
@@ -774,12 +774,12 @@
       "notRecorded": "기록 없음",
       "loadFailed": "버전 정보를 불러오지 못했습니다.",
       "license": "라이선스",
-      "licenseText": "온마루는 GNU General Public License v3.0에 따라 배포되는 자유 소프트웨어입니다.",
+      "licenseText": "마루 NAS는 GNU General Public License v3.0에 따라 배포되는 자유 소프트웨어입니다.",
       "notices": "오픈 소스 고지",
-      "noticesIntro": "온마루에는 다음 제3자 소프트웨어와 에셋이 들어 있습니다.",
+      "noticesIntro": "마루 NAS에는 다음 제3자 소프트웨어와 에셋이 들어 있습니다.",
       "notes": {
         "omvLogo": "openmediavault 자체를 가리킬 때만 씁니다. 보증이나 제휴를 뜻하지 않습니다.",
-        "pretendard": "온마루 로고의 글자에 썼으며 윤곽선으로 바꿔 넣었습니다.",
+        "pretendard": "마루 NAS 로고의 글자에 썼으며 윤곽선으로 바꿔 넣었습니다.",
         "go": "백엔드 실행 파일에 표준 라이브러리가 들어 있습니다.",
         "xterm": "웹 터미널의 화면을 그립니다.",
         "goX": "웹 터미널의 SSH 클라이언트로 백엔드 실행 파일에 들어 있습니다.",
@@ -846,7 +846,7 @@
       "intro": "화면 설정에서 테마나 바탕화면을 정하지 않은 사용자에게 적용됩니다."
     },
     "server": {
-      "intro": "온마루가 가동되는 설정입니다. 첫 구역의 값은 여기서 바꿀 수 있고, 나머지는 서버의 설정 파일에서 바꿉니다.",
+      "intro": "마루 NAS가 가동되는 설정입니다. 첫 구역의 값은 여기서 바꿀 수 있고, 나머지는 서버의 설정 파일에서 바꿉니다.",
       "loadFailed": "서버 설정을 불러오지 못했습니다.",
       "saveFailed": "설정을 저장하지 못했습니다.",
       "invalid": "값의 형식이 올바르지 않습니다.",
@@ -893,7 +893,7 @@
     },
     "helper": {
       "title": "권한 도우미",
-      "desc": "root로 도는 별도 서비스를 거쳐, 온마루가 내 Linux 계정 권한으로, 그리고 비밀번호를 다시 입력하면 몇 분 동안 root 권한으로 일할 수 있게 합니다.",
+      "desc": "root로 도는 별도 서비스를 거쳐, 마루 NAS가 내 Linux 계정 권한으로, 그리고 비밀번호를 다시 입력하면 몇 분 동안 root 권한으로 일할 수 있게 합니다.",
       "status": "상태",
       "state": {
         "disabled": "설치 안 됨",
@@ -904,7 +904,7 @@
       },
       "stateDesc": {
         "disabled": "./install.sh --reinstall을 다시 실행해 도우미 설치를 고르세요.",
-        "unavailable": "온마루가 도우미에 연결하지 못했습니다. 서버에서 systemctl status maru-helper.socket을 확인하세요.",
+        "unavailable": "마루 NAS가 도우미에 연결하지 못했습니다. 서버에서 systemctl status maru-helper.socket을 확인하세요.",
         "none": "로그인할 때 도우미가 이 계정을 받지 않았습니다(시스템 계정이거나 연결하지 못한 경우 등). 다시 로그인하면 다시 시도합니다.",
         "reauth": "도우미가 다시 시작되어 이 세션을 잊었습니다. 로그아웃한 뒤 다시 로그인하세요.",
         "active": "이 세션은 도우미를 쓸 수 있습니다."
@@ -922,7 +922,7 @@
       "loadFailed": "도우미 상태를 불러오지 못했습니다."
     },
     "update": {
-      "intro": "온마루를 설치한 git 저장소에서 새 버전을 확인하고 업그레이드합니다.",
+      "intro": "마루 NAS를 설치한 git 저장소에서 새 버전을 확인하고 업그레이드합니다.",
       "loadFailed": "업그레이드 상태를 불러오지 못했습니다.",
       "current": "설치된 버전",
       "version": "버전",
@@ -979,14 +979,14 @@
       "notes": "업그레이드한 뒤",
       "notesAfter": "업그레이드한 뒤에 다음을 해 주세요.",
       "applyTitle": "업그레이드",
-      "applyDesc": "비밀번호를 다시 입력해야 합니다. 업그레이드가 끝나면 온마루가 다시 시작하고 모든 사용자가 로그아웃됩니다.",
+      "applyDesc": "비밀번호를 다시 입력해야 합니다. 업그레이드가 끝나면 마루 NAS가 다시 시작하고 모든 사용자가 로그아웃됩니다.",
       "apply": "업그레이드",
-      "confirmTitle": "온마루를 업그레이드할까요?",
+      "confirmTitle": "마루 NAS를 업그레이드할까요?",
       "confirmMessage": "새 버전을 빌드해 설치하고, 끝나면 모든 사용자가 로그아웃됩니다. 진행하기 전에 커밋 목록을 확인하세요.",
       "cannotElevate": "이 계정은 root 권한으로 상승할 수 없습니다. openmediavault-admin과 상승 그룹(기본 sudo)에 모두 속한 계정으로 로그인하세요.",
       "noHelperTicket": "이 세션은 권한 도우미를 쓸 수 없습니다. 로그아웃한 뒤 Linux 계정으로 다시 로그인하세요.",
       "applying": "업그레이드 중",
-      "applyingDesc": "끝나면 온마루가 다시 시작하고, 다시 연결되면 페이지를 자동으로 새로 고칩니다.",
+      "applyingDesc": "끝나면 마루 NAS가 다시 시작하고, 다시 연결되면 페이지를 자동으로 새로 고칩니다.",
       "applyWaiting": "업그레이드 요청을 보내고 시작을 기다리고 있습니다…",
       "requestedBy": "{{time}}에 {{user}} 계정이 시작했습니다.",
       "applied": "{{version}}(으)로 업그레이드했습니다",

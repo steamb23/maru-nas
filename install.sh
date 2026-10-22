@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 온마루(Onmaru) 설치 스크립트. Go 설치기(installer/ → bin/maru-install)를 빌드하거나 찾아 실행한다.
+# 마루 NAS 설치 스크립트. Go 설치기(installer/ → bin/maru-install)를 빌드하거나 찾아 실행한다.
 # 옵션과 동작은 모두 설치기가 정한다: ./install.sh --help
 #
 # 설치기는 실행한 계정으로 빌드한다. root가 일반 사용자 소유 저장소에서 실행하면(sudo ./install.sh, sudo -i, su)

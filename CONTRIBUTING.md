@@ -1,12 +1,12 @@
-# Contributing to Onmaru
+# Contributing to Maru NAS
 
 한국어: [CONTRIBUTING.ko.md](CONTRIBUTING.ko.md)
 
-Thank you for your interest in Onmaru, a desktop-like web dashboard for openmediavault 8. This document explains what you need to know before opening an issue or a pull request. Design rules for each area live in `CLAUDE.md` and `.claude/rules/`; they are written in Korean, so if something there is unclear, ask in an issue.
+Thank you for your interest in Maru NAS, a desktop-like web dashboard for openmediavault 8. This document explains what you need to know before opening an issue or a pull request. Design rules for each area live in `CLAUDE.md` and `.claude/rules/`; they are written in Korean, so if something there is unclear, ask in an issue.
 
 ## Scope
 
-- Onmaru shows status and handles simple operations. Deep configuration stays in the OMV web UI (workbench). We do not rebuild OMV screens; we link to them.
+- Maru NAS shows status and handles simple operations. Deep configuration stays in the OMV web UI (workbench). We do not rebuild OMV screens; we link to them.
 - Local network only. We do not add features or settings that assume exposure to the internet.
 - All OMV 8.x releases are supported. A new RPC call must exist in the OMV 8.0 sources as well.
 - `ROADMAP.md` lists planned features. Open an issue before starting one so we can agree on the design first.
@@ -65,7 +65,7 @@ Useful commands (run from the repository root):
 
 ## Privileges and security
 
-Onmaru runs as an unprivileged system user and must stay that way.
+Maru NAS runs as an unprivileged system user and must stay that way.
 
 - The service process never escalates privileges. Information and changes that need root go through the OMV RPC API, using the signed-in user's own OMV session.
 - Do not add code that calls `omv-rpc`, connects to the OMV engine socket or reads the Docker or Podman socket directly. We do not accept pull requests that add the service user to the `docker` or `openmediavault-engined` group.
@@ -98,4 +98,4 @@ Translations are the easiest way to contribute.
 
 ## License
 
-Onmaru is licensed under the GNU General Public License v3.0 (see `LICENSE`). By contributing, you agree that your contribution is licensed under the same terms.
+Maru NAS is licensed under the GNU General Public License v3.0 (see `LICENSE`). By contributing, you agree that your contribution is licensed under the same terms.

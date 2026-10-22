@@ -24,7 +24,7 @@ const (
 	// totpSecretBytes는 비밀 키 길이다(RFC 4226이 권하는 160비트).
 	totpSecretBytes = 20
 	// TOTPIssuer는 인증 앱에 보이는 발급자 이름이다(브랜드 이름이라 현지화하지 않는다).
-	TOTPIssuer = "Onmaru"
+	TOTPIssuer = "Maru NAS"
 )
 
 var totpEncoding = base32.StdEncoding.WithPadding(base32.NoPadding)
@@ -45,7 +45,9 @@ func TOTPURI(secret, account string) string {
 	q.Set("digits", fmt.Sprint(totpDigits))
 	q.Set("period", fmt.Sprint(totpPeriod))
 	label := url.PathEscape(TOTPIssuer + ":" + account)
-	return "otpauth://totp/" + label + "?" + q.Encode()
+	// 발급자 이름의 공백은 쿼리에서도 %20으로 쓴다. Key URI 형식은 RFC 3986 인코딩이고, +를 그대로 보이는 인증 앱이 있다.
+	// Encode는 + 문자 자체를 %2B로 바꾸므로 남은 +는 모두 공백이다.
+	return "otpauth://totp/" + label + "?" + strings.ReplaceAll(q.Encode(), "+", "%20")
 }
 
 // totpStep은 t가 속한 시간 단계다.

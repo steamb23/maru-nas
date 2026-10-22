@@ -1,6 +1,6 @@
 # Written by maru install.sh
 [Unit]
-Description=Onmaru dashboard upgrade requests
+Description=Maru NAS dashboard upgrade requests
 
 [Path]
 # A check request that maru leaves in its state directory, or an upgrade request
