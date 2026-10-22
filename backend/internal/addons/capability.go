@@ -15,7 +15,7 @@ import (
 	"sync"
 	"time"
 
-	"onmaru/backend/internal/api"
+	"maru/backend/internal/api"
 )
 
 // knownPlugins는 manifest의 requires.plugins에 쓸 수 있는 OMV 플러그인 패키지와

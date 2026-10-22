@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"strings"
 
-	"onmaru/backend/internal/api"
+	"maru/backend/internal/api"
 )
 
 // CPU 온도를 주는 hwmon 드라이버 이름.

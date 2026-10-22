@@ -11,7 +11,7 @@ import (
 	"testing/fstest"
 	"time"
 
-	"onmaru/backend/internal/api"
+	"maru/backend/internal/api"
 )
 
 func TestParseInstalledPackages(t *testing.T) {

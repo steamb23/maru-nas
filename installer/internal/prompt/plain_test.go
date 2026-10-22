@@ -9,16 +9,16 @@ import (
 func TestPlainInputDefaultAndRetry(t *testing.T) {
 	var out strings.Builder
 	p := NewPlain(strings.NewReader("bad\n\n"), &out, "en")
-	v, err := p.Input(Input{Title: "Name", Default: "onmaru", Validate: func(s string) error {
+	v, err := p.Input(Input{Title: "Name", Default: "maru", Validate: func(s string) error {
 		if s == "bad" {
 			return errors.New("not allowed")
 		}
 		return nil
 	}})
-	if err != nil || v != "onmaru" {
+	if err != nil || v != "maru" {
 		t.Fatalf("got %q %v", v, err)
 	}
-	if !strings.Contains(out.String(), "Name [onmaru]: ") || !strings.Contains(out.String(), "not allowed") {
+	if !strings.Contains(out.String(), "Name [maru]: ") || !strings.Contains(out.String(), "not allowed") {
 		t.Errorf("output %q", out.String())
 	}
 }

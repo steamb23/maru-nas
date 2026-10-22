@@ -5,12 +5,12 @@ import (
 	"strings"
 	"time"
 
-	"onmaru/backend/config"
+	"maru/backend/config"
 )
 
 func stepDaemonReload(c *Context) error { return c.Sys.Run("systemctl", "daemon-reload") }
 
-// stepStart는 onmaru를 켜고, 돌고 있으면 다시 시작한다.
+// stepStart는 maru를 켜고, 돌고 있으면 다시 시작한다.
 func stepStart(c *Context) error {
 	unit := serviceName + ".service"
 	if err := c.Sys.RunQuiet("systemctl", "enable", unit); err != nil {
@@ -58,8 +58,8 @@ func stepNextSteps(c *Context) error {
 	if c.proxyUnchanged {
 		return nil
 	}
-	c.Print(c.L("Next: point your reverse proxy (HTTPS) at onmaru. See README.md, 'Reverse proxy'.",
-		"다음 단계: 리버스 프록시(HTTPS)가 onmaru를 가리키게 설정하세요. README.md의 '리버스 프록시'를 참고하세요."))
+	c.Print(c.L("Next: point your reverse proxy (HTTPS) at maru. See README.md, 'Reverse proxy'.",
+		"다음 단계: 리버스 프록시(HTTPS)가 maru를 가리키게 설정하세요. README.md의 '리버스 프록시'를 참고하세요."))
 	listen := c.Values.Get(nameListen)
 	if path, ok := strings.CutPrefix(listen, config.UnixPrefix); ok {
 		c.Print("  - Caddy:  reverse_proxy unix/" + path)

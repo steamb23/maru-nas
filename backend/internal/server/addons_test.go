@@ -6,8 +6,8 @@ import (
 	"sync"
 	"testing"
 
-	"onmaru/backend/internal/addons"
-	"onmaru/backend/internal/api"
+	"maru/backend/internal/addons"
+	"maru/backend/internal/api"
 )
 
 type testProvider struct {

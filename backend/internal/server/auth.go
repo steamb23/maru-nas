@@ -12,18 +12,18 @@ import (
 	"strings"
 	"time"
 
-	"onmaru/backend/internal/api"
-	"onmaru/backend/internal/auth"
-	"onmaru/backend/internal/omv"
+	"maru/backend/internal/api"
+	"maru/backend/internal/auth"
+	"maru/backend/internal/omv"
 )
 
 const (
 	// SessionCookie는 대시보드 세션 쿠키 이름이다.
-	SessionCookie = "onmaru_session"
+	SessionCookie = "maru_session"
 	// PendingCookie는 2차 인증 대기 쿠키 이름이다.
-	PendingCookie = "onmaru_pending"
+	PendingCookie = "maru_pending"
 	// DeviceCookie는 신뢰 기기 토큰 쿠키 이름이다(auth.Limiter.Trust). 로그아웃해도 지우지 않는다.
-	DeviceCookie = "onmaru_device"
+	DeviceCookie = "maru_device"
 	// maxBodyBytes는 인증 요청 본문의 최대 크기다.
 	maxBodyBytes = 4 << 10
 )

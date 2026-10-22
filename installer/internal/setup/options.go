@@ -161,14 +161,14 @@ func usage(reg Registry, lang, name string) string {
   --reinstall        설치된 값을 기본값으로 모든 설정을 다시 묻고 다시 설치합니다
   --upgrade          설치된 설정으로 확인 없이 업그레이드합니다(스크립트용). 설치되어 있지 않으면 실패합니다
                      기존 설치에 없는 설정(새 버전에서 생긴 설정)만 묻습니다
-  --no-build         빌드를 건너뛰고 기존 bin/onmaru를 설치합니다
+  --no-build         빌드를 건너뛰고 기존 bin/maru를 설치합니다
   --uninstall        서비스, 실행 파일, 설정을 제거합니다
   --service-install  빌드 없이 설치 단계만 실행합니다(root 전용). 설정 옵션을 모두 주면 묻지 않습니다
   --dry-run          설치 단계를 실행하지 않고 쓸 파일의 차이와 실행할 명령만 보여 줍니다(sudo 없음.
                      --no-build가 없으면 빌드는 합니다)
   --upgrade-plan     기존 설치를 읽기만 하고, 이 버전으로 업그레이드할 때 물을 설정과 수동 재설치 사유를
                      JSON으로 출력합니다(대시보드에서 업그레이드용)
-  --upgrade-service  대시보드에서 업그레이드의 확인·적용 요청을 처리합니다(root 전용). onmaru-upgrade.service가
+  --upgrade-service  대시보드에서 업그레이드의 확인·적용 요청을 처리합니다(root 전용). maru-upgrade.service가
                      실행하므로 직접 실행하지 않습니다
   --plain            TUI 대신 줄 단위로 묻습니다
   --lang en|ko       안내 문구 언어(기본값은 로캘에 따름)
@@ -181,20 +181,20 @@ func usage(reg Registry, lang, name string) string {
 		return b.String()
 	}
 	fmt.Fprintf(&b, "Usage: %s [--upgrade | --reinstall] [--no-build | --uninstall | --service-install | --upgrade-plan | --upgrade-service] [settings] [--lang en|ko]\n\n", name)
-	b.WriteString(`  (no option)        ask for settings, build, then install. If onmaru is already installed, upgrade with the
+	b.WriteString(`  (no option)        ask for settings, build, then install. If maru is already installed, upgrade with the
                      installed settings (only missing settings are asked; after the summary choose
                      Upgrade, Change settings or Cancel). Uses sudo for the install step when needed
   --reinstall        ask every setting again, with the installed values as defaults, then reinstall
   --upgrade          upgrade with the installed settings without any confirmation (for scripts); fails if
                      nothing is installed. Only settings missing from the installation (new in this version) are asked
-  --no-build         skip the build and install the existing bin/onmaru
+  --no-build         skip the build and install the existing bin/maru
   --uninstall        remove the service, binary and settings
   --service-install  run only the install step, without building (root only). No questions if all settings are given
   --dry-run          show the install step's file changes and commands instead of running them (no sudo;
                      the build still runs unless --no-build is given)
   --upgrade-plan     read the existing installation only and print, as JSON, the settings to ask and the
                      reasons for a manual reinstall when upgrading to this version (for the dashboard upgrade)
-  --upgrade-service  handle a check or upgrade request from the dashboard (root only). onmaru-upgrade.service
+  --upgrade-service  handle a check or upgrade request from the dashboard (root only). maru-upgrade.service
                      runs it; do not run it yourself
   --plain            ask line by line instead of the TUI
   --lang en|ko       language of the messages (default: from the locale)

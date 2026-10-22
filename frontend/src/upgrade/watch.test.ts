@@ -43,7 +43,7 @@ describe('step', () => {
     expect(showsRestartScreen(state.phase)).toBe(true)
   })
 
-  it('reloads when the session is gone (onmaru restarted)', () => {
+  it('reloads when the session is gone (maru restarted)', () => {
     const { effects } = run([{ type: 'status', info: applying('install') }, { type: 'unauthorized' }])
     expect(effects).toEqual(['none', 'reload'])
   })

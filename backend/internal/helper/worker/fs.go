@@ -12,7 +12,7 @@ import (
 	"strings"
 	"syscall"
 
-	"onmaru/backend/internal/helper/proto"
+	"maru/backend/internal/helper/proto"
 )
 
 const (
@@ -21,7 +21,7 @@ const (
 	// MaxList는 fs.list가 담는 최대 항목 수다. 넘치면 Truncated다.
 	MaxList = 10000
 	// uploadPrefix는 올리는 중인 임시 파일 이름의 접두사다.
-	uploadPrefix = ".onmaru-upload-"
+	uploadPrefix = ".maru-upload-"
 )
 
 // bases는 사용자 범위 파일 연산이 닿을 수 있는 기준 디렉터리다: 사용자 홈 디렉터리와

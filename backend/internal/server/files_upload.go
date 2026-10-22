@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"time"
 
-	"onmaru/backend/internal/api"
-	"onmaru/backend/internal/auth"
+	"maru/backend/internal/api"
+	"maru/backend/internal/auth"
 )
 
 const (

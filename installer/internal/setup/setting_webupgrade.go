@@ -6,7 +6,7 @@ import (
 	"slices"
 	"strings"
 
-	"onmaru/backend/config"
+	"maru/backend/config"
 )
 
 // buildTools는 대시보드에서 업그레이드의 확인·빌드에 필요한 명령이다. 기본 빌드 PATH는 이 명령을 찾은 디렉터리다.
@@ -16,7 +16,7 @@ var buildTools = []string{"git", "go", "node", "npm", "make"}
 var standardPath = []string{"/usr/local/bin", "/usr/bin", "/bin"}
 
 // settingWebUpgrade는 대시보드에서 업그레이드(설정 앱의 업데이트 페이지)를 허용할지다. 권한 도우미를 설치할 때만 쓴다.
-// 허용하면 업그레이드 서비스(onmaru-upgrade.path·.service), root 소유 설치기 복사본, root 쪽 설정 파일을 쓰고 도우미
+// 허용하면 업그레이드 서비스(maru-upgrade.path·.service), root 소유 설치기 복사본, root 쪽 설정 파일을 쓰고 도우미
 // 유닛에 요청 디렉터리를 더한다(step_webupgrade.go). 허용하지 않으면 이것들을 지운다.
 //
 // 이 설정이 없던 버전의 설치는 꺼진 것으로 읽어 업그레이드할 때 묻지 않는다. 켜려면 --web-upgrade를 주거나 --reinstall로 묻는다.
@@ -56,13 +56,13 @@ var settingWebUpgrade = &Setting{
 	Prompt: &PromptSpec{
 		Kind:  PromptConfirm,
 		Title: L("Allow upgrading from the dashboard?", "대시보드에서 업그레이드를 허용할까요?"),
-		Help: L(`Administrators can then upgrade onmaru from the settings app (Update page) instead of running git pull and
-./install.sh over SSH. A root service (onmaru-upgrade) runs git and the build as the owner of this repository and
+		Help: L(`Administrators can then upgrade maru from the settings app (Update page) instead of running git pull and
+./install.sh over SSH. A root service (maru-upgrade) runs git and the build as the owner of this repository and
 then installs the new version as root. Upgrading needs root elevation (the password again).
 As with ./install.sh, whoever can change this repository can get code run as root through an upgrade.
 See README.md, "Upgrading from the dashboard".`,
 			`허용하면 관리자가 SSH로 git pull과 ./install.sh를 실행하는 대신 설정 앱(업데이트 페이지)에서 온마루를 업그레이드할 수
-있습니다. root로 도는 서비스(onmaru-upgrade)가 이 저장소의 소유자 계정으로 git과 빌드를 실행한 뒤 새 버전을 root로
+있습니다. root로 도는 서비스(maru-upgrade)가 이 저장소의 소유자 계정으로 git과 빌드를 실행한 뒤 새 버전을 root로
 설치합니다. 업그레이드에는 root 권한 상승(비밀번호 재입력)이 필요합니다.
 ./install.sh와 마찬가지로 이 저장소를 바꿀 수 있는 계정은 업그레이드를 통해 root로 코드를 실행할 수 있습니다.
 README.md의 "대시보드에서 업그레이드"를 참고하세요.`),

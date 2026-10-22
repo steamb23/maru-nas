@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"onmaru/backend/internal/api"
+	"maru/backend/internal/api"
 )
 
 const (

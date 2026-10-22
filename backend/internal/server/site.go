@@ -6,11 +6,11 @@ import (
 	"strconv"
 	"sync"
 
-	"onmaru/backend/config"
-	"onmaru/backend/internal/api"
-	"onmaru/backend/internal/auth"
-	"onmaru/backend/internal/prefs"
-	"onmaru/backend/internal/terminal"
+	"maru/backend/config"
+	"maru/backend/internal/api"
+	"maru/backend/internal/auth"
+	"maru/backend/internal/prefs"
+	"maru/backend/internal/terminal"
 )
 
 // 전역 설정(관리자): 로그인 화면, 기본 화면, 웹에서 덮어쓰는 가동 설정.

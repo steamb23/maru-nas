@@ -4,8 +4,8 @@ import (
 	"net"
 	"strings"
 
-	"onmaru/backend/config"
-	"onmaru/installer/internal/prompt"
+	"maru/backend/config"
+	"maru/installer/internal/prompt"
 )
 
 // stepPort는 TCP 수신이면 다른 프로세스(예: make dev의 백엔드)가 그 주소를 쓰고 있는지 미리 알린다.

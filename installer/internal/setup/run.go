@@ -2,14 +2,14 @@
 //
 //	./install.sh                    1단계: 설정을 묻고 실행한 계정으로 빌드한다(일반 사용자 또는 root만 있는 환경의 root).
 //	                                이미 설치되어 있으면 설치된 설정으로 업그레이드한다(mode.go)
-//	                                2단계: root가 아니면 sudo로 bin/onmaru-install --service-install을 실행한다
+//	                                2단계: root가 아니면 sudo로 bin/maru-install --service-install을 실행한다
 //	./install.sh --reinstall        설치된 값을 기본값으로 모든 설정을 다시 묻는다
 //	./install.sh --upgrade          기존 설치의 설정 그대로 묻지 않고 빌드·설치한다(스크립트용). 기존 설치에 없는 설정만 묻는다
 //	./install.sh --service-install  2단계만 실행한다(root 전용). 설정을 모두 주면 묻지 않는다
 //	./install.sh --uninstall        제거한다(root가 아니면 sudo로 다시 실행한다)
 //	./install.sh --dry-run          바꾸는 작업 없이 쓸 파일의 차이와 실행할 명령만 보여 준다
 //	./install.sh --upgrade-plan     기존 설치를 읽기만 하고 이 버전으로의 업그레이드 계획을 JSON으로 출력한다(plan.go)
-//	onmaru-install --upgrade-service  대시보드에서 업그레이드의 요청 하나를 처리한다(onmaru-upgrade.service, upgrade_service.go)
+//	maru-install --upgrade-service  대시보드에서 업그레이드의 요청 하나를 처리한다(maru-upgrade.service, upgrade_service.go)
 //
 // 리버스 프록시 설정은 하지 않는다. 생성하는 설정 파일(유닛, /etc/default/*)의 주석은 언어와 상관없이 영어로 쓴다.
 package setup
@@ -24,7 +24,7 @@ import (
 	"strings"
 	"syscall"
 
-	"onmaru/installer/internal/prompt"
+	"maru/installer/internal/prompt"
 )
 
 // Main은 설치기를 실행하고 종료 코드를 돌려준다.
@@ -42,7 +42,7 @@ func Main(args []string) int {
 		fmt.Fprintln(os.Stderr, "error: cannot find the installer executable:", err)
 		return 1
 	}
-	// 설치기는 저장소의 bin/onmaru-install이다.
+	// 설치기는 저장소의 bin/maru-install이다.
 	repo := filepath.Dir(filepath.Dir(exe))
 	name := entryName(repo)
 	if perr != nil {

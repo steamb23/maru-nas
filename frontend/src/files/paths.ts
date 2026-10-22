@@ -101,7 +101,7 @@ export function folderLabel(roots: readonly Root[], dir: string, homeName: strin
 }
 
 // UPLOAD_PREFIX는 도우미가 올리는 중인 임시 파일에 쓰는 이름 접두사다. 이 이름으로는 올리거나 만들거나 바꿀 수 없다.
-const UPLOAD_PREFIX = '.onmaru-upload-'
+const UPLOAD_PREFIX = '.maru-upload-'
 
 // NameProblem은 새 이름(올리기, 폴더 만들기, 이름 바꾸기)으로 쓸 수 없는 이유다.
 export type NameProblem = 'empty' | 'dots' | 'chars' | 'tooLong' | 'reserved'

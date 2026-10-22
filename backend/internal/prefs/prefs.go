@@ -10,8 +10,8 @@ import (
 	"slices"
 	"sync"
 
-	"onmaru/backend/internal/api"
-	"onmaru/backend/internal/security"
+	"maru/backend/internal/api"
+	"maru/backend/internal/security"
 )
 
 // Store는 사용자 설정 저장소다. 여러 고루틴에서 함께 써도 된다.

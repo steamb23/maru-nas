@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"onmaru/backend/internal/api"
+	"maru/backend/internal/api"
 )
 
 func TestSiteRoundTrip(t *testing.T) {

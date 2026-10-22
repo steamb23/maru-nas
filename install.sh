@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
-# 온마루(Onmaru) 설치 스크립트. Go 설치기(installer/ → bin/onmaru-install)를 빌드하거나 찾아 실행한다.
+# 온마루(Onmaru) 설치 스크립트. Go 설치기(installer/ → bin/maru-install)를 빌드하거나 찾아 실행한다.
 # 옵션과 동작은 모두 설치기가 정한다: ./install.sh --help
 #
 # 설치기는 실행한 계정으로 빌드한다. root가 일반 사용자 소유 저장소에서 실행하면(sudo ./install.sh, sudo -i, su)
-# 저장소에 root 소유 파일이 생기지 않게 빌드하지 않고 이미 있는 bin/onmaru-install을 쓴다(설치기도 같은 규칙으로
-# onmaru를 빌드하지 않는다). go가 없을 때도 이미 있는 bin/onmaru-install을 쓴다.
+# 저장소에 root 소유 파일이 생기지 않게 빌드하지 않고 이미 있는 bin/maru-install을 쓴다(설치기도 같은 규칙으로
+# maru를 빌드하지 않는다). go가 없을 때도 이미 있는 bin/maru-install을 쓴다.
 set -euo pipefail
 
 self=$(readlink -f "${BASH_SOURCE[0]}")
 repo=$(dirname "$self")
-installer=$repo/bin/onmaru-install
+installer=$repo/bin/maru-install
 
 # 안내 문구 언어: --lang en|ko, 없으면 로캘(LC_ALL, LC_MESSAGES, LANG)이 ko로 시작하면 한국어. 설치기와 같은 규칙이다.
 lang=""

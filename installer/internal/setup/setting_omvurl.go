@@ -6,8 +6,8 @@ import (
 	"net/url"
 	"regexp"
 
-	"onmaru/backend/config"
-	"onmaru/installer/internal/prompt"
+	"maru/backend/config"
+	"maru/installer/internal/prompt"
 )
 
 // settingOMVURL은 백엔드가 OMV rpc.php에 접속할 주소다(루프백만). 기본값은 OMV nginx 설정의 수신 포트로 만든다.
@@ -16,7 +16,7 @@ var settingOMVURL = &Setting{
 	Flag:  FlagValue,
 	Arg:   "URL",
 	Usage: L("OMV web UI address (loopback)", "OMV 웹 UI 주소(루프백)"),
-	Env:   []EnvLine{{File: OnmaruEnv, Key: config.EnvOMVURL}},
+	Env:   []EnvLine{{File: MaruEnv, Key: config.EnvOMVURL}},
 	Default: func(c *Context) string {
 		if v := c.Installed.Env.Value(config.EnvOMVURL); v != "" {
 			return v
@@ -91,8 +91,8 @@ func noticeForceSSL(c *Context) error {
 	if !omvForcesHTTPS(c.Sys) {
 		return nil
 	}
-	c.Warn(L(`OMV redirects HTTP to HTTPS ("Force SSL/TLS" is on). onmaru talks to OMV over plain HTTP on loopback and cannot log in this way. Turn off Force SSL/TLS in the OMV web UI (System > Workbench) first.`,
-		`OMV가 HTTP를 HTTPS로 리다이렉트합니다("Force SSL/TLS" 켜짐). onmaru는 루프백의 평문 HTTP로 OMV에 접속하므로 이 상태로는 로그인할 수 없습니다. 먼저 OMV 웹 UI(System > Workbench)에서 Force SSL/TLS를 끄세요.`))
+	c.Warn(L(`OMV redirects HTTP to HTTPS ("Force SSL/TLS" is on). maru talks to OMV over plain HTTP on loopback and cannot log in this way. Turn off Force SSL/TLS in the OMV web UI (System > Workbench) first.`,
+		`OMV가 HTTP를 HTTPS로 리다이렉트합니다("Force SSL/TLS" 켜짐). maru는 루프백의 평문 HTTP로 OMV에 접속하므로 이 상태로는 로그인할 수 없습니다. 먼저 OMV 웹 UI(System > Workbench)에서 Force SSL/TLS를 끄세요.`))
 	if c.upgrading() {
 		return nil
 	}

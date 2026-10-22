@@ -55,7 +55,7 @@
     "installing": "Installing the new version. The sign-in screen appears once the restart is done.",
     "waiting": "Waiting to reconnect to Onmaru…",
     "elapsed": "Elapsed {{time}}",
-    "stuck": "Onmaru hasn't come back. Run ./install.sh in the repository over SSH to recover. The log is in journalctl -u onmaru-upgrade."
+    "stuck": "Onmaru hasn't come back. Run ./install.sh in the repository over SSH to recover. The log is in journalctl -u maru-upgrade."
   },
   "desktop": {
     "label": "Desktop",
@@ -248,7 +248,7 @@
         "dots": "\".\" and \"..\" can't be used as names.",
         "chars": "Names can't contain \"/\".",
         "tooLong": "The name is too long. Names can be up to 255 bytes in UTF-8.",
-        "reserved": "Names starting with \".onmaru-upload-\" are used by files being uploaded, so they can't be used."
+        "reserved": "Names starting with \".maru-upload-\" are used by files being uploaded, so they can't be used."
       },
       "restoreTitle": "Restore under a new name",
       "restore": "Restore"
@@ -866,7 +866,7 @@
       "runtimeDesc": "Values the server started with and where they came from.",
       "overriddenBadge": "Changed here",
       "howTo": "Changing other settings",
-      "howToDesc": "These values are environment variables in /etc/default/onmaru. Restart the service after editing. If you change the listen address, update the reverse proxy too.",
+      "howToDesc": "These values are environment variables in /etc/default/maru. Restart the service after editing. If you change the listen address, update the reverse proxy too.",
       "howToInstall": "You can also run ./install.sh --reinstall again from the repository and answer its questions.",
       "copy": "Copy commands",
       "copied": "Copied",
@@ -904,7 +904,7 @@
       },
       "stateDesc": {
         "disabled": "Run ./install.sh --reinstall again and choose to install the helper.",
-        "unavailable": "Onmaru can't reach the helper. Check systemctl status onmaru-helper.socket on the server.",
+        "unavailable": "Onmaru can't reach the helper. Check systemctl status maru-helper.socket on the server.",
         "none": "The helper didn't accept this account when you signed in (for example a system account, or it was unreachable). Signing in again retries.",
         "reauth": "The helper restarted and no longer knows this session. Sign out and sign in again.",
         "active": "This session can use the helper."
@@ -931,7 +931,7 @@
         "title": "Upgrading from the dashboard is off",
         "notEnabled": "Run this in the repository as its owner to turn it on.",
         "noHelper": "This needs the privileged helper. Run this in the repository as its owner to install both.",
-        "stateDir": "Not available when the state directory has been moved from its default location (/var/lib/onmaru).",
+        "stateDir": "Not available when the state directory has been moved from its default location (/var/lib/maru).",
         "how": "The repository must be cloned by a regular account, not root."
       },
       "check": "Check for a new version",
@@ -939,9 +939,9 @@
       "checkRemote": "Fetch and check",
       "checkLocal": "Check the local repository",
       "pending": "Check requested. Waiting for it to start…",
-      "stalled": "The upgrade service is not picking up the request. On the server, check that onmaru-upgrade.path is running.",
+      "stalled": "The upgrade service is not picking up the request. On the server, check that maru-upgrade.path is running.",
       "checking": "Checking: {{stage}}…",
-      "interrupted": "The upgrade service seems to have stopped midway. See the log in journalctl -u onmaru-upgrade, then check again.",
+      "interrupted": "The upgrade service seems to have stopped midway. See the log in journalctl -u maru-upgrade, then check again.",
       "checkedAt": "Last checked {{time}}",
       "stages": {
         "inspect": "Inspecting the repository",
@@ -953,7 +953,7 @@
       },
       "log": "Log",
       "checkFailed": "The check failed ({{stage}})",
-      "checkFailedDesc": "Nothing was changed. The full log is in journalctl -u onmaru-upgrade.",
+      "checkFailedDesc": "Nothing was changed. The full log is in journalctl -u maru-upgrade.",
       "latest": "Onmaru is up to date.",
       "outdated": "The installation changed after this check. Check again.",
       "newVersion": "New version",
@@ -1063,7 +1063,7 @@
       "verifyNow": "Verify now",
       "passkeys": "Passkeys",
       "passkeysDesc": "Confirm with this device’s screen lock or a security key. This is the recommended method.",
-      "passkeysOff": "Passkeys are not available because the administrator has not set the public address (ONMARU_PUBLIC_ORIGIN).",
+      "passkeysOff": "Passkeys are not available because the administrator has not set the public address (MARU_PUBLIC_ORIGIN).",
       "passkeysUnsupported": "This browser cannot use passkeys at this address. Passkeys need HTTPS with a trusted certificate.",
       "passkeyCreated": "Added {{created}}",
       "passkeyUsed": "Added {{created}} · last used {{used}}",
@@ -1125,7 +1125,7 @@
       "noAutoLogout": "OpenMediaVault auto logout is off, so a checked session stays checked until sign-out. Turn on auto logout in the OMV web UI.",
       "passkeys": "Passkeys",
       "passkeysOn": "Available for {{rpId}}.",
-      "passkeysOff": "Set the public dashboard address (ONMARU_PUBLIC_ORIGIN in /etc/default/onmaru, or ./install.sh --reinstall) to use passkeys. Authenticator apps work without it.",
+      "passkeysOff": "Set the public dashboard address (MARU_PUBLIC_ORIGIN in /etc/default/maru, or ./install.sh --reinstall) to use passkeys. Authenticator apps work without it.",
       "available": "Available",
       "unavailable": "Unavailable",
       "passkeyLogin": "Passkey sign-in",

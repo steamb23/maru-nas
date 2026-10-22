@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 	"slices"
 
-	"onmaru/backend/internal/api"
+	"maru/backend/internal/api"
 )
 
 // SiteStore는 모든 사용자에게 적용하는 전역 설정 저장소다. 관리자만 바꾼다(검사는 호출하는 쪽이 한다).

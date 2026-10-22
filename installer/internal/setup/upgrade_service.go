@@ -13,12 +13,12 @@ import (
 	"syscall"
 	"time"
 
-	"onmaru/backend/config"
-	"onmaru/installer/internal/prompt"
+	"maru/backend/config"
+	"maru/installer/internal/prompt"
 )
 
-// 업그레이드 서비스(--upgrade-service). onmaru-upgrade.path가 확인 요청(onmaru의 상태 디렉터리) 또는 적용 요청(도우미의
-// upgrade.apply)을 보면 onmaru-upgrade.service가 root 소유 설치기 복사본으로 이것을 실행한다. 한 번에 요청 하나를
+// 업그레이드 서비스(--upgrade-service). maru-upgrade.path가 확인 요청(maru의 상태 디렉터리) 또는 적용 요청(도우미의
+// upgrade.apply)을 보면 maru-upgrade.service가 root 소유 설치기 복사본으로 이것을 실행한다. 한 번에 요청 하나를
 // 처리하고(적용이 먼저), 진행과 결과는 상태 파일(config.UpgradeStatusFile)에 쓴다. 설계는 .claude/docs/upgrade.md,
 // 명령 실행·파일 처리는 upgrade_exec.go에 있다.
 //
@@ -32,8 +32,8 @@ import (
 // runUpgradeService는 --upgrade-service다.
 func runUpgradeService(c *Context) error {
 	if !c.IsRoot {
-		return fail(c.L("--upgrade-service must run as root; onmaru-upgrade.service runs it",
-			"--upgrade-service는 root로만 실행할 수 있습니다. onmaru-upgrade.service가 실행합니다"))
+		return fail(c.L("--upgrade-service must run as root; maru-upgrade.service runs it",
+			"--upgrade-service는 root로만 실행할 수 있습니다. maru-upgrade.service가 실행합니다"))
 	}
 	s := &upgradeService{out: c.Out, now: time.Now, dropPrivileges: true}
 	return s.serve()
@@ -400,7 +400,7 @@ func clip(s string, n int) string {
 // 않게 git archive로 installer와 backend만 꺼낸다. Go가 이 버전을 빌드할 수 없으면(go env가 실패) goErr에 그 이유를 준다.
 // 임시 디렉터리는 소유자의 것이다(계획이 저장소 소유자를 확인하는 설정이 있다).
 func (s *upgradeService) plan(target string, opts []string) (*config.UpgradePlan, string, error) {
-	dir, err := os.MkdirTemp(s.tmp, "onmaru-upgrade-")
+	dir, err := os.MkdirTemp(s.tmp, "maru-upgrade-")
 	if err != nil {
 		return nil, "", err
 	}
@@ -432,7 +432,7 @@ func (s *upgradeService) plan(target string, opts []string) (*config.UpgradePlan
 		}
 		return nil, clip(line, 300), nil
 	}
-	bin := filepath.Join(dir, "bin", "onmaru-install")
+	bin := filepath.Join(dir, "bin", "maru-install")
 	if err := s.run(owner(src, planTimeout), "go", "build", "-trimpath", "-o", bin, "."); err != nil {
 		return nil, "", uerr("cannot build the installer of "+target+" (see the log)", target+"의 설치기를 빌드할 수 없습니다(로그 참고)")
 	}
@@ -607,8 +607,8 @@ func (s *upgradeService) apply(prev config.UpgradeStatus, req config.UpgradeAppl
 	}
 	install := append([]string{"--service-install", "--upgrade", "--plain", "--lang", "en"}, args...)
 	if err := s.run(cmdOpts{dir: s.cfg.Repo, timeout: installTimeout}, filepath.Join(s.cfg.Repo, installerBinSrcRel), install...); err != nil {
-		return "", uerr("the new installer failed. onmaru may not be running; run ./install.sh from the repository over SSH to recover (see the log and README.md)",
-			"새 설치기가 실패했습니다. onmaru가 돌고 있지 않을 수 있습니다. SSH로 저장소에서 ./install.sh를 실행해 복구하세요(로그와 README.md 참고)")
+		return "", uerr("the new installer failed. maru may not be running; run ./install.sh from the repository over SSH to recover (see the log and README.md)",
+			"새 설치기가 실패했습니다. maru가 돌고 있지 않을 수 있습니다. SSH로 저장소에서 ./install.sh를 실행해 복구하세요(로그와 README.md 참고)")
 	}
 	version := ""
 	if rec := s.readRecord(); rec != nil && rec.Revision == req.Target {

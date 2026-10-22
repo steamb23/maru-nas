@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-// 대시보드에서 업그레이드의 요청과 상태(.claude/docs/upgrade.md). onmaru가 확인 요청을, 도우미의 upgrade.apply가 적용 요청을 쓰고,
+// 대시보드에서 업그레이드의 요청과 상태(.claude/docs/upgrade.md). maru가 확인 요청을, 도우미의 upgrade.apply가 적용 요청을 쓰고,
 // 업그레이드 서비스(설치기의 --upgrade-service)가 둘을 읽어 처리한 뒤 진행과 결과를 상태 파일에 쓴다.
 
 // UpgradeRequestFormat은 확인·적용 요청의 형식 번호다. 필드를 빼거나 뜻을 바꾸면 올린다.
@@ -19,7 +19,7 @@ const (
 	UpgradeModeLocal = "local"
 )
 
-// UpgradeCheckRequest는 onmaru가 자기 상태 디렉터리에 남기는 확인 요청이다(UpgradeCheckRequestName). 업그레이드
+// UpgradeCheckRequest는 maru가 자기 상태 디렉터리에 남기는 확인 요청이다(UpgradeCheckRequestName). 업그레이드
 // 서비스는 이 파일을 믿지 않고 확인 방식만 읽는다.
 type UpgradeCheckRequest struct {
 	Format int    `json:"format"`
@@ -93,7 +93,7 @@ const (
 	UpgradeStageUpdate = "update"
 	// UpgradeStageBuild: 저장소 소유자로 빌드한다.
 	UpgradeStageBuild = "build"
-	// UpgradeStageInstall: 새 설치기를 root로 실행해 설치한다(onmaru와 도우미가 다시 시작한다).
+	// UpgradeStageInstall: 새 설치기를 root로 실행해 설치한다(maru와 도우미가 다시 시작한다).
 	UpgradeStageInstall = "install"
 )
 
@@ -190,6 +190,6 @@ type UpgradeApply struct {
 // UpgradeError는 실패 이유다.
 type UpgradeError struct {
 	Text LocalizedText `json:"text"`
-	// Log는 실패한 명령 출력의 끝부분이다. 전체 로그는 journalctl -u onmaru-upgrade에 있다.
+	// Log는 실패한 명령 출력의 끝부분이다. 전체 로그는 journalctl -u maru-upgrade에 있다.
 	Log string `json:"log,omitempty"`
 }

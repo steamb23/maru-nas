@@ -19,7 +19,7 @@ import (
 	"syscall"
 	"time"
 
-	"onmaru/backend/config"
+	"maru/backend/config"
 )
 
 // Account는 계정 데이터베이스(getent passwd) 항목 일부다.

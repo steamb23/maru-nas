@@ -13,9 +13,9 @@ import (
 	"testing"
 	"time"
 
-	"onmaru/backend/internal/api"
-	"onmaru/backend/internal/omv/omvfake"
-	"onmaru/backend/internal/prefs"
+	"maru/backend/internal/api"
+	"maru/backend/internal/omv/omvfake"
+	"maru/backend/internal/prefs"
 )
 
 func TestFilesUploadCheck(t *testing.T) {
@@ -47,7 +47,7 @@ func TestFilesUploadCheck(t *testing.T) {
 		t.Fatalf("stat = %v", err)
 	}
 	// 이름과 범위는 올리기와 같게 거른다(UTF-8이 아닌 이름은 JSON으로 보낼 수 없다).
-	for _, p := range []string{e.disk + "/media/.onmaru-upload-x.part", e.disk + "/media/", "media/x"} {
+	for _, p := range []string{e.disk + "/media/.maru-upload-x.part", e.disk + "/media/", "media/x"} {
 		wantStatus(t, check(p), http.StatusBadRequest)
 	}
 	wantCode(t, check("/etc/x"), http.StatusForbidden, api.ErrOutsideRoots)
@@ -137,7 +137,7 @@ func putLikeBrowser(t *testing.T, addr, target, cookie string, size int) (*http.
 	}
 	t.Cleanup(func() { c.Close() })
 	c.SetDeadline(time.Now().Add(20 * time.Second))
-	fmt.Fprintf(c, "PUT %s HTTP/1.1\r\nHost: onmaru\r\nContent-Type: application/octet-stream\r\nContent-Length: %d\r\nCookie: %s\r\n\r\n",
+	fmt.Fprintf(c, "PUT %s HTTP/1.1\r\nHost: maru\r\nContent-Type: application/octet-stream\r\nContent-Length: %d\r\nCookie: %s\r\n\r\n",
 		target, size, cookie)
 	buf := make([]byte, 64<<10)
 	var werr error
@@ -153,7 +153,7 @@ func putLikeBrowser(t *testing.T, addr, target, cookie string, size int) (*http.
 }
 
 // 본문을 다 받기 전에 거절해도 남은 본문을 먼저 받으므로, 본문을 끝까지 보내는 클라이언트가 쓰기 오류(RST) 없이
-// 응답을 받는다. 프록시는 이 클라이언트와 같은 자리에 있다(브라우저 → 프록시 → onmaru).
+// 응답을 받는다. 프록시는 이 클라이언트와 같은 자리에 있다(브라우저 → 프록시 → maru).
 func TestFilesUploadEarlyRejectNoReset(t *testing.T) {
 	site := prefs.NewMemoryStore()
 	site.UpdateSite(func(v *api.SiteSettings) {

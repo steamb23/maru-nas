@@ -19,9 +19,9 @@ import (
 	"testing"
 	"time"
 
-	"onmaru/backend/config"
-	"onmaru/backend/internal/helper/proto"
-	"onmaru/backend/internal/helper/worker"
+	"maru/backend/config"
+	"maru/backend/internal/helper/proto"
+	"maru/backend/internal/helper/worker"
 )
 
 // TestMain은 ExecSpawner 시험에서 이 테스트 실행 파일이 worker로 실행될 때 worker.Main을 부른다.

@@ -9,11 +9,11 @@ import (
 	"testing"
 	"time"
 
-	"onmaru/backend/internal/addons"
-	"onmaru/backend/internal/addons/containers"
-	"onmaru/backend/internal/addons/services"
-	"onmaru/backend/internal/api"
-	"onmaru/backend/internal/omv/omvfake"
+	"maru/backend/internal/addons"
+	"maru/backend/internal/addons/containers"
+	"maru/backend/internal/addons/services"
+	"maru/backend/internal/api"
+	"maru/backend/internal/omv/omvfake"
 )
 
 // actionEnv는 테스트용 조작 애드온을 등록한 환경이다.

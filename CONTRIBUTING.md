@@ -16,8 +16,8 @@ Thank you for your interest in Onmaru, a desktop-like web dashboard for openmedi
 Tool versions and installation steps are in the "빌드 및 설치" section of `README.md`. In short: Go 1.27.1 or later, Node.js 22.12 or later, git, make.
 
 ```sh
-git clone https://github.com/steamb23/Onmaru.git
-cd Onmaru
+git clone https://github.com/steamb23/maru-nas.git
+cd maru-nas
 git submodule update --init --depth 1
 npm --prefix frontend ci
 make dev-fake
@@ -31,14 +31,14 @@ make dev-fake
 | `user` | `user` | regular user | |
 | `totp` | `totp` | administrator | second factor code `123456` |
 
-To test against a real OMV, put `ONMARU_OMV_URL=<your OMV address>` in `frontend/.env.local` and run `make dev`. Never commit that file.
+To test against a real OMV, put `MARU_OMV_URL=<your OMV address>` in `frontend/.env.local` and run `make dev`. Never commit that file.
 
 Useful commands (run from the repository root):
 
 | Command | What it does |
 |---|---|
 | `make check` | lint (`gofmt`, `go vet`, oxlint, `tsc`) and tests (`go test`, Vitest) |
-| `make build` | production build into `bin/onmaru`, the privileged helper `bin/onmaru-helper` and the installer `bin/onmaru-install` |
+| `make build` | production build into `bin/maru`, the privileged helper `bin/maru-helper` and the installer `bin/maru-install` |
 | `make types` | regenerate TypeScript from Go structs and addon manifests |
 
 ## Branches and pull requests
@@ -69,7 +69,7 @@ Onmaru runs as an unprivileged system user and must stay that way.
 
 - The service process never escalates privileges. Information and changes that need root go through the OMV RPC API, using the signed-in user's own OMV session.
 - Do not add code that calls `omv-rpc`, connects to the OMV engine socket or reads the Docker or Podman socket directly. We do not accept pull requests that add the service user to the `docker` or `openmediavault-engined` group.
-- Privileged work that OMV RPC cannot do (a user's own files, root operations) goes only through the privileged helper (`backend/cmd/onmaru-helper`), as typed operations from its fixed list. There is no generic command execution. Adding a root operation must be discussed in an issue first.
+- Privileged work that OMV RPC cannot do (a user's own files, root operations) goes only through the privileged helper (`backend/cmd/maru-helper`), as typed operations from its fixed list. There is no generic command execution. Adding a root operation must be discussed in an issue first.
 - Never put passwords, OMV session IDs or tokens in logs, test fixtures or commits. Authenticator-app secrets and recovery codes of the security hardening mode count as secrets too.
 - Test fixtures (`testdata/` and the like) contain synthetic data only. Replace disk serials, MAC and IP addresses, host names and user names with fake values.
 - Personal environment details (domains, IP addresses) belong in `*.local.md` files, which are ignored by git. Do not hardcode them in committed files.

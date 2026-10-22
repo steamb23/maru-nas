@@ -5,7 +5,7 @@ package api
 import (
 	"encoding/json"
 
-	"onmaru/backend/config"
+	"maru/backend/config"
 )
 
 // HealthResponse는 GET /api/health의 응답이다.
@@ -566,7 +566,7 @@ type SiteDefaults struct {
 }
 
 // ServerOverrides는 재시작 없이 바꿀 수 있는 가동 설정을 웹에서 덮어쓴 값이다. 없는 값은 플래그·환경 변수
-// (/etc/default/onmaru) 값을 따른다.
+// (/etc/default/maru) 값을 따른다.
 type ServerOverrides struct {
 	// WorkbenchURL은 -workbench-url을 덮어쓴다. 빈 문자열이면 OMV 워크벤치 앱을 끈다.
 	WorkbenchURL *string `json:"workbenchUrl,omitempty"`
@@ -720,7 +720,7 @@ type ServerSettings struct {
 	SmartRefreshAt OverridableSetting `json:"smartRefreshAt"`
 	// Terminal은 웹 터미널 허용 여부("true" 또는 "false")다.
 	Terminal OverridableSetting `json:"terminal"`
-	// Runtime은 시작할 때 정해진 가동 설정 전체다(플래그 순서). 바꾸려면 /etc/default/onmaru를 고치고 다시 시작한다.
+	// Runtime은 시작할 때 정해진 가동 설정 전체다(플래그 순서). 바꾸려면 /etc/default/maru를 고치고 다시 시작한다.
 	Runtime []RuntimeSetting `json:"runtime"`
 }
 
@@ -1381,11 +1381,11 @@ type SecurityUserInfo struct {
 
 // 대시보드에서 업그레이드를 쓸 수 없는 이유(UpgradeInfo.DisabledReason).
 const (
-	// UpgradeNotEnabled: 설치기가 대시보드에서 업그레이드를 켜지 않았다(/etc/default/onmaru-upgrade가 없다).
+	// UpgradeNotEnabled: 설치기가 대시보드에서 업그레이드를 켜지 않았다(/etc/default/maru-upgrade가 없다).
 	UpgradeNotEnabled = "not-enabled"
 	// UpgradeNoHelper: 권한 도우미를 설정하지 않았다(-helper-socket). 업그레이드는 도우미의 root 연산으로 요청한다.
 	UpgradeNoHelper = "no-helper"
-	// UpgradeStateDir: 상태 디렉터리가 없거나 설치한 위치(/var/lib/onmaru)가 아니다. 업그레이드 서비스의 경로 유닛은
+	// UpgradeStateDir: 상태 디렉터리가 없거나 설치한 위치(/var/lib/maru)가 아니다. 업그레이드 서비스의 경로 유닛은
 	// 그 안의 확인 요청만 지켜본다.
 	UpgradeStateDir = "state-dir"
 )
@@ -1400,16 +1400,16 @@ type UpgradeInfo struct {
 	Repo string `json:"repo,omitempty"`
 	User string `json:"user,omitempty"`
 	// Pending은 확인 요청을 업그레이드 서비스가 아직 가져가지 않았다는 뜻이다. PendingStalled는 1분 넘게 남아 있다는
-	// 뜻이다(경로 유닛 onmaru-upgrade.path가 돌지 않는다).
+	// 뜻이다(경로 유닛 maru-upgrade.path가 돌지 않는다).
 	Pending        bool `json:"pending"`
 	PendingStalled bool `json:"pendingStalled"`
 	// Interrupted는 상태 파일이 확인·업그레이드 중인 채로 업그레이드 서비스의 시간 상한(2시간)보다 오래 바뀌지 않았다는
 	// 뜻이다. 서비스가 중단됐으므로 다시 확인할 수 있다.
 	Interrupted bool `json:"interrupted"`
-	// Version, Revision은 지금 실행 중인 onmaru의 버전과 커밋이다(Revision은 모르면 없다).
+	// Version, Revision은 지금 실행 중인 maru의 버전과 커밋이다(Revision은 모르면 없다).
 	Version  string `json:"version"`
 	Revision string `json:"revision,omitempty"`
-	// Installed는 설치기가 남긴 설치 기록이다(/var/lib/onmaru-upgrade/installed.json). 없거나 읽을 수 없으면 null이다.
+	// Installed는 설치기가 남긴 설치 기록이다(/var/lib/maru-upgrade/installed.json). 없거나 읽을 수 없으면 null이다.
 	// 실행 파일에 커밋이 없을 때(go run) 화면이 이 기록의 커밋을 보인다.
 	Installed *config.InstallRecord `json:"installed"`
 	// Status는 업그레이드 서비스의 상태 파일이다. 없거나 읽을 수 없으면 null이다.

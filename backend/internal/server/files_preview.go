@@ -5,7 +5,7 @@ import (
 	"path"
 	"strings"
 
-	"onmaru/backend/internal/auth"
+	"maru/backend/internal/auth"
 )
 
 // previewTypes는 미리보기가 그 형식으로 보내는 확장자(소문자, 점 없이)다. 브라우저가 그대로 그리거나 재생하는

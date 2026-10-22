@@ -3,7 +3,7 @@ package setup
 import (
 	"errors"
 
-	"onmaru/backend/config"
+	"maru/backend/config"
 )
 
 // settingWorkbenchURL은 대시보드의 "OMV 워크벤치" 앱이 OMV 웹 UI를 새 탭으로 열 주소다(브라우저 기준).
@@ -14,7 +14,7 @@ var settingWorkbenchURL = &Setting{
 	Arg:  "URL",
 	Usage: L("OMV web UI address for browsers (empty hides the OMV Workbench app)",
 		"브라우저에서 OMV 웹 UI를 열 주소(빈 값이면 OMV 워크벤치 앱을 숨깁니다)"),
-	Env:     []EnvLine{{File: OnmaruEnv, Key: config.EnvWorkbenchURL}},
+	Env:     []EnvLine{{File: MaruEnv, Key: config.EnvWorkbenchURL}},
 	Default: func(c *Context) string { return c.Installed.Env.Value(config.EnvWorkbenchURL) },
 	// 빈 값도 정한 값(끔)이므로 키가 있는지로 판단한다.
 	Load: func(c *Context) (string, bool) { return c.Installed.Env.Get(config.EnvWorkbenchURL) },

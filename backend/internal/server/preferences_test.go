@@ -9,9 +9,9 @@ import (
 	"strings"
 	"testing"
 
-	"onmaru/backend/internal/addons"
-	"onmaru/backend/internal/api"
-	"onmaru/backend/internal/prefs"
+	"maru/backend/internal/addons"
+	"maru/backend/internal/api"
+	"maru/backend/internal/prefs"
 )
 
 // widgetAddon은 위젯 보기가 있는 테스트용 애드온이다(크기 2×2~4×3, 기본 3×2).

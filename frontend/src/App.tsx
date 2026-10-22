@@ -47,7 +47,7 @@ function Screen() {
 }
 
 // Root는 업그레이드로 다시 시작하는 동안이면 재시작 화면, 아니면 인증 상태의 화면이다. 재시작 화면은 401로 세션이
-// 끝나도 남아 있다가 onmaru가 돌아오면 페이지를 새로 고친다(upgrade/watch.ts).
+// 끝나도 남아 있다가 maru가 돌아오면 페이지를 새로 고친다(upgrade/watch.ts).
 function Root() {
   const restarting = useUpgradeWatch((s) => showsRestartScreen(s.phase))
   return restarting ? <RestartScreen /> : <Screen />

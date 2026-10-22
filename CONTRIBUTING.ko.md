@@ -16,8 +16,8 @@ openmediavault 8용 데스크톱형 웹 대시보드 온마루에 관심을 가�
 도구 버전과 설치 방법은 `README.md`의 "빌드 및 설치"에 있습니다. 요약하면 Go 1.27.1 이상, Node.js 22.12 이상, git, make가 필요합니다.
 
 ```sh
-git clone https://github.com/steamb23/Onmaru.git
-cd Onmaru
+git clone https://github.com/steamb23/maru-nas.git
+cd maru-nas
 git submodule update --init --depth 1
 npm --prefix frontend ci
 make dev-fake
@@ -31,14 +31,14 @@ make dev-fake
 | `user` | `user` | 일반 사용자 | |
 | `totp` | `totp` | 관리자 | 2차 인증 코드 `123456` |
 
-실제 OMV로 확인하려면 `frontend/.env.local`에 `ONMARU_OMV_URL=<OMV 주소>`를 두고 `make dev`를 실행합니다. 이 파일은 커밋하지 않습니다.
+실제 OMV로 확인하려면 `frontend/.env.local`에 `MARU_OMV_URL=<OMV 주소>`를 두고 `make dev`를 실행합니다. 이 파일은 커밋하지 않습니다.
 
 자주 쓰는 명령(저장소 루트에서 실행):
 
 | 명령 | 내용 |
 |---|---|
 | `make check` | 린트(`gofmt`, `go vet`, oxlint, `tsc`)와 테스트(`go test`, Vitest) |
-| `make build` | 프로덕션 빌드(`bin/onmaru`, 권한 도우미 `bin/onmaru-helper`, 설치기 `bin/onmaru-install`) |
+| `make build` | 프로덕션 빌드(`bin/maru`, 권한 도우미 `bin/maru-helper`, 설치기 `bin/maru-install`) |
 | `make types` | Go 구조체와 애드온 manifest에서 TypeScript 다시 생성 |
 
 ## 브랜치와 풀 리퀘스트
@@ -69,7 +69,7 @@ make dev-fake
 
 - 서비스 프로세스는 권한을 올리지 않습니다. root가 필요한 정보와 변경은 로그인한 사용자 자신의 OMV 세션으로 OMV RPC API를 거칩니다.
 - `omv-rpc`를 호출하거나, OMV 엔진 소켓에 붙거나, Docker·Podman 소켓을 직접 읽는 코드는 추가하지 않습니다. 서비스 사용자를 `docker`나 `openmediavault-engined` 그룹에 넣는 풀 리퀘스트는 받지 않습니다.
-- OMV RPC로 할 수 없는 권한 작업(사용자 자신의 파일, root 작업)은 권한 도우미(`backend/cmd/onmaru-helper`)의 정해진 연산으로만 합니다. 임의 명령을 실행하는 기능은 없습니다. root 연산을 더하려면 이슈에서 먼저 상의해 주세요.
+- OMV RPC로 할 수 없는 권한 작업(사용자 자신의 파일, root 작업)은 권한 도우미(`backend/cmd/maru-helper`)의 정해진 연산으로만 합니다. 임의 명령을 실행하는 기능은 없습니다. root 연산을 더하려면 이슈에서 먼저 상의해 주세요.
 - 비밀번호, OMV 세션 ID, 토큰을 로그·테스트 픽스처·커밋에 남기지 않습니다. 보안 강화 모드의 인증 앱 비밀 키와 복구 코드도 비밀 값입니다.
 - 테스트 픽스처(`testdata/` 등)에는 합성한 값만 씁니다. 디스크 시리얼, MAC·IP 주소, 호스트 이름, 사용자 이름은 가짜 값으로 바꿉니다.
 - 도메인, IP 주소 같은 개인 환경 정보는 git이 무시하는 `*.local.md` 파일에 둡니다. 커밋되는 파일에 하드코딩하지 않습니다.

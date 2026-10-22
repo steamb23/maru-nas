@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"onmaru/backend/internal/helper/proto"
+	"maru/backend/internal/helper/proto"
 )
 
 // searchRun은 fs.search를 실행하고 찾은 항목(경로 순), 마지막 진행, 마지막 응답, Serve의 오류를 돌려준다.

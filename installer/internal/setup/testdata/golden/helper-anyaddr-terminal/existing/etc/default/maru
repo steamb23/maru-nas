@@ -1,0 +1,13 @@
+# maru settings. Written by install.sh; re-run it to change them.
+# See README.md for every option.
+MARU_LISTEN=127.0.0.1:8090
+MARU_ALLOW_NON_LOOPBACK=false
+MARU_OMV_URL=http://127.0.0.1
+MARU_SMART_REFRESH_AT=00:00
+MARU_WORKBENCH_URL=
+# Privileged helper socket; empty means the helper is not installed.
+MARU_HELPER_SOCKET=
+MARU_TERMINAL=false
+MARU_TERMINAL=true
+MARU_SSH_ADDR="127.0.0.1:2222"
+MARU_SSH_HOST_KEYS=/etc/ssh/ssh_host_ed25519_key.pub

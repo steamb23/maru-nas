@@ -1,5 +1,5 @@
-// Package upgrade는 대시보드에서 업그레이드(.claude/docs/upgrade.md)의 onmaru 쪽 파일을 다룬다. 업그레이드 서비스가 쓰는 상태
-// 파일과 root 쪽 설정 파일을 읽고, 확인 요청을 onmaru의 상태 디렉터리에 쓴다. 적용 요청은 권한 도우미의
+// Package upgrade는 대시보드에서 업그레이드(.claude/docs/upgrade.md)의 maru 쪽 파일을 다룬다. 업그레이드 서비스가 쓰는 상태
+// 파일과 root 쪽 설정 파일을 읽고, 확인 요청을 maru의 상태 디렉터리에 쓴다. 적용 요청은 권한 도우미의
 // upgrade.apply가 쓰므로 여기에 없다. 형식은 backend/config(upgrade.go, upgrade_request.go)에 있다.
 package upgrade
 
@@ -16,7 +16,7 @@ import (
 	"syscall"
 	"time"
 
-	"onmaru/backend/config"
+	"maru/backend/config"
 )
 
 const (
@@ -44,7 +44,7 @@ type Paths struct {
 	CheckRequest string
 }
 
-// NewPaths는 설치된 경로다. root는 경로 앞에 붙이는 가짜 루트(개발 서버, 비우면 실제 경로)이고, stateDir는 onmaru의
+// NewPaths는 설치된 경로다. root는 경로 앞에 붙이는 가짜 루트(개발 서버, 비우면 실제 경로)이고, stateDir는 maru의
 // 상태 디렉터리다(비우면 확인 요청을 쓸 곳이 없다).
 func NewPaths(root, stateDir string) Paths {
 	p := Paths{EnvFile: root + config.UpgradeEnvFile, StatusFile: root + config.UpgradeStatusFile, RecordFile: root + config.InstallRecordFile}
@@ -188,7 +188,7 @@ func (m *Manager) RequestCheck(mode string) (requested bool, err error) {
 }
 
 // writeAtomic은 같은 디렉터리의 임시 파일에 쓴 뒤 이름을 바꾼다(경로 유닛은 다 쓴 파일만 본다). 업그레이드 서비스는
-// root로 읽으므로 권한은 0644다(상태 디렉터리 자체가 onmaru 전용이다).
+// root로 읽으므로 권한은 0644다(상태 디렉터리 자체가 maru 전용이다).
 func writeAtomic(path string, data []byte) error {
 	tmp, err := os.CreateTemp(filepath.Dir(path), ".upgrade-check-*.tmp")
 	if err != nil {

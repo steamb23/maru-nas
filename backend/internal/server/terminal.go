@@ -13,9 +13,9 @@ import (
 
 	"github.com/coder/websocket"
 
-	"onmaru/backend/internal/api"
-	"onmaru/backend/internal/auth"
-	"onmaru/backend/internal/terminal"
+	"maru/backend/internal/api"
+	"maru/backend/internal/auth"
+	"maru/backend/internal/terminal"
 )
 
 const (

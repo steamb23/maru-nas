@@ -18,13 +18,13 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"onmaru/backend/internal/addons"
-	"onmaru/backend/internal/addons/storage"
-	"onmaru/backend/internal/api"
-	"onmaru/backend/internal/auth"
-	"onmaru/backend/internal/files"
-	"onmaru/backend/internal/helper/client"
-	"onmaru/backend/internal/helper/proto"
+	"maru/backend/internal/addons"
+	"maru/backend/internal/addons/storage"
+	"maru/backend/internal/api"
+	"maru/backend/internal/auth"
+	"maru/backend/internal/files"
+	"maru/backend/internal/helper/client"
+	"maru/backend/internal/helper/proto"
 )
 
 // 파일 탐색기 API. 파일은 권한 도우미가 로그인한 사용자의 권한으로 다루고(fs.names, fs.statmany, fs.info, fs.read,
@@ -49,7 +49,7 @@ const (
 	// maxQuery는 "이 폴더에서 찾기" 검색어의 최대 바이트 수다.
 	maxQuery = 255
 	// uploadTempPrefix는 권한 도우미가 올리는 중인 임시 파일에 쓰는 이름 접두사다. 이 이름으로는 만들거나 바꾸지 않는다.
-	uploadTempPrefix = ".onmaru-upload-"
+	uploadTempPrefix = ".maru-upload-"
 )
 
 // sharesMethods는 공유 폴더 스냅숏이 부르는 고정 메서드다(관리자 전용 RPC).

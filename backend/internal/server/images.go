@@ -7,8 +7,8 @@ import (
 	"mime"
 	"net/http"
 
-	"onmaru/backend/internal/api"
-	"onmaru/backend/internal/prefs"
+	"maru/backend/internal/api"
+	"maru/backend/internal/prefs"
 )
 
 // maxImageBytes는 올리는 배경 이미지 한 장의 상한이다. 4K 사진도 넉넉히 들어간다.

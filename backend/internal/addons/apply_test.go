@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"onmaru/backend/internal/api"
+	"maru/backend/internal/api"
 )
 
 // applyCaller는 ApplyChange가 부르는 Config·Exec RPC를 흉내 내고 순서를 기록한다.

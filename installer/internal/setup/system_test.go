@@ -6,19 +6,19 @@ import (
 )
 
 func TestEnvFile(t *testing.T) {
-	e := ParseEnv([]byte("# c\nONMARU_A=1\nONMARU_A=\"two\"\nONMARU_B=\nONMARU_Q=\"\nONMARU_X=a\"b\" c\n#ONMARU_C=3\n ONMARU_D=4\nexport ONMARU_E=5\n"))
-	for key, want := range map[string]string{"ONMARU_A": "two", "ONMARU_B": "", "ONMARU_Q": `"`, "ONMARU_X": `a"b" c`} {
+	e := ParseEnv([]byte("# c\nMARU_A=1\nMARU_A=\"two\"\nMARU_B=\nMARU_Q=\"\nMARU_X=a\"b\" c\n#MARU_C=3\n MARU_D=4\nexport MARU_E=5\n"))
+	for key, want := range map[string]string{"MARU_A": "two", "MARU_B": "", "MARU_Q": `"`, "MARU_X": `a"b" c`} {
 		if v, ok := e.Get(key); !ok || v != want {
 			t.Errorf("%s = %q %v, want %q", key, v, ok, want)
 		}
 	}
-	for _, key := range []string{"ONMARU_C", "ONMARU_D", "ONMARU_E", "ONMARU"} {
+	for _, key := range []string{"MARU_C", "MARU_D", "MARU_E", "MARU"} {
 		if e.Has(key) {
 			t.Errorf("%s found", key)
 		}
 	}
-	got := e.Unmanaged(map[string]bool{"ONMARU_A": true})
-	want := []string{"ONMARU_B=", `ONMARU_Q="`, `ONMARU_X=a"b" c`}
+	got := e.Unmanaged(map[string]bool{"MARU_A": true})
+	want := []string{"MARU_B=", `MARU_Q="`, `MARU_X=a"b" c`}
 	if strings.Join(got, "|") != strings.Join(want, "|") {
 		t.Errorf("unmanaged %q", got)
 	}
@@ -39,13 +39,13 @@ func TestUnitUser(t *testing.T) {
 
 func TestHealthRequest(t *testing.T) {
 	for listen, want := range map[string]string{
-		"127.0.0.1:8090":               "http://127.0.0.1:8090/api/health",
-		"0.0.0.0:8090":                 "http://127.0.0.1:8090/api/health",
-		":8090":                        "http://127.0.0.1:8090/api/health",
-		"[::]:8090":                    "http://[::1]:8090/api/health",
-		"[::1]:9000":                   "http://[::1]:9000/api/health",
-		"192.0.2.10:8090":              "http://192.0.2.10:8090/api/health",
-		"unix:/run/onmaru/onmaru.sock": "http://localhost/api/health",
+		"127.0.0.1:8090":           "http://127.0.0.1:8090/api/health",
+		"0.0.0.0:8090":             "http://127.0.0.1:8090/api/health",
+		":8090":                    "http://127.0.0.1:8090/api/health",
+		"[::]:8090":                "http://[::1]:8090/api/health",
+		"[::1]:9000":               "http://[::1]:9000/api/health",
+		"192.0.2.10:8090":          "http://192.0.2.10:8090/api/health",
+		"unix:/run/maru/maru.sock": "http://localhost/api/health",
 	} {
 		if _, got := healthRequest(listen); got != want {
 			t.Errorf("%s: %s, want %s", listen, got, want)
@@ -63,7 +63,7 @@ func TestDiffLines(t *testing.T) {
 }
 
 func TestShellQuote(t *testing.T) {
-	if got := commandLine("sudo", []string{"/x/onmaru-install", "--workbench-url", "", "a b", "it's"}); got != `sudo /x/onmaru-install --workbench-url '' 'a b' 'it'\''s'` {
+	if got := commandLine("sudo", []string{"/x/maru-install", "--workbench-url", "", "a b", "it's"}); got != `sudo /x/maru-install --workbench-url '' 'a b' 'it'\''s'` {
 		t.Errorf("got %s", got)
 	}
 }

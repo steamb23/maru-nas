@@ -1,4 +1,4 @@
-// Package client는 onmaru가 권한 도우미(onmaru-helper)를 부르는 클라이언트다.
+// Package client는 maru가 권한 도우미(maru-helper)를 부르는 클라이언트다.
 //
 // 요청마다 Unix 소켓 연결을 새로 연다. 도우미가 돌려준 오류는 *proto.Error(코드)이고,
 // 연결 자체를 못 하면 ErrUnavailable로 감싼 오류다. 티켓과 비밀번호는 로그에 남기지 않는다.
@@ -13,7 +13,7 @@ import (
 	"net"
 	"time"
 
-	"onmaru/backend/internal/helper/proto"
+	"maru/backend/internal/helper/proto"
 )
 
 // ErrUnavailable은 도우미에 연결하지 못했거나 응답을 받지 못했다는 오류다.
@@ -107,7 +107,7 @@ func (c *Client) Close(ctx context.Context, ticket string) error {
 	return c.call(ctx, proto.Request{Op: proto.OpClose, Ticket: ticket}, controlTimeout, nil)
 }
 
-// Reset은 도우미의 티켓을 모두 폐기한다. onmaru가 시작할 때 이전 실행의 티켓을 정리한다.
+// Reset은 도우미의 티켓을 모두 폐기한다. maru가 시작할 때 이전 실행의 티켓을 정리한다.
 func (c *Client) Reset(ctx context.Context) error {
 	return c.call(ctx, proto.Request{Op: proto.OpReset}, controlTimeout, nil)
 }
@@ -294,7 +294,7 @@ func (c *Client) SSHAuthorize(ctx context.Context, ticket, publicKey string) err
 	return c.run(ctx, ticket, proto.ScopeUser, proto.ActionSSHAuthorize, proto.SSHKeyParams{PublicKey: publicKey}, nil)
 }
 
-// SSHRevoke는 SSHAuthorize로 넣은 키 줄(과 만료된 onmaru 키 줄)을 지운다(사용자 권한).
+// SSHRevoke는 SSHAuthorize로 넣은 키 줄(과 만료된 maru 키 줄)을 지운다(사용자 권한).
 func (c *Client) SSHRevoke(ctx context.Context, ticket, publicKey string) error {
 	return c.run(ctx, ticket, proto.ScopeUser, proto.ActionSSHRevoke, proto.SSHKeyParams{PublicKey: publicKey}, nil)
 }

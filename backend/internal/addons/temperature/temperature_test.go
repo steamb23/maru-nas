@@ -8,9 +8,9 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"onmaru/backend/internal/addons"
-	"onmaru/backend/internal/addons/smart"
-	"onmaru/backend/internal/api"
+	"maru/backend/internal/addons"
+	"maru/backend/internal/addons/smart"
+	"maru/backend/internal/api"
 )
 
 func file(s string) *fstest.MapFile { return &fstest.MapFile{Data: []byte(s + "\n")} }

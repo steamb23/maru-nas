@@ -6,7 +6,7 @@
 #   scripts/dev-pick.sh --fake    가짜 OMV로 정하고 워크트리만 묻는다(--real은 실제 OMV)
 #
 # 브랜치가 체크아웃되지 않은 워크트리(detached HEAD)와 디렉터리가 없어진 워크트리는 고를 수 없으므로 목록에서 뺀다.
-# 환경 변수(DEV_PORT, ONMARU_* 등)는 그대로 dev.sh에 넘어간다.
+# 환경 변수(DEV_PORT, MARU_* 등)는 그대로 dev.sh에 넘어간다.
 set -euo pipefail
 
 root="$(cd "$(dirname "$0")/.." && pwd)"

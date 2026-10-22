@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"onmaru/backend/config"
-	"onmaru/backend/internal/upgrade"
+	"maru/backend/config"
+	"maru/backend/internal/upgrade"
 )
 
 type fixture struct {

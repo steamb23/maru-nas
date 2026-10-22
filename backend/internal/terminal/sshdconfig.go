@@ -1,4 +1,4 @@
-// Package terminal은 웹 터미널의 SSH 쪽이다. onmaru는 같은 호스트의 sshd(루프백)에 붙는 SSH
+// Package terminal은 웹 터미널의 SSH 쪽이다. maru는 같은 호스트의 sshd(루프백)에 붙는 SSH
 // 클라이언트가 되고, 브라우저와의 WebSocket 중계는 internal/server가 한다.
 //
 // 접속 계정은 대시보드 세션의 사용자로 고정한다. 누가 들어갈 수 있는지(AllowGroups, 셸, 인증 방식)는

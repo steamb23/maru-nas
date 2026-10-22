@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"onmaru/backend/internal/helper/proto"
+	"maru/backend/internal/helper/proto"
 )
 
 // copyRun은 fs.copy를 실행하고 진행 응답과 마지막 응답, Serve의 오류를 돌려준다.

@@ -1,4 +1,4 @@
-// Package proto는 onmaru와 권한 도우미(onmaru-helper) 사이의 Unix 소켓 프로토콜이다.
+// Package proto는 maru와 권한 도우미(maru-helper) 사이의 Unix 소켓 프로토콜이다.
 //
 // 연결 하나에 요청 하나다. 요청과 응답은 모두 프레임(4바이트 big-endian 길이 + JSON 머리)으로
 // 시작하고, 머리의 Size만큼 원시 본문이 뒤따를 수 있다(올리기는 요청 뒤, 읽기는 응답 뒤).
@@ -33,7 +33,7 @@ const (
 	OpActivate = "session.activate"
 	// OpClose는 티켓을 폐기한다.
 	OpClose = "session.close"
-	// OpReset은 모든 티켓을 폐기한다. onmaru가 시작할 때 이전 실행의 티켓을 정리한다.
+	// OpReset은 모든 티켓을 폐기한다. maru가 시작할 때 이전 실행의 티켓을 정리한다.
 	OpReset = "session.reset"
 	// OpStatus는 티켓 상태(상승 여부 등)를 알려 준다.
 	OpStatus = "session.status"
@@ -69,9 +69,9 @@ const (
 	ActionStatMany = "fs.statmany"
 	// ActionInfo는 파일 하나의 소유자·그룹·ACL 유무·내 권한을 함께 읽는다(파일 탐색기의 정보 패널).
 	ActionInfo = "fs.info"
-	// ActionSSHAuthorize는 ~/.ssh/authorized_keys에 onmaru가 접속할 때만 쓰는 짧은 수명의 키 줄을 넣는다.
+	// ActionSSHAuthorize는 ~/.ssh/authorized_keys에 maru가 접속할 때만 쓰는 짧은 수명의 키 줄을 넣는다.
 	ActionSSHAuthorize = "ssh.authorize"
-	// ActionSSHRevoke는 그 키 줄(과 만료된 onmaru 키 줄)을 지운다.
+	// ActionSSHRevoke는 그 키 줄(과 만료된 maru 키 줄)을 지운다.
 	ActionSSHRevoke = "ssh.revoke"
 	// ActionUpgradeApply는 대시보드에서 업그레이드의 적용 요청(대상 커밋, 설정 값)을 업그레이드 서비스의 요청
 	// 디렉터리에 쓴다(root 범위). 명령은 받지 않는다.

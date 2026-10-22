@@ -1,4 +1,4 @@
-// 패스키로 로그인의 브라우저 항목을 localStorage(onmaru.passkeyLogin)에 읽고 쓴다. 형식 검사는 passkeyLogin.ts가 한다.
+// 패스키로 로그인의 브라우저 항목을 localStorage(maru.passkeyLogin)에 읽고 쓴다. 형식 검사는 passkeyLogin.ts가 한다.
 // 컴포넌트, 흐름 모듈(passkeyLoginFlow.ts), 실제 인증 저장소의 권유 판단(auth/store.ts의 useAuthStore)에서만 import한다.
 //
 // 항목은 로그인 상태가 아니다. 서버 share와 패스키 PRF가 함께 있어야 풀리는 비밀번호 암호문이다. 저장소에 접근할 수
@@ -18,7 +18,7 @@ import {
   upsertEntry,
 } from './passkeyLogin'
 
-const STORAGE_KEY = 'onmaru.passkeyLogin'
+const STORAGE_KEY = 'maru.passkeyLogin'
 
 export function loadPasskeyLogins(): PasskeyLoginStore {
   try {

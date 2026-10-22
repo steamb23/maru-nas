@@ -12,11 +12,11 @@
 
 ## 웹 터미널의 sshd 쪽 보강
 
-OMV SSH 설정의 추가 옵션에 `AuthenticationMethods publickey,keyboard-interactive`를 두고 root가 PAM OTP를 설정하면, 도우미의 임시 키만으로는 들어갈 수 없으므로 onmaru가 뚫려도 OTP가 필요합니다. onmaru의 keyboard-interactive 중계 확인이 남아 있습니다. 보안 강화 모드(`README.md`)는 onmaru가 확인하므로 onmaru 자체가 뚫린 경우는 막지 못하며, 이 보강이 그 부분을 채웁니다.
+OMV SSH 설정의 추가 옵션에 `AuthenticationMethods publickey,keyboard-interactive`를 두고 root가 PAM OTP를 설정하면, 도우미의 임시 키만으로는 들어갈 수 없으므로 maru가 뚫려도 OTP가 필요합니다. maru의 keyboard-interactive 중계 확인이 남아 있습니다. 보안 강화 모드(`README.md`)는 maru가 확인하므로 maru 자체가 뚫린 경우는 막지 못하며, 이 보강이 그 부분을 채웁니다.
 
 ## 웹에서 가동 설정 바꾸기
 
-설정 앱의 서버 페이지에서 `/etc/default/onmaru`의 가동 설정을 바꾸고 서비스를 다시 시작합니다. 권한 도우미의 root 권한 상승(OMV 관리자이면서 상승 그룹에 속한 사용자가 비밀번호를 다시 입력)을 쓰고, 도우미에 허용된 키 변경과 재시작만 하는 root 연산을 더합니다(`.claude/docs/helper.md`의 "root 연산을 더할 때"). 수신 주소는 프록시 설정과 어긋나 접속이 끊길 수 있으므로 웹에서 바꾸지 않습니다.
+설정 앱의 서버 페이지에서 `/etc/default/maru`의 가동 설정을 바꾸고 서비스를 다시 시작합니다. 권한 도우미의 root 권한 상승(OMV 관리자이면서 상승 그룹에 속한 사용자가 비밀번호를 다시 입력)을 쓰고, 도우미에 허용된 키 변경과 재시작만 하는 root 연산을 더합니다(`.claude/docs/helper.md`의 "root 연산을 더할 때"). 수신 주소는 프록시 설정과 어긋나 접속이 끊길 수 있으므로 웹에서 바꾸지 않습니다.
 
 - 대시보드에서 업그레이드(`.claude/docs/upgrade.md`)의 업그레이드 서비스가 root로 설치기를 실행하는 경로를 함께 쓸 수 있습니다. 설정 값을 설치기 옵션으로 넘기고 설치기가 검사합니다.
 

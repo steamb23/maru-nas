@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"testing"
 
-	"onmaru/backend/internal/addons"
+	"maru/backend/internal/addons"
 )
 
 func TestParseStatus(t *testing.T) {

@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"onmaru/backend/config"
-	"onmaru/installer/internal/prompt"
+	"maru/backend/config"
+	"maru/installer/internal/prompt"
 )
 
 const (
@@ -43,10 +43,10 @@ type fakeBuild struct {
 	modified bool
 }
 
-// 설치기와 bin/onmaru가 같은 커밋에서 빌드됐으면 버전과 커밋을 기록한다. 일반 사용자가 읽을 수 있어야 한다(0755/0644).
+// 설치기와 bin/maru가 같은 커밋에서 빌드됐으면 버전과 커밋을 기록한다. 일반 사용자가 읽을 수 있어야 한다(0755/0644).
 func TestInstallRecord(t *testing.T) {
 	f := installedFake(t)
-	f.buildInfo["/repo/bin/onmaru"] = vcsBuild(revA, true)
+	f.buildInfo["/repo/bin/maru"] = vcsBuild(revA, true)
 	rec, out := runRecordUpgrade(t, f, &fakeBuild{rev: revA, modified: true})
 	want := config.InstallRecord{
 		Format: config.InstallRecordFormat, Version: config.Version, Revision: revA,
@@ -79,7 +79,7 @@ func TestInstallRecord(t *testing.T) {
 func TestInstallRecordUnconfirmed(t *testing.T) {
 	cases := []struct {
 		name     string
-		binary   *fakeBuild // nil이면 bin/onmaru를 읽을 수 없다
+		binary   *fakeBuild // nil이면 bin/maru를 읽을 수 없다
 		self     *fakeBuild
 		revision string
 		warning  string
@@ -93,7 +93,7 @@ func TestInstallRecordUnconfirmed(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			f := installedFake(t)
 			if tc.binary != nil {
-				f.buildInfo["/repo/bin/onmaru"] = vcsBuild(tc.binary.rev, false)
+				f.buildInfo["/repo/bin/maru"] = vcsBuild(tc.binary.rev, false)
 			}
 			rec, out := runRecordUpgrade(t, f, tc.self)
 			if rec.Version != "" || rec.Revision != tc.revision || rec.Format != config.InstallRecordFormat || rec.InstalledAt == "" {

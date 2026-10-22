@@ -13,10 +13,10 @@ import (
 	"testing"
 	"time"
 
-	"onmaru/backend/internal/addons/storage"
-	"onmaru/backend/internal/api"
-	"onmaru/backend/internal/omv/omvfake"
-	"onmaru/backend/internal/prefs"
+	"maru/backend/internal/addons/storage"
+	"maru/backend/internal/api"
+	"maru/backend/internal/omv/omvfake"
+	"maru/backend/internal/prefs"
 )
 
 // fakeMounts는 /srv 아래 마운트 목록이다(파일 탐색기의 디스크).
@@ -376,7 +376,7 @@ func TestFilesUpload(t *testing.T) {
 	for _, ct := range []string{"", "application/json", "multipart/form-data; boundary=x", "text/plain"} {
 		wantStatus(t, up(e.disk+"/media/x.txt", ct, "", "x"), http.StatusUnsupportedMediaType)
 	}
-	for _, p := range []string{e.disk + "/media/.onmaru-upload-x.part", e.disk + "/media/", e.disk + "/media/a\xffb", "media/x"} {
+	for _, p := range []string{e.disk + "/media/.maru-upload-x.part", e.disk + "/media/", e.disk + "/media/a\xffb", "media/x"} {
 		wantStatus(t, up(p, "application/octet-stream", "", "x"), http.StatusBadRequest)
 	}
 	wantStatus(t, up("/etc/x", "application/octet-stream", "", "x"), http.StatusForbidden)
@@ -429,7 +429,7 @@ func TestFilesMkdirRenameDelete(t *testing.T) {
 		t.Fatalf("mkdir on disk: %v", err)
 	}
 	wantCode(mkdir(b, media+"/새 폴더"), http.StatusConflict, api.ErrFileExists)
-	for _, p := range []string{media + "/.onmaru-upload-x", media + "/", "media/x", media + "/../x", "/"} {
+	for _, p := range []string{media + "/.maru-upload-x", media + "/", "media/x", media + "/../x", "/"} {
 		wantStatus(t, mkdir(b, p), http.StatusBadRequest)
 	}
 	wantCode(mkdir(b, e.disk+"/x"), http.StatusForbidden, api.ErrOutsideRoots)
@@ -469,7 +469,7 @@ func TestFilesMkdirRenameDelete(t *testing.T) {
 	// 폴더를 자기 안으로 옮기거나 같은 이름으로 바꾸지 않는다.
 	wantStatus(t, rename(b, media+"/sub", media+"/sub/inner"), http.StatusBadRequest)
 	wantStatus(t, rename(b, media+"/sub", media+"/sub"), http.StatusBadRequest)
-	wantStatus(t, rename(b, media+"/sub", media+"/.onmaru-upload-sub"), http.StatusBadRequest)
+	wantStatus(t, rename(b, media+"/sub", media+"/.maru-upload-sub"), http.StatusBadRequest)
 	wantCode(rename(b, media+"/sub", e.disk+"/sub"), http.StatusForbidden, api.ErrOutsideRoots)
 	// 사이드바에 보이는 폴더(공유 폴더, 홈)는 이름을 바꾸거나 옮기지 않는다.
 	wantCode(rename(b, media, docs+"/media"), http.StatusConflict, api.ErrRootFolder)
@@ -585,7 +585,7 @@ func TestFilesTrash(t *testing.T) {
 		return b.do(http.MethodPost, "/api/files/trash/restore", api.FilesTrashRestoreRequest{Trash: item.Trash, Name: item.Name, To: to})
 	}
 	wantCode(t, restore(e.disk+"/a.txt"), http.StatusForbidden, api.ErrOutsideRoots)
-	wantStatus(t, restore(media+"/.onmaru-upload-a"), http.StatusBadRequest)
+	wantStatus(t, restore(media+"/.maru-upload-a"), http.StatusBadRequest)
 	e.file("media/a.txt", "taken")
 	wantCode(t, restore(media+"/a.txt"), http.StatusConflict, api.ErrFileExists)
 	rec := restore(media + "/a (2).txt")

@@ -1,9 +1,9 @@
 설치기 골든 픽스처
 
 Go 설치기로 바꾸기 직전의 bash install.sh(커밋 28999d9)가 만든 설정 파일이다. Go 설치기가 같은 설정으로
-만드는 /etc/default/onmaru, /etc/default/onmaru-helper, onmaru.service, onmaru-helper.socket,
-onmaru-helper.service는 이 파일들과 바이트 단위로 같아야 한다(golden_test.go). 유일한 의도한 차이는
-레지스트리가 관리하지 않는 기존 ONMARU_* 줄을 파일 끝에 보존하는 것이며, 그런 줄이 있는 케이스는 여기에 두지 않는다.
+만드는 /etc/default/maru, /etc/default/maru-helper, maru.service, maru-helper.socket,
+maru-helper.service는 이 파일들과 바이트 단위로 같아야 한다(golden_test.go). 유일한 의도한 차이는
+레지스트리가 관리하지 않는 기존 MARU_* 줄을 파일 끝에 보존하는 것이며, 그런 줄이 있는 케이스는 여기에 두지 않는다.
 
 만든 방법: install.sh를 임시 디렉터리에 복사해 마지막 `main "$@"`를 지우고, env_get·terminal_settings가 읽는
 환경 파일과 write_file·remove_helper가 쓰는 경로만 가짜 루트 아래로 바꾼 뒤, install·systemctl·useradd·id·getent·
@@ -23,13 +23,13 @@ ss·sleep을 셸 함수로 가로채 `main --service-install <args>`를 실행�
                                 사용자 dash·그룹 nogroup, 기존 환경 파일의 터미널 줄 보존(같은 키가 두 번이면 마지막 값,
                                 큰따옴표 한 쌍은 벗긴다)
   nohelper-ip-partial-terminal  도우미 없음(기존 도우미 파일 제거), 특정 IP + 루프백 외 허용, 기존 환경 파일에
-                                ONMARU_TERMINAL=(빈 값)만 있고 나머지 터미널 키는 주석이라 기본값 주석으로 씀
+                                MARU_TERMINAL=(빈 값)만 있고 나머지 터미널 키는 주석이라 기본값 주석으로 씀
   helper-loopback6              도우미 설치(그룹 wheel), [::1]:9000, 공개 주소는 입력 그대로 기록(대소문자·:443/ 유지)
   helper-unix-nogroup           도우미 설치, Unix 소켓, 그룹 nogroup(다음 단계 안내의 그룹), https OMV 주소
   rerun-unchanged               helper-loopback 결과 위에 같은 설정으로 다시 설치. 모든 파일이 "unchanged"이고 백업이 없다
   helper-web-upgrade            helper-loopback + 대시보드에서 업그레이드(--web-upgrade, --build-path). bash install.sh에 없던
                                 설정이라 Go 설치기의 출력으로 만들었다. 다른 파일은 helper-loopback과 같고, 도우미 유닛에
-                                RuntimeDirectory 줄이, 새로 /etc/default/onmaru-upgrade와 onmaru-upgrade.service·.path가 생긴다
+                                RuntimeDirectory 줄이, 새로 /etc/default/maru-upgrade와 maru-upgrade.service·.path가 생긴다
 
 도우미를 설치하는 bash 케이스의 args 끝에는 --no-web-upgrade를 더했다(대시보드에서 업그레이드가 생긴 뒤 설정을 모두 준
 --service-install이 묻지 않게). 이 설정을 끄면 파일 출력은 bash와 같다.

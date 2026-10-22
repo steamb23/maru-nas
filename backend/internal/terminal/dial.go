@@ -20,8 +20,8 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
-	"onmaru/backend/config"
-	"onmaru/backend/internal/helper/proto"
+	"maru/backend/config"
+	"maru/backend/internal/helper/proto"
 )
 
 const (

@@ -2,7 +2,7 @@
 // 그 사용자마다 패스키로 로그인 단추를 둔다(풀어 낸 비밀번호는 화면 상태에 넣지 않는다).
 import { type FormEvent, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import lockupUrl from '../assets/logo/onmaru-lockup.svg?url'
+import lockupUrl from '../assets/logo/maru-lockup.svg?url'
 import { useSiteStore } from '../appearance/siteStore'
 import { BRAND_NAME, BRAND_ROMANIZED, BRAND_TAGLINE } from '../brand'
 import { useLanguage } from '../i18n'

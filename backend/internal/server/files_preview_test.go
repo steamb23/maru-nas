@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"onmaru/backend/internal/api"
-	"onmaru/backend/internal/omv/omvfake"
+	"maru/backend/internal/api"
+	"maru/backend/internal/omv/omvfake"
 )
 
 func TestPreviewHeaders(t *testing.T) {

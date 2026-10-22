@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"onmaru/backend/config"
-	"onmaru/backend/internal/api"
+	"maru/backend/config"
+	"maru/backend/internal/api"
 )
 
 const upgradeTarget = "0123456789abcdef0123456789abcdef01234567"
@@ -23,7 +23,7 @@ func (e *env) enableUpgrade() {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		e.t.Fatal(err)
 	}
-	data := "ONMARU_UPGRADE_REPO=/home/alice/onmaru\nONMARU_UPGRADE_USER=alice\nONMARU_UPGRADE_PATH=/usr/bin:/bin\n"
+	data := "MARU_UPGRADE_REPO=/home/alice/maru-nas\nMARU_UPGRADE_USER=alice\nMARU_UPGRADE_PATH=/usr/bin:/bin\n"
 	if err := os.WriteFile(path, []byte(data), 0o644); err != nil {
 		e.t.Fatal(err)
 	}
@@ -71,7 +71,7 @@ func TestUpgradeAdminOnly(t *testing.T) {
 }
 
 func TestUpgradeDisabled(t *testing.T) {
-	// Upgrade를 주지 않으면 실제 /etc/default/onmaru-upgrade를 보지 않고 꺼져 있다.
+	// Upgrade를 주지 않으면 실제 /etc/default/maru-upgrade를 보지 않고 꺼져 있다.
 	e := newEnv(t, envOptions{helper: true})
 	b := e.browser()
 	wantStatus(t, b.login("admin", "admin"), http.StatusOK)
@@ -88,7 +88,7 @@ func TestUpgradeDisabled(t *testing.T) {
 	b = e.browser()
 	wantStatus(t, b.login("admin", "admin"), http.StatusOK)
 	info = decode[api.UpgradeInfo](t, b.do(http.MethodGet, "/api/upgrade", nil))
-	if info.Enabled || info.DisabledReason != api.UpgradeNoHelper || info.Repo != "/home/alice/onmaru" || info.User != "alice" {
+	if info.Enabled || info.DisabledReason != api.UpgradeNoHelper || info.Repo != "/home/alice/maru-nas" || info.User != "alice" {
 		t.Fatalf("no helper = %+v", info)
 	}
 	wantCode(t, b.do(http.MethodPost, "/api/upgrade/check", api.StartUpgradeCheckRequest{Mode: config.UpgradeModeLocal}),

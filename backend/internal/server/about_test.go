@@ -4,9 +4,9 @@ import (
 	"net/http"
 	"testing"
 
-	"onmaru/backend/config"
-	"onmaru/backend/internal/addons"
-	"onmaru/backend/internal/api"
+	"maru/backend/config"
+	"maru/backend/internal/addons"
+	"maru/backend/internal/api"
 )
 
 func TestAbout(t *testing.T) {

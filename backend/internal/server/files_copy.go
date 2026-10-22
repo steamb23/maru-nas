@@ -6,10 +6,10 @@ import (
 	"net/http"
 	"path"
 
-	"onmaru/backend/internal/api"
-	"onmaru/backend/internal/auth"
-	"onmaru/backend/internal/files"
-	"onmaru/backend/internal/helper/proto"
+	"maru/backend/internal/api"
+	"maru/backend/internal/auth"
+	"maru/backend/internal/files"
+	"maru/backend/internal/helper/proto"
 )
 
 // filesCopy는 한 폴더 안의 항목을 다른 폴더로 복사한다(다른 디스크로 끌어 놓기). 복사는 도우미가 사용자 권한으로

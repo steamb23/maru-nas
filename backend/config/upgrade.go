@@ -5,27 +5,27 @@ package config
 
 const (
 	// UpgradeStateDir는 설치 기록과 업그레이드 상태 파일을 두는 디렉터리다(root 소유 0755, 파일은 0644).
-	// 저장소 소유자(일반 사용자)로 실행하는 설치기의 --upgrade-plan과 onmaru가 읽으므로 다른 사용자도 읽을 수 있어야 한다.
-	UpgradeStateDir = "/var/lib/onmaru-upgrade"
+	// 저장소 소유자(일반 사용자)로 실행하는 설치기의 --upgrade-plan과 maru가 읽으므로 다른 사용자도 읽을 수 있어야 한다.
+	UpgradeStateDir = "/var/lib/maru-upgrade"
 	// InstallRecordFile은 설치기가 설치할 때마다(수동 설치 포함) 쓰는 설치 기록이다.
 	InstallRecordFile = UpgradeStateDir + "/installed.json"
-	// UpgradeStatusFile은 업그레이드 서비스(onmaru-upgrade.service)가 확인·적용의 진행과 결과를 쓰는 상태 파일이다.
-	// onmaru는 읽기만 하고, onmaru가 다시 시작되어도 남는다.
+	// UpgradeStatusFile은 업그레이드 서비스(maru-upgrade.service)가 확인·적용의 진행과 결과를 쓰는 상태 파일이다.
+	// maru는 읽기만 하고, maru가 다시 시작되어도 남는다.
 	UpgradeStatusFile = UpgradeStateDir + "/status.json"
 	// UpgradeEnvFile은 대시보드에서 업그레이드의 root 쪽 설정 파일이다(저장소 경로, 빌드 계정, 빌드 PATH. root 소유 0644).
 	// 설치기가 --web-upgrade일 때만 쓰므로 이 파일이 있으면 대시보드에서 업그레이드가 켜져 있다.
-	UpgradeEnvFile = "/etc/default/onmaru-upgrade"
-	// UpgradeCheckRequestName은 onmaru가 자기 상태 디렉터리에 남기는 확인 요청 파일의 이름이다. 설치한 onmaru의 상태
-	// 디렉터리는 /var/lib/onmaru(StateDirectory=)이고 업그레이드 서비스의 경로 유닛이 그 안의 이 이름을 지켜본다.
+	UpgradeEnvFile = "/etc/default/maru-upgrade"
+	// UpgradeCheckRequestName은 maru가 자기 상태 디렉터리에 남기는 확인 요청 파일의 이름이다. 설치한 maru의 상태
+	// 디렉터리는 /var/lib/maru(StateDirectory=)이고 업그레이드 서비스의 경로 유닛이 그 안의 이 이름을 지켜본다.
 	UpgradeCheckRequestName = "upgrade-check.json"
 	// UpgradeRequestDir는 도우미의 root 연산 upgrade.apply가 적용 요청을 쓰는 디렉터리다(root 0700). 도우미 유닛의
 	// RuntimeDirectory=라 도우미만 쓸 수 있다.
-	UpgradeRequestDir = "/run/onmaru-upgrade"
+	UpgradeRequestDir = "/run/maru-upgrade"
 	// UpgradeApplyRequestName은 UpgradeRequestDir 안의 적용 요청 파일 이름이다.
 	UpgradeApplyRequestName = "apply.json"
-	// InstalledStateDir는 설치한 onmaru의 상태 디렉터리(유닛의 StateDirectory=onmaru)다. 경로 유닛은 이 안의 확인
-	// 요청만 지켜보므로, 상태 디렉터리를 옮긴 onmaru는 대시보드에서 업그레이드를 쓸 수 없다.
-	InstalledStateDir = "/var/lib/onmaru"
+	// InstalledStateDir는 설치한 maru의 상태 디렉터리(유닛의 StateDirectory=maru)다. 경로 유닛은 이 안의 확인
+	// 요청만 지켜보므로, 상태 디렉터리를 옮긴 maru는 대시보드에서 업그레이드를 쓸 수 없다.
+	InstalledStateDir = "/var/lib/maru"
 )
 
 // InstallRecordFormat은 InstallRecord의 형식 번호다. 필드를 빼거나 뜻을 바꾸면 올린다.
@@ -37,7 +37,7 @@ type InstallRecord struct {
 	Format int `json:"format"`
 	// Version은 설치한 버전이다. 설치기와 실행 파일이 같은 커밋에서 빌드됐는지 확인하지 못하면 빈 값이다.
 	Version string `json:"version"`
-	// Revision은 설치한 실행 파일(onmaru)을 빌드한 커밋(40자리 16진수)이다. 알 수 없으면 빈 값이다.
+	// Revision은 설치한 실행 파일(maru)을 빌드한 커밋(40자리 16진수)이다. 알 수 없으면 빈 값이다.
 	Revision string `json:"revision"`
 	// RevisionTime은 그 커밋의 시각(RFC 3339)이다.
 	RevisionTime string `json:"revisionTime"`
@@ -59,7 +59,7 @@ const (
 
 // UpgradeReason.ID 값.
 const (
-	// UpgradeReasonNotInstalled: 설치되어 있지 않다(유닛이나 /etc/default/onmaru가 없다).
+	// UpgradeReasonNotInstalled: 설치되어 있지 않다(유닛이나 /etc/default/maru가 없다).
 	UpgradeReasonNotInstalled = "not-installed"
 	// UpgradeReasonNoRecord: 설치 기록이 없거나, 읽을 수 없거나, 버전·커밋이 비어 있다.
 	UpgradeReasonNoRecord = "no-record"
@@ -91,7 +91,7 @@ type LocalizedText struct {
 	Ko string `json:"ko"`
 }
 
-// UpgradePlan은 새 버전의 설치기가 내는 업그레이드 계획이다(onmaru-install --upgrade-plan). 설치기는 기존 설치를
+// UpgradePlan은 새 버전의 설치기가 내는 업그레이드 계획이다(maru-install --upgrade-plan). 설치기는 기존 설치를
 // 읽기만 하고 계획을 만든다. 설정 옵션을 함께 주면 그 값을 쓰고 검사하므로, 입력한 값을 확인하는 데에도 쓴다.
 type UpgradePlan struct {
 	Format int `json:"format"`

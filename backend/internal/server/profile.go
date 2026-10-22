@@ -11,9 +11,9 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"onmaru/backend/internal/addons"
-	"onmaru/backend/internal/api"
-	"onmaru/backend/internal/auth"
+	"maru/backend/internal/addons"
+	"maru/backend/internal/api"
+	"maru/backend/internal/auth"
 )
 
 // 프로필: 로그인한 사용자 자신의 OMV 계정 정보. 애드온이 아니므로 manifest 허용 목록 대신 아래 고정 메서드만

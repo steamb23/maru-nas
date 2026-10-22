@@ -7,7 +7,7 @@ import (
 	"text/template"
 	"time"
 
-	"onmaru/backend/config"
+	"maru/backend/config"
 )
 
 // templates는 systemd 유닛 템플릿이다. 유닛의 하드닝 줄을 바꾸는 일은 이 템플릿 파일을 고치는 것이다

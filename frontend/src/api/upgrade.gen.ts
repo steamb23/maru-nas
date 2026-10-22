@@ -7,42 +7,42 @@
 
 /**
  * UpgradeStateDir는 설치 기록과 업그레이드 상태 파일을 두는 디렉터리다(root 소유 0755, 파일은 0644).
- * 저장소 소유자(일반 사용자)로 실행하는 설치기의 --upgrade-plan과 onmaru가 읽으므로 다른 사용자도 읽을 수 있어야 한다.
+ * 저장소 소유자(일반 사용자)로 실행하는 설치기의 --upgrade-plan과 maru가 읽으므로 다른 사용자도 읽을 수 있어야 한다.
  */
-export const UpgradeStateDir = "/var/lib/onmaru-upgrade";
+export const UpgradeStateDir = "/var/lib/maru-upgrade";
 /**
  * InstallRecordFile은 설치기가 설치할 때마다(수동 설치 포함) 쓰는 설치 기록이다.
  */
 export const InstallRecordFile = UpgradeStateDir + "/installed.json";
 /**
- * UpgradeStatusFile은 업그레이드 서비스(onmaru-upgrade.service)가 확인·적용의 진행과 결과를 쓰는 상태 파일이다.
- * onmaru는 읽기만 하고, onmaru가 다시 시작되어도 남는다.
+ * UpgradeStatusFile은 업그레이드 서비스(maru-upgrade.service)가 확인·적용의 진행과 결과를 쓰는 상태 파일이다.
+ * maru는 읽기만 하고, maru가 다시 시작되어도 남는다.
  */
 export const UpgradeStatusFile = UpgradeStateDir + "/status.json";
 /**
  * UpgradeEnvFile은 대시보드에서 업그레이드의 root 쪽 설정 파일이다(저장소 경로, 빌드 계정, 빌드 PATH. root 소유 0644).
  * 설치기가 --web-upgrade일 때만 쓰므로 이 파일이 있으면 대시보드에서 업그레이드가 켜져 있다.
  */
-export const UpgradeEnvFile = "/etc/default/onmaru-upgrade";
+export const UpgradeEnvFile = "/etc/default/maru-upgrade";
 /**
- * UpgradeCheckRequestName은 onmaru가 자기 상태 디렉터리에 남기는 확인 요청 파일의 이름이다. 설치한 onmaru의 상태
- * 디렉터리는 /var/lib/onmaru(StateDirectory=)이고 업그레이드 서비스의 경로 유닛이 그 안의 이 이름을 지켜본다.
+ * UpgradeCheckRequestName은 maru가 자기 상태 디렉터리에 남기는 확인 요청 파일의 이름이다. 설치한 maru의 상태
+ * 디렉터리는 /var/lib/maru(StateDirectory=)이고 업그레이드 서비스의 경로 유닛이 그 안의 이 이름을 지켜본다.
  */
 export const UpgradeCheckRequestName = "upgrade-check.json";
 /**
  * UpgradeRequestDir는 도우미의 root 연산 upgrade.apply가 적용 요청을 쓰는 디렉터리다(root 0700). 도우미 유닛의
  * RuntimeDirectory=라 도우미만 쓸 수 있다.
  */
-export const UpgradeRequestDir = "/run/onmaru-upgrade";
+export const UpgradeRequestDir = "/run/maru-upgrade";
 /**
  * UpgradeApplyRequestName은 UpgradeRequestDir 안의 적용 요청 파일 이름이다.
  */
 export const UpgradeApplyRequestName = "apply.json";
 /**
- * InstalledStateDir는 설치한 onmaru의 상태 디렉터리(유닛의 StateDirectory=onmaru)다. 경로 유닛은 이 안의 확인
- * 요청만 지켜보므로, 상태 디렉터리를 옮긴 onmaru는 대시보드에서 업그레이드를 쓸 수 없다.
+ * InstalledStateDir는 설치한 maru의 상태 디렉터리(유닛의 StateDirectory=maru)다. 경로 유닛은 이 안의 확인
+ * 요청만 지켜보므로, 상태 디렉터리를 옮긴 maru는 대시보드에서 업그레이드를 쓸 수 없다.
  */
-export const InstalledStateDir = "/var/lib/onmaru";
+export const InstalledStateDir = "/var/lib/maru";
 /**
  * InstallRecordFormat은 InstallRecord의 형식 번호다. 필드를 빼거나 뜻을 바꾸면 올린다.
  */
@@ -58,7 +58,7 @@ export interface InstallRecord {
    */
   version: string;
   /**
-   * Revision은 설치한 실행 파일(onmaru)을 빌드한 커밋(40자리 16진수)이다. 알 수 없으면 빈 값이다.
+   * Revision은 설치한 실행 파일(maru)을 빌드한 커밋(40자리 16진수)이다. 알 수 없으면 빈 값이다.
    */
   revision: string;
   /**
@@ -88,7 +88,7 @@ export const UpgradeCommandInstall = "./install.sh";
  */
 export const UpgradeCommandReinstall = "./install.sh --reinstall";
 /**
- * UpgradeReasonNotInstalled: 설치되어 있지 않다(유닛이나 /etc/default/onmaru가 없다).
+ * UpgradeReasonNotInstalled: 설치되어 있지 않다(유닛이나 /etc/default/maru가 없다).
  */
 export const UpgradeReasonNotInstalled = "not-installed";
 /**
@@ -135,7 +135,7 @@ export interface LocalizedText {
   ko: string;
 }
 /**
- * UpgradePlan은 새 버전의 설치기가 내는 업그레이드 계획이다(onmaru-install --upgrade-plan). 설치기는 기존 설치를
+ * UpgradePlan은 새 버전의 설치기가 내는 업그레이드 계획이다(maru-install --upgrade-plan). 설치기는 기존 설치를
  * 읽기만 하고 계획을 만든다. 설정 옵션을 함께 주면 그 값을 쓰고 검사하므로, 입력한 값을 확인하는 데에도 쓴다.
  */
 export interface UpgradePlan {
@@ -267,7 +267,7 @@ export const UpgradeModeRemote = "remote";
  */
 export const UpgradeModeLocal = "local";
 /**
- * UpgradeCheckRequest는 onmaru가 자기 상태 디렉터리에 남기는 확인 요청이다(UpgradeCheckRequestName). 업그레이드
+ * UpgradeCheckRequest는 maru가 자기 상태 디렉터리에 남기는 확인 요청이다(UpgradeCheckRequestName). 업그레이드
  * 서비스는 이 파일을 믿지 않고 확인 방식만 읽는다.
  */
 export interface UpgradeCheckRequest {
@@ -353,7 +353,7 @@ export const UpgradeStageUpdate = "update";
  */
 export const UpgradeStageBuild = "build";
 /**
- * UpgradeStageInstall: 새 설치기를 root로 실행해 설치한다(onmaru와 도우미가 다시 시작한다).
+ * UpgradeStageInstall: 새 설치기를 root로 실행해 설치한다(maru와 도우미가 다시 시작한다).
  */
 export const UpgradeStageInstall = "install";
 /**
@@ -509,7 +509,7 @@ export interface UpgradeApply {
 export interface UpgradeError {
   text: LocalizedText;
   /**
-   * Log는 실패한 명령 출력의 끝부분이다. 전체 로그는 journalctl -u onmaru-upgrade에 있다.
+   * Log는 실패한 명령 출력의 끝부분이다. 전체 로그는 journalctl -u maru-upgrade에 있다.
    */
   log?: string;
 }

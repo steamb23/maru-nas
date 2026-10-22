@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"onmaru/backend/internal/helper/proto"
+	"maru/backend/internal/helper/proto"
 )
 
 // dirent는 linux_dirent64 레코드 하나를 만든다(8바이트 정렬).

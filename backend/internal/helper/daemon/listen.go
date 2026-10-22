@@ -44,7 +44,7 @@ func ActivationListener() (*net.UnixListener, error) {
 	}
 	const fd = 3
 	syscall.CloseOnExec(fd)
-	f := os.NewFile(fd, "onmaru-helper.sock")
+	f := os.NewFile(fd, "maru-helper.sock")
 	l, err := net.FileListener(f)
 	f.Close()
 	if err != nil {

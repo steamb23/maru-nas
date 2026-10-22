@@ -6,7 +6,7 @@ import type { LinkAppId } from '../windows/apps'
 export const NOTICE_COOKIE_MAX_AGE = 365 * 24 * 60 * 60
 
 export function noticeCookieName(id: LinkAppId): string {
-  return `onmaru_link_notice_${id}`
+  return `maru_link_notice_${id}`
 }
 
 // noticeSkipped는 cookie(document.cookie)에 그 앱의 안내를 끈 기록이 있는지다.

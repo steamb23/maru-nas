@@ -9,7 +9,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"onmaru/backend/internal/helper/proto"
+	"maru/backend/internal/helper/proto"
 )
 
 // fs.search는 폴더와 그 아래 모든 폴더를 너비 우선으로 읽으며 이름에 찾기어가 든 항목을 찾는다(대소문자 무시,

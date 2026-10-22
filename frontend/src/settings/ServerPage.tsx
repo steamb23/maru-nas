@@ -1,6 +1,6 @@
 // 설정의 서버 페이지(관리자): 웹에서 바꾸는 가동 설정(워크벤치 주소, SMART 확인 시각, 웹 터미널 허용), 권한 도우미,
 // 가동 설정 현황.
-// 나머지 가동 설정은 /etc/default/onmaru에서 바꾸고 서비스를 다시 시작해야 하므로 값·출처와 방법만 보여 준다.
+// 나머지 가동 설정은 /etc/default/maru에서 바꾸고 서비스를 다시 시작해야 하므로 값·출처와 방법만 보여 준다.
 import type { ParseKeys } from 'i18next'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -12,7 +12,7 @@ import { HelperSection } from './HelperSection'
 import { CommandBlock, SettingsCard, SettingsNotice, SettingsRow, SettingsSection, Switch } from './controls'
 import { OVERRIDE_FLAGS, type OverrideKey, SOURCE_LABELS, overridesWith, runtimeLabelKey } from './server'
 
-const HOW_TO_COMMANDS = 'sudoedit /etc/default/onmaru\nsudo systemctl restart onmaru'
+const HOW_TO_COMMANDS = 'sudoedit /etc/default/maru\nsudo systemctl restart maru'
 
 type LoadState = { status: 'loading' } | { status: 'ready'; data: ServerSettings } | { status: 'error' }
 

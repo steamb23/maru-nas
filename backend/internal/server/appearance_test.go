@@ -10,8 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	"onmaru/backend/internal/api"
-	"onmaru/backend/internal/prefs"
+	"maru/backend/internal/api"
+	"maru/backend/internal/prefs"
 )
 
 // testPNG, testJPEG는 테스트용으로 합성한 작은 이미지다.

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"onmaru/installer/internal/prompt"
+	"maru/installer/internal/prompt"
 )
 
 // goldenCase는 testdata/golden/<이름>의 케이스다(만든 방법과 케이스 설명은 그 디렉터리의 README).
@@ -98,7 +98,7 @@ func TestGoldenServiceInstall(t *testing.T) {
 	}
 }
 
-// 기존 환경 파일이 바뀌면 /etc/default/onmaru.bak-<시각>으로 남기고, 유닛은 백업하지 않는다.
+// 기존 환경 파일이 바뀌면 /etc/default/maru.bak-<시각>으로 남기고, 유닛은 백업하지 않는다.
 func TestGoldenBackup(t *testing.T) {
 	for _, gc := range goldenCases(t) {
 		if gc.name != "helper-anyaddr-terminal" {
@@ -122,28 +122,28 @@ func TestGoldenBackup(t *testing.T) {
 	}
 }
 
-// 레지스트리가 관리하지 않는 기존 ONMARU_* 줄은 파일 끝에 보존한다(bash install.sh에서 바뀐 유일한 출력).
+// 레지스트리가 관리하지 않는 기존 MARU_* 줄은 파일 끝에 보존한다(bash install.sh에서 바뀐 유일한 출력).
 func TestKeepUnmanagedLines(t *testing.T) {
 	for _, gc := range goldenCases(t) {
 		if gc.name != "helper-loopback" {
 			continue
 		}
 		args := append([]string{"--service-install"}, gc.args...)
-		f := newGoldenFake(t, gc, "onmaru")
-		f.put(t, envFile, "ONMARU_LISTEN=127.0.0.1:8090\nONMARU_COOKIE_PATH=/desk/\n#ONMARU_STATE_DIR=/x\nOTHER=1\nONMARU_TERMINAL=true\n", 0o644)
-		f.put(t, helperEnvFile, "ONMARU_HELPER_CLIENT_USER=old\nONMARU_HELPER_IDLE=5m\n", 0o644)
+		f := newGoldenFake(t, gc, "maru")
+		f.put(t, envFile, "MARU_LISTEN=127.0.0.1:8090\nMARU_COOKIE_PATH=/desk/\n#MARU_STATE_DIR=/x\nOTHER=1\nMARU_TERMINAL=true\n", 0o644)
+		f.put(t, helperEnvFile, "MARU_HELPER_CLIENT_USER=old\nMARU_HELPER_IDLE=5m\n", 0o644)
 		c, out, _ := newTestContext(t, f, prompt.Fail{}, args...)
 		c.IsRoot = true
 		if err := Run(c); err != nil {
 			t.Fatalf("Run: %v\n%s", err, out)
 		}
 		want, _ := os.ReadFile(filepath.Join(gc.dir, "want", envFile))
-		wantEnv := strings.Replace(string(want), "#ONMARU_TERMINAL=false", "ONMARU_TERMINAL=true", 1) + keptComment + "ONMARU_COOKIE_PATH=/desk/\n"
+		wantEnv := strings.Replace(string(want), "#MARU_TERMINAL=false", "MARU_TERMINAL=true", 1) + keptComment + "MARU_COOKIE_PATH=/desk/\n"
 		if got, _ := f.read(t, envFile); got != wantEnv {
 			t.Errorf("env\n--- got\n%s--- want\n%s", got, wantEnv)
 		}
 		wantHelper, _ := os.ReadFile(filepath.Join(gc.dir, "want", helperEnvFile))
-		if got, _ := f.read(t, helperEnvFile); got != string(wantHelper)+keptComment+"ONMARU_HELPER_IDLE=5m\n" {
+		if got, _ := f.read(t, helperEnvFile); got != string(wantHelper)+keptComment+"MARU_HELPER_IDLE=5m\n" {
 			t.Errorf("helper env\n%s", got)
 		}
 	}

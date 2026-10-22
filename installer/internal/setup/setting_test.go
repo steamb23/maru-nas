@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"onmaru/installer/internal/prompt"
+	"maru/installer/internal/prompt"
 )
 
 // validationCase는 설정 하나의 검사 표 한 줄이다. values는 함께 정한 다른 설정이다.
@@ -21,20 +21,20 @@ type validationCase struct {
 func TestSettingValidation(t *testing.T) {
 	allow := Values{nameAllowNonLoopback: "true"}
 	cases := []validationCase{
-		{settingUser, "onmaru", nil, true},
-		{settingUser, "svc_onmaru-2", nil, true},
+		{settingUser, "maru", nil, true},
+		{settingUser, "svc_maru-2", nil, true},
 		{settingUser, "_svc", nil, true},
 		{settingUser, "root", nil, false},
-		{settingUser, "Onmaru", nil, false},
+		{settingUser, "Maru", nil, false},
 		{settingUser, "-x", nil, false},
 		{settingUser, "", nil, false},
 
 		{settingListen, "127.0.0.1:8090", nil, true},
 		{settingListen, "127.0.0.2:9000", nil, true},
 		{settingListen, "[::1]:8090", nil, true},
-		{settingListen, "unix:/run/onmaru/onmaru.sock", nil, true},
-		{settingListen, "unix:/tmp/onmaru.sock", nil, false},
-		{settingListen, "unix:onmaru.sock", nil, false},
+		{settingListen, "unix:/run/maru/maru.sock", nil, true},
+		{settingListen, "unix:/tmp/maru.sock", nil, false},
+		{settingListen, "unix:maru.sock", nil, false},
 		{settingListen, "127.0.0.1:0", nil, false},
 		{settingListen, "127.0.0.1:65536", nil, false},
 		{settingListen, "127.0.0.1:http", nil, false},
@@ -125,10 +125,10 @@ func TestSettingValidationKorean(t *testing.T) {
 // 레지스트리 왕복: 정한 값 → 2단계 인자 → 파싱 = 같은 값. 레지스트리의 모든 옵션 설정을 거친다.
 func TestRegistryRoundtrip(t *testing.T) {
 	for _, v := range []Values{
-		{nameUser: "onmaru", nameListen: "0.0.0.0:8090", nameAllowNonLoopback: "true", nameOMVURL: "http://127.0.0.1:8001",
+		{nameUser: "maru", nameListen: "0.0.0.0:8090", nameAllowNonLoopback: "true", nameOMVURL: "http://127.0.0.1:8001",
 			nameSmartRefreshAt: "03:30", nameWorkbenchURL: "", namePublicOrigin: "", nameHelper: "yes", nameElevateGroup: "wheel",
 			nameWebUpgrade: "yes", nameBuildPath: "/usr/local/go/bin:/usr/bin:/bin"},
-		{nameUser: "dash", nameListen: "unix:/run/onmaru/onmaru.sock", nameOMVURL: "http://127.0.0.1",
+		{nameUser: "dash", nameListen: "unix:/run/maru/maru.sock", nameOMVURL: "http://127.0.0.1",
 			nameSmartRefreshAt: "00:00", nameWorkbenchURL: "https://nas.example.lan/a b", namePublicOrigin: "https://desk.example.lan",
 			nameHelper: "no"},
 	} {
@@ -208,17 +208,17 @@ func TestUsageListsEverySetting(t *testing.T) {
 }
 
 func TestSummary(t *testing.T) {
-	c := &Context{Lang: "ko", RepoDir: "/repo", Values: Values{nameUser: "onmaru", nameListen: "0.0.0.0:8090", nameAllowNonLoopback: "true",
+	c := &Context{Lang: "ko", RepoDir: "/repo", Values: Values{nameUser: "maru", nameListen: "0.0.0.0:8090", nameAllowNonLoopback: "true",
 		nameOMVURL: "http://127.0.0.1", nameSmartRefreshAt: "00:00", nameWorkbenchURL: "", namePublicOrigin: "https://desk.example.lan",
 		nameHelper: "yes", nameElevateGroup: "sudo"}}
 	got := settings.summary(c)
 	for _, want := range []string{
-		"  실행 파일     /repo/bin/onmaru -> /usr/local/bin/onmaru",
-		"  서비스 사용자 onmaru",
+		"  실행 파일     /repo/bin/maru -> /usr/local/bin/maru",
+		"  서비스 사용자 maru",
 		"  수신          0.0.0.0:8090  (루프백 외 주소 허용)",
 		"  OMV 워크벤치  (끔)",
-		"  권한 도우미   설치 (/usr/local/bin/onmaru-helper, 상승 그룹 sudo)",
-		"  설정 파일     /etc/systemd/system/onmaru.service, /etc/default/onmaru",
+		"  권한 도우미   설치 (/usr/local/bin/maru-helper, 상승 그룹 sudo)",
+		"  설정 파일     /etc/systemd/system/maru.service, /etc/default/maru",
 	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("summary misses %q:\n%s", want, got)
@@ -230,9 +230,9 @@ func TestSummary(t *testing.T) {
 func TestLoadInstalled(t *testing.T) {
 	f := newFake(t)
 	f.put(t, unitFile, "[Service]\nUser=dash\nUser=other\n", 0o644)
-	f.put(t, envFile, "ONMARU_LISTEN=0.0.0.0:8090\nONMARU_ALLOW_NON_LOOPBACK=true\nONMARU_OMV_URL=\"http://127.0.0.1:8001\"\n"+
-		"ONMARU_WORKBENCH_URL=\nONMARU_HELPER_SOCKET=/run/onmaru-helper/helper.sock\n", 0o644)
-	f.put(t, helperEnvFile, "ONMARU_HELPER_ELEVATE_GROUP=wheel\n", 0o644)
+	f.put(t, envFile, "MARU_LISTEN=0.0.0.0:8090\nMARU_ALLOW_NON_LOOPBACK=true\nMARU_OMV_URL=\"http://127.0.0.1:8001\"\n"+
+		"MARU_WORKBENCH_URL=\nMARU_HELPER_SOCKET=/run/maru-helper/helper.sock\n", 0o644)
+	f.put(t, helperEnvFile, "MARU_HELPER_ELEVATE_GROUP=wheel\n", 0o644)
 	f.put(t, helperServiceUnit, "x", 0o644)
 	inst, err := readInstalled(f)
 	if err != nil {
@@ -268,13 +268,13 @@ func TestLoadInstalled(t *testing.T) {
 func TestPromptDefaults(t *testing.T) {
 	f := newFake(t)
 	f.put(t, nginxWebGUI, "server {\n    listen 443 ssl;\n    listen *:8001 default_server;\n}\n", 0o644)
-	f.put(t, envFile, "ONMARU_HELPER_SOCKET=\nONMARU_PUBLIC_ORIGIN=https://desk.example.lan\n", 0o644)
+	f.put(t, envFile, "MARU_HELPER_SOCKET=\nMARU_PUBLIC_ORIGIN=https://desk.example.lan\n", 0o644)
 	inst, _ := readInstalled(f)
 	c := &Context{Lang: "en", Sys: f, Installed: inst, Values: Values{}}
 	for s, want := range map[*Setting]string{
-		settingUser: "onmaru", settingOMVURL: "http://127.0.0.1:8001", settingSmartRefreshAt: "00:00",
+		settingUser: "maru", settingOMVURL: "http://127.0.0.1:8001", settingSmartRefreshAt: "00:00",
 		settingWorkbenchURL: "", settingPublicOrigin: "https://desk.example.lan", settingHelper: "no", settingElevateGroup: "sudo",
-		// 기존 설치에 /etc/default/onmaru-upgrade가 없으므로 꺼 둔 것이다.
+		// 기존 설치에 /etc/default/maru-upgrade가 없으므로 꺼 둔 것이다.
 		settingWebUpgrade: "no",
 	} {
 		if got := s.defaultValue(c); got != want {
@@ -292,26 +292,26 @@ func TestPromptDefaults(t *testing.T) {
 	}
 }
 
-// 설치기는 backend 모듈에서 공개 패키지 onmaru/backend/config만 쓴다(huh 등 설치기 의존성이 백엔드에 섞이지 않게,
+// 설치기는 backend 모듈에서 공개 패키지 maru/backend/config만 쓴다(huh 등 설치기 의존성이 백엔드에 섞이지 않게,
 // 백엔드 내부 코드가 설치기에 딸려 오지 않게).
 func TestBackendDependencies(t *testing.T) {
 	gobin, err := exec.LookPath("go")
 	if err != nil {
 		t.Skip("go tool not found")
 	}
-	out, err := exec.Command(gobin, "list", "-deps", "onmaru/installer").Output()
+	out, err := exec.Command(gobin, "list", "-deps", "maru/installer").Output()
 	if err != nil {
 		t.Fatalf("go list: %v", err)
 	}
 	found := false
 	for _, dep := range strings.Fields(string(out)) {
-		if dep == "onmaru/backend/config" {
+		if dep == "maru/backend/config" {
 			found = true
-		} else if dep == "onmaru/backend" || strings.HasPrefix(dep, "onmaru/backend/") {
+		} else if dep == "maru/backend" || strings.HasPrefix(dep, "maru/backend/") {
 			t.Errorf("installer depends on %s", dep)
 		}
 	}
 	if !found {
-		t.Error("installer does not use onmaru/backend/config")
+		t.Error("installer does not use maru/backend/config")
 	}
 }

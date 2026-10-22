@@ -1,11 +1,11 @@
-// Package daemon은 권한 도우미(onmaru-helper)의 root 부모 프로세스다.
+// Package daemon은 권한 도우미(maru-helper)의 root 부모 프로세스다.
 //
-// 도우미는 onmaru를 믿지 않는다. 믿는 것은 세 가지뿐이다.
-//   - 소켓 상대의 uid(SO_PEERCRED)가 onmaru 서비스 사용자인지
+// 도우미는 maru를 믿지 않는다. 믿는 것은 세 가지뿐이다.
+//   - 소켓 상대의 uid(SO_PEERCRED)가 maru 서비스 사용자인지
 //   - 자기가 비밀번호를 직접 확인하고 발급한 티켓인지
 //   - 자기가 /etc/passwd·/etc/group에서 직접 읽은 계정·그룹 정보
 //
-// 그래서 onmaru가 뚫려도 지금 로그인해 있는 사용자의 티켓만 쓸 수 있고, root 범위 연산은
+// 그래서 maru가 뚫려도 지금 로그인해 있는 사용자의 티켓만 쓸 수 있고, root 범위 연산은
 // 비밀번호를 다시 확인해 상승한 티켓으로만, 정해진 목록(proto.Actions)의 연산만 할 수 있다.
 // 연산은 worker 자식 프로세스가 사용자 범위면 그 사용자 권한으로 실행하며, 부모는 사용자
 // 데이터를 읽거나 쓰지 않는다.
@@ -25,9 +25,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"onmaru/backend/config"
-	"onmaru/backend/internal/helper/proto"
-	"onmaru/backend/internal/helper/worker"
+	"maru/backend/config"
+	"maru/backend/internal/helper/proto"
+	"maru/backend/internal/helper/worker"
 )
 
 const (
@@ -59,7 +59,7 @@ const (
 
 // Config는 도우미 설정이다.
 type Config struct {
-	// ClientUID는 연결을 받을 상대 uid(onmaru 서비스 사용자)다.
+	// ClientUID는 연결을 받을 상대 uid(maru 서비스 사용자)다.
 	ClientUID int
 	// AdminGroup은 OMV 관리자 그룹이다. 비우면 DefaultAdminGroup.
 	AdminGroup string
@@ -78,7 +78,7 @@ type Config struct {
 	ElevateTTL time.Duration
 	// PendingTTL은 2차 인증 대기 티켓이 activate를 기다리는 시간이다. 기본 5분(OMV 대기 시간과 같다).
 	PendingTTL time.Duration
-	// TicketIdle은 쓰지 않은 티켓이 남는 시간이다. 기본 24시간(onmaru 세션 상한과 같다).
+	// TicketIdle은 쓰지 않은 티켓이 남는 시간이다. 기본 24시간(maru 세션 상한과 같다).
 	TicketIdle time.Duration
 	// IdleExit이 0보다 크면 티켓과 연결이 없이 이만큼 지났을 때 Serve를 끝낸다(소켓 활성화).
 	IdleExit time.Duration

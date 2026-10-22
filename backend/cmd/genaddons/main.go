@@ -6,7 +6,7 @@ import (
 	"log"
 	"os"
 
-	"onmaru/backend/internal/addons/builtin"
+	"maru/backend/internal/addons/builtin"
 )
 
 func main() {

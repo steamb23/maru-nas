@@ -8,13 +8,13 @@ import (
 	"net/http"
 	"time"
 
-	"onmaru/backend/internal/api"
-	"onmaru/backend/internal/auth"
-	"onmaru/backend/internal/helper/client"
-	"onmaru/backend/internal/helper/proto"
+	"maru/backend/internal/api"
+	"maru/backend/internal/auth"
+	"maru/backend/internal/helper/client"
+	"maru/backend/internal/helper/proto"
 )
 
-// Helper는 권한 도우미(onmaru-helper) 클라이언트다. *client.Client가 구현한다.
+// Helper는 권한 도우미(maru-helper) 클라이언트다. *client.Client가 구현한다.
 // 티켓은 도우미가 비밀번호를 직접 확인하고 발급하며, 이 백엔드는 세션에 보관해 넘기기만 한다.
 type Helper interface {
 	Open(ctx context.Context, user, password string, pending bool) (proto.OpenResult, error)

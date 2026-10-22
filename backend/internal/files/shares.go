@@ -5,7 +5,7 @@ import (
 	"path"
 	"slices"
 
-	"onmaru/backend/internal/api"
+	"maru/backend/internal/api"
 )
 
 // omvShare는 ShareMgmt.enumerateSharedFolders 응답 항목에서 쓰는 필드다.

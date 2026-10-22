@@ -1,9 +1,9 @@
 // Package upgradefake는 `make dev-fake`와 테스트에서 쓰는 가짜 업그레이드 서비스다(설치기의 --upgrade-service 대신).
 //
-// onmaru가 상태 디렉터리에 남긴 확인 요청과 가짜 권한 도우미가 쓴 적용 요청을 짧은 주기로 보고, 단계마다 조금씩
+// maru가 상태 디렉터리에 남긴 확인 요청과 가짜 권한 도우미가 쓴 적용 요청을 짧은 주기로 보고, 단계마다 조금씩
 // 기다리며 가짜 루트의 상태 파일(config.UpgradeStatusFile)에 진행과 결과를 쓴다. 저장소·빌드·설치는 하지 않고
-// onmaru를 다시 시작하지도 않는다(재시작 화면은 시험 VM에서 확인한다). 값은 모두 합성한 가짜 값이다.
-// 운영 바이너리(cmd/onmaru, cmd/onmaru-helper)에서 import하지 않는다.
+// maru를 다시 시작하지도 않는다(재시작 화면은 시험 VM에서 확인한다). 값은 모두 합성한 가짜 값이다.
+// 운영 바이너리(cmd/maru, cmd/maru-helper)에서 import하지 않는다.
 package upgradefake
 
 import (
@@ -19,7 +19,7 @@ import (
 	"sync"
 	"time"
 
-	"onmaru/backend/config"
+	"maru/backend/config"
 )
 
 // 시나리오(Options.Scenario, 개발 서버의 FAKEUPGRADE_SCENARIO).
@@ -49,9 +49,9 @@ const (
 
 // Options는 Start의 설정이다.
 type Options struct {
-	// Root는 root 쪽 설정 파일과 상태 파일 앞에 붙는 가짜 루트다(onmaru의 ONMARU_DEV_UPGRADE_ROOT와 같다).
+	// Root는 root 쪽 설정 파일과 상태 파일 앞에 붙는 가짜 루트다(maru의 MARU_DEV_UPGRADE_ROOT와 같다).
 	Root string
-	// CheckRequest는 onmaru가 남기는 확인 요청 파일이다(<상태 디렉터리>/upgrade-check.json).
+	// CheckRequest는 maru가 남기는 확인 요청 파일이다(<상태 디렉터리>/upgrade-check.json).
 	CheckRequest string
 	// ApplyDir는 가짜 도우미의 upgrade.apply가 적용 요청을 쓰는 디렉터리다(helperfake.Server.UpgradeDir).
 	ApplyDir string
@@ -106,7 +106,7 @@ func Start(o Options) (*Service, error) {
 		}
 	} else {
 		env := "# Fake file written by the fake upgrade service (make dev-fake).\n" +
-			config.EnvUpgradeRepo + "=/home/fake-owner/onmaru\n" +
+			config.EnvUpgradeRepo + "=/home/fake-owner/maru-nas\n" +
 			config.EnvUpgradeUser + "=fake-owner\n" +
 			config.EnvUpgradePath + "=/usr/local/bin:/usr/bin:/bin\n"
 		if err := os.WriteFile(envFile, []byte(env), 0o644); err != nil {
@@ -259,7 +259,7 @@ func (s *Service) check(data []byte) error {
 			return s.fail(config.UpgradeStateCheckFailed,
 				"git fetch failed. The repository owner's git settings and credentials are used without asking for passwords; check the network and that fetching works for that account without a prompt (see the log)",
 				"git fetch가 실패했습니다. 저장소 소유자 계정의 git 설정과 자격 증명을 비밀번호를 묻지 않고 씁니다. 네트워크와, 그 계정에서 묻는 것 없이 가져올 수 있는지 확인하세요(로그 참고)",
-				"$ git -C /home/fake-owner/onmaru fetch\nfatal: unable to access 'https://git.example.invalid/onmaru.git/': Could not resolve host: git.example.invalid\n")
+				"$ git -C /home/fake-owner/maru-nas fetch\nfatal: unable to access 'https://git.example.invalid/maru-nas.git/': Could not resolve host: git.example.invalid\n")
 		}
 		if err := s.stage(config.UpgradeStageInspect); err != nil {
 			return err
@@ -279,7 +279,7 @@ func (s *Service) check(data []byte) error {
 		return s.fail(config.UpgradeStateCheckFailed,
 			"the installer of "+targetRevision+" could not make an upgrade plan (see the log)",
 			targetRevision+"의 설치기가 업그레이드 계획을 만들지 못했습니다(로그 참고)",
-			"$ go build -trimpath -o bin/onmaru-install .\ninternal/setup/plan.go:12:2: undefined: fakeSymbol\n")
+			"$ go build -trimpath -o bin/maru-install .\ninternal/setup/plan.go:12:2: undefined: fakeSymbol\n")
 	}
 	chk.Plan = s.plan()
 	if s.o.Scenario == ScenarioManual {
@@ -433,7 +433,7 @@ func (s *Service) apply(data []byte) error {
 	}
 	s.status.State, s.status.Stage = config.UpgradeStateApplied, ""
 	s.status.Apply.FinishedAt, s.status.Apply.Version = s.stamp(), chk.Plan.Version
-	s.o.Logf("fake upgrade: applied %s (onmaru is not restarted in the fake service)", chk.Plan.Version)
+	s.o.Logf("fake upgrade: applied %s (maru is not restarted in the fake service)", chk.Plan.Version)
 	return s.write()
 }
 

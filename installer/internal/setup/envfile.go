@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-// EnvFile은 systemd EnvironmentFile 형식의 설정 파일(/etc/default/onmaru 등)이다. 셸로 source하지 않고 줄 단위로 읽는다.
+// EnvFile은 systemd EnvironmentFile 형식의 설정 파일(/etc/default/maru 등)이다. 셸로 source하지 않고 줄 단위로 읽는다.
 // nil은 파일이 없다는 뜻이고, 모든 메서드가 nil에서도 동작한다.
 type EnvFile struct {
 	lines []string
@@ -48,10 +48,10 @@ func (e *EnvFile) Has(key string) bool {
 	return ok
 }
 
-// envLineRE는 보존 대상이 될 수 있는 onmaru 설정 줄이다.
-var envLineRE = regexp.MustCompile(`^(ONMARU_[A-Z0-9_]+)=`)
+// envLineRE는 보존 대상이 될 수 있는 maru 설정 줄이다.
+var envLineRE = regexp.MustCompile(`^(MARU_[A-Z0-9_]+)=`)
 
-// Unmanaged는 managed에 없는 ONMARU_* 줄을 원래 모습 그대로 돌려준다. 손으로 넣은 설정(예: ONMARU_COOKIE_PATH)을
+// Unmanaged는 managed에 없는 MARU_* 줄을 원래 모습 그대로 돌려준다. 손으로 넣은 설정(예: MARU_COOKIE_PATH)을
 // 다시 설치할 때 지우지 않고 보존하는 데 쓴다.
 func (e *EnvFile) Unmanaged(managed map[string]bool) []string {
 	if e == nil {

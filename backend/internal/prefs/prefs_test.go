@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"onmaru/backend/internal/api"
+	"maru/backend/internal/api"
 )
 
 var sample = []api.WidgetPlacement{

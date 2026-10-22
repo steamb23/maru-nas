@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"onmaru/backend/internal/api"
-	"onmaru/backend/internal/security"
+	"maru/backend/internal/api"
+	"maru/backend/internal/security"
 )
 
 var testRP = &security.RP{ID: "desk.example.lan", Origin: "https://desk.example.lan"}

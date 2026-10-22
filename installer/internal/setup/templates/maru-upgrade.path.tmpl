@@ -1,0 +1,13 @@
+# Written by maru install.sh
+[Unit]
+Description=Onmaru dashboard upgrade requests
+
+[Path]
+# A check request that maru leaves in its state directory, or an upgrade request
+# from the privileged helper (root operation upgrade.apply).
+PathExists={{.UpgradeCheckRequest}}
+PathExists={{.UpgradeApplyRequest}}
+Unit={{.UpgradeName}}.service
+
+[Install]
+WantedBy=paths.target

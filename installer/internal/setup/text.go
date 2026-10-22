@@ -3,7 +3,7 @@ package setup
 import (
 	"strings"
 
-	"onmaru/backend/config"
+	"maru/backend/config"
 )
 
 // Text는 영어·한국어 문구 한 쌍이다. 문구는 쓰는 곳(설정·단계 파일) 옆에 L(en, ko)로 둔다.

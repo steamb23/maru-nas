@@ -25,7 +25,7 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 - OMV가 관리하는 설정 파일(`/etc/` 아래 서비스 설정, OMV 설정 DB)을 직접 수정하지 않는다. OMV는 자기 DB를 기준으로 Salt로 설정 파일을 다시 생성하므로 직접 수정은 덮어써진다. 설정 변경은 반드시 로그인한 사용자의 세션으로 `rpc.php`를 호출해서 한다
 - `omv-rpc` CLI는 쓰지 않는다. 엔진 소켓(`/var/lib/openmediavault/engined.sock`)에 직접 붙어 비밀번호 확인 없이 관리자로 실행되므로, root나 `openmediavault-engined` 그룹만 쓸 수 있다. 어떤 계정도 이 그룹에 추가하는 방안을 제안하지 않는다(사실상 root 권한 부여)
 - 서비스 계정을 `docker` 그룹에도 넣지 않는다. root가 필요한 정보(SMART, SATA 디스크 온도, 컨테이너)는 OMV RPC로만 가져오며, Docker·Podman 소켓을 직접 읽는 코드는 만들지 않는다
-- OMV RPC로 할 수 없는 권한 작업(사용자 자신의 파일 접근, root 작업)은 권한 도우미(`onmaru-helper`)의 정해진 연산으로만 한다. 임의 명령 실행 연산을 만들지 않고, root 연산을 더할 때는 `.claude/docs/helper.md`의 절차를 따른다
+- OMV RPC로 할 수 없는 권한 작업(사용자 자신의 파일 접근, root 작업)은 권한 도우미(`maru-helper`)의 정해진 연산으로만 한다. 임의 명령 실행 연산을 만들지 않고, root 연산을 더할 때는 `.claude/docs/helper.md`의 절차를 따른다
 - `sudo`나 root 권한이 필요한 명령은 실행하지 않는다. 필요하면 명령과 이유를 제시하고 사용자가 직접 실행하게 한다
 - 시스템 상태를 바꾸는 RPC(서비스 재시작, 디스크·파일시스템·공유 폴더 변경 등)는 코드로 작성만 하고, 실제 호출 테스트는 사용자에게 맡긴다
 - 비밀번호, OMV 세션 ID, 토큰을 로그·파일·커밋·테스트 픽스처에 남기지 않는다
@@ -37,21 +37,21 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 
 - **배포**: 앞단 리버스 프록시(Caddy 등)가 HTTPS를 처리하고 대시보드를 둘 호스트·경로를 정한다(예: 별도 서브도메인 루트, 또는 OMV와 같은 도메인의 경로 접두사). 프론트는 상대 경로(`base: './'`)로 빌드하므로 경로 접두사에 묶이지 않고, 백엔드 라우트는 대시보드 루트(`/api/*`) 기준이다. OMV의 nginx 설정은 건드리지 않는다
   - 도메인 등 개인 환경 정보는 `*.local.md`(커밋 안 함)에 둔다. 커밋되는 파일에 도메인·IP를 하드코딩하지 않는다
-  - OMV 웹 UI(workbench)는 대시보드 안 창(iframe)이 아니라 이름 붙은 브라우저 탭으로 연다. 브라우저 기준 주소는 `-workbench-url`(`ONMARU_WORKBENCH_URL`)이며, 비우면 "OMV 워크벤치" 앱을 숨긴다(`README.md`의 "OMV 워크벤치 열기")
+  - OMV 웹 UI(workbench)는 대시보드 안 창(iframe)이 아니라 이름 붙은 브라우저 탭으로 연다. 브라우저 기준 주소는 `-workbench-url`(`MARU_WORKBENCH_URL`)이며, 비우면 "OMV 워크벤치" 앱을 숨긴다(`README.md`의 "OMV 워크벤치 열기")
 - **실행**: systemd 서비스로 Go 실행 파일 하나를 전용 일반 사용자로 실행한다. 프론트엔드는 `go:embed`로 포함한다. 수신은 기본적으로 루프백 TCP(`127.0.0.1:8090`)이고, Docker 안의 프록시처럼 루프백에 닿지 못하는 경우를 위해 Unix 소켓(`unix:/경로`)을 지원한다. 루프백이 아닌 주소는 `-allow-non-loopback`을 명시해야만 허용한다
   - Docker는 쓰지 않는다(호스트 `/proc`, `/sys`, 네트워크를 직접 봐야 하므로)
-  - 설치는 루트의 `install.sh`(영어·한국어 안내)가 한다. `install.sh`는 Go 설치기(`installer/` → `bin/onmaru-install`, huh TUI)를 빌드해 실행하는 부트스트랩이고, 설치기가 systemd 유닛과 `/etc/default/onmaru`를 직접 만든다. 리버스 프록시는 설정하지 않는다. Claude는 작성만 하고 실행은 사용자가 한다(확인은 Go 테스트와 `--dry-run`)
+  - 설치는 루트의 `install.sh`(영어·한국어 안내)가 한다. `install.sh`는 Go 설치기(`installer/` → `bin/maru-install`, huh TUI)를 빌드해 실행하는 부트스트랩이고, 설치기가 systemd 유닛과 `/etc/default/maru`를 직접 만든다. 리버스 프록시는 설정하지 않는다. Claude는 작성만 하고 실행은 사용자가 한다(확인은 Go 테스트와 `--dry-run`)
     - 흐름(1단계 빌드 → sudo 2단계), 설치 방식(새 설치, `--reinstall`, 업그레이드), 설정·단계를 더하는 절차는 `.claude/rules/installer.md`, 사용자 설명은 `README.md`의 "설치 스크립트"·"업그레이드"
-    - 대시보드에서 업그레이드(`--web-upgrade`, 설계는 `.claude/docs/upgrade.md`): 설치기가 root 소유 복사본과 `onmaru-upgrade.service`·`.path`를 설치한다. 그 서비스(설치기의 `--upgrade-service`)가 저장소 소유자 권한으로 git·빌드를 하고 새 설치기를 root로 실행한다. onmaru는 확인 요청과 상태 파일만(설정 앱의 업데이트 페이지, `/api/upgrade*`), 도우미는 적용 요청(`upgrade.apply`)만 다룬다. 상세는 `.claude/rules/installer.md`의 "업그레이드 서비스", onmaru 쪽은 `.claude/rules/backend.md`의 "대시보드에서 업그레이드"
+    - 대시보드에서 업그레이드(`--web-upgrade`, 설계는 `.claude/docs/upgrade.md`): 설치기가 root 소유 복사본과 `maru-upgrade.service`·`.path`를 설치한다. 그 서비스(설치기의 `--upgrade-service`)가 저장소 소유자 권한으로 git·빌드를 하고 새 설치기를 root로 실행한다. maru는 확인 요청과 상태 파일만(설정 앱의 업데이트 페이지, `/api/upgrade*`), 도우미는 적용 요청(`upgrade.apply`)만 다룬다. 상세는 `.claude/rules/installer.md`의 "업그레이드 서비스", maru 쪽은 `.claude/rules/backend.md`의 "대시보드에서 업그레이드"
   - 사용자 대상 설치·설정·프록시 안내는 `README.md`에 둔다. 플래그를 추가·변경하면 `README.md`의 설정 표와 설치기 레지스트리도 함께 고친다
 - **백엔드는 얇은 API 서버**다. 역할은 (1) 현황 읽기: `/proc`·`/sys` 직접 읽기, root가 필요한 정보는 OMV RPC, (2) 설정 변경 요청을 OMV `rpc.php`로 전달, (3) 대시보드 설정(사용자별 위젯 배치·바로가기·화면 설정, 관리자의 전역 설정, 배경 이미지) 저장, 세 가지뿐이다. OMV RPC로 할 수 없는 권한 작업은 (4) 권한 도우미에 맡긴다. (5) 웹 터미널은 같은 호스트의 sshd에 SSH 클라이언트로 붙어 셸을 중계한다
   - (3)은 상태 디렉터리(`-state-dir`, `internal/prefs`)에 대시보드 자신의 상태만 두며 OMV 설정·시스템 파일을 쓰지 않는다. 내용은 `.claude/rules/backend.md`
   - 설정 앱(`src/settings/`)은 대시보드 설정, 자기 계정 프로필, 보안 수단, 정보만 다룬다. 전역에 적용되는 설정은 관리자만 바꾸고, 그 밖의 OMV·OS 설정은 넣지 않는다. 페이지 목록은 `README.md`의 "설정 앱"
-  - 웹에서 덮어쓰는 가동 설정은 재시작 없이 바뀌는 워크벤치 주소, SMART 확인 시각, 웹 터미널 허용뿐이다(`site.json`, 플래그보다 우선). 나머지는 root가 `/etc/default/onmaru`를 고친다
-- **권한 도우미**(`onmaru-helper`, `-helper-socket`, 설치기가 기본으로 설치): root로 도는 별도 실행 파일이 소켓 활성화로 onmaru 서비스 사용자의 연결만 받는다. 로그인할 때 비밀번호를 `unix_chkpwd`로 확인해 티켓을 주고, 연산을 그 사용자 권한으로 강등해 실행한다. root 연산은 권한 상승한 관리자 세션에서 5분 동안, 정해진 목록만 쓴다(지금은 `id`, 대시보드에서 업그레이드의 `upgrade.apply`, 파일 탐색기 디스크 휴지통의 `trash.prepare`). 상세는 `.claude/docs/helper.md`, 규칙은 `.claude/rules/helper.md`
+  - 웹에서 덮어쓰는 가동 설정은 재시작 없이 바뀌는 워크벤치 주소, SMART 확인 시각, 웹 터미널 허용뿐이다(`site.json`, 플래그보다 우선). 나머지는 root가 `/etc/default/maru`를 고친다
+- **권한 도우미**(`maru-helper`, `-helper-socket`, 설치기가 기본으로 설치): root로 도는 별도 실행 파일이 소켓 활성화로 maru 서비스 사용자의 연결만 받는다. 로그인할 때 비밀번호를 `unix_chkpwd`로 확인해 티켓을 주고, 연산을 그 사용자 권한으로 강등해 실행한다. root 연산은 권한 상승한 관리자 세션에서 5분 동안, 정해진 목록만 쓴다(지금은 `id`, 대시보드에서 업그레이드의 `upgrade.apply`, 파일 탐색기 디스크 휴지통의 `trash.prepare`). 상세는 `.claude/docs/helper.md`, 규칙은 `.claude/rules/helper.md`
 - **파일 탐색기**(`internal/files`, `src/files/`, 셸 앱): 홈 폴더와 공유 폴더를 도우미의 사용자 권한 연산으로 둘러보고 내려받고 올리고 하위 폴더까지 찾는다. 공유 폴더 목록은 관리자 세션이 받은 스냅숏(`site.json`)이고, 접근은 파일 시스템 권한을 따르며 관리자가 켜면 OMV 공유 폴더 권한도 따른다. 큰 폴더는 이름을 먼저 읽고 보이는 범위의 정보만 읽는다. 파일 미리보기는 따로 여는 셸 앱(`src/viewer/`)이다. 상세는 `.claude/rules/files.md`
 - **웹 터미널**(`internal/terminal`, 기본 꺼짐): 백엔드가 루프백 sshd에 대시보드 세션 사용자로만 접속해 WebSocket(`/api/terminal`)으로 셸을 중계한다. TTY를 직접 띄우지 않으며, 누가 들어갈 수 있는지는 OMV의 SSH 설정이 정한다. 상세는 `.claude/rules/terminal.md`
-- **보안 강화 모드**(`internal/security`): 웹 터미널·root 권한 상승을 세션의 보증 수준(로그인 < 비밀번호 재확인 < 2차 인증)으로 막는다. 2차 인증(패스키·TOTP·복구 코드·OMV 2차 인증)의 확인은 onmaru가 하며 도우미에 넣지 않는다. 상세는 `.claude/rules/security.md`
+- **보안 강화 모드**(`internal/security`): 웹 터미널·root 권한 상승을 세션의 보증 수준(로그인 < 비밀번호 재확인 < 2차 인증)으로 막는다. 2차 인증(패스키·TOTP·복구 코드·OMV 2차 인증)의 확인은 maru가 하며 도우미에 넣지 않는다. 상세는 `.claude/rules/security.md`
 - **OMV RPC는 항상 백엔드가 중계한다**: 브라우저 → `/api/rpc` → 백엔드 → OMV `rpc.php`. 브라우저가 `rpc.php`를 직접 호출하지 않는다
   - 백엔드는 대시보드 세션마다 OMV 세션을 메모리에 보관하고, 항상 같은 주소(127.0.0.1)와 고정 User-Agent로 OMV를 호출한다
   - 브라우저의 쿠키를 OMV에 그대로 전달하지 않는다. OMV는 User-Agent가 다르면 세션을 파기하므로 사용자를 로그아웃시키게 된다
@@ -86,10 +86,10 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 
 | 명령 | 내용 |
 |---|---|
-| `make dev` | 개발 서버. 백엔드 `127.0.0.1:8090`(`go run`) + Vite `0.0.0.0:5173`(`http://<NAS-IP>:5173/`), Ctrl+C로 둘 다 종료. 실제 OMV에 연결하므로 `frontend/.env.local`에 `ONMARU_OMV_URL`(이 NAS의 OMV 주소)을 둔다 |
+| `make dev` | 개발 서버. 백엔드 `127.0.0.1:8090`(`go run`) + Vite `0.0.0.0:5173`(`http://<NAS-IP>:5173/`), Ctrl+C로 둘 다 종료. 실제 OMV에 연결하므로 `frontend/.env.local`에 `MARU_OMV_URL`(이 NAS의 OMV 주소)을 둔다 |
 | `make dev-fake` | `make dev`에 가짜 OMV(`127.0.0.1:8091`), 가짜 권한 도우미(상태 디렉터리의 `helper.sock`, 파일 연산은 `helper-root/` 아래만), 가짜 sshd(`127.0.0.1:8092`, 장난감 셸)를 함께 띄워 연결한다 |
 | `make dev-pick` | 워크트리와 OMV 연결(실제·가짜)을 번호로 골라 개발 서버를 띄운다(`scripts/dev-pick.sh`). 입력을 기다리므로 Claude는 쓰지 않는다 |
-| `make build` | 프론트 빌드 → `backend/internal/web/static/dist/` → `bin/onmaru` 단일 실행 파일, 권한 도우미 `bin/onmaru-helper`(`CGO_ENABLED=0`), 설치기 `bin/onmaru-install` |
+| `make build` | 프론트 빌드 → `backend/internal/web/static/dist/` → `bin/maru` 단일 실행 파일, 권한 도우미 `bin/maru-helper`(`CGO_ENABLED=0`), 설치기 `bin/maru-install` |
 | `make lint` | `gofmt -l`, `go vet`(backend·installer 두 모듈), oxlint, `tsc -b` |
 | `make test` | `go test -count=1 ./...`(backend·installer 두 모듈. 모듈 밖 생성물 검사가 캐시로 통과하지 않게), `vitest run` |
 | `make check` | lint + test |
@@ -99,23 +99,23 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 
 개발 서버 환경 변수와 워크트리:
 
-- 포트: `ONMARU_LISTEN`(백엔드), `FAKEOMV_LISTEN`(가짜 OMV), `FAKESSH_LISTEN`(가짜 sshd), `DEV_PORT`(Vite). 상태 디렉터리는 `ONMARU_STATE_DIR`
+- 포트: `MARU_LISTEN`(백엔드), `FAKEOMV_LISTEN`(가짜 OMV), `FAKESSH_LISTEN`(가짜 sshd), `DEV_PORT`(Vite). 상태 디렉터리는 `MARU_STATE_DIR`
 - `make dev-fake` 전용: `FAKEOMV_TIMEOUT=1m`(세션 timeout, 분 단위), `FAKEOMV_VERSION=8.3`(옛 OMV 응답, `omvfake.Version`), `FAKEFILES_LARGE=60000`(파일 탐색기의 큰 폴더, 가짜 디스크의 사진/휴대폰 백업), `FAKESSH_AUTH=publickey`(가짜 sshd가 받는 인증 방법), `FAKEUPGRADE_SCENARIO=manual`(가짜 업그레이드 서비스의 시나리오: web, manual, latest, check-fail, apply-fail, disabled), `FAKEUPGRADE_STEP=20s`(가짜 업그레이드 서비스의 단계 사이 지연, 기본 1.5s)
-- 웹 터미널 허용은 설정 앱이나 `ONMARU_TERMINAL=true`로 켠다
+- 웹 터미널 허용은 설정 앱이나 `MARU_TERMINAL=true`로 켠다
 - git 워크트리에서 실행하면 주 체크아웃의 `frontend/.env.local`(워크트리에 있으면 그 값이 우선)과 `.dev-state`를 쓴다. 주 체크아웃에서 `make dev BRANCH=<브랜치>`(`make dev-fake`도 같다)로 그 브랜치가 체크아웃된 워크트리의 코드를 실행할 수 있다(실행은 부른 쪽의 `scripts/dev.sh`)
 
 ## 테스트 전략
 
 로그인이 필요한 기능도 실제 비밀번호 없이 검증한다. Claude는 실제 OMV에 로그인 시도를 보내지 않는다(실패 로그·fail2ban 영향, 비밀번호 취급 금지).
 
-- 예외: 가상 머신으로 테스트 환경을 구축한 경우, 그 VM의 OMV와 onmaru에는 VM 전용 가짜 계정으로 로그인해 확인해도 된다. VM의 주소·계정·전달 경로는 `CLAUDE.local.md`에 두고, 로그인하기 전에 그 주소가 실제로 VM으로 이어지는지 확인한다(실제 NAS의 OMV로 가지 않게)
+- 예외: 가상 머신으로 테스트 환경을 구축한 경우, 그 VM의 OMV와 maru에는 VM 전용 가짜 계정으로 로그인해 확인해도 된다. VM의 주소·계정·전달 경로는 `CLAUDE.local.md`에 두고, 로그인하기 전에 그 주소가 실제로 VM으로 이어지는지 확인한다(실제 NAS의 OMV로 가지 않게)
 
 1. **Go 테스트**: 가짜 OMV(`internal/omv/omvfake`)를 `httptest`로 띄워 실제 클라이언트·핸들러와 연결한다. 상세는 `.claude/rules/backend.md`
 2. **Vitest**: 저장소·클라이언트·순수 함수
 3. **브라우저(Playwright)**: Claude가 띄우는 개발 서버는 **기본 포트(8090·8091·8092·5173)를 쓰지 않는다**. 사용자가 기본 포트로 자기 개발 서버를 띄울 수 있게, 저장소 루트에서 다른 포트와 상태 디렉터리로 띄운다
    ```sh
-   DEV_PORT=5174 ONMARU_LISTEN=127.0.0.1:8190 FAKEOMV_LISTEN=127.0.0.1:8191 FAKESSH_LISTEN=127.0.0.1:8192 \
-     ONMARU_STATE_DIR="$PWD/.dev-state/fake-claude" make dev-fake
+   DEV_PORT=5174 MARU_LISTEN=127.0.0.1:8190 FAKEOMV_LISTEN=127.0.0.1:8191 FAKESSH_LISTEN=127.0.0.1:8192 \
+     MARU_STATE_DIR="$PWD/.dev-state/fake-claude" make dev-fake
    ```
    `http://<NAS-IP>:5174/`에 가짜 계정으로 로그인해 확인한다. 만료 확인은 앞에 `FAKEOMV_TIMEOUT=1m`을 더한다. 확인이 끝나면 서버를 내린다
    - 로그인하기 전에 백엔드 로그의 `omv:` 주소가 가짜 OMV(`127.0.0.1:8191`)인지 확인한다. `scripts/dev.sh`는 개발 서버 포트가 이미 쓰이고 있으면 시작하지 않는다

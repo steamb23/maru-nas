@@ -11,9 +11,9 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"onmaru/backend/internal/api"
-	"onmaru/backend/internal/auth"
-	"onmaru/backend/internal/security"
+	"maru/backend/internal/api"
+	"maru/backend/internal/auth"
+	"maru/backend/internal/security"
 )
 
 // 패스키(WebAuthn): challenge, 등록, 확인. 확인·등록 값의 검사는 internal/security가 한다.

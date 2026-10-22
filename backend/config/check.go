@@ -21,7 +21,7 @@ const UnixPrefix = "unix:"
 func CheckListen(addr string, allowNonLoopback bool) error {
 	if path, ok := strings.CutPrefix(addr, UnixPrefix); ok {
 		if !filepath.IsAbs(path) {
-			return errors.New("unix socket path must be absolute (e.g. unix:/run/onmaru/onmaru.sock), got " + addr)
+			return errors.New("unix socket path must be absolute (e.g. unix:/run/maru/maru.sock), got " + addr)
 		}
 		return nil
 	}
@@ -57,7 +57,7 @@ func CheckOMVURL(raw string) error {
 // CheckHelperSocket은 도우미 소켓 경로가 비었거나 절대 경로인지 확인한다.
 func CheckHelperSocket(path string) error {
 	if path != "" && (!filepath.IsAbs(path) || filepath.Clean(path) != path) {
-		return errors.New("helper socket must be an absolute path (e.g. /run/onmaru-helper/helper.sock), got " + path)
+		return errors.New("helper socket must be an absolute path (e.g. /run/maru-helper/helper.sock), got " + path)
 	}
 	return nil
 }
@@ -141,5 +141,5 @@ func ParsePublicOrigin(raw string) (id, origin string, err error) {
 // groupNameRE는 받는 그룹 이름 꼴이다. 실행 인자로 넘길 수 있으므로 -로 시작하지 않게 한다.
 var groupNameRE = regexp.MustCompile(`^[A-Za-z0-9_][A-Za-z0-9_.-]{0,63}$`)
 
-// ValidGroupName은 그룹 이름(onmaru-helper -elevate-group 등) 꼴이 맞는지다.
+// ValidGroupName은 그룹 이름(maru-helper -elevate-group 등) 꼴이 맞는지다.
 func ValidGroupName(name string) bool { return groupNameRE.MatchString(name) }

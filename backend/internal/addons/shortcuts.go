@@ -3,7 +3,7 @@ package addons
 import (
 	"fmt"
 
-	"onmaru/backend/internal/api"
+	"maru/backend/internal/api"
 )
 
 const (

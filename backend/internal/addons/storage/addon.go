@@ -3,8 +3,8 @@ package storage
 import (
 	"context"
 
-	"onmaru/backend/internal/addons"
-	"onmaru/backend/internal/api"
+	"maru/backend/internal/addons"
+	"maru/backend/internal/api"
 )
 
 // ID는 디스크 용량 애드온의 id다.

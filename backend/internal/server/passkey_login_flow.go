@@ -8,10 +8,10 @@ import (
 	"strings"
 	"time"
 
-	"onmaru/backend/internal/api"
-	"onmaru/backend/internal/auth"
-	"onmaru/backend/internal/omv"
-	"onmaru/backend/internal/security"
+	"maru/backend/internal/api"
+	"maru/backend/internal/auth"
+	"maru/backend/internal/omv"
+	"maru/backend/internal/security"
 )
 
 // 패스키로 로그인의 로그인 단계(인증 없음). 브라우저 항목의 사용자 이름·등록 ID로 그 패스키 하나만 허용하는 확인을
@@ -21,7 +21,7 @@ import (
 
 const (
 	// PasskeyLoginCookie는 패스키로 로그인 단계를 잇는 쿠키 이름이다(options부터 finish까지).
-	PasskeyLoginCookie = "onmaru_passkey_login"
+	PasskeyLoginCookie = "maru_passkey_login"
 	// passkeyUnlockTTL은 share를 내준 뒤 비밀번호를 받을 때까지 기다리는 시간이다.
 	passkeyUnlockTTL = 2 * time.Minute
 )

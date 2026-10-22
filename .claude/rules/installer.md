@@ -11,27 +11,27 @@ paths:
 
 ## 구조
 
-- `install.sh`는 부트스트랩이다. 실행한 계정으로 `installer/`를 `bin/onmaru-install`로 빌드해 exec한다(go가 없거나 root가 남의 저장소에서 실행하면 이미 있는 실행 파일을 쓴다). 옵션과 동작은 모두 설치기가 정한다. 진입점 이름 `./install.sh`는 README, 화면 문구(모든 언어), 생성 파일의 주석이 참조하므로 바꾸지 않는다
-- `installer/`는 별도 Go 모듈(`onmaru/installer`)이다. `go.work` 없이 `replace onmaru/backend => ../backend`로 로컬 백엔드를 쓰고, go 지시어는 `backend/go.mod`와 같게 둔다. TUI 의존성 huh v2는 이 모듈에만 있다(`backend/go.mod`·`go.sum`에는 charm 모듈이 없어야 한다)
+- `install.sh`는 부트스트랩이다. 실행한 계정으로 `installer/`를 `bin/maru-install`로 빌드해 exec한다(go가 없거나 root가 남의 저장소에서 실행하면 이미 있는 실행 파일을 쓴다). 옵션과 동작은 모두 설치기가 정한다. 진입점 이름 `./install.sh`는 README, 화면 문구(모든 언어), 생성 파일의 주석이 참조하므로 바꾸지 않는다
+- `installer/`는 별도 Go 모듈(`maru/installer`)이다. `go.work` 없이 `replace maru/backend => ../backend`로 로컬 백엔드를 쓰고, go 지시어는 `backend/go.mod`와 같게 둔다. TUI 의존성 huh v2는 이 모듈에만 있다(`backend/go.mod`·`go.sum`에는 charm 모듈이 없어야 한다)
 - 백엔드에서 쓰는 것은 공개 패키지 `backend/config`(환경 변수 키, 기본값, 검증 함수, 버전)뿐이다. `backend/internal`은 Go 규칙상 import할 수 없고, `TestBackendDependencies`가 다른 백엔드 패키지를 링크하지 않는지 본다. `backend/config`는 표준 라이브러리만 쓴다(`TestStandardLibraryOnly`)
 - `internal/setup`
-  - `run.go`: 흐름(1단계 설치, `--service-install` 2단계, `--uninstall`, `--dry-run`, `--upgrade-plan`)과 sudo 재실행(`sudo bin/onmaru-install --service-install --lang X <레지스트리가 만든 인자> [--upgrade | --reinstall] [--plain]`). root면 같은 프로세스에서 이어 간다. 2단계는 받은 값을 다시 검사한다
+  - `run.go`: 흐름(1단계 설치, `--service-install` 2단계, `--uninstall`, `--dry-run`, `--upgrade-plan`)과 sudo 재실행(`sudo bin/maru-install --service-install --lang X <레지스트리가 만든 인자> [--upgrade | --reinstall] [--plain]`). root면 같은 프로세스에서 이어 간다. 2단계는 받은 값을 다시 검사한다
   - `mode.go`: 설치 방식(새 설치, 다시 설치, 업그레이드)을 정하고 알리며, 업그레이드 요약 뒤의 선택(업그레이드·설정 바꾸기·취소)과 진행 확인을 한다(아래 "설치 방식")
   - `setting.go`: 설정 타입과 레지스트리 동작(옵션 파싱, 사용법, 2단계 인자, 업그레이드 로드, 질문, 검증, 요약, 환경 파일 생성). `settings.go`: 설정 목록. 순서가 질문·요약·환경 파일 줄·사용법의 순서다. `setting_<이름>.go`: 설정 정의
   - `step.go`·`steps.go`·`step_<이름>.go`: 설치·제거 단계. User 단계는 빌드, Root 단계는 설치다
   - `setting_webupgrade.go`·`step_webupgrade.go`: 대시보드에서 업그레이드 설정(`--web-upgrade`, `--build-path`)과 설치·제거(아래 "업그레이드 서비스")
   - `upgrade_service.go`·`upgrade_exec.go`: 업그레이드 서비스(`--upgrade-service`)의 확인·적용 흐름과, 소유자 권한 명령 실행·요청·상태 파일 처리
-  - `step_record.go`: 설치 기록(`config.InstallRecordFile`, `/var/lib/onmaru-upgrade/installed.json`, 디렉터리 0755·파일 0644). 서비스를 시작한 뒤 매번 쓰고 제거할 때 디렉터리째 지운다. 커밋은 설치하는 `bin/onmaru`의 빌드 정보(`System.ReadBuildInfo`)에서 읽고, 버전(`config.Version`)은 설치기 자신의 커밋(`Context.SelfBuild`)과 같을 때만 적는다. 확인하지 못한 값은 비우고 경고만 한다(설치는 실패하지 않는다)
+  - `step_record.go`: 설치 기록(`config.InstallRecordFile`, `/var/lib/maru-upgrade/installed.json`, 디렉터리 0755·파일 0644). 서비스를 시작한 뒤 매번 쓰고 제거할 때 디렉터리째 지운다. 커밋은 설치하는 `bin/maru`의 빌드 정보(`System.ReadBuildInfo`)에서 읽고, 버전(`config.Version`)은 설치기 자신의 커밋(`Context.SelfBuild`)과 같을 때만 적는다. 확인하지 못한 값은 비우고 경고만 한다(설치는 실패하지 않는다)
   - `plan.go`: 업그레이드 계획(`--upgrade-plan`, 아래 "업그레이드 계획"). `upgrade_list.go`: 수동 재설치 경계와 업그레이드 뒤 할 일 목록(유지자가 고치는 곳). `version.go`: `X.Y.Z` 비교, Node.js 범위, 요구 도구 버전 상수
   - `system.go`: System 인터페이스와 실제 구현. `system_dryrun.go`: 파일 쓰기·root 명령을 보여 주기만 하고 읽기·확인·빌드는 실제로 한다. 테스트의 `fake_test.go`: 가짜 루트(임시 디렉터리)와 명령 기록
   - `envfile.go`: 환경 파일 읽기(source 안 함. 마지막 `KEY=` 줄, 값을 감싼 큰따옴표 한 쌍은 벗김)와 쓰기(내용이 같으면 "unchanged", 바뀌면 환경 파일만 `.bak-<시각>` 백업, 유닛은 백업 없이 덮어씀)
-  - `templates/*.tmpl`: 유닛 5종(onmaru, 도우미 소켓·서비스, 업그레이드 서비스·경로. embed, `text/template`). 하드닝 줄을 바꾸는 일은 이 파일을 고치는 것이다
+  - `templates/*.tmpl`: 유닛 5종(maru, 도우미 소켓·서비스, 업그레이드 서비스·경로. embed, `text/template`). 하드닝 줄을 바꾸는 일은 이 파일을 고치는 것이다
   - `text.go`: 문구 `L(en, ko)`와 로캘 언어 선택(`--lang`, 아니면 `LC_ALL`·`LC_MESSAGES`·`LANG`이 ko로 시작하면 ko). 문구는 쓰는 곳(설정·단계 파일) 옆에 둔다
 - `internal/prompt`: Prompter(Input, Select, Confirm, Note). huh(표준 입력·출력이 터미널, `TERM≠dumb`, `--plain` 아님), 줄 단위(그 밖), 테스트용 `Script`(질문 ID별 답)와 `Fail`(질문하면 실패). 두 실제 구현 모두 잘못된 입력은 다시 묻는다
 
 ## 설치 방식
 
-`resolveMode`가 1단계와 직접 실행한 2단계에서 같은 규칙으로 정한다. "설치되어 있음"은 유닛 파일과 `/etc/default/onmaru`가 모두 있다는 뜻이다.
+`resolveMode`가 1단계와 직접 실행한 2단계에서 같은 규칙으로 정한다. "설치되어 있음"은 유닛 파일과 `/etc/default/maru`가 모두 있다는 뜻이다.
 
 - 옵션 없음
   - 둘 다 없음: 새 설치. 옵션으로 주지 않은 설정을 모두 묻고 요약 뒤 "진행할까요?"
@@ -59,14 +59,14 @@ paths:
 
 설계는 `.claude/docs/upgrade.md`, 사용자 설명은 `README.md`의 "대시보드에서 업그레이드". 경로·형식은 `backend/config`(`upgrade.go`, `upgrade_request.go`)에 있다.
 
-- 설정: `--web-upgrade`(`FlagToggle`, 도우미를 설치할 때만)와 `--build-path`(묻지 않는 `FlagValue`). 켜면 `stepWebUpgrade`가 설치기 복사본(`/usr/local/lib/onmaru/onmaru-install`, `bin/onmaru-install`에서), `/etc/default/onmaru-upgrade`(저장소 경로·빌드 계정·빌드 PATH), `onmaru-upgrade.service`·`.path`를 쓰고, 도우미 유닛에 `RuntimeDirectory=onmaru-upgrade`가 들어간다. 끄거나 도우미를 지우면(제거 포함) `removeWebUpgrade`가 경로 유닛을 끄고 이것들과 남은 요청·상태 파일을 지운다. 돌고 있는 업그레이드 서비스는 멈추지 않는다
+- 설정: `--web-upgrade`(`FlagToggle`, 도우미를 설치할 때만)와 `--build-path`(묻지 않는 `FlagValue`). 켜면 `stepWebUpgrade`가 설치기 복사본(`/usr/local/lib/maru/maru-install`, `bin/maru-install`에서), `/etc/default/maru-upgrade`(저장소 경로·빌드 계정·빌드 PATH), `maru-upgrade.service`·`.path`를 쓰고, 도우미 유닛에 `RuntimeDirectory=maru-upgrade`가 들어간다. 끄거나 도우미를 지우면(제거 포함) `removeWebUpgrade`가 경로 유닛을 끄고 이것들과 남은 요청·상태 파일을 지운다. 돌고 있는 업그레이드 서비스는 멈추지 않는다
   - 값: 설정 파일이 있으면 켜짐이다. 이 설정이 없던 버전의 설치는 꺼진 것으로 읽어 묻지 않는다. 새 설치의 기본값은 저장소 소유자가 일반 사용자일 때 켜짐이고, root 소유 저장소에서는 켤 수 없다(`Validate`). 소유자는 `System.FileOwner(c.RepoDir)`로 읽는다
   - 빌드 PATH: sudo가 PATH를 바꾸므로 1단계(`ActionInstall`)는 기존 값을 읽지 않고 `System.Which`로 git·go·node·npm·make를 찾은 디렉터리 + `/usr/local/bin:/usr/bin:/bin`을 `Registry.fill`로 채워 2단계에 넘긴다. 2단계를 직접 실행하면(대시보드 업그레이드 포함) 기존 값을 쓴다
-  - 설정 파일 키(`config.EnvUpgrade*`)와 서비스 시간 상한(`config.UpgradeServiceTimeout`, 유닛의 `TimeoutStartSec`로 렌더), 설치한 상태 디렉터리(`config.InstalledStateDir`)는 onmaru도 쓰므로 `backend/config`에 둔다
+  - 설정 파일 키(`config.EnvUpgrade*`)와 서비스 시간 상한(`config.UpgradeServiceTimeout`, 유닛의 `TimeoutStartSec`로 렌더), 설치한 상태 디렉터리(`config.InstalledStateDir`)는 maru도 쓰므로 `backend/config`에 둔다
   - 경로 유닛은 바뀌었을 때만 다시 시작한다. 업그레이드 서비스 유닛은 어떤 단계도 시작·재시작하지 않는다(그 서비스 안에서 설치기가 돈다)
 - `--upgrade-service`(root, 다른 옵션 없음): 저장소 밖의 복사본으로 돌므로 `c.RepoDir`를 쓰지 않고 저장소·계정·PATH는 설정 파일에서만 정한다. 요청 하나를 처리한다(적용이 먼저)
-  - 요청은 내용과 상관없이 먼저 읽고 지운다(`PathExists=`가 다시 실행하지 않게). onmaru가 쓰는 확인 요청은 `O_NOFOLLOW`·4KiB, root가 쓰는 설정 파일·적용 요청은 64KiB까지 읽는다. 설정 파일이 없으면 요청만 지우고 상태 파일을 만들지 않는다
-  - 소유자 명령은 uid·gid·보조 그룹으로 강등하고 새 세션, 새 환경 변수(HOME·PATH 등, 프롬프트 끔)로 빌드 PATH에서 찾아 실행한다. root로 실행하는 것은 마지막의 `bin/onmaru-install --service-install --upgrade --plain --lang en <설정>`뿐이다
+  - 요청은 내용과 상관없이 먼저 읽고 지운다(`PathExists=`가 다시 실행하지 않게). maru가 쓰는 확인 요청은 `O_NOFOLLOW`·4KiB, root가 쓰는 설정 파일·적용 요청은 64KiB까지 읽는다. 설정 파일이 없으면 요청만 지우고 상태 파일을 만들지 않는다
+  - 소유자 명령은 uid·gid·보조 그룹으로 강등하고 새 세션, 새 환경 변수(HOME·PATH 등, 프롬프트 끔)로 빌드 PATH에서 찾아 실행한다. root로 실행하는 것은 마지막의 `bin/maru-install --service-install --upgrade --plain --lang en <설정>`뿐이다
   - 확인은 저장소 상태를 수동 재설치 사유(`config.UpgradeReason*`)로 담고, 대상 커밋의 `installer`·`backend`만 `git archive`로 소유자 임시 디렉터리에 꺼내 빌드해 `--upgrade-plan`을 실행한다(임시 디렉터리가 소유자 것이어야 `--web-upgrade` 검사가 통과한다). 적용은 마지막 확인·설치 기록·작업 트리·커밋 관계를 다시 보고 설정 값을 계획으로 다시 검사한 뒤(빌드 전) fast-forward, 서브모듈, `stepBuild`(소유자), 빌드 결과의 커밋 확인, 설치 순서다
   - 작업 실패는 상태 파일(`Error`, 로그 끝부분)에 남기고 0으로 끝낸다. 단계가 바뀔 때마다(설치 단계 전 포함) 상태 파일을 쓴다
   - 업그레이드 서비스의 동작을 바꾸면 이전 버전의 서비스가 새 버전을 올린다는 점을 생각한다. 이전 서비스가 못 하는 일이 생기면 `manualUpgrades`에 항목을 더한다
@@ -87,7 +87,7 @@ paths:
    - 백엔드와 같은 규칙이면 `backend/config`의 함수로 검사하고, 설치기만의 더 엄격한 규칙(사용자 이름, Unix 소켓 경로, IP만 받는 주소 등)은 설정 정의에 둔다
    - 설정 정의 안의 함수에서 다른 설정 값은 `name*` 상수로 읽는다(설정 변수를 직접 가리키면 패키지 초기화 순환이 생긴다)
 2. `settings.go`의 목록에 한 줄 더한다
-3. 백엔드 플래그도 생기면 `backend/config`에 키·기본값을 두고 `cmd/onmaru/main.go`의 플래그와 `runtimeEntry` 목록에서 쓴다
+3. 백엔드 플래그도 생기면 `backend/config`에 키·기본값을 두고 `cmd/maru/main.go`의 플래그와 `runtimeEntry` 목록에서 쓴다
 4. `README.md`의 설치 옵션 표(`TestReadmeListsEveryOption`)와 설정 표, `setting_test.go`의 검사 표와 왕복 표에 더한다
 5. 환경 파일 출력이 바뀌면 골든(`testdata/golden/*/want`)도 고친다. 골든은 bash `install.sh`의 출력에서 시작했으므로 바꾼 이유를 커밋 메시지에 적는다
 
@@ -99,8 +99,8 @@ paths:
 
 ## 불변 조건
 
-- 생성하는 파일(유닛 5종, `/etc/default/onmaru`, `/etc/default/onmaru-helper`, `/etc/default/onmaru-upgrade`)은 골든과 바이트 단위로 같고 명령 순서(`commands`)도 같아야 한다(`TestGoldenServiceInstall`). 골든은 bash `install.sh`의 출력에서 시작했고, bash에 없던 설정(대시보드에서 업그레이드)은 Go 설치기 출력으로 만든 케이스로 본다(`testdata/golden/README`). 생성 파일의 주석은 영어로 쓰고 진입점을 `install.sh`라고 부른다
-- 의도한 차이는 레지스트리가 관리하지 않는 기존 `ONMARU_*` 줄을 파일 끝 "Kept from the previous file" 주석 아래에 보존하는 것뿐이다. 그런 줄이 없으면 주석도 쓰지 않는다
+- 생성하는 파일(유닛 5종, `/etc/default/maru`, `/etc/default/maru-helper`, `/etc/default/maru-upgrade`)은 골든과 바이트 단위로 같고 명령 순서(`commands`)도 같아야 한다(`TestGoldenServiceInstall`). 골든은 bash `install.sh`의 출력에서 시작했고, bash에 없던 설정(대시보드에서 업그레이드)은 Go 설치기 출력으로 만든 케이스로 본다(`testdata/golden/README`). 생성 파일의 주석은 영어로 쓰고 진입점을 `install.sh`라고 부른다
+- 의도한 차이는 레지스트리가 관리하지 않는 기존 `MARU_*` 줄을 파일 끝 "Kept from the previous file" 주석 아래에 보존하는 것뿐이다. 그런 줄이 없으면 주석도 쓰지 않는다
 - 설치 기록은 설치 시각이 들어가므로 골든 대상이 아니다(`record_test.go`가 본다). 파일 쓰기는 명령 기록에 남지 않으므로 골든의 `commands`도 그대로다
 - bash `install.sh`가 만든 설치(같은 경로·환경 변수 키·유닛의 `User=`)를 업그레이드(옵션 없음 또는 `--upgrade`)로 읽는다. 설정이 모두 있는 설치의 업그레이드는 설정 질문이 없고(옵션 없는 터미널 실행은 요약 뒤 선택 하나), 설정을 모두 준 `--service-install`(README의 자동화 예시, 테스트 VM의 설치 시험)은 설치 여부와 상관없이 질문 없이 끝나야 한다
 - 비TTY에서 설정 질문이 필요하면(빠진 설정, 검사를 통과하지 못한 기존 값) 멈추지 않고 그 옵션 목록을 알린 뒤 2로 끝낸다. 확인 질문(진행할까요, 그래도 계속할까요)도 비TTY에서는 묻지 않고 오류로 끝낸다. 업그레이드(옵션 없는 비TTY 실행, `--upgrade`), 설정을 모두 준 `--service-install`, `--dry-run`은 진행 확인을 하지 않는다

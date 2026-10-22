@@ -8,7 +8,7 @@ import { initReactI18next, useTranslation } from 'react-i18next'
 import { FALLBACK_LANGUAGE, type Language, SUPPORTED_LANGUAGES, isLanguage, pickLanguage } from './languages'
 import en from './locales/en.json'
 
-const STORAGE_KEY = 'onmaru.language'
+const STORAGE_KEY = 'maru.language'
 
 // 영어는 빠진 키의 대체 언어라 진입 청크에 넣는다. 다른 언어는 언어마다 청크 하나로 나뉘어 고를 때 받는다.
 // 언어 수만큼 늘어나는 카탈로그를 모든 사용자가 받지 않게 하려는 것이다.

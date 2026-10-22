@@ -3,7 +3,7 @@ package setup
 import (
 	"errors"
 
-	"onmaru/backend/config"
+	"maru/backend/config"
 )
 
 // settingPublicOrigin은 브라우저가 대시보드에 접속하는 공개 HTTPS 주소다. 보안 강화 모드의 패스키(RP)에 쓴다.
@@ -15,7 +15,7 @@ var settingPublicOrigin = &Setting{
 	Usage: L("public HTTPS address browsers use for the dashboard (for passkeys, empty turns them off)",
 		"브라우저가 대시보드에 접속하는 공개 HTTPS 주소(패스키용, 빈 값이면 패스키를 끕니다)"),
 	Env: []EnvLine{{
-		File:    OnmaruEnv,
+		File:    MaruEnv,
 		Comment: "Public HTTPS address browsers use for the dashboard, for passkeys (security hardening mode); empty turns passkeys off.",
 		Key:     config.EnvPublicOrigin,
 	}},

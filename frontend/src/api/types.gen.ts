@@ -851,7 +851,7 @@ export interface SiteDefaults {
 }
 /**
  * ServerOverrides는 재시작 없이 바꿀 수 있는 가동 설정을 웹에서 덮어쓴 값이다. 없는 값은 플래그·환경 변수
- * (/etc/default/onmaru) 값을 따른다.
+ * (/etc/default/maru) 값을 따른다.
  */
 export interface ServerOverrides {
   /**
@@ -1056,7 +1056,7 @@ export interface ServerSettings {
    */
   terminal: OverridableSetting;
   /**
-   * Runtime은 시작할 때 정해진 가동 설정 전체다(플래그 순서). 바꾸려면 /etc/default/onmaru를 고치고 다시 시작한다.
+   * Runtime은 시작할 때 정해진 가동 설정 전체다(플래그 순서). 바꾸려면 /etc/default/maru를 고치고 다시 시작한다.
    */
   runtime: RuntimeSetting[];
 }
@@ -2054,7 +2054,7 @@ export interface SecurityUserInfo {
   unreadable?: boolean;
 }
 /**
- * UpgradeNotEnabled: 설치기가 대시보드에서 업그레이드를 켜지 않았다(/etc/default/onmaru-upgrade가 없다).
+ * UpgradeNotEnabled: 설치기가 대시보드에서 업그레이드를 켜지 않았다(/etc/default/maru-upgrade가 없다).
  */
 export const UpgradeNotEnabled = "not-enabled";
 /**
@@ -2062,7 +2062,7 @@ export const UpgradeNotEnabled = "not-enabled";
  */
 export const UpgradeNoHelper = "no-helper";
 /**
- * UpgradeStateDir: 상태 디렉터리가 없거나 설치한 위치(/var/lib/onmaru)가 아니다. 업그레이드 서비스의 경로 유닛은
+ * UpgradeStateDir: 상태 디렉터리가 없거나 설치한 위치(/var/lib/maru)가 아니다. 업그레이드 서비스의 경로 유닛은
  * 그 안의 확인 요청만 지켜본다.
  */
 export const UpgradeStateDir = "state-dir";
@@ -2083,7 +2083,7 @@ export interface UpgradeInfo {
   user?: string;
   /**
    * Pending은 확인 요청을 업그레이드 서비스가 아직 가져가지 않았다는 뜻이다. PendingStalled는 1분 넘게 남아 있다는
-   * 뜻이다(경로 유닛 onmaru-upgrade.path가 돌지 않는다).
+   * 뜻이다(경로 유닛 maru-upgrade.path가 돌지 않는다).
    */
   pending: boolean;
   pendingStalled: boolean;
@@ -2093,12 +2093,12 @@ export interface UpgradeInfo {
    */
   interrupted: boolean;
   /**
-   * Version, Revision은 지금 실행 중인 onmaru의 버전과 커밋이다(Revision은 모르면 없다).
+   * Version, Revision은 지금 실행 중인 maru의 버전과 커밋이다(Revision은 모르면 없다).
    */
   version: string;
   revision?: string;
   /**
-   * Installed는 설치기가 남긴 설치 기록이다(/var/lib/onmaru-upgrade/installed.json). 없거나 읽을 수 없으면 null이다.
+   * Installed는 설치기가 남긴 설치 기록이다(/var/lib/maru-upgrade/installed.json). 없거나 읽을 수 없으면 null이다.
    * 실행 파일에 커밋이 없을 때(go run) 화면이 이 기록의 커밋을 보인다.
    */
   installed?: config.InstallRecord;

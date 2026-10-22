@@ -398,7 +398,7 @@
       "runtimeDesc": "Werte, mit denen der Server gestartet wurde, und ihre Herkunft.",
       "overriddenBadge": "Hier geändert",
       "howTo": "Andere Einstellungen ändern",
-      "howToDesc": "Diese Werte sind Umgebungsvariablen in /etc/default/onmaru. Starten Sie den Dienst nach dem Bearbeiten neu. Wenn Sie die Empfangsadresse ändern, passen Sie auch den Reverse-Proxy an.",
+      "howToDesc": "Diese Werte sind Umgebungsvariablen in /etc/default/maru. Starten Sie den Dienst nach dem Bearbeiten neu. Wenn Sie die Empfangsadresse ändern, passen Sie auch den Reverse-Proxy an.",
       "howToInstall": "Sie können auch ./install.sh --reinstall im Repository erneut ausführen und die Fragen beantworten.",
       "copy": "Befehle kopieren",
       "copied": "Kopiert",

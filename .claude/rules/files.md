@@ -10,7 +10,7 @@ paths:
 
 # 파일 탐색기
 
-홈 폴더와 OMV 공유 폴더를 둘러보는 셸 앱 `files`다. 파일은 권한 도우미의 사용자 권한 연산으로 다루고(`.claude/docs/helper.md`의 "파일 탐색기 연산"), onmaru는 보이는 폴더 밖의 경로를 거르고 목록을 정렬·캐시한다. 사용자 설명은 `README.md`의 "파일 탐색기", 남은 단계는 `ROADMAP.md`.
+홈 폴더와 OMV 공유 폴더를 둘러보는 셸 앱 `files`다. 파일은 권한 도우미의 사용자 권한 연산으로 다루고(`.claude/docs/helper.md`의 "파일 탐색기 연산"), maru는 보이는 폴더 밖의 경로를 거르고 목록을 정렬·캐시한다. 사용자 설명은 `README.md`의 "파일 탐색기", 남은 단계는 `ROADMAP.md`.
 
 ## 접근과 범위
 
@@ -29,7 +29,7 @@ paths:
 - 그룹은 도우미 `id`의 그룹 이름(커널의 실제 그룹, Samba가 `@group`을 푸는 것과 같다)이고 홈과 함께 세션별로 기억한다(`files.Cache.Identity`). 로그인한 동안 바뀐 그룹은 다시 로그인해야 반영된다
 - 적용(`handler.roots`의 `fileRoots`): 거부인 공유 폴더는 사이드바에서 빼고 `hidden`에 둔다. `withinRoots`가 디스크 최상위 보기에서도 그 아래를 403 `outside_roots`로 막고, 검색 결과에서도 뺀다. `rootFolder`가 숨긴 공유 폴더도 지킨다. 읽기인 공유 폴더는 `FilesShare.ReadOnly`, 목록·정보의 `shareReadOnly`(그때 `writable`·`access.write`는 false)이고, 쓰기 라우트가 바꿀 곳을 `allowedWritePaths`로 거른다(올리기와 사전 확인, 만들기, 이름 바꾸기·옮기기 양쪽, 삭제, 휴지통 넣기, 되돌리기 대상, 복사 대상): 403 `share_read_only`. 휴지통 영구 삭제·비우기는 휴지통 디렉터리만 다루므로 거르지 않는다
 - 적용 중인지(켜져 있고 스냅숏이 있음)는 뿌리 응답의 `FilesRoots.FollowPrivileges`로 알리고, 정보 패널이 안내 문구(`files.info.noteFollow`)를 그에 맞춘다
-- 도우미의 범위는 바꾸지 않으므로 onmaru가 뚫리면 지켜 주지 않는다(설정 화면이 파일 시스템 권한도 함께 적용된다고 알린다)
+- 도우미의 범위는 바꾸지 않으므로 maru가 뚫리면 지켜 주지 않는다(설정 화면이 파일 시스템 권한도 함께 적용된다고 알린다)
 
 ## 목록(큰 폴더)
 
@@ -44,7 +44,7 @@ paths:
 
 - 내려받기(`GET /api/files/download`)는 `fs.read` 스트림이다. 내용을 브라우저가 그리지 않게 언제나 `application/octet-stream`, `attachment`(ASCII `filename` + RFC 5987 `filename*`), `nosniff`, `CSP: default-src 'none'; sandbox`로 보낸다. 범위는 하나(`bytes=a-b`, `a-`, `-n`)와 ETag `If-Range`만 받고, 여러 범위는 200 전체다
 - 프런트는 숨긴 `<a download>`로 받는다(`files/download.ts`). 401이면 브라우저가 오류 본문을 파일로 저장하므로 누르기 직전에 `GET /api/files/info`로 세션과 파일을 먼저 확인한다
-- 올리기(`PUT /api/files/upload?path=&overwrite=1`)는 원시 본문(`application/octet-stream`만, CSRF 보조 장치, `auth-omv.md`)과 `Content-Length`(없으면 411)를 받아 메모리에 모으지 않고 `fs.write`로 흘려 보낸다. 이름은 `proto.ValidName` + UTF-8 + `.onmaru-upload-` 접두사 금지. 핸들러와 사전 확인은 `internal/server/files_upload.go`
+- 올리기(`PUT /api/files/upload?path=&overwrite=1`)는 원시 본문(`application/octet-stream`만, CSRF 보조 장치, `auth-omv.md`)과 `Content-Length`(없으면 411)를 받아 메모리에 모으지 않고 `fs.write`로 흘려 보낸다. 이름은 `proto.ValidName` + UTF-8 + `.maru-upload-` 접두사 금지. 핸들러와 사전 확인은 `internal/server/files_upload.go`
   - **본문 전 거절**: Go 서버는 핸들러가 본문을 읽기 전에 응답하고 남은 본문이 256KiB 이상이면 본문을 버리지 않고 500ms 뒤 연결을 닫는다. 브라우저(HTTP/1.1)와 일부 프록시는 본문을 끝까지 보낸 뒤에야 응답을 읽으므로 닫힌 연결에 쓰다가 RST를 받고, 거절이 502(Vite 프록시)나 늦은 응답·멈춤(Caddy)이 된다. 그래서 라우트를 `drainRejected`로 감싼다: 본문을 다 받기 전에 오류(400 이상)로 답하면 응답을 모아 두고 남은 본문을 먼저 받은 뒤 길이를 붙여 보낸다(보통의 요청·응답과 같아진다). 세션이 있으면 `Content-Length`까지(60초 무진행이면 멈춤), 세션이 없는 401과 길이를 모르는 본문은 1MiB까지만 받고, 다 받지 못하면 응답 뒤에 닫는다(`Connection: close`). 응답을 먼저 보내고 본문을 받는 방식(`EnableFullDuplex`)은 쓰지 않는다. desk-test에서 Caddy(브라우저 쪽 HTTP/2)를 거친 Chrome의 HTTP/2 연결이 가끔(12번 중 3번) 멈췄고 그 연결의 다음 요청도 막혔다. curl은 같은 경로에서 멈추지 않았다 401·보안 정책·형식·이름·범위 거절과 도우미의 도중 거절(`exists`, `permission_denied`, `no_space`)이 모두 이 경로다
   - **사전 확인**(`POST /api/files/upload/check {path}`, 204): 프록시에 따라 위 거절도 본문을 다 보낸 뒤에야 브라우저에 오므로, 프런트는 PUT 전에 본문 없이 같은 가드(`requireFilesWrite`)와 같은 검사(`uploadTarget`: 새 이름, 보이는 폴더 안)를 거친다. 도우미는 부르지 않는다(같은 이름·쓰기 권한은 PUT이 안다). 사용성을 위한 것이고 PUT은 모든 검사를 그대로 한다
 - 프런트: 탐색기 창이 고른(끌어 놓은) 파일마다 `info`로 같은 이름을 먼저 확인하고(`uploads.ts`의 `checkUploads`, 있으면 덮어쓰기·건너뛰기, 남은 파일에 같게 적용) 그 파일들을 올리기 작업 하나로 파일 작업 목록에 더한다(`startUpload`, 아래 "파일 작업"). 작업은 파일을 하나씩 XHR로 올린다(`uploadFile`, 진행률). `uploadFile`은 본문을 보내기 전에 사전 확인(`checkUpload`)을 하므로, `withStepUp`이 보안 확인 대화상자를 본문 전에 띄우고 확인 뒤 둘 다 다시 한다. 탐색기 창을 닫아도 이어진다
@@ -65,8 +65,8 @@ paths:
 ## 만들기·이름 바꾸기·옮기기·삭제
 
 - 라우트: `POST /api/files/mkdir {path}`, `POST /api/files/rename {from, to}`(이름 바꾸기, 끌어 놓기의 옮기기), `POST /api/files/delete {path, recursive}`(204). JSON 본문만 받고(CSRF 보조 장치) 도우미의 `fs.mkdir`·`fs.rename`·`fs.remove`를 부른다. 만들거나 바꾼 항목은 `fileItemOf`로 돌려준다
-- **보이는 폴더 지키기**(`rootFolder`): 도우미는 자기 기준 디렉터리(홈, `/srv` 아래 마운트 지점)만 지키고 공유 폴더는 지키지 않는다. 그래서 onmaru가 보이는 폴더(홈, 스냅숏의 공유 폴더 전부, 디스크) 자신이거나 그것을 품은 경로의 이름 바꾸기·옮기기·삭제를 409 `root_folder`로 막는다(디스크 최상위 보기에서는 공유 폴더가 디스크의 한 폴더로 보인다). 스냅숏이 없는 대체 상태에서는 공유 폴더를 모르므로 파일 시스템 권한(디스크 맨 위는 보통 root 소유)에 맡긴다
-- 새 이름(`splitNew`, `newNameOK`)은 올리기와 같은 검사(`proto.ValidName`, UTF-8, `.onmaru-upload-` 접두사 금지)를 거친다. 폴더를 자기 안으로 옮기는 요청(`to`가 `from` 안)과 같은 경로는 400이다. 프런트도 같은 검사(`paths.ts`의 `nameProblem`, `moveAllowed`)를 먼저 한다
+- **보이는 폴더 지키기**(`rootFolder`): 도우미는 자기 기준 디렉터리(홈, `/srv` 아래 마운트 지점)만 지키고 공유 폴더는 지키지 않는다. 그래서 maru가 보이는 폴더(홈, 스냅숏의 공유 폴더 전부, 디스크) 자신이거나 그것을 품은 경로의 이름 바꾸기·옮기기·삭제를 409 `root_folder`로 막는다(디스크 최상위 보기에서는 공유 폴더가 디스크의 한 폴더로 보인다). 스냅숏이 없는 대체 상태에서는 공유 폴더를 모르므로 파일 시스템 권한(디스크 맨 위는 보통 root 소유)에 맡긴다
+- 새 이름(`splitNew`, `newNameOK`)은 올리기와 같은 검사(`proto.ValidName`, UTF-8, `.maru-upload-` 접두사 금지)를 거친다. 폴더를 자기 안으로 옮기는 요청(`to`가 `from` 안)과 같은 경로는 400이다. 프런트도 같은 검사(`paths.ts`의 `nameProblem`, `moveAllowed`)를 먼저 한다
 - 옮기기는 이름 바꾸기 하나다. 다른 기준 디렉터리나 다른 파일시스템이면 도우미가 `cross_device`(409)를 주고 복사하지 않는다. 대상이 있으면 덮어쓰지 않는다(`file_exists`). 다른 디스크로 끌어 놓으면 아래 "복사"를 쓴다
 - `POST /api/files/delete`는 SMB 휴지통(`.recycle`)을 거치지 않는 영구 삭제다(삭제의 기본은 아래 "휴지통"). `recursive`는 목록에서 폴더(`type`이 `dir`, 심볼릭 링크 아님)인 항목에만 보내고, 그 밖의 항목이 실제로는 비어 있지 않은 폴더면 `not_empty`(409)다. 목록이 낡아 파일로 보인 폴더를 통째로 지우지 않게 하기 위해서다. 도우미는 `fs.remove`를 10분까지 기다리고, 넘으면 일부만 지운 채 `transfer_timeout`이다(다시 지우면 이어서 지운다)
 - `GET /api/files/list/{id}/find?name=&sort=&order=&q=`는 보기에서 그 이름의 자리다(`Listing.IndexOf`, 없으면 -1). 만들거나 이름을 바꾼 뒤 다시 받은 목록에서 그 줄을 고를 때 쓰며 도우미를 부르지 않는다
@@ -140,6 +140,6 @@ paths:
 - Vitest: 고르기 구간, 새 이름 검사·확장자 앞 고르기, 아이콘 보기 배치·키 이동, 보기 설정 저장소, `previewKind`, 텍스트 보기(`viewer.test.ts`), 검색 사건 읽기·미리보기 범위(`client.test.ts`), `moveAllowed`, `volumeOf`, `runEach` 중지·실패 묶기, 변경 알림, 끌어 놓기의 할 일(`dropMode`), 복사 요청 나누기·진행률·속도, 올리기 작업(차례, 다시 올리기·덮어쓰기, 멈추기, 양), 복사 응답 사건 읽기와 올리기 사전 확인(거절하면 본문을 보내지 않음, `client.test.ts`)
 - 브라우저(복사): 가짜 홈과 가짜 디스크는 기준 디렉터리가 달라 홈 ↔ 디스크가 복사다. 작업 창을 보려면 파일 수만 개짜리 폴더를 쓴다(큰 파일 하나는 로컬 디스크에서 금방 끝난다)
 - 브라우저(휴지통): 가짜 디스크 맨 위(`helper-root/srv/disk1`)는 개발 사용자 소유라 처음에는 `own`이다. `none`(휴지통 없음 안내)은 맨 위를 잠시 `chmod 0555`로 바꿔 보고, 디스크 휴지통 만들기는 상승할 수 있는 `totp`로 확인한다. 서버의 `trash-list --trash-dir=<휴지통>`으로 형식 호환을 볼 수 있다
-- `make dev-fake`: 가짜 OMV가 가짜 도우미 디스크(`helper-root/srv/disk1`)에 합성 파일과 공유 폴더(문서, 미디어, 사진, 관리, 폴더 없는 백업, 루트 파일시스템의 kvm)를 만든다(`cmd/fakeomv/files.go`). 공유 폴더 권한 따르기를 켜면 `user`에게 사진은 읽기 전용, 관리는 보이지 않는다. `FAKEFILES_LARGE=<n>`이면 사진/휴대폰 백업에 빈 파일 n개를 만든다. onmaru는 개발 전용 환경 변수 `ONMARU_DEV_FILES_SRV`(플래그·가동 설정 목록에 넣지 않음)로 그 아래 폴더를 디스크로 본다
+- `make dev-fake`: 가짜 OMV가 가짜 도우미 디스크(`helper-root/srv/disk1`)에 합성 파일과 공유 폴더(문서, 미디어, 사진, 관리, 폴더 없는 백업, 루트 파일시스템의 kvm)를 만든다(`cmd/fakeomv/files.go`). 공유 폴더 권한 따르기를 켜면 `user`에게 사진은 읽기 전용, 관리는 보이지 않는다. `FAKEFILES_LARGE=<n>`이면 사진/휴대폰 백업에 빈 파일 n개를 만든다. maru는 개발 전용 환경 변수 `MARU_DEV_FILES_SRV`(플래그·가동 설정 목록에 넣지 않음)로 그 아래 폴더를 디스크로 본다
 - 브라우저: Playwright 컨테이너는 문자셋 때문에 한글 이름 내려받기를 `download`로 저장한다(Blob도 같다). 한글 파일 이름은 실제 브라우저에서 확인한다
   - 끌어서 옮기기는 `page.mouse`(down → 여러 단계 move → up)로, 바깥 파일 끌어 놓기는 페이지 안에서 `DataTransfer`에 `File`을 넣어 `dragover`·`drop` 이벤트를 보내 확인한다

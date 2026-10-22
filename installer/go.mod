@@ -1,11 +1,11 @@
-module onmaru/installer
+module maru/installer
 
 go 1.27.1
 
 require (
 	charm.land/huh/v2 v2.0.3
 	charm.land/lipgloss/v2 v2.0.1
-	onmaru/backend v0.0.0
+	maru/backend v0.0.0
 )
 
 require (
@@ -34,4 +34,4 @@ require (
 	golang.org/x/sys v0.49.0 // indirect
 )
 
-replace onmaru/backend => ../backend
+replace maru/backend => ../backend

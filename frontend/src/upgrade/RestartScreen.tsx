@@ -1,5 +1,5 @@
-// 업그레이드로 onmaru가 다시 시작하는 동안 데스크톱 대신 그리는 화면. 감시(watch.ts)가 설치 단계에 들어가거나 연결이
-// 끊기면 보이고, onmaru가 돌아오면 감시가 페이지를 새로 고친다. 데스크톱을 내리므로 그동안 다른 주기 요청은 없다.
+// 업그레이드로 maru가 다시 시작하는 동안 데스크톱 대신 그리는 화면. 감시(watch.ts)가 설치 단계에 들어가거나 연결이
+// 끊기면 보이고, maru가 돌아오면 감시가 페이지를 새로 고친다. 데스크톱을 내리므로 그동안 다른 주기 요청은 없다.
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { LanguageSelect } from '../shell/LanguageSelect'

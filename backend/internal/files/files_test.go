@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"onmaru/backend/internal/api"
-	"onmaru/backend/internal/helper/proto"
+	"maru/backend/internal/api"
+	"maru/backend/internal/helper/proto"
 )
 
 func TestCompareNames(t *testing.T) {

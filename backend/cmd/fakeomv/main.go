@@ -2,7 +2,7 @@
 //
 // `make dev-fake`가 백엔드를 이 서버에 연결해, 실제 OMV 계정 없이 로그인 화면과
 // 세션 만료를 브라우저에서 확인할 수 있게 한다. 계정은 모두 가짜 값이며 운영
-// 바이너리(bin/onmaru)에는 포함되지 않는다.
+// 바이너리(bin/maru)에는 포함되지 않는다.
 //
 // / 에는 가짜 workbench 안내 페이지를 둔다. 대시보드의 "OMV 워크벤치" 링크 앱이 여는 탭을
 // 확인하는 용도이며, OMV 웹 UI를 흉내 내지는 않는다.
@@ -17,8 +17,8 @@
 //
 // 가짜 도우미가 있으면 파일 탐색기용 합성 파일과 공유 폴더를 만든다(files.go, FAKEFILES_LARGE로 큰 폴더).
 //
-// 가짜 도우미가 있고 ONMARU_DEV_UPGRADE_ROOT·ONMARU_STATE_DIR가 있으면 대시보드에서 업그레이드의 가짜 업그레이드
-// 서비스(internal/upgrade/upgradefake)도 띄운다. onmaru가 그 상태 디렉터리에 남긴 확인 요청과 가짜 도우미가 쓴
+// 가짜 도우미가 있고 MARU_DEV_UPGRADE_ROOT·MARU_STATE_DIR가 있으면 대시보드에서 업그레이드의 가짜 업그레이드
+// 서비스(internal/upgrade/upgradefake)도 띄운다. maru가 그 상태 디렉터리에 남긴 확인 요청과 가짜 도우미가 쓴
 // 적용 요청을 처리해 가짜 루트의 상태 파일에 쓴다. FAKEUPGRADE_SCENARIO로 시나리오(web, manual, latest, check-fail,
 // apply-fail, disabled)를, FAKEUPGRADE_STEP으로 단계 사이 지연(기본 1.5s)을 고른다.
 package main
@@ -34,11 +34,11 @@ import (
 	"path/filepath"
 	"time"
 
-	"onmaru/backend/config"
-	"onmaru/backend/internal/helper/helperfake"
-	"onmaru/backend/internal/omv/omvfake"
-	"onmaru/backend/internal/terminal/sshfake"
-	"onmaru/backend/internal/upgrade/upgradefake"
+	"maru/backend/config"
+	"maru/backend/internal/helper/helperfake"
+	"maru/backend/internal/omv/omvfake"
+	"maru/backend/internal/terminal/sshfake"
+	"maru/backend/internal/upgrade/upgradefake"
 )
 
 func main() {
@@ -99,7 +99,7 @@ func main() {
 	if addr := os.Getenv("FAKESSH_LISTEN"); addr != "" {
 		startFakeSSH(addr, helper)
 	}
-	if root, state := os.Getenv("ONMARU_DEV_UPGRADE_ROOT"), os.Getenv("ONMARU_STATE_DIR"); helper != nil && root != "" && state != "" {
+	if root, state := os.Getenv("MARU_DEV_UPGRADE_ROOT"), os.Getenv("MARU_STATE_DIR"); helper != nil && root != "" && state != "" {
 		u, err := upgradefake.Start(upgradefake.Options{
 			Root:         root,
 			CheckRequest: filepath.Join(state, config.UpgradeCheckRequestName),

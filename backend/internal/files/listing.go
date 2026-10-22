@@ -9,8 +9,8 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"onmaru/backend/internal/api"
-	"onmaru/backend/internal/helper/proto"
+	"maru/backend/internal/api"
+	"maru/backend/internal/helper/proto"
 )
 
 // SortKey는 보기의 정렬 기준이다.

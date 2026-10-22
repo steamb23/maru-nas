@@ -410,7 +410,7 @@
       "runtimeDesc": "Wartości, z którymi uruchomiono serwer, i ich źródło.",
       "overriddenBadge": "Zmieniono tutaj",
       "howTo": "Zmiana innych ustawień",
-      "howToDesc": "Te wartości to zmienne środowiskowe w /etc/default/onmaru. Po edycji uruchom ponownie usługę. Jeśli zmienisz adres nasłuchiwania, zaktualizuj też odwrotne proxy.",
+      "howToDesc": "Te wartości to zmienne środowiskowe w /etc/default/maru. Po edycji uruchom ponownie usługę. Jeśli zmienisz adres nasłuchiwania, zaktualizuj też odwrotne proxy.",
       "howToInstall": "Możesz też ponownie uruchomić ./install.sh --reinstall z repozytorium i odpowiedzieć na pytania.",
       "copy": "Kopiuj polecenia",
       "copied": "Skopiowano",

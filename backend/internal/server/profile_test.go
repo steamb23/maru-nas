@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"onmaru/backend/internal/api"
-	"onmaru/backend/internal/omv/omvfake"
+	"maru/backend/internal/api"
+	"maru/backend/internal/omv/omvfake"
 )
 
 // loginTOTP는 2차 인증이 필요한 가짜 관리자(일반 계정)로 로그인한다.

@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"onmaru/backend/config"
+	"maru/backend/config"
 )
 
 // Account는 로컬 계정 하나다.
@@ -29,7 +29,7 @@ type Account struct {
 // ErrNoAccount는 계정이 없다는 오류다.
 var ErrNoAccount = errors.New("no such account")
 
-// Accounts는 계정·그룹 정보다. 도우미는 onmaru가 보낸 값이 아니라 이것만 믿는다.
+// Accounts는 계정·그룹 정보다. 도우미는 maru가 보낸 값이 아니라 이것만 믿는다.
 type Accounts interface {
 	// Lookup은 이름으로 계정을 찾는다. 없으면 ErrNoAccount다.
 	Lookup(name string) (Account, error)

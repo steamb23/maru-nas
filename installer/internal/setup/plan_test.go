@@ -10,8 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	"onmaru/backend/config"
-	"onmaru/installer/internal/prompt"
+	"maru/backend/config"
+	"maru/installer/internal/prompt"
 )
 
 // planFake는 설정이 모두 있는 설치(helper-loopback 골든), 이 버전의 설치 기록, 요구 범위 안의 node가 있는 가짜 시스템이다.
@@ -34,7 +34,7 @@ func putRecord(t *testing.T, f *fakeSystem, rec config.InstallRecord) {
 	f.put(t, config.InstallRecordFile, string(data), 0o644)
 }
 
-// setEnvLine은 기존 /etc/default/onmaru의 key 줄을 바꾼다. value가 nil이면 그 줄을 지운다.
+// setEnvLine은 기존 /etc/default/maru의 key 줄을 바꾼다. value가 nil이면 그 줄을 지운다.
 func setEnvLine(t *testing.T, f *fakeSystem, key string, value *string) {
 	t.Helper()
 	data, _ := f.read(t, envFile)
@@ -285,7 +285,7 @@ func TestUpgradePlanAskSetting(t *testing.T) {
 func TestUpgradePlanNotInstalled(t *testing.T) {
 	for name, setup := range map[string]func(t *testing.T, f *fakeSystem){
 		"nothing":  func(t *testing.T, f *fakeSystem) {},
-		"env only": func(t *testing.T, f *fakeSystem) { f.put(t, envFile, "ONMARU_LISTEN=127.0.0.1:8090\n", 0o644) },
+		"env only": func(t *testing.T, f *fakeSystem) { f.put(t, envFile, "MARU_LISTEN=127.0.0.1:8090\n", 0o644) },
 	} {
 		t.Run(name, func(t *testing.T) {
 			f := newFake(t)

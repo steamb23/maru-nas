@@ -8,8 +8,8 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"onmaru/backend/internal/addons"
-	"onmaru/backend/internal/api"
+	"maru/backend/internal/addons"
+	"maru/backend/internal/api"
 )
 
 // pidStat는 /proc/<pid>/stat 한 줄을 만든다. 쓰지 않는 필드는 0이다.

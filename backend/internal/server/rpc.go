@@ -6,10 +6,10 @@ import (
 	"log"
 	"net/http"
 
-	"onmaru/backend/internal/addons"
-	"onmaru/backend/internal/api"
-	"onmaru/backend/internal/auth"
-	"onmaru/backend/internal/omv"
+	"maru/backend/internal/addons"
+	"maru/backend/internal/api"
+	"maru/backend/internal/auth"
+	"maru/backend/internal/omv"
 )
 
 // maxRPCBodyBytes는 /api/rpc 요청 본문의 최대 크기다.

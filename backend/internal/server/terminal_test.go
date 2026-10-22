@@ -11,8 +11,8 @@ import (
 
 	"github.com/coder/websocket"
 
-	"onmaru/backend/internal/api"
-	"onmaru/backend/internal/terminal/sshfake"
+	"maru/backend/internal/api"
+	"maru/backend/internal/terminal/sshfake"
 )
 
 // wsTerm은 테스트용 터미널 WebSocket 클라이언트다.

@@ -138,7 +138,7 @@ describe('경로', () => {
   it('올릴 수 없는 이름을 거른다', () => {
     expect(uploadNameOk('사진.jpg')).toBe(true)
     expect(uploadNameOk('.hidden')).toBe(true)
-    for (const bad of ['', '.', '..', 'a/b', 'a\0b', '.onmaru-upload-x.part', 'ㄱ'.repeat(86)]) {
+    for (const bad of ['', '.', '..', 'a/b', 'a\0b', '.maru-upload-x.part', 'ㄱ'.repeat(86)]) {
       expect(uploadNameOk(bad)).toBe(false)
     }
   })
@@ -461,7 +461,7 @@ describe('새 이름', () => {
     expect(nameProblem('a\0b')).toBe('chars')
     expect(nameProblem('가'.repeat(85))).toBeNull()
     expect(nameProblem('가'.repeat(86))).toBe('tooLong')
-    expect(nameProblem('.onmaru-upload-x')).toBe('reserved')
+    expect(nameProblem('.maru-upload-x')).toBe('reserved')
     expect(nameProblem('.bashrc')).toBeNull()
     expect(uploadNameOk(' 공백 ')).toBe(true)
   })

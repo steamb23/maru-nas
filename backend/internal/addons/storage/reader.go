@@ -8,7 +8,7 @@ import (
 	"strings"
 	"syscall"
 
-	"onmaru/backend/internal/api"
+	"maru/backend/internal/api"
 )
 
 // Usage는 statfs 결과(바이트)다.

@@ -5,7 +5,7 @@ import type { LinkAppId } from './apps'
 // 링크 앱마다 여는 브라우저 탭 이름. 같은 이름으로 열면 이미 열린 탭을 다시 써서 새 탭이 쌓이지 않고,
 // 그 탭의 OMV 로그인(탭마다 따로다)도 유지된다.
 export const LINK_TAB_NAMES: Record<LinkAppId, string> = {
-  workbench: 'onmaru-omv-workbench',
+  workbench: 'maru-omv-workbench',
 }
 
 // linkConfigured는 링크 앱의 주소가 설정되어 있는지다. capability를 아직 받지 못했으면 주소를 모르므로 false.

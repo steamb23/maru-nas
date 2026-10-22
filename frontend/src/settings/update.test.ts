@@ -203,7 +203,7 @@ group('versionLabel', () => {
 
 group('manualCommands', () => {
   it('changes to the repository and runs the command', () => {
-    expect(manualCommands('/home/alice/onmaru', './install.sh --reinstall')).toBe('cd /home/alice/onmaru\n./install.sh --reinstall')
+    expect(manualCommands('/home/alice/maru-nas', './install.sh --reinstall')).toBe('cd /home/alice/maru-nas\n./install.sh --reinstall')
     expect(manualCommands("/home/al ice/it's", './install.sh')).toBe("cd '/home/al ice/it'\\''s'\n./install.sh")
     expect(manualCommands(undefined, undefined)).toBe('./install.sh')
   })

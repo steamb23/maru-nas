@@ -3,7 +3,7 @@ package addons
 import (
 	"testing"
 
-	"onmaru/backend/internal/api"
+	"maru/backend/internal/api"
 )
 
 func widgetRegistry(t *testing.T) *Registry {

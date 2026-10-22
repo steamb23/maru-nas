@@ -8,15 +8,15 @@ import (
 	"testing"
 	"time"
 
-	"onmaru/backend/config"
-	"onmaru/backend/internal/helper/proto"
+	"maru/backend/config"
+	"maru/backend/internal/helper/proto"
 )
 
 // upgrade.apply는 대상 커밋과 설정 이름·값의 꼴만 검사해 요청 디렉터리에 root만 읽는 적용 요청을 쓴다. 요청한 사용자는
 // 작업(티켓)에서 정한다. 대시보드에서 업그레이드가 꺼져 있으면(디렉터리 없음) upgrade_disabled다.
 func TestUpgradeApply(t *testing.T) {
 	e := newEnv(t)
-	dir := filepath.Join(t.TempDir(), "onmaru-upgrade")
+	dir := filepath.Join(t.TempDir(), "maru-upgrade")
 	e.cfg.UpgradeDir = dir
 	e.cfg.Now = func() time.Time { return time.Date(2026, 10, 19, 1, 2, 3, 0, time.FixedZone("KST", 9*3600)) }
 	e.job.User = "bob"

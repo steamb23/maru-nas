@@ -1,4 +1,4 @@
-// Package config는 백엔드(onmaru, onmaru-helper)와 설치기(installer)가 함께 쓰는 설정 규칙이다.
+// Package config는 백엔드(maru, maru-helper)와 설치기(installer)가 함께 쓰는 설정 규칙이다.
 // 환경 변수 키, 기본값, 설정 값 검사 함수, 온마루 버전(Version), 대시보드에서 업그레이드의 파일 형식(upgrade.go)을 둔다.
 //
 // 설치기는 별도 Go 모듈이라 backend/internal을 import할 수 없으므로 이 공개 패키지만 쓴다.
@@ -6,28 +6,28 @@
 // (TestStandardLibraryOnly).
 package config
 
-// onmaru 실행 파일의 환경 변수 키. 같은 이름의 명령줄 플래그보다 우선순위가 낮다.
+// maru 실행 파일의 환경 변수 키. 같은 이름의 명령줄 플래그보다 우선순위가 낮다.
 const (
-	EnvListen           = "ONMARU_LISTEN"
-	EnvAllowNonLoopback = "ONMARU_ALLOW_NON_LOOPBACK"
-	EnvOMVURL           = "ONMARU_OMV_URL"
-	EnvCookiePath       = "ONMARU_COOKIE_PATH"
-	EnvStateDir         = "ONMARU_STATE_DIR"
+	EnvListen           = "MARU_LISTEN"
+	EnvAllowNonLoopback = "MARU_ALLOW_NON_LOOPBACK"
+	EnvOMVURL           = "MARU_OMV_URL"
+	EnvCookiePath       = "MARU_COOKIE_PATH"
+	EnvStateDir         = "MARU_STATE_DIR"
 	// EnvSystemdStateDir는 systemd의 StateDirectory=가 넘겨주는 상태 디렉터리다(EnvStateDir가 없을 때 쓴다).
 	EnvSystemdStateDir = "STATE_DIRECTORY"
-	EnvWorkbenchURL    = "ONMARU_WORKBENCH_URL"
-	EnvSmartRefreshAt  = "ONMARU_SMART_REFRESH_AT"
-	EnvHelperSocket    = "ONMARU_HELPER_SOCKET"
-	EnvTerminal        = "ONMARU_TERMINAL"
-	EnvSSHAddr         = "ONMARU_SSH_ADDR"
-	EnvSSHHostKeys     = "ONMARU_SSH_HOST_KEYS"
-	EnvPublicOrigin    = "ONMARU_PUBLIC_ORIGIN"
+	EnvWorkbenchURL    = "MARU_WORKBENCH_URL"
+	EnvSmartRefreshAt  = "MARU_SMART_REFRESH_AT"
+	EnvHelperSocket    = "MARU_HELPER_SOCKET"
+	EnvTerminal        = "MARU_TERMINAL"
+	EnvSSHAddr         = "MARU_SSH_ADDR"
+	EnvSSHHostKeys     = "MARU_SSH_HOST_KEYS"
+	EnvPublicOrigin    = "MARU_PUBLIC_ORIGIN"
 )
 
-// onmaru-helper 실행 파일의 환경 변수 키.
+// maru-helper 실행 파일의 환경 변수 키.
 const (
-	EnvHelperClientUser   = "ONMARU_HELPER_CLIENT_USER"
-	EnvHelperElevateGroup = "ONMARU_HELPER_ELEVATE_GROUP"
+	EnvHelperClientUser   = "MARU_HELPER_CLIENT_USER"
+	EnvHelperElevateGroup = "MARU_HELPER_ELEVATE_GROUP"
 )
 
 // 기본값. 빈 값이 기본인 설정(워크벤치 주소, 공개 주소, 도우미 소켓 등)은 따로 두지 않는다.
@@ -41,8 +41,8 @@ const (
 	// DefaultSSHHostKeys는 sshd 호스트 공개 키 파일의 glob 패턴이다(0644라 누구나 읽는다).
 	DefaultSSHHostKeys = "/etc/ssh/ssh_host_*_key.pub"
 
-	// DefaultHelperClientUser는 도우미가 연결을 받는 사용자(onmaru 서비스 사용자)의 기본값이다.
-	DefaultHelperClientUser = "onmaru"
+	// DefaultHelperClientUser는 도우미가 연결을 받는 사용자(maru 서비스 사용자)의 기본값이다.
+	DefaultHelperClientUser = "maru"
 	// DefaultElevateGroup은 root 권한 상승에 openmediavault-admin과 함께 필요한 그룹의 기본값이다.
 	DefaultElevateGroup = "sudo"
 )

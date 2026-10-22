@@ -1,0 +1,5 @@
+# maru-helper settings. Written by install.sh; re-run it to change them.
+# Only this user may connect to the helper socket.
+MARU_HELPER_CLIENT_USER=dash
+# Members of openmediavault-admin who are also in this group may elevate to root.
+MARU_HELPER_ELEVATE_GROUP=openmediavault-admin

@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"onmaru/backend/internal/api"
+	"maru/backend/internal/api"
 )
 
 // listResponse는 Smart.getList 응답이다(rpc.common.getlist 형식의 {total, data}).

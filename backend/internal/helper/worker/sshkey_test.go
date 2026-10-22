@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"onmaru/backend/internal/helper/proto"
+	"maru/backend/internal/helper/proto"
 )
 
 // testKey는 새 ed25519 공개 키의 authorized_keys 형식("ssh-ed25519 <base64>")이다.
@@ -76,7 +76,7 @@ func TestSSHAuthorizeCreatesFile(t *testing.T) {
 	e, _ := sshEnv(t)
 	key := testKey(t)
 	e.ok(nil, proto.ScopeUser, proto.ActionSSHAuthorize, proto.SSHKeyParams{PublicKey: key}, nil)
-	want := `restrict,pty,from="127.0.0.1,::1",expiry-time="20261017120200Z" ` + key + " onmaru-ephemeral\n"
+	want := `restrict,pty,from="127.0.0.1,::1",expiry-time="20261017120200Z" ` + key + " maru-ephemeral\n"
 	if got := e.keys(); got != want {
 		t.Fatalf("authorized_keys = %q, want %q", got, want)
 	}
@@ -103,7 +103,7 @@ func TestSSHAuthorizeKeepsOtherLines(t *testing.T) {
 		t.Fatalf("user lines changed: %q", got)
 	}
 	if strings.Count(got, SSHKeyMarker) != 2 {
-		t.Fatalf("want two onmaru lines: %q", got)
+		t.Fatalf("want two maru lines: %q", got)
 	}
 	// 0644로 있던 파일은 그대로 0644(그룹·다른 사용자 쓰기만 뺀다).
 	if m := mode(t, e.keysPath()); m != 0o644 {
@@ -133,9 +133,9 @@ func TestSSHKeyRemovesExpiredLines(t *testing.T) {
 	if strings.Contains(got, strings.Fields(stale)[1]) || !strings.Contains(got, strings.Fields(fresh)[1]) {
 		t.Fatalf("authorized_keys = %q", got)
 	}
-	// 만료 시각을 읽을 수 없는 onmaru 줄도 지운다. 같은 주석이라도 옵션이 다른 줄(사용자가 쓴 줄)은 남긴다.
-	broken := `restrict,pty,from="127.0.0.1,::1",expiry-time="soon" ` + testKey(t) + " onmaru-ephemeral\n"
-	mine := "ssh-ed25519 AAAAmine onmaru-ephemeral\n"
+	// 만료 시각을 읽을 수 없는 maru 줄도 지운다. 같은 주석이라도 옵션이 다른 줄(사용자가 쓴 줄)은 남긴다.
+	broken := `restrict,pty,from="127.0.0.1,::1",expiry-time="soon" ` + testKey(t) + " maru-ephemeral\n"
+	mine := "ssh-ed25519 AAAAmine maru-ephemeral\n"
 	if err := os.WriteFile(e.keysPath(), []byte(broken+mine), 0o600); err != nil {
 		t.Fatal(err)
 	}

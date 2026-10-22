@@ -41,17 +41,17 @@ OMV 8의 모든 버전을 지원한다. OMV 패키지(`packages.openmediavault.o
 ## 인증 설계
 
 - 로그인 화면은 자체 디자인하고, 인증은 백엔드가 `Session.login`(필요하면 `Session.verify`)을 호출해 위임한다. 계정·비밀번호를 따로 저장하지 않는다
-- 로그인 성공 시 대시보드 자체 세션 쿠키(`onmaru_session`, HttpOnly, SameSite=Strict, Path는 `-cookie-path`, 기본 `/`)를 발급한다. 2차 인증 대기 중에는 `onmaru_pending`. Secure는 HTTPS로 들어온 요청(`X-Forwarded-Proto: https`)에만 붙인다(평문 HTTP 개발 서버에서는 브라우저가 Secure 쿠키를 저장하지 않으므로). 세션 저장소는 메모리이며 백엔드 재시작 시 모두 재로그인한다
+- 로그인 성공 시 대시보드 자체 세션 쿠키(`maru_session`, HttpOnly, SameSite=Strict, Path는 `-cookie-path`, 기본 `/`)를 발급한다. 2차 인증 대기 중에는 `maru_pending`. Secure는 HTTPS로 들어온 요청(`X-Forwarded-Proto: https`)에만 붙인다(평문 HTTP 개발 서버에서는 브라우저가 Secure 쿠키를 저장하지 않으므로). 세션 저장소는 메모리이며 백엔드 재시작 시 모두 재로그인한다
 - 백엔드의 OMV 클라이언트는 세션 ID를 쿠키가 아닌 `X-OpenMediaVault-SessionID` 헤더로 보내고, 응답 `Set-Cookie`로 바뀐 ID를 갱신한다
 - `/api/*`는 대시보드 세션이 없으면 401을 반환한다(`/api/health`, 로그인 라우트, 로그인 화면이 쓰는 `GET /api/site`와 `GET /api/site/images/login-background` 제외). 본문이 있는 요청(POST, PUT)은 `Content-Type: application/json`만 받는다(CSRF 보조 장치)
   - 예외: 이미지 올리기(`PUT /api/preferences/wallpaper-image`, `…/avatar-image`, `PUT /api/site/images/{name}`)는 원시 이미지 본문(`image/png|jpeg|webp`)만 받는다. HTML 폼은 이 형식을 보낼 수 없고 다른 출처의 fetch는 preflight에서 막히므로 같은 보조 장치가 된다. multipart는 받지 않는다
   - 예외: 파일 탐색기의 올리기(`PUT /api/files/upload`)는 원시 본문(`application/octet-stream`)만 받는다. 이 형식도 HTML 폼이 보낼 수 없고 다른 출처의 fetch는 preflight에서 막힌다. 내려받기(`GET /api/files/download`)는 같은 사이트 이동(`<a download>`)이라 SameSite=Strict 쿠키가 간다
   - 공개 로그인 배경은 대시보드 주소에 닿는 누구나 받을 수 있다(로그인 화면에 보이는 그림이다). 설정 앱이 관리자에게 이 점을 알린다
 - 로그인 상태를 localStorage·sessionStorage에 저장하지 않는다. 앱 시작 시 `/api/session`으로 상태를 복원한다(workbench처럼 탭마다 로그인하지 않게 하기 위함)
-  - 패스키로 로그인의 브라우저 항목(localStorage `onmaru.passkeyLogin`)은 로그인 상태가 아니다. 서버 share와 패스키 PRF가 함께 있어야 풀리는 비밀번호 암호문이며, 있어도 세션은 생기지 않는다(`.claude/rules/security.md`의 "패스키로 로그인")
+  - 패스키로 로그인의 브라우저 항목(localStorage `maru.passkeyLogin`)은 로그인 상태가 아니다. 서버 share와 패스키 PRF가 함께 있어야 풀리는 비밀번호 암호문이며, 있어도 세션은 생기지 않는다(`.claude/rules/security.md`의 "패스키로 로그인")
 - OMV가 중계 호출에 401을 반환하면 해당 대시보드 세션을 지우고 브라우저를 로그인 화면으로 보낸다
 - 로그인 시도 제한: 실패 응답 전 1초 지연, IP·사용자 이름별로 15분 안에 5번째 실패부터 30초에서 두 배씩 최대 15분 잠금(429, `Retry-After`), 한 IP의 동시 시도는 2개까지
-  - 사용자 이름별 잠금은 IP와 무관하므로 누구나 남의 계정을 잠글 수 있다. 그래서 인증을 끝까지 마친(2차 인증 포함) 브라우저에 신뢰 기기 쿠키(`onmaru_device`, HttpOnly, SameSite=Strict, 30일, 로그인할 때마다 새 토큰)를 주고, 같은 사용자 이름으로 이 토큰을 보낸 시도는 사용자 이름별 잠금을 건너뛴다. IP별 제한은 그대로 받고, 토큰으로 5번 틀리면 토큰을 폐기한다. 로그아웃해도 지우지 않는다. 토큰은 메모리에만 두므로 백엔드를 재시작하면 모두 사라진다(`auth.Limiter.Trust`)
+  - 사용자 이름별 잠금은 IP와 무관하므로 누구나 남의 계정을 잠글 수 있다. 그래서 인증을 끝까지 마친(2차 인증 포함) 브라우저에 신뢰 기기 쿠키(`maru_device`, HttpOnly, SameSite=Strict, 30일, 로그인할 때마다 새 토큰)를 주고, 같은 사용자 이름으로 이 토큰을 보낸 시도는 사용자 이름별 잠금을 건너뛴다. IP별 제한은 그대로 받고, 토큰으로 5번 틀리면 토큰을 폐기한다. 로그아웃해도 지우지 않는다. 토큰은 메모리에만 두므로 백엔드를 재시작하면 모두 사라진다(`auth.Limiter.Trust`)
   - 실패 기록은 1만 개까지 둔다. 넘치면 기간이 지난 기록, 잠기지 않은 기록, 잠긴 기록 순으로 오래된 것부터 지운다
 - 로그에는 사용자 이름·IP·결과만 남긴다. 비밀번호, 대시보드·OMV 세션 ID, OMV 오류의 `trace`는 남기지 않고 브라우저에도 넘기지 않는다
 - 로그아웃하거나 다른 사용자가 로그인하면 창을 모두 닫는다. 세션 만료 후 같은 사용자가 다시 로그인하면 창 배치를 남긴다

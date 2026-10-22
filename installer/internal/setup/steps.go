@@ -12,14 +12,14 @@ var installSteps = []Step{
 	{Name: "port", Phase: PhaseRoot, Run: stepPort},
 	// 파일을 다시 쓰기 전에 기존 값과 비교한다.
 	{Name: "proxy-unchanged", Phase: PhaseRoot, Run: stepProxyUnchanged},
-	{Name: "onmaru-binary", Phase: PhaseRoot, Run: stepInstallBinary},
+	{Name: "maru-binary", Phase: PhaseRoot, Run: stepInstallBinary},
 	{Name: "helper", Phase: PhaseRoot, Run: stepHelper},
 	{Name: "web-upgrade", Phase: PhaseRoot, Run: stepWebUpgrade},
 	{Name: "env", Phase: PhaseRoot, Run: stepEnv},
 	{Name: "unit", Phase: PhaseRoot, Run: stepUnit},
 	{Name: "daemon-reload", Phase: PhaseRoot, Run: stepDaemonReload},
 	{Name: "web-upgrade-path", Phase: PhaseRoot, When: webUpgradeWanted, Run: stepWebUpgradePath},
-	// onmaru가 시작할 때 도우미에 연결하므로 도우미 소켓을 먼저 연다.
+	// maru가 시작할 때 도우미에 연결하므로 도우미 소켓을 먼저 연다.
 	{Name: "helper-socket", Phase: PhaseRoot, When: helperWanted, Run: stepHelperSocket},
 	{Name: "start", Phase: PhaseRoot, Run: stepStart},
 	// 서비스를 시작한 뒤에 기록한다(시작하지 못한 설치를 기록하지 않게).

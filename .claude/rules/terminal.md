@@ -11,16 +11,16 @@ paths:
 
 ## 설계
 
-- **SSH 방식이다.** onmaru는 같은 호스트의 sshd(루프백)에 붙는 SSH 클라이언트(`golang.org/x/crypto/ssh`)이고, PTY는 sshd가 할당한다(`pty-req`). onmaru 쪽에서 PTY·셸 프로세스를 직접 띄우지 않으며(유닛의 `DevicePolicy=closed`를 바꾸지 않는다), 도우미에 셸·명령 실행 연산을 두지 않는다
+- **SSH 방식이다.** maru는 같은 호스트의 sshd(루프백)에 붙는 SSH 클라이언트(`golang.org/x/crypto/ssh`)이고, PTY는 sshd가 할당한다(`pty-req`). maru 쪽에서 PTY·셸 프로세스를 직접 띄우지 않으며(유닛의 `DevicePolicy=closed`를 바꾸지 않는다), 도우미에 셸·명령 실행 연산을 두지 않는다
   - TTY 중계를 택하지 않은 이유: 도우미의 셸 연산은 "임의 명령 실행 연산 금지" 규칙에 걸리고, 도우미가 띄운 셸은 도우미의 샌드박스(`AF_UNIX`만, `ProtectSystem=strict`, `NoNewPrivileges`)를 물려받아 네트워크·sudo가 막힌다. 하드닝 없는 root 데몬으로 `login`을 띄우는 것은 sshd를 새 root 코드로 다시 만드는 셈이다
-  - sshd는 원래 LAN에 열려 있으므로 onmaru가 뚫려도 새로 얻는 권한이 없다. 누가 어떻게 들어갈 수 있는지(`AllowGroups`, 인증 방식, root 로그인)는 OMV의 SSH 설정이 정하고 onmaru는 sshd 설정을 읽기만 한다
+  - sshd는 원래 LAN에 열려 있으므로 maru가 뚫려도 새로 얻는 권한이 없다. 누가 어떻게 들어갈 수 있는지(`AllowGroups`, 인증 방식, root 로그인)는 OMV의 SSH 설정이 정하고 maru는 sshd 설정을 읽기만 한다
 - 접속 계정은 대시보드 세션 사용자로 고정한다. 다른 계정·root를 고르는 기능을 만들지 않는다(범용 SSH 게이트웨이가 되지 않게)
 - 주소: `-ssh-addr`(기본 `auto` = `sshd_config`의 첫 `Port`로 `127.0.0.1`)는 루프백 IP만 받는다(`terminal.CheckAddr`). `sshd_config`는 첫 `Match` 줄부터 읽지 않는다(`ParseSSHDConfig`)
 - 호스트 키: 접속할 때마다 `-ssh-host-keys`(`/etc/ssh/ssh_host_*_key.pub`)를 읽어 그중 하나와 같은 서버 키만 받는다. TOFU·known_hosts를 쓰지 않는다. `ssh.FixedHostKey`는 키 하나만 받으므로 쓰지 않는다
 - 인증 순서(`Dialer.Dial`, 서버가 허용하는 것만 시도된다): 도우미 임시 키 → keyboard-interactive → password
   - 임시 키: ed25519 키를 메모리에서 만들어 `ssh.authorize`로 넣고, 핸드셰이크가 끝나면 성공·실패와 관계없이 `ssh.revoke`로 지운다. 넣지 못하면 오류 대신 빈 서명자를 돌려줘 다음 방법으로 넘어간다(도우미 오류 코드는 `Error.KeyCode` 힌트)
   - 비밀번호·keyboard-interactive는 WebSocket `prompt`로 브라우저에 묻고 답을 그대로 넘긴다. 저장·기록하지 않는다. x/crypto는 방법 하나가 오류를 내도 다음 방법을 시도하므로, 한 번 취소하면 다시 묻지 않게 기억한다(`authState.canceled`)
-  - sshd·fail2ban에는 접속지가 루프백으로만 보이므로 비밀번호 실패는 onmaru가 센다(`handler.terminalLimiter`, 로그인과 따로 둔 `auth.Limiter`). 물어서 인증이 실패한 접속 하나가 실패 하나다
+  - sshd·fail2ban에는 접속지가 루프백으로만 보이므로 비밀번호 실패는 maru가 센다(`handler.terminalLimiter`, 로그인과 따로 둔 `auth.Limiter`). 물어서 인증이 실패한 접속 하나가 실패 하나다
   - 그룹 소속(`AllowGroups`)은 접속을 막는 데 쓰지 않고 실패 안내에만 쓴다(`NotAllowedGroups`). sshd가 최종 판단한다
 - 세션: 대시보드 세션 하나에 `ssh.Client` 하나, 창마다 채널(`NewSession`) 하나다(`Manager`). 인증은 첫 창에서만 하고, 같은 세션의 다른 창(같은 탭의 새 창, 다른 탭)은 기다렸다가 함께 쓴다. 세션당 창 4개(sshd `MaxSessions` 10보다 작게), 클라이언트 32개까지. 마지막 창이 닫히거나 세션이 끝나면(`auth.Store.OnRemove`, 접속 중이면 질문 대기도 취소) 닫는다
 - 허용: `-terminal`(기본 끔)과 설정 앱의 덮어쓰기(`site.json`의 `server.terminal`). 꺼져 있으면 `/api/terminal`이 403 `terminal_disabled`, 끄는 순간 `Manager.CloseAll`로 열린 터미널을 닫는다. 프론트는 `capabilities.terminal`로 앱을 숨긴다

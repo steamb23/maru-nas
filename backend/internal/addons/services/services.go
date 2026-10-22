@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"onmaru/backend/internal/addons"
-	"onmaru/backend/internal/api"
+	"maru/backend/internal/addons"
+	"maru/backend/internal/api"
 )
 
 // ID는 서비스 애드온의 id다.

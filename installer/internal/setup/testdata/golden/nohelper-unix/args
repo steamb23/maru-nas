@@ -1,9 +1,9 @@
 --lang
 en
 --user
-onmaru
+maru
 --listen
-unix:/run/onmaru/onmaru.sock
+unix:/run/maru/maru.sock
 --omv-url
 http://127.0.0.1:8081
 --smart-refresh-at

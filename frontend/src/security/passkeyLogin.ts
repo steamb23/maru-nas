@@ -23,8 +23,8 @@ const SHARE_BYTES = 32
 // PRF 결과는 HMAC-SHA-256 출력이라 32바이트다. 더 짧으면 받지 않는다.
 const MIN_PRF_BYTES = 32
 const IV_BYTES = 12
-const HKDF_INFO = new TextEncoder().encode('onmaru passkey login v1')
-const AAD_TAG = 'onmaru-passkey-login-v1'
+const HKDF_INFO = new TextEncoder().encode('maru passkey login v1')
+const AAD_TAG = 'maru-passkey-login-v1'
 
 // PasskeyLoginEntry는 이 브라우저의 등록 하나다. 이진 값은 base64url 문자열이고 expiresAt은 ms다.
 export interface PasskeyLoginEntry {

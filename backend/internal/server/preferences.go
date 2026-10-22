@@ -5,10 +5,10 @@ import (
 	"net/http"
 	"regexp"
 
-	"onmaru/backend/internal/addons"
-	"onmaru/backend/internal/api"
-	"onmaru/backend/internal/auth"
-	"onmaru/backend/internal/prefs"
+	"maru/backend/internal/addons"
+	"maru/backend/internal/api"
+	"maru/backend/internal/auth"
+	"maru/backend/internal/prefs"
 )
 
 // maxPreferencesBodyBytes는 PUT /api/preferences/* 본문의 상한이다. 위젯·바로가기 64개도 넉넉히 들어간다.

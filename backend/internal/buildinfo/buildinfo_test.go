@@ -4,7 +4,7 @@ import (
 	"runtime/debug"
 	"testing"
 
-	"onmaru/backend/config"
+	"maru/backend/config"
 )
 
 func TestFromBuildInfo(t *testing.T) {

@@ -14,7 +14,7 @@ const locales = fromHere('src/i18n/locales')
 // SVG 이름공간을 붙여 data URL로 넣는다. 따로 내보낸 .svg 파일도 같은 이유로 깨지므로 크기와 관계없이 넣는다.
 function svgNamespace(): Plugin {
   return {
-    name: 'onmaru:svg-namespace',
+    name: 'maru:svg-namespace',
     enforce: 'pre',
     async load(id) {
       const [file, query = ''] = id.split('?', 2)
@@ -33,7 +33,7 @@ function svgNamespace(): Plugin {
 // (i18n/appNames.ts).
 function catalogApps(): Plugin {
   return {
-    name: 'onmaru:catalog-apps',
+    name: 'maru:catalog-apps',
     enforce: 'pre',
     async load(id) {
       const [file, query = ''] = id.split('?', 2)
@@ -50,10 +50,10 @@ export default defineConfig(({ mode }) => {
   // 개인 환경 값은 커밋하지 않는 frontend/.env.local에 둔다.
   //   DEV_HOST            개발 서버 바인딩 주소 (기본: 모든 인터페이스)
   //   DEV_ALLOWED_HOSTS   IP가 아닌 호스트 이름으로 접속할 때 허용할 이름 (쉼표 구분)
-  //   ONMARU_LISTEN      백엔드 주소 (기본: 127.0.0.1:8090)
-  //   DEV_PORT           개발 서버 포트 (기본: 5173). scripts/dev.sh의 포트 검사와 같은 값을 쓴다
+  //   MARU_LISTEN         백엔드 주소 (기본: 127.0.0.1:8090)
+  //   DEV_PORT            개발 서버 포트 (기본: 5173). scripts/dev.sh의 포트 검사와 같은 값을 쓴다
   const env = { ...loadEnv(mode, fromHere('.'), ''), ...process.env }
-  const backend = env.ONMARU_LISTEN || '127.0.0.1:8090'
+  const backend = env.MARU_LISTEN || '127.0.0.1:8090'
 
   return {
     // 상대 경로로 빌드해 어떤 경로 접두사 아래에서도 동작하게 한다. 대시보드를 둘 호스트·경로는

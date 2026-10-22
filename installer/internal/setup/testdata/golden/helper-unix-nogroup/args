@@ -1,9 +1,9 @@
 --lang
 en
 --user
-onmaru
+maru
 --listen
-unix:/run/onmaru/onmaru.sock
+unix:/run/maru/maru.sock
 --omv-url
 https://localhost/
 --smart-refresh-at

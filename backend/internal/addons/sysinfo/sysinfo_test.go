@@ -8,7 +8,7 @@ import (
 	"testing/fstest"
 	"time"
 
-	"onmaru/backend/internal/api"
+	"maru/backend/internal/api"
 )
 
 func TestParseCPUTimes(t *testing.T) {

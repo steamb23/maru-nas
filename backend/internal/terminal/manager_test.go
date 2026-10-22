@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"onmaru/backend/internal/terminal/sshfake"
+	"maru/backend/internal/terminal/sshfake"
 )
 
 func TestManagerSharesClient(t *testing.T) {

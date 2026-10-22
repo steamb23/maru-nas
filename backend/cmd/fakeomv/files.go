@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"onmaru/backend/internal/omv/omvfake"
+	"maru/backend/internal/omv/omvfake"
 )
 
 // 파일 탐색기 개발용 합성 데이터. 가짜 도우미의 가짜 디스크(helper-root/srv/disk1) 아래에 공유 폴더 몇 개와

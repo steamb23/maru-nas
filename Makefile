@@ -18,7 +18,7 @@ dev-pick:
 types:
 	cd backend && go tool tygo generate && go run ./cmd/genaddons
 
-# 프론트엔드를 빌드해 실행 파일에 포함한 bin/onmaru와 권한 도우미 bin/onmaru-helper, 설치기 bin/onmaru-install 생성
+# 프론트엔드를 빌드해 실행 파일에 포함한 bin/maru와 권한 도우미 bin/maru-helper, 설치기 bin/maru-install 생성
 build: build-frontend build-backend build-installer
 
 build-frontend:
@@ -26,12 +26,12 @@ build-frontend:
 
 # 도우미는 root로 돌므로 cgo 없이 정적으로 빌드해 os/user가 NSS 대신 로컬 /etc/passwd·/etc/group만 읽게 한다.
 build-backend:
-	cd backend && go build -trimpath -o ../bin/onmaru ./cmd/onmaru
-	cd backend && CGO_ENABLED=0 go build -trimpath -o ../bin/onmaru-helper ./cmd/onmaru-helper
+	cd backend && go build -trimpath -o ../bin/maru ./cmd/maru
+	cd backend && CGO_ENABLED=0 go build -trimpath -o ../bin/maru-helper ./cmd/maru-helper
 
 # 설치기는 별도 Go 모듈(installer/)이다. install.sh도 같은 명령으로 빌드한다.
 build-installer:
-	cd installer && go build -trimpath -o ../bin/onmaru-install .
+	cd installer && go build -trimpath -o ../bin/maru-install .
 
 lint:
 	@out=$$(cd backend && gofmt -l .); if [ -n "$$out" ]; then echo "gofmt 필요:"; echo "$$out"; exit 1; fi

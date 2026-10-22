@@ -1,8 +1,8 @@
 package setup
 
 import (
-	"onmaru/backend/config"
-	"onmaru/installer/internal/prompt"
+	"maru/backend/config"
+	"maru/installer/internal/prompt"
 )
 
 // stepUninstallConfirm은 제거를 확인한다. 아니요면 아무것도 하지 않고 끝낸다.
@@ -22,7 +22,7 @@ func stepUninstallConfirm(c *Context) error {
 	return nil
 }
 
-// stepStop은 onmaru를 멈추고 끈다.
+// stepStop은 maru를 멈추고 끈다.
 func stepStop(c *Context) error {
 	if c.Sys.Check("systemctl", "list-unit-files", serviceName+".service") == nil {
 		_ = c.Sys.RunSilent("systemctl", "disable", "--now", serviceName+".service")
@@ -46,7 +46,7 @@ func stepRemoveFiles(c *Context) error {
 	return c.Sys.Run("systemctl", "daemon-reload")
 }
 
-// stepRemoveRuntimeDir은 /run/onmaru를 지운다. RuntimeDirectoryPreserve=yes라 서비스를 멈춰도 남는다
+// stepRemoveRuntimeDir은 /run/maru를 지운다. RuntimeDirectoryPreserve=yes라 서비스를 멈춰도 남는다
 // (재부팅하면 어차피 사라진다).
 func stepRemoveRuntimeDir(c *Context) error {
 	if err := c.Sys.RemoveAll(runtimeDir); err != nil {
@@ -111,7 +111,7 @@ func isOwnSystemUser(c *Context, name string) (bool, error) {
 }
 
 func stepProxyNote(c *Context) error {
-	c.Info(L("If a reverse proxy pointed at onmaru, remove that configuration as well.",
-		"리버스 프록시에 onmaru 설정이 있다면 그것도 지워 주세요."))
+	c.Info(L("If a reverse proxy pointed at maru, remove that configuration as well.",
+		"리버스 프록시에 maru 설정이 있다면 그것도 지워 주세요."))
 	return nil
 }

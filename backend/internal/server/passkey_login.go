@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"time"
 
-	"onmaru/backend/internal/api"
-	"onmaru/backend/internal/auth"
-	"onmaru/backend/internal/security"
+	"maru/backend/internal/api"
+	"maru/backend/internal/auth"
+	"maru/backend/internal/security"
 )
 
 // 패스키로 로그인(분할 키). 비밀번호 암호문은 브라우저에만 있고, 서버는 키의 나머지 조각(share)만 둔다. 키는 패스키

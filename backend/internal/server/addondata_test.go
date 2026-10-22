@@ -12,13 +12,13 @@ import (
 	"testing/fstest"
 	"time"
 
-	"onmaru/backend/internal/addons"
-	"onmaru/backend/internal/addons/containers"
-	"onmaru/backend/internal/addons/services"
-	"onmaru/backend/internal/addons/smart"
-	"onmaru/backend/internal/addons/sysinfo"
-	"onmaru/backend/internal/api"
-	"onmaru/backend/internal/omv/omvfake"
+	"maru/backend/internal/addons"
+	"maru/backend/internal/addons/containers"
+	"maru/backend/internal/addons/services"
+	"maru/backend/internal/addons/smart"
+	"maru/backend/internal/addons/sysinfo"
+	"maru/backend/internal/api"
+	"maru/backend/internal/omv/omvfake"
 )
 
 // dataAddon은 Fetch가 있는 테스트용 애드온이다.

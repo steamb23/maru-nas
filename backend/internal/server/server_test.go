@@ -15,18 +15,18 @@ import (
 	"testing"
 	"time"
 
-	"onmaru/backend/internal/addons"
-	"onmaru/backend/internal/api"
-	"onmaru/backend/internal/auth"
-	helperclient "onmaru/backend/internal/helper/client"
-	"onmaru/backend/internal/helper/helperfake"
-	"onmaru/backend/internal/omv"
-	"onmaru/backend/internal/omv/omvfake"
-	"onmaru/backend/internal/prefs"
-	"onmaru/backend/internal/security"
-	"onmaru/backend/internal/terminal"
-	"onmaru/backend/internal/terminal/sshfake"
-	"onmaru/backend/internal/upgrade"
+	"maru/backend/internal/addons"
+	"maru/backend/internal/api"
+	"maru/backend/internal/auth"
+	helperclient "maru/backend/internal/helper/client"
+	"maru/backend/internal/helper/helperfake"
+	"maru/backend/internal/omv"
+	"maru/backend/internal/omv/omvfake"
+	"maru/backend/internal/prefs"
+	"maru/backend/internal/security"
+	"maru/backend/internal/terminal"
+	"maru/backend/internal/terminal/sshfake"
+	"maru/backend/internal/upgrade"
 )
 
 type fakeSource struct {
@@ -147,7 +147,7 @@ func newEnv(t *testing.T, o envOptions) *env {
 	store.Now = clk.Now
 	lim := auth.NewLimiter()
 	lim.Now = clk.Now
-	var client OMV = omv.NewClient(ts.URL, "onmaru-test/1")
+	var client OMV = omv.NewClient(ts.URL, "maru-test/1")
 	if o.omvOverride != nil {
 		client = o.omvOverride
 	}

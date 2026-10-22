@@ -10,8 +10,8 @@ func TestCheckListen(t *testing.T) {
 	}{
 		{addr: "127.0.0.1:8090"},
 		{addr: "[::1]:8090"},
-		{addr: "unix:/run/onmaru/onmaru.sock"},
-		{addr: "unix:onmaru.sock", wantErr: true},
+		{addr: "unix:/run/maru/maru.sock"},
+		{addr: "unix:maru.sock", wantErr: true},
 		{addr: "0.0.0.0:8090", wantErr: true},
 		{addr: ":8090", wantErr: true},
 		{addr: "192.0.2.1:8090", wantErr: true},
@@ -43,7 +43,7 @@ func TestCheckOMVURL(t *testing.T) {
 }
 
 func TestCheckHelperSocket(t *testing.T) {
-	for _, ok := range []string{"", "/run/onmaru-helper/helper.sock"} {
+	for _, ok := range []string{"", "/run/maru-helper/helper.sock"} {
 		if err := CheckHelperSocket(ok); err != nil {
 			t.Errorf("%q rejected: %v", ok, err)
 		}

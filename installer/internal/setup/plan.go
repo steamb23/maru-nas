@@ -7,7 +7,7 @@ import (
 	"maps"
 	"strings"
 
-	"onmaru/backend/config"
+	"maru/backend/config"
 )
 
 // runUpgradePlan은 --upgrade-plan이다. 이 버전으로 업그레이드할 때 물을 설정, 수동 재설치 사유, 업그레이드 뒤 할 일을
@@ -48,8 +48,8 @@ func buildUpgradePlan(c *Context) (config.UpgradePlan, error) {
 	}
 	if inst := c.Installed; !inst.UnitExists || inst.Env == nil {
 		addManual(config.UpgradeReasonNotInstalled, L(
-			"onmaru is not installed ("+unitFile+" and "+envFile+" are both needed)",
-			"onmaru가 설치되어 있지 않습니다("+unitFile+"와 "+envFile+"가 모두 있어야 합니다)"), config.UpgradeCommandInstall)
+			"maru is not installed ("+unitFile+" and "+envFile+" are both needed)",
+			"maru가 설치되어 있지 않습니다("+unitFile+"와 "+envFile+"가 모두 있어야 합니다)"), config.UpgradeCommandInstall)
 		finishPlan(&p)
 		return p, nil
 	}

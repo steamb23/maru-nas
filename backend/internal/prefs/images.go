@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"onmaru/backend/internal/api"
+	"maru/backend/internal/api"
 )
 
 // ImageStore는 배경 이미지 저장소다. 자리(ImageKey)마다 이미지 하나를 둔다.

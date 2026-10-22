@@ -9,12 +9,12 @@ import (
 	"sync"
 	"time"
 
-	"onmaru/backend/internal/api"
-	"onmaru/backend/internal/auth"
-	"onmaru/backend/internal/omv"
-	"onmaru/backend/internal/prefs"
-	"onmaru/backend/internal/security"
-	"onmaru/backend/internal/terminal"
+	"maru/backend/internal/api"
+	"maru/backend/internal/auth"
+	"maru/backend/internal/omv"
+	"maru/backend/internal/prefs"
+	"maru/backend/internal/security"
+	"maru/backend/internal/terminal"
 )
 
 // 보안 강화 모드: 기능별 정책(site.json), 세션 보증 수준을 올리는 확인(비밀번호 재확인, 2차 인증), 정책 적용.

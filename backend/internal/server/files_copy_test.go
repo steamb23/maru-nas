@@ -10,9 +10,9 @@ import (
 	"strings"
 	"testing"
 
-	"onmaru/backend/internal/api"
-	"onmaru/backend/internal/omv/omvfake"
-	"onmaru/backend/internal/prefs"
+	"maru/backend/internal/api"
+	"maru/backend/internal/omv/omvfake"
+	"maru/backend/internal/prefs"
 )
 
 // copyEvents는 POST /api/files/copy 응답의 사건들이다.
@@ -85,7 +85,7 @@ func TestFilesCopy(t *testing.T) {
 	}
 	wantCode(cp(api.FilesCopyRequest{Dir: media, To: home}), http.StatusBadRequest, api.ErrBadRequest)
 	wantCode(cp(api.FilesCopyRequest{Dir: media, Names: []string{"../x"}, To: home}), http.StatusBadRequest, api.ErrBadRequest)
-	wantCode(cp(api.FilesCopyRequest{Dir: media, Names: []string{".onmaru-upload-x"}, To: home}), http.StatusBadRequest, api.ErrBadRequest)
+	wantCode(cp(api.FilesCopyRequest{Dir: media, Names: []string{".maru-upload-x"}, To: home}), http.StatusBadRequest, api.ErrBadRequest)
 	wantCode(cp(api.FilesCopyRequest{Dir: media, Names: []string{"sub"}, To: media + "/sub/x"}), http.StatusBadRequest, api.ErrBadRequest)
 	wantCode(cp(api.FilesCopyRequest{Dir: media, Names: []string{"a.txt"}, To: "/etc"}), http.StatusForbidden, api.ErrOutsideRoots)
 	wantCode(cp(api.FilesCopyRequest{Dir: media, Names: []string{"a.txt"}, To: home + "/a.txt"}), http.StatusBadRequest, api.ErrNotDir)

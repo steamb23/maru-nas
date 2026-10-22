@@ -6,7 +6,7 @@ import { createUpgradeWatch } from './watch'
 export const useUpgradeWatch = createUpgradeWatch({
   fetchStatus: fetchUpgrade,
   fetchHealth,
-  // 401은 세션이 사라졌다는 뜻이다(onmaru가 다시 시작함). 그 밖(연결 실패, 프록시의 502 등)은 끊김으로 본다.
+  // 401은 세션이 사라졌다는 뜻이다(maru가 다시 시작함). 그 밖(연결 실패, 프록시의 502 등)은 끊김으로 본다.
   classify: (err) => (err instanceof ApiError && err.status === 401 ? 'unauthorized' : 'unreachable'),
   reload: () => {
     setUpgradeHint()

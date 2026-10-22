@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"onmaru/installer/internal/prompt"
+	"maru/installer/internal/prompt"
 )
 
 // allSettingIDs는 기본값으로 답할 때 묻는 설정 질문 ID다(수신 방식은 루프백).
@@ -49,10 +49,10 @@ func TestResolveMode(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			f := newFake(t)
 			if tc.unit {
-				f.put(t, unitFile, "User=onmaru\n", 0o644)
+				f.put(t, unitFile, "User=maru\n", 0o644)
 			}
 			if tc.env {
-				f.put(t, envFile, "ONMARU_LISTEN=127.0.0.1:8090\n", 0o644)
+				f.put(t, envFile, "MARU_LISTEN=127.0.0.1:8090\n", 0o644)
 			}
 			c, out, _ := newTestContext(t, f, prompt.Fail{}, tc.args...)
 			inst, err := readInstalled(f)
@@ -147,11 +147,11 @@ func TestDefaultUpgradeChangeSettings(t *testing.T) {
 	}
 	env, _ := f.read(t, envFile)
 	for _, line := range []string{
-		"ONMARU_LISTEN=unix:/run/onmaru/onmaru.sock\n", "ONMARU_ALLOW_NON_LOOPBACK=false\n",
+		"MARU_LISTEN=unix:/run/maru/maru.sock\n", "MARU_ALLOW_NON_LOOPBACK=false\n",
 		// 옵션으로 준 값이 다시 묻는 질문의 기본값이다.
-		"ONMARU_SMART_REFRESH_AT=03:30\n",
-		"ONMARU_WORKBENCH_URL=\n", "ONMARU_PUBLIC_ORIGIN=https://desk.example.lan\n",
-		"ONMARU_HELPER_SOCKET=/run/onmaru-helper/helper.sock\n",
+		"MARU_SMART_REFRESH_AT=03:30\n",
+		"MARU_WORKBENCH_URL=\n", "MARU_PUBLIC_ORIGIN=https://desk.example.lan\n",
+		"MARU_HELPER_SOCKET=/run/maru-helper/helper.sock\n",
 	} {
 		if !strings.Contains(env, line) {
 			t.Errorf("env misses %q:\n%s", line, env)
@@ -186,8 +186,8 @@ func TestDefaultUpgradeNonInteractive(t *testing.T) {
 func TestReinstallAsksEverySetting(t *testing.T) {
 	f := installedFake(t)
 	env, _ := f.read(t, envFile)
-	env = strings.Replace(env, "ONMARU_SMART_REFRESH_AT=00:00", "ONMARU_SMART_REFRESH_AT=03:30", 1)
-	env = strings.Replace(env, "ONMARU_WORKBENCH_URL=\n", "ONMARU_WORKBENCH_URL=https://nas.example.lan/\n", 1)
+	env = strings.Replace(env, "MARU_SMART_REFRESH_AT=00:00", "MARU_SMART_REFRESH_AT=03:30", 1)
+	env = strings.Replace(env, "MARU_WORKBENCH_URL=\n", "MARU_WORKBENCH_URL=https://nas.example.lan/\n", 1)
 	f.put(t, envFile, env, 0o644)
 	script := &prompt.Script{Answers: defaultAnswers(map[string]string{"proceed": ""})}
 	c, out, _ := newTestContext(t, f, script, "--reinstall", "--no-build")
@@ -279,7 +279,7 @@ func TestInvalidInstalledValue(t *testing.T) {
 	}
 
 	t.Run("tty default", func(t *testing.T) {
-		f := broken(t, "ONMARU_SMART_REFRESH_AT=00:00", "ONMARU_SMART_REFRESH_AT=25:00")
+		f := broken(t, "MARU_SMART_REFRESH_AT=00:00", "MARU_SMART_REFRESH_AT=25:00")
 		script := &prompt.Script{Answers: map[string]string{"smart-refresh-at": "", "upgrade-action": ""}}
 		c, out, _ := newTestContext(t, f, script, "--no-build")
 		c.IsRoot = true
@@ -297,21 +297,21 @@ func TestInvalidInstalledValue(t *testing.T) {
 	})
 
 	t.Run("tty explicit upgrade", func(t *testing.T) {
-		f := broken(t, "ONMARU_SMART_REFRESH_AT=00:00", "ONMARU_SMART_REFRESH_AT=25:00")
+		f := broken(t, "MARU_SMART_REFRESH_AT=00:00", "MARU_SMART_REFRESH_AT=25:00")
 		script := &prompt.Script{Answers: map[string]string{"smart-refresh-at": "01:00"}}
 		c, out, _ := newTestContext(t, f, script, "--upgrade", "--no-build")
 		c.IsRoot = true
 		if err := Run(c); err != nil {
 			t.Fatalf("Run: %v\n%s", err, out)
 		}
-		if env, _ := f.read(t, envFile); !strings.Contains(env, "ONMARU_SMART_REFRESH_AT=01:00\n") {
+		if env, _ := f.read(t, envFile); !strings.Contains(env, "MARU_SMART_REFRESH_AT=01:00\n") {
 			t.Errorf("env:\n%s", env)
 		}
 	})
 
 	t.Run("tty listen", func(t *testing.T) {
 		// 루프백이 아닌 주소인데 허용하지 않은 설치: 수신 방식을 기본(루프백)부터 다시 고른다.
-		f := broken(t, "ONMARU_LISTEN=127.0.0.1:8090", "ONMARU_LISTEN=0.0.0.0:8090")
+		f := broken(t, "MARU_LISTEN=127.0.0.1:8090", "MARU_LISTEN=0.0.0.0:8090")
 		script := &prompt.Script{Answers: map[string]string{"listen-mode": "", "listen": "", "upgrade-action": ""}}
 		c, out, _ := newTestContext(t, f, script, "--no-build")
 		c.IsRoot = true
@@ -323,7 +323,7 @@ func TestInvalidInstalledValue(t *testing.T) {
 
 	t.Run("non-tty", func(t *testing.T) {
 		for _, args := range [][]string{{"--no-build"}, {"--upgrade", "--no-build"}} {
-			f := broken(t, "ONMARU_SMART_REFRESH_AT=00:00", "ONMARU_SMART_REFRESH_AT=25:00")
+			f := broken(t, "MARU_SMART_REFRESH_AT=00:00", "MARU_SMART_REFRESH_AT=25:00")
 			c, _, _ := newTestContext(t, f, prompt.Fail{}, args...)
 			c.IsRoot = true
 			c.Interactive = false

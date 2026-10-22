@@ -22,8 +22,8 @@ import (
 	"syscall"
 	"time"
 
-	"onmaru/backend/config"
-	"onmaru/backend/internal/helper/proto"
+	"maru/backend/config"
+	"maru/backend/internal/helper/proto"
 )
 
 // MaxJob은 stdin으로 받는 작업의 최대 크기다.
@@ -75,7 +75,7 @@ func (c Config) withDefaults() Config {
 	return c
 }
 
-// Main은 `onmaru-helper worker`의 본체다. 종료 코드를 돌려준다.
+// Main은 `maru-helper worker`의 본체다. 종료 코드를 돌려준다.
 // 0은 성공, 2는 연산 실패(stderr에 code=<코드>), 1은 실행 오류다.
 func Main() int {
 	// OMV Samba의 create mask 0664 / directory mask 0775와 같게 그룹 쓰기를 남긴다.

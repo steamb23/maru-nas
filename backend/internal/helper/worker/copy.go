@@ -10,7 +10,7 @@ import (
 	"syscall"
 	"time"
 
-	"onmaru/backend/internal/helper/proto"
+	"maru/backend/internal/helper/proto"
 )
 
 // fs.copy는 한 폴더 안의 항목을 다른 폴더(다른 기준 디렉터리여도 된다)로 복사한다. 먼저 복사할 파일 수와 크기를

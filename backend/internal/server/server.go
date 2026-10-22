@@ -11,16 +11,16 @@ import (
 	"net/http"
 	"time"
 
-	"onmaru/backend/internal/addons"
-	"onmaru/backend/internal/api"
-	"onmaru/backend/internal/auth"
-	"onmaru/backend/internal/buildinfo"
-	"onmaru/backend/internal/files"
-	"onmaru/backend/internal/omv"
-	"onmaru/backend/internal/prefs"
-	"onmaru/backend/internal/security"
-	"onmaru/backend/internal/terminal"
-	"onmaru/backend/internal/upgrade"
+	"maru/backend/internal/addons"
+	"maru/backend/internal/api"
+	"maru/backend/internal/auth"
+	"maru/backend/internal/buildinfo"
+	"maru/backend/internal/files"
+	"maru/backend/internal/omv"
+	"maru/backend/internal/prefs"
+	"maru/backend/internal/security"
+	"maru/backend/internal/terminal"
+	"maru/backend/internal/upgrade"
 )
 
 // SystemSource는 시스템 통계를 제공한다. *sysinfo.Reader가 구현한다.

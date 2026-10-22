@@ -14,7 +14,7 @@ import (
 	"time"
 	"unsafe"
 
-	"onmaru/backend/internal/helper/proto"
+	"maru/backend/internal/helper/proto"
 )
 
 // 파일 탐색기가 쓰는 연산: fs.names(이름과 종류만), fs.statmany(이름 여러 개 lstat), fs.info(정보 패널).

@@ -16,7 +16,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"onmaru/backend/config"
+	"maru/backend/config"
 )
 
 // WebAuthn(패스키)을 CBOR 파서 없이 처리한다.

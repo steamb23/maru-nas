@@ -12,9 +12,9 @@ import (
 	"testing"
 	"time"
 
-	helperclient "onmaru/backend/internal/helper/client"
-	"onmaru/backend/internal/helper/helperfake"
-	"onmaru/backend/internal/terminal/sshfake"
+	helperclient "maru/backend/internal/helper/client"
+	"maru/backend/internal/helper/helperfake"
+	"maru/backend/internal/terminal/sshfake"
 )
 
 // testEnv는 가짜 도우미와, 그 가짜 홈의 authorized_keys를 보는 가짜 sshd다.
@@ -132,7 +132,7 @@ func TestDialWithHelperKey(t *testing.T) {
 		t.Fatal("asked for a password despite the helper key")
 	}
 	// 인증이 끝나면 임시 키 줄을 지운다.
-	if keys := e.authorizedKeys("user"); strings.Contains(keys, "onmaru-ephemeral") {
+	if keys := e.authorizedKeys("user"); strings.Contains(keys, "maru-ephemeral") {
 		t.Fatalf("temporary key left: %q", keys)
 	}
 }
@@ -253,7 +253,7 @@ func TestDialHelperKeyRejectedBySSHD(t *testing.T) {
 		t.Fatalf("error = %+v", de)
 	}
 	// 넣었던 키 줄은 지운다.
-	if keys := e.authorizedKeys("user"); strings.Contains(keys, "onmaru-ephemeral") {
+	if keys := e.authorizedKeys("user"); strings.Contains(keys, "maru-ephemeral") {
 		t.Fatalf("temporary key left: %q", keys)
 	}
 }

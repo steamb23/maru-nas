@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"onmaru/backend/config"
-	"onmaru/installer/internal/prompt"
+	"maru/backend/config"
+	"maru/installer/internal/prompt"
 )
 
 func goldenDir(name string) string { return filepath.Join("testdata/golden", name) }
@@ -22,8 +22,8 @@ func installedFake(t *testing.T) *fakeSystem {
 	f.copyTree(t, filepath.Join(goldenDir("helper-loopback"), "want"))
 	f.put(t, binDst, "old\n", 0o755)
 	f.put(t, helperBinDst, "old\n", 0o755)
-	f.users["onmaru"] = Account{Name: "onmaru", UID: 999, Home: "/nonexistent"}
-	f.groups["onmaru"] = "onmaru"
+	f.users["maru"] = Account{Name: "maru", UID: 999, Home: "/nonexistent"}
+	f.groups["maru"] = "maru"
 	return f
 }
 
@@ -48,7 +48,7 @@ func TestFlowFreshInstall(t *testing.T) {
 		t.Fatalf("exec calls %v", *calls)
 	}
 	call := (*calls)[0]
-	if call.path != "/usr/bin/sudo" || !slices.Equal(call.argv[:5], []string{"sudo", "/repo/bin/onmaru-install", "--service-install", "--lang", "en"}) {
+	if call.path != "/usr/bin/sudo" || !slices.Equal(call.argv[:5], []string{"sudo", "/repo/bin/maru-install", "--service-install", "--lang", "en"}) {
 		t.Fatalf("exec %v", call)
 	}
 	if len(f.log) != 0 {
@@ -56,8 +56,8 @@ func TestFlowFreshInstall(t *testing.T) {
 	}
 
 	// 2단계: sudo가 실행할 인자 그대로, root로, 질문 없이
-	f.users["onmaru"] = Account{Name: "onmaru", UID: 999, Home: "/nonexistent"}
-	f.groups["onmaru"] = "onmaru"
+	f.users["maru"] = Account{Name: "maru", UID: 999, Home: "/nonexistent"}
+	f.groups["maru"] = "maru"
 	c2, out2, _ := newTestContext(t, f, prompt.Fail{}, call.argv[2:]...)
 	c2.IsRoot = true
 	if err := Run(c2); err != nil {
@@ -70,7 +70,7 @@ func TestFlowFreshInstall(t *testing.T) {
 func TestFlowUpgradeAsksOnlyMissing(t *testing.T) {
 	f := installedFake(t)
 	env, _ := f.read(t, envFile)
-	f.put(t, envFile, strings.Replace(env, "ONMARU_PUBLIC_ORIGIN=\n", "", 1), 0o644)
+	f.put(t, envFile, strings.Replace(env, "MARU_PUBLIC_ORIGIN=\n", "", 1), 0o644)
 	script := &prompt.Script{Answers: map[string]string{"public-origin": "-"}}
 	c, out, calls := newTestContext(t, f, script, "--upgrade", "--no-build")
 	c.IsRoot = true
@@ -97,8 +97,8 @@ func TestFlowUpgradeAsksOnlyMissing(t *testing.T) {
 // 설정이 모두 있는 기존 설치의 --upgrade는 질문이 하나도 없고, 파일이 그대로면 백업도 없다. 도우미도 다시 시작한다.
 func TestFlowUpgradeNoQuestions(t *testing.T) {
 	f := installedFake(t)
-	f.active["onmaru.service"] = true
-	f.active["onmaru-helper.service"] = true
+	f.active["maru.service"] = true
+	f.active["maru-helper.service"] = true
 	c, out, _ := newTestContext(t, f, prompt.Fail{}, "--upgrade", "--no-build")
 	c.IsRoot = true
 	if err := Run(c); err != nil {
@@ -108,7 +108,7 @@ func TestFlowUpgradeNoQuestions(t *testing.T) {
 	if b := backups(t, f); len(b) != 0 {
 		t.Errorf("backups %v", b)
 	}
-	for _, want := range []string{"systemctl restart onmaru-helper.service", "systemctl restart onmaru.service"} {
+	for _, want := range []string{"systemctl restart maru-helper.service", "systemctl restart maru.service"} {
 		if !slices.Contains(f.log, want) {
 			t.Errorf("missing %q in %v", want, f.log)
 		}
@@ -126,7 +126,7 @@ func TestFlowUpgradeReexec(t *testing.T) {
 		t.Fatalf("Run: %v\n%s", err, out)
 	}
 	argv := (*calls)[0].argv
-	if !slices.Equal(argv[:5], []string{"sudo", "/repo/bin/onmaru-install", "--service-install", "--lang", "ko"}) ||
+	if !slices.Equal(argv[:5], []string{"sudo", "/repo/bin/maru-install", "--service-install", "--lang", "ko"}) ||
 		!slices.Contains(argv, "--upgrade") || argv[len(argv)-1] != "--plain" {
 		t.Errorf("argv %q", argv)
 	}
@@ -145,7 +145,7 @@ func TestFlowUpgradeNeedsInstallation(t *testing.T) {
 // 도우미를 설치했다가 --no-helper로 다시 설치하면 도우미 파일과 유닛을 지운다.
 func TestFlowHelperRemoved(t *testing.T) {
 	f := installedFake(t)
-	c, out, _ := newTestContext(t, f, prompt.Fail{}, "--service-install", "--user", "onmaru", "--listen", "127.0.0.1:8090",
+	c, out, _ := newTestContext(t, f, prompt.Fail{}, "--service-install", "--user", "maru", "--listen", "127.0.0.1:8090",
 		"--omv-url", "http://127.0.0.1", "--smart-refresh-at", "00:00", "--workbench-url", "", "--public-origin", "", "--no-helper")
 	c.IsRoot = true
 	if err := Run(c); err != nil {
@@ -157,14 +157,14 @@ func TestFlowHelperRemoved(t *testing.T) {
 		}
 	}
 	env, _ := f.read(t, envFile)
-	if !strings.Contains(env, "\nONMARU_HELPER_SOCKET=\n") {
+	if !strings.Contains(env, "\nMARU_HELPER_SOCKET=\n") {
 		t.Errorf("env %s", env)
 	}
 	unit, _ := f.read(t, unitFile)
-	if strings.Contains(unit, "onmaru-helper") {
+	if strings.Contains(unit, "maru-helper") {
 		t.Errorf("unit still wants the helper:\n%s", unit)
 	}
-	i := slices.Index(f.log, "systemctl disable --now onmaru-helper.socket onmaru-helper.service")
+	i := slices.Index(f.log, "systemctl disable --now maru-helper.socket maru-helper.service")
 	if i < 0 || f.log[i+1] != "systemctl daemon-reload" {
 		t.Errorf("log %v", f.log)
 	}
@@ -199,7 +199,7 @@ func TestFlowNewUserAndPortInUse(t *testing.T) {
 	}
 
 	// 서비스가 이미 돌고 있으면 그 포트는 자기 것이다.
-	f.active["onmaru.service"] = true
+	f.active["maru.service"] = true
 	c2, out2, _ := newTestContext(t, f, prompt.Fail{}, args...)
 	c2.IsRoot = true
 	if err := Run(c2); err != nil {
@@ -223,7 +223,7 @@ func TestFlowServiceInstallNeedsRoot(t *testing.T) {
 func TestFlowNonInteractiveMissing(t *testing.T) {
 	f := newFake(t)
 	f.putRepo(t)
-	c, _, calls := newTestContext(t, f, prompt.Fail{}, "--no-build", "--user", "onmaru", "--omv-url", "http://127.0.0.1",
+	c, _, calls := newTestContext(t, f, prompt.Fail{}, "--no-build", "--user", "maru", "--omv-url", "http://127.0.0.1",
 		"--smart-refresh-at", "00:00", "--workbench-url", "")
 	c.Interactive = false
 	code, msg := ExitCode(Run(c))
@@ -253,7 +253,7 @@ func TestFlowNonInteractiveProceed(t *testing.T) {
 }
 
 func allSettingArgs(extra ...string) []string {
-	return append(extra, "--user", "onmaru", "--listen", "unix:/run/onmaru/onmaru.sock", "--omv-url", "http://127.0.0.1",
+	return append(extra, "--user", "maru", "--listen", "unix:/run/maru/maru.sock", "--omv-url", "http://127.0.0.1",
 		"--smart-refresh-at", "00:00", "--workbench-url", "", "--public-origin", "", "--helper", "--elevate-group", "sudo", "--no-web-upgrade")
 }
 
@@ -275,19 +275,19 @@ func TestFlowDryRun(t *testing.T) {
 	if after, _ := f.read(t, envFile); after != before {
 		t.Error("dry run changed the env file")
 	}
-	if _, ok := f.read(t, "/etc/systemd/system/onmaru.service"); !ok {
+	if _, ok := f.read(t, "/etc/systemd/system/maru.service"); !ok {
 		t.Error("unit missing")
 	}
 	s := out.String()
 	for _, want := range []string{
-		"[dry-run] write /etc/default/onmaru (0644, changes):",
-		"    - ONMARU_LISTEN=127.0.0.1:8090",
-		"    + ONMARU_LISTEN=unix:/run/onmaru/onmaru.sock",
-		"[dry-run] run: cp -p -- /etc/default/onmaru /etc/default/onmaru.bak-",
-		"[dry-run] run: install -o root -g root -m 0755 /repo/bin/onmaru /usr/local/bin/onmaru",
+		"[dry-run] write /etc/default/maru (0644, changes):",
+		"    - MARU_LISTEN=127.0.0.1:8090",
+		"    + MARU_LISTEN=unix:/run/maru/maru.sock",
+		"[dry-run] run: cp -p -- /etc/default/maru /etc/default/maru.bak-",
+		"[dry-run] run: install -o root -g root -m 0755 /repo/bin/maru /usr/local/bin/maru",
 		"[dry-run] run: systemctl daemon-reload",
 		"[dry-run] check http://localhost/api/health",
-		"Caddy:  reverse_proxy unix//run/onmaru/onmaru.sock",
+		"Caddy:  reverse_proxy unix//run/maru/maru.sock",
 	} {
 		if !strings.Contains(s, want) {
 			t.Errorf("output missing %q:\n%s", want, s)
@@ -305,23 +305,23 @@ func TestFlowDryRun(t *testing.T) {
 func TestFlowUninstall(t *testing.T) {
 	f := installedFake(t)
 	f.put(t, stateDir+"/site.json", "{}", 0o600)
-	f.put(t, runtimeDir+"/onmaru.sock", "", 0o660)
-	f.put(t, "/etc/default/onmaru-other", "keep\n", 0o644)
+	f.put(t, runtimeDir+"/maru.sock", "", 0o660)
+	f.put(t, "/etc/default/maru-other", "keep\n", 0o644)
 	f.put(t, config.InstallRecordFile, "{}\n", 0o644)
-	f.put(t, config.UpgradeEnvFile, "ONMARU_UPGRADE_REPO=/repo\n", 0o644)
+	f.put(t, config.UpgradeEnvFile, "MARU_UPGRADE_REPO=/repo\n", 0o644)
 	f.put(t, upgradeServiceUnit, "x", 0o644)
 	f.put(t, upgradePathUnit, "x", 0o644)
 	f.put(t, upgradeInstallerDst, "x", 0o755)
 	f.put(t, upgradeCheckRequest, "{}", 0o644)
 	f.put(t, upgradeApplyRequest, "{}", 0o600)
-	f.unitFiles["onmaru.service"] = true
+	f.unitFiles["maru.service"] = true
 	script := &prompt.Script{Answers: map[string]string{"uninstall": "y", "uninstall-state-dir": "y", "uninstall-user": "y"}}
 	c, out, _ := newTestContext(t, f, script, "--uninstall")
 	c.IsRoot = true
 	if err := Run(c); err != nil {
 		t.Fatalf("Run: %v\n%s", err, out)
 	}
-	for _, p := range append(configFiles, binDst, helperBinDst, stateDir+"/site.json", runtimeDir+"/onmaru.sock",
+	for _, p := range append(configFiles, binDst, helperBinDst, stateDir+"/site.json", runtimeDir+"/maru.sock",
 		upgradeInstallerDst, upgradeCheckRequest, upgradeApplyRequest) {
 		if _, ok := f.read(t, p); ok {
 			t.Errorf("%s not removed", p)
@@ -333,18 +333,18 @@ func TestFlowUninstall(t *testing.T) {
 		}
 	}
 	// 설치기가 만들지 않은 파일은 건드리지 않는다.
-	if _, ok := f.read(t, "/etc/default/onmaru-other"); !ok {
+	if _, ok := f.read(t, "/etc/default/maru-other"); !ok {
 		t.Error("unrelated file removed")
 	}
 	want := []string{
-		"systemctl list-unit-files onmaru.service",
-		"systemctl disable --now onmaru.service",
-		"systemctl disable --now onmaru-upgrade.path",
+		"systemctl list-unit-files maru.service",
+		"systemctl disable --now maru.service",
+		"systemctl disable --now maru-upgrade.path",
 		"systemctl daemon-reload",
-		"systemctl disable --now onmaru-helper.socket onmaru-helper.service",
+		"systemctl disable --now maru-helper.socket maru-helper.service",
 		"systemctl daemon-reload",
 		"systemctl daemon-reload",
-		"userdel onmaru",
+		"userdel maru",
 	}
 	if !slices.Equal(f.log, want) {
 		t.Errorf("log %q", f.log)
@@ -366,14 +366,14 @@ func TestFlowUninstallDeclinedAndSharedUser(t *testing.T) {
 		t.Fatalf("declined uninstall changed something: %v", f.log)
 	}
 
-	f.users["onmaru"] = Account{Name: "onmaru", UID: 1000, Home: "/home/onmaru"}
+	f.users["maru"] = Account{Name: "maru", UID: 1000, Home: "/home/maru"}
 	script := &prompt.Script{Answers: map[string]string{"uninstall": "y"}}
 	c2, out, _ := newTestContext(t, f, script, "--uninstall")
 	c2.IsRoot = true
 	if err := Run(c2); err != nil {
 		t.Fatalf("Run: %v\n%s", err, out)
 	}
-	if slices.Contains(f.log, "userdel onmaru") {
+	if slices.Contains(f.log, "userdel maru") {
 		t.Error("shared user deleted")
 	}
 }
@@ -385,7 +385,7 @@ func TestFlowUninstallReexec(t *testing.T) {
 	if err := Run(c); !errors.Is(err, errExecIntercepted) {
 		t.Fatal(err)
 	}
-	if argv := (*calls)[0].argv; !slices.Equal(argv, []string{"sudo", "/repo/bin/onmaru-install", "--uninstall", "--lang", "en"}) {
+	if argv := (*calls)[0].argv; !slices.Equal(argv, []string{"sudo", "/repo/bin/maru-install", "--uninstall", "--lang", "en"}) {
 		t.Errorf("argv %q", argv)
 	}
 }
@@ -466,12 +466,12 @@ func TestAskListenAnyAddress(t *testing.T) {
 		t.Errorf("got %d %q", code, msg)
 	}
 	// 기존 설치가 Unix 소켓이면 기본 선택도 Unix 소켓이다.
-	c.Installed = &Installed{Env: ParseEnv([]byte("ONMARU_LISTEN=unix:/run/onmaru/onmaru.sock\nONMARU_ALLOW_NON_LOOPBACK=true\n"))}
+	c.Installed = &Installed{Env: ParseEnv([]byte("MARU_LISTEN=unix:/run/maru/maru.sock\nMARU_ALLOW_NON_LOOPBACK=true\n"))}
 	script.Answers = map[string]string{"listen-mode": ""}
 	if err := askListen(c); err != nil {
 		t.Fatal(err)
 	}
-	if c.Values.Get(nameListen) != "unix:/run/onmaru/onmaru.sock" || c.Values.Bool(nameAllowNonLoopback) {
+	if c.Values.Get(nameListen) != "unix:/run/maru/maru.sock" || c.Values.Bool(nameAllowNonLoopback) {
 		t.Errorf("values %v", c.Values)
 	}
 }

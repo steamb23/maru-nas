@@ -5,7 +5,7 @@ import (
 	"runtime/debug"
 	"time"
 
-	"onmaru/backend/config"
+	"maru/backend/config"
 )
 
 // stepRecord는 설치 기록(config.InstallRecordFile)을 쓴다. 대시보드에서 업그레이드는 이 기록으로 지금 설치된 버전과
@@ -25,8 +25,8 @@ func stepRecord(c *Context) error {
 	return nil
 }
 
-// installRecord는 설치하는 실행 파일의 기록이다. 커밋은 설치기가 아니라 설치하는 bin/onmaru에서 읽는다(--no-build면
-// 설치기만 새로 빌드되고 bin/onmaru는 예전 것일 수 있다). 버전은 이 설치기의 버전이므로, 설치기와 bin/onmaru가 같은
+// installRecord는 설치하는 실행 파일의 기록이다. 커밋은 설치기가 아니라 설치하는 bin/maru에서 읽는다(--no-build면
+// 설치기만 새로 빌드되고 bin/maru는 예전 것일 수 있다). 버전은 이 설치기의 버전이므로, 설치기와 bin/maru가 같은
 // 커밋에서 빌드됐는지 확인했을 때만 적는다. 확인하지 못한 값은 빈 값으로 두고 경고한다(업그레이드가 틀린 기록을 믿고
 // 수동 재설치가 필요한 버전 경계를 건너뛰지 않게).
 func (c *Context) installRecord() config.InstallRecord {

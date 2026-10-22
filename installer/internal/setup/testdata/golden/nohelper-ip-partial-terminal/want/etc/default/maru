@@ -1,0 +1,16 @@
+# maru settings. Written by install.sh; re-run it to change them.
+# See README.md for every option.
+MARU_LISTEN=192.0.2.10:8090
+MARU_ALLOW_NON_LOOPBACK=true
+MARU_OMV_URL=http://[::1]:8001
+MARU_SMART_REFRESH_AT=12:00
+MARU_WORKBENCH_URL=../
+# Public HTTPS address browsers use for the dashboard, for passkeys (security hardening mode); empty turns passkeys off.
+MARU_PUBLIC_ORIGIN=
+# Privileged helper socket; empty means the helper is not installed.
+MARU_HELPER_SOCKET=
+# Web terminal (SSH to this host's sshd). Off by default; admins can also turn it on in the settings app.
+# install.sh keeps these lines as they are.
+MARU_TERMINAL=
+#MARU_SSH_ADDR=auto
+#MARU_SSH_HOST_KEYS=/etc/ssh/ssh_host_*_key.pub

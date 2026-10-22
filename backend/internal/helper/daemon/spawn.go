@@ -14,8 +14,8 @@ import (
 	"syscall"
 	"time"
 
-	"onmaru/backend/internal/helper/proto"
-	"onmaru/backend/internal/helper/worker"
+	"maru/backend/internal/helper/proto"
+	"maru/backend/internal/helper/worker"
 )
 
 // Credential은 worker를 실행할 사용자 권한이다. nil이면 root다.

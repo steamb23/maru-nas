@@ -18,7 +18,7 @@ func TestStandardLibraryOnly(t *testing.T) {
 		t.Fatalf("go list: %v", err)
 	}
 	for _, dep := range strings.Fields(string(out)) {
-		if dep != "onmaru/backend/config" {
+		if dep != "maru/backend/config" {
 			t.Errorf("backend/config depends on non-standard package %s", dep)
 		}
 	}

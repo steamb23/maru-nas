@@ -5,20 +5,20 @@ paths:
 
 # 백엔드 (Go)
 
-- 표준 라이브러리(`net/http`)를 쓴다. 런타임 외부 의존성은 웹 터미널의 `golang.org/x/crypto/ssh`(`internal/terminal`)와 `github.com/coder/websocket`(`internal/server/terminal.go`)뿐이며 다른 곳에서 쓰지 않는다. 권한 도우미(`cmd/onmaru-helper`)에는 링크하지 않는다(도우미의 SSH 공개 키 확인은 `proto`가 직접 읽는다). tygo는 go.mod의 `tool` 지시어로 고정한 빌드 도구다
-- `-listen`(`ONMARU_LISTEN`, 기본 `127.0.0.1:8090`)은 루프백 TCP 주소 또는 `unix:/절대/경로`를 받는다. 루프백이 아닌 TCP 주소는 `-allow-non-loopback`(`ONMARU_ALLOW_NON_LOOPBACK`)을 명시했을 때만 허용하고 시작 시 경고를 남긴다. 기본값이 거부인 동작을 유지한다
-  - Unix 소켓은 권한 `0660`으로 만들고, 남은 소켓 파일은 지우되 소켓이 아닌 파일이나 사용 중인 소켓은 건드리지 않는다(`cmd/onmaru` `listenOn`)
+- 표준 라이브러리(`net/http`)를 쓴다. 런타임 외부 의존성은 웹 터미널의 `golang.org/x/crypto/ssh`(`internal/terminal`)와 `github.com/coder/websocket`(`internal/server/terminal.go`)뿐이며 다른 곳에서 쓰지 않는다. 권한 도우미(`cmd/maru-helper`)에는 링크하지 않는다(도우미의 SSH 공개 키 확인은 `proto`가 직접 읽는다). tygo는 go.mod의 `tool` 지시어로 고정한 빌드 도구다
+- `-listen`(`MARU_LISTEN`, 기본 `127.0.0.1:8090`)은 루프백 TCP 주소 또는 `unix:/절대/경로`를 받는다. 루프백이 아닌 TCP 주소는 `-allow-non-loopback`(`MARU_ALLOW_NON_LOOPBACK`)을 명시했을 때만 허용하고 시작 시 경고를 남긴다. 기본값이 거부인 동작을 유지한다
+  - Unix 소켓은 권한 `0660`으로 만들고, 남은 소켓 파일은 지우되 소켓이 아닌 파일이나 사용 중인 소켓은 건드리지 않는다(`cmd/maru` `listenOn`)
   - 프록시를 거치지 않은 요청은 `X-Forwarded-*`를 위조할 수 있다. 루프백·소켓 수신은 이 헤더를 믿을 근거이므로 다른 경로를 기본으로 열지 않는다
-- `-omv-url`(`ONMARU_OMV_URL`, 기본 `http://127.0.0.1`)은 루프백만 허용한다(OMV 세션 ID가 네트워크로 나가지 않게). 이 제한은 완화하지 않는다
-- `-workbench-url`(`ONMARU_WORKBENCH_URL`, 기본 빈 값)은 브라우저가 OMV 웹 UI를 열 주소다. 백엔드는 접속하지 않고 `/api/capabilities`로 알려 주기만 한다. http(s) URL 또는 `/`·`./`·`../`로 시작하는 경로만 받고, scheme 없는 호스트 이름·query·fragment는 거부한다(`config.CheckWorkbenchURL`. 설정 앱에서 덮어쓰는 값과 설치기의 입력도 같은 함수로 검사한다)
+- `-omv-url`(`MARU_OMV_URL`, 기본 `http://127.0.0.1`)은 루프백만 허용한다(OMV 세션 ID가 네트워크로 나가지 않게). 이 제한은 완화하지 않는다
+- `-workbench-url`(`MARU_WORKBENCH_URL`, 기본 빈 값)은 브라우저가 OMV 웹 UI를 열 주소다. 백엔드는 접속하지 않고 `/api/capabilities`로 알려 주기만 한다. http(s) URL 또는 `/`·`./`·`../`로 시작하는 경로만 받고, scheme 없는 호스트 이름·query·fragment는 거부한다(`config.CheckWorkbenchURL`. 설정 앱에서 덮어쓰는 값과 설치기의 입력도 같은 함수로 검사한다)
 - `backend/config`는 백엔드와 설치기(별도 모듈 `installer/`)가 함께 쓰는 공개 패키지다. 온마루 버전(`Version`), 대시보드에서 업그레이드의 파일 형식(`upgrade.go`, `upgrade_request.go`. tygo가 `frontend/src/api/upgrade.gen.ts`로 내보낸다)과 서비스 상수(`upgrade_service.go`, 내보내지 않음), 환경 변수 키·기본값 상수와 설정 검사 함수(`CheckListen`, `CheckOMVURL`, `CheckHelperSocket`, `CheckWorkbenchURL`, `ParseRefreshAt`, `ParsePublicOrigin`, `ValidGroupName`)를 둔다. 플래그 정의와 `runtimeEntry` 목록은 이 상수를 쓴다. 표준 라이브러리만 쓰고 `backend/internal`을 import하지 않는다(`TestStandardLibraryOnly`). 여기서 규칙을 바꾸면 설치기에도 그대로 적용되므로 설치기 테스트도 돌린다(`.claude/rules/installer.md`)
-- 대시보드 설정은 `internal/prefs`가 상태 디렉터리(`-state-dir`, `ONMARU_STATE_DIR`, 없으면 systemd의 `STATE_DIRECTORY`)에 저장한다: 사용자별 JSON(`users/`, `Store`), 전역 설정(`site.json`, `SiteStore`), 배경 이미지(`images/`, `ImageStore`), 보안 강화 모드의 수단 기록(`security/`, `security.Store`. 읽을 수 없는 파일은 `.corrupt`로 옮기지 않고 오류로 돌려준다, `.claude/rules/security.md`). 비우면 메모리에만 둔다. 대시보드 자신의 상태만 두며 OMV 설정이나 시스템 파일은 쓰지 않는다. `make dev`는 `.dev-state/real`, `make dev-fake`는 `.dev-state/fake`를 쓴다(커밋 안 함). git 워크트리에서 실행하거나 `BRANCH=<브랜치>`로 워크트리를 골라도 주 체크아웃의 `.dev-state`를 쓰므로, 상태 형식(`version`)을 바꾸는 브랜치이거나 주 체크아웃과 개발 서버를 동시에 띄울 때는 `ONMARU_STATE_DIR`로 따로 둔다
+- 대시보드 설정은 `internal/prefs`가 상태 디렉터리(`-state-dir`, `MARU_STATE_DIR`, 없으면 systemd의 `STATE_DIRECTORY`)에 저장한다: 사용자별 JSON(`users/`, `Store`), 전역 설정(`site.json`, `SiteStore`), 배경 이미지(`images/`, `ImageStore`), 보안 강화 모드의 수단 기록(`security/`, `security.Store`. 읽을 수 없는 파일은 `.corrupt`로 옮기지 않고 오류로 돌려준다, `.claude/rules/security.md`). 비우면 메모리에만 둔다. 대시보드 자신의 상태만 두며 OMV 설정이나 시스템 파일은 쓰지 않는다. `make dev`는 `.dev-state/real`, `make dev-fake`는 `.dev-state/fake`를 쓴다(커밋 안 함). git 워크트리에서 실행하거나 `BRANCH=<브랜치>`로 워크트리를 골라도 주 체크아웃의 `.dev-state`를 쓰므로, 상태 형식(`version`)을 바꾸는 브랜치이거나 주 체크아웃과 개발 서버를 동시에 띄울 때는 `MARU_STATE_DIR`로 따로 둔다
   - 설정 변경 API는 부분별로 둔다(`PUT /api/preferences/widgets`, `…/shortcuts`, `…/drawer`, `…/system-info`, `…/files`(파일 탐색기 보기), `…/appearance`, 전역은 `PUT /api/site/login`, `…/defaults`, `…/server`, `…/security`). 서로 덮어쓰지 않게 하며, 저장소는 설정 파일을 읽고 쓰는 동안 잠가 한쪽 저장이 다른 쪽을 지우지 않게 한다
 - 전역 설정 쓰기(`/api/site/*`)는 `requireAdmin`(관리자가 아니면 403 `admin_required`)을 거친다. 로그인 화면이 쓰는 `GET /api/site`(화면 꾸밈 정보만, 가동 설정·주소는 넣지 않음)와 로그인 배경 이미지만 인증 없이 준다
 - 배경 이미지는 자리(`prefs.SiteImage`, `prefs.UserWallpaper`)마다 하나다. 올리기는 원시 이미지 본문(`image/png|jpeg|webp`, 20MiB 이하, multipart 아님)이고 형식은 내용으로 다시 판별해 저장한다(SVG·HTML 거부). 보낼 때는 `serveImage`로 저장 형식, `nosniff`, `Content-Security-Policy: default-src 'none'; sandbox`, ETag(내용 해시 리비전)를 붙인다. 이미지를 지우면 그 이미지를 가리키던 배경 서술자도 지운다
 - 웹에서 덮어쓰는 가동 설정은 재시작 없이 바뀌는 워크벤치 주소, SMART 확인 시각, 웹 터미널 허용(`-terminal`, 값은 `"true"`·`"false"` 문자열)뿐이다. 덮어쓴 값은 `site.json`에 두고 `handler.over`에 올려 바로 반영한다(`/api/capabilities`, `smart.Cache.SetRefreshAt`). 가동 설정 현황(값·출처)은 `main.go`가 `flag.Visit`·환경 변수로 만들어 `Config.Runtime`으로 넘긴다. 플래그를 더하면 그 목록에도 넣는다
-- `cmd/fakeomv`와 `internal/omv/omvfake`, `internal/helper/helperfake`, `internal/terminal/sshfake`, `internal/upgrade/upgradefake`는 개발·테스트용이다. 운영 바이너리(`cmd/onmaru`, `cmd/onmaru-helper`)에서 import하지 않는다
-- `-helper-socket`(`ONMARU_HELPER_SOCKET`, 기본 빈 값)은 권한 도우미 소켓의 절대 경로다. 비우면 `Config.Helper`가 nil이고 도우미 기능(`/api/helper*`)은 `disabled`·503이다. 시작할 때 도우미에 `reset`을 보낸다. 도우미 쪽 규칙은 `.claude/rules/helper.md`
+- `cmd/fakeomv`와 `internal/omv/omvfake`, `internal/helper/helperfake`, `internal/terminal/sshfake`, `internal/upgrade/upgradefake`는 개발·테스트용이다. 운영 바이너리(`cmd/maru`, `cmd/maru-helper`)에서 import하지 않는다
+- `-helper-socket`(`MARU_HELPER_SOCKET`, 기본 빈 값)은 권한 도우미 소켓의 절대 경로다. 비우면 `Config.Helper`가 nil이고 도우미 기능(`/api/helper*`)은 `disabled`·503이다. 시작할 때 도우미에 `reset`을 보낸다. 도우미 쪽 규칙은 `.claude/rules/helper.md`
 - `/api/*` 경로는 대시보드 루트 기준이다. 대시보드를 경로 접두사 아래에 두면 리버스 프록시가 접두사를 제거한다. 쿠키 Path는 `-cookie-path`(기본 `/`)
 - `internal/web/static/`에는 `.gitkeep`만 커밋한다. `dist/`는 빌드 결과다
   - 캐시: 해시가 붙은 `assets/*`는 `Cache-Control: public, max-age=31536000, immutable`, 그 밖의 파일(`index.html`)은 `no-cache`다. embed 파일은 수정 시각이 0이라 `Last-Modified`가 없으므로 시작할 때 내용 해시로 ETag를 만든다. 없는 파일(업그레이드 전 탭이 요청한 옛 청크)의 404에는 캐시 헤더를 붙이지 않는다(`internal/web`)
@@ -44,21 +44,21 @@ paths:
 - 이름 바꾸기·옮기기·삭제는 사이드바에 보이는 폴더(홈, 공유 폴더, 디스크) 자신과 그것을 품은 경로를 409 `root_folder`로 막는다(`rootFolder`. 도우미는 공유 폴더를 지키지 않는다, `.claude/rules/files.md`)
 - 공유 폴더 권한 따르기(`SiteFiles.FollowPrivileges`)를 켜면 `roots`가 권한 없는 공유 폴더를 숨기고(`withinRoots`가 그 아래를 403 `outside_roots`), 쓰기 라우트는 바꿀 곳을 `allowedWritePaths`로 걸러 읽기 전용 공유 폴더 안이면 403 `share_read_only`다(`.claude/rules/files.md`의 "공유 폴더 권한 따르기")
 - 도우미 파일 오류 코드는 `writeFilesError`가 HTTP로 바꾼다(`not_found` 404, `permission_denied`·`outside_roots` 403, `exists` 409 `file_exists`, `not_empty`·`cross_device`·`no_trash` 409, `no_space` 507, `busy` 429 `helper_busy`, `timeout` 504 `transfer_timeout` 등). 나머지는 `writeHelperError`
-- 디스크(`Config.Mounts`, `storage.Reader.MountsUnder`)와 데이터 디스크 디렉터리(`Config.FilesSrvDir`, 기본 `/srv`). 개발 서버는 `ONMARU_DEV_FILES_SRV`(개발 전용, 플래그·가동 설정 목록·설치기 레지스트리에 넣지 않음)로 가짜 도우미 디스크를 가리킨다
+- 디스크(`Config.Mounts`, `storage.Reader.MountsUnder`)와 데이터 디스크 디렉터리(`Config.FilesSrvDir`, 기본 `/srv`). 개발 서버는 `MARU_DEV_FILES_SRV`(개발 전용, 플래그·가동 설정 목록·설치기 레지스트리에 넣지 않음)로 가짜 도우미 디스크를 가리킨다
 - HTTP 서버에는 `ReadTimeout`·`WriteTimeout`을 두지 않는다(6시간 전송). 전송 상한과 무진행 끊기는 도우미가 한다
 
 ## 대시보드에서 업그레이드
 
 설계는 `.claude/docs/upgrade.md`, 업그레이드 서비스(설치기)는 `.claude/rules/installer.md`의 "업그레이드 서비스".
 
-- onmaru는 업그레이드 서비스의 파일만 다룬다(`internal/upgrade`): root 쪽 설정 파일(`config.UpgradeEnvFile`, 있으면 켜짐, 저장소 경로·계정은 수동 안내에 쓴다), 상태 파일(`config.UpgradeStatusFile`), 설치 기록(`config.InstallRecordFile`, 실행 파일에 커밋이 없을 때 화면이 쓴다)을 O_NOFOLLOW·크기 상한으로 읽고, 확인 요청(`<상태 디렉터리>/upgrade-check.json`)을 같은 디렉터리 임시 파일에서 이름을 바꿔 쓴다. 저장소·git·빌드에는 닿지 않는다(`ProtectHome=yes`)
+- maru는 업그레이드 서비스의 파일만 다룬다(`internal/upgrade`): root 쪽 설정 파일(`config.UpgradeEnvFile`, 있으면 켜짐, 저장소 경로·계정은 수동 안내에 쓴다), 상태 파일(`config.UpgradeStatusFile`), 설치 기록(`config.InstallRecordFile`, 실행 파일에 커밋이 없을 때 화면이 쓴다)을 O_NOFOLLOW·크기 상한으로 읽고, 확인 요청(`<상태 디렉터리>/upgrade-check.json`)을 같은 디렉터리 임시 파일에서 이름을 바꿔 쓴다. 저장소·git·빌드에는 닿지 않는다(`ProtectHome=yes`)
   - 상태 파일이 `checking`·`applying`인 채로 `config.UpgradeServiceTimeout`(유닛의 `TimeoutStartSec`)보다 오래되면 중단으로, 확인 요청이 1분 넘게 남아 있으면 멈춤으로 보고, 둘 다 다시 요청할 수 있다. 같은 방식으로 성공한 확인(`checked`)이 나온 지(`CheckedAt`) 30초(`checkReuse`)가 지나지 않았으면 확인 요청을 쓰지 않고 그 결과를 그대로 돌려준다(`Snapshot.RecentCheck`, 오류나 안내 없음). 실패한 확인은 원인을 고친 뒤 바로 다시 확인할 수 있게 다시 쓰지 않는다
-  - 경로 유닛은 `config.InstalledStateDir`(`/var/lib/onmaru`) 안의 확인 요청만 보므로, 상태 디렉터리가 비었거나 그곳이 아니면 확인 요청 경로를 비워 `state-dir`로 끈다(`main.go`의 `upgradePaths`)
+  - 경로 유닛은 `config.InstalledStateDir`(`/var/lib/maru`) 안의 확인 요청만 보므로, 상태 디렉터리가 비었거나 그곳이 아니면 확인 요청 경로를 비워 `state-dir`로 끈다(`main.go`의 `upgradePaths`)
 - 라우트(모두 `requireAdmin`): `GET /api/upgrade`(`api.UpgradeInfo`, 상태 파일은 `config.UpgradeStatus` 그대로), `POST /api/upgrade/check`(상승 필요 없음), `POST /api/upgrade/apply`(대상·설정 꼴을 먼저 400으로 거르고, 켜짐·바쁨·끝난 확인과 같은 대상인지 본 뒤 도우미 `upgrade.apply`. 상승하지 않았으면 도우미의 `elevation_required`). 오류 코드 `upgrade_disabled`·`upgrade_busy`·`upgrade_outdated`
   - 여기서 하는 검사는 빠른 거절과 안내다. 진행할 수 있는지는 업그레이드 서비스가 저장소·설치 상태로 다시 확인한다
   - 로그에는 사용자·대상·설정 이름만 남기고 설정 값은 남기지 않는다
-- `Config.Upgrade`가 nil이면 빈 경로라 꺼짐(`not-enabled`)이다(테스트가 실제 `/etc/default/onmaru-upgrade`를 읽지 않게). 서버 테스트는 `envOptions{upgrade: true}`가 임시 디렉터리를 쓴다
-- 개발 서버: `ONMARU_DEV_UPGRADE_ROOT`(개발 전용 환경 변수, 플래그·가동 설정 목록·설치기 레지스트리에 넣지 않음)가 있으면 설정·상태 파일 경로 앞에 붙이고 상태 디렉터리 검사를 건너뛴다. `make dev-fake`가 상태 디렉터리의 `upgrade-root`로 정하고, 가짜 OMV 프로세스의 가짜 업그레이드 서비스(`internal/upgrade/upgradefake`, 운영 바이너리에서 import하지 않음)가 그 아래에 쓴다. 시나리오는 `FAKEUPGRADE_SCENARIO`(web, manual, latest, check-fail, apply-fail, disabled), 단계 지연은 `FAKEUPGRADE_STEP`(기본 1.5s)이며 onmaru를 다시 시작하지 않는다
+- `Config.Upgrade`가 nil이면 빈 경로라 꺼짐(`not-enabled`)이다(테스트가 실제 `/etc/default/maru-upgrade`를 읽지 않게). 서버 테스트는 `envOptions{upgrade: true}`가 임시 디렉터리를 쓴다
+- 개발 서버: `MARU_DEV_UPGRADE_ROOT`(개발 전용 환경 변수, 플래그·가동 설정 목록·설치기 레지스트리에 넣지 않음)가 있으면 설정·상태 파일 경로 앞에 붙이고 상태 디렉터리 검사를 건너뛴다. `make dev-fake`가 상태 디렉터리의 `upgrade-root`로 정하고, 가짜 OMV 프로세스의 가짜 업그레이드 서비스(`internal/upgrade/upgradefake`, 운영 바이너리에서 import하지 않음)가 그 아래에 쓴다. 시나리오는 `FAKEUPGRADE_SCENARIO`(web, manual, latest, check-fail, apply-fail, disabled), 단계 지연은 `FAKEUPGRADE_STEP`(기본 1.5s)이며 maru를 다시 시작하지 않는다
 
 ## 테스트
 

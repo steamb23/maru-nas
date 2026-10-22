@@ -16,7 +16,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"onmaru/backend/internal/helper/proto"
+	"maru/backend/internal/helper/proto"
 )
 
 // 휴지통: FreeDesktop 휴지통 규격을 trash-cli의 trash-put과 같은 곳·형식으로 쓴다. 그래서 서버의 trash-list,
@@ -424,7 +424,7 @@ func userTrashDirs(job Job, cfg Config) ([]trashDir, error) {
 	return out, nil
 }
 
-// findTrashDir는 abs가 사용자의 휴지통 디렉터리인지 확인한다. onmaru가 보낸 경로는 믿지 않고 직접 찾은 목록과 비교한다.
+// findTrashDir는 abs가 사용자의 휴지통 디렉터리인지 확인한다. maru가 보낸 경로는 믿지 않고 직접 찾은 목록과 비교한다.
 func findTrashDir(job Job, cfg Config, abs string) (trashDir, error) {
 	dirs, err := userTrashDirs(job, cfg)
 	if err != nil {

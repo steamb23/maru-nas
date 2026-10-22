@@ -4,9 +4,9 @@ import (
 	"net/http"
 	"path"
 
-	"onmaru/backend/internal/api"
-	"onmaru/backend/internal/auth"
-	"onmaru/backend/internal/helper/proto"
+	"maru/backend/internal/api"
+	"maru/backend/internal/auth"
+	"maru/backend/internal/helper/proto"
 )
 
 // filesSearch는 폴더와 그 아래 모든 폴더에서 이름에 찾기어가 든 항목을 찾는다(대소문자 무시). 찾기는 도우미가 사용자

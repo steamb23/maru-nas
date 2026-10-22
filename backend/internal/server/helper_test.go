@@ -8,11 +8,11 @@ import (
 	"testing"
 	"time"
 
-	"onmaru/backend/internal/api"
-	"onmaru/backend/internal/auth"
-	helperclient "onmaru/backend/internal/helper/client"
-	"onmaru/backend/internal/helper/helperfake"
-	"onmaru/backend/internal/helper/proto"
+	"maru/backend/internal/api"
+	"maru/backend/internal/auth"
+	helperclient "maru/backend/internal/helper/client"
+	"maru/backend/internal/helper/helperfake"
+	"maru/backend/internal/helper/proto"
 )
 
 // session은 브라우저의 대시보드 세션이다(저장소에서 도우미 티켓을 보기 위해).

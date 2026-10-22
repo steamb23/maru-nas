@@ -14,7 +14,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"onmaru/backend/internal/api"
+	"maru/backend/internal/api"
 )
 
 // CPUTimes는 /proc/stat의 합산 "cpu" 줄이며 단위는 clock tick이다.

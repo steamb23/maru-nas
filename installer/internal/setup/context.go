@@ -8,8 +8,8 @@ import (
 	"runtime/debug"
 	"strconv"
 
-	"onmaru/backend/config"
-	"onmaru/installer/internal/prompt"
+	"maru/backend/config"
+	"maru/installer/internal/prompt"
 )
 
 // Context는 설치기 한 번의 실행 상태다. 설정 정의와 단계는 이것만 받는다.
@@ -177,17 +177,17 @@ func (v Values) SetBool(name string, b bool) {
 // Installed는 기존 설치(유닛, 환경 파일)에서 읽은 내용이다. 설치 단계가 파일을 다시 쓰기 전의 모습이다.
 // 파일은 모두 0644라 일반 사용자도 읽는다.
 type Installed struct {
-	// UnitExists는 onmaru 유닛 파일이 있는지다.
+	// UnitExists는 maru 유닛 파일이 있는지다.
 	UnitExists bool
 	// UnitUser는 유닛의 User= 값이다.
 	UnitUser string
-	// Env는 /etc/default/onmaru다. nil이면 없다.
+	// Env는 /etc/default/maru다. nil이면 없다.
 	Env *EnvFile
-	// HelperEnv는 /etc/default/onmaru-helper다. nil이면 없다.
+	// HelperEnv는 /etc/default/maru-helper다. nil이면 없다.
 	HelperEnv *EnvFile
 	// HelperServiceExists는 도우미 서비스 유닛이 있는지다.
 	HelperServiceExists bool
-	// UpgradeEnv는 /etc/default/onmaru-upgrade다(대시보드에서 업그레이드). nil이면 없다(꺼져 있다).
+	// UpgradeEnv는 /etc/default/maru-upgrade다(대시보드에서 업그레이드). nil이면 없다(꺼져 있다).
 	UpgradeEnv *EnvFile
 }
 

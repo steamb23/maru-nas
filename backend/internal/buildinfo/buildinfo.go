@@ -5,8 +5,8 @@ import (
 	"runtime"
 	"runtime/debug"
 
-	"onmaru/backend/config"
-	"onmaru/backend/internal/api"
+	"maru/backend/config"
+	"maru/backend/internal/api"
 )
 
 // Read는 지금 실행 파일의 빌드 정보다. go build는 git 저장소 안에서 빌드하면 커밋 정보를 넣지만

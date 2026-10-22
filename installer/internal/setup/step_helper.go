@@ -33,8 +33,8 @@ func installHelper(c *Context) error {
 	}
 	data := c.unitData()
 	for _, u := range []struct{ tmpl, path string }{
-		{"onmaru-helper.socket", helperSocketUnit},
-		{"onmaru-helper.service", helperServiceUnit},
+		{"maru-helper.socket", helperSocketUnit},
+		{"maru-helper.service", helperServiceUnit},
 	} {
 		b, err := renderUnit(u.tmpl, data)
 		if err != nil {
@@ -69,7 +69,7 @@ func removeHelper(c *Context) error {
 }
 
 // stepHelperSocket은 도우미 소켓을 켠다. 이미 돌던 도우미는 새 실행 파일로 다시 시작한다(티켓이 사라지므로
-// 사용자는 다시 로그인한다. onmaru도 다시 시작하므로 어차피 다시 로그인한다).
+// 사용자는 다시 로그인한다. maru도 다시 시작하므로 어차피 다시 로그인한다).
 func stepHelperSocket(c *Context) error {
 	if err := c.Sys.RunQuiet("systemctl", "enable", "--now", helperName+".socket"); err != nil {
 		return err

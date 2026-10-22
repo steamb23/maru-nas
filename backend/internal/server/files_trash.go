@@ -6,11 +6,11 @@ import (
 	"net/http"
 	"path"
 
-	"onmaru/backend/internal/addons/storage"
-	"onmaru/backend/internal/api"
-	"onmaru/backend/internal/auth"
-	"onmaru/backend/internal/files"
-	"onmaru/backend/internal/helper/proto"
+	"maru/backend/internal/addons/storage"
+	"maru/backend/internal/api"
+	"maru/backend/internal/auth"
+	"maru/backend/internal/files"
+	"maru/backend/internal/helper/proto"
 )
 
 // 파일 탐색기의 휴지통 API. 휴지통은 권한 도우미가 FreeDesktop 휴지통 규격(trash-put과 같은 곳·형식)으로 다룬다

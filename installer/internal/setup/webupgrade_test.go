@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"onmaru/backend/config"
-	"onmaru/installer/internal/prompt"
+	"maru/backend/config"
+	"maru/installer/internal/prompt"
 )
 
 // webUpgradeFake는 helper-web-upgrade 골든 결과(대시보드에서 업그레이드를 허용한 설치)가 설치된 가짜 시스템이다.
@@ -19,12 +19,12 @@ func webUpgradeFake(t *testing.T) *fakeSystem {
 	f.putRepo(t)
 	f.copyTree(t, filepath.Join(goldenDir("helper-web-upgrade"), "want"))
 	env, _ := f.read(t, config.UpgradeEnvFile)
-	f.put(t, config.UpgradeEnvFile, strings.Replace(env, "ONMARU_UPGRADE_PATH=/usr/bin:/usr/local/bin:/bin", "ONMARU_UPGRADE_PATH=/opt/go/bin:/usr/bin", 1), 0o644)
+	f.put(t, config.UpgradeEnvFile, strings.Replace(env, "MARU_UPGRADE_PATH=/usr/bin:/usr/local/bin:/bin", "MARU_UPGRADE_PATH=/opt/go/bin:/usr/bin", 1), 0o644)
 	f.put(t, binDst, "old\n", 0o755)
 	f.put(t, helperBinDst, "old\n", 0o755)
 	f.put(t, upgradeInstallerDst, "old\n", 0o755)
-	f.users["onmaru"] = Account{Name: "onmaru", UID: 999, Home: "/nonexistent"}
-	f.groups["onmaru"] = "onmaru"
+	f.users["maru"] = Account{Name: "maru", UID: 999, Home: "/nonexistent"}
+	f.groups["maru"] = "maru"
 	return f
 }
 
@@ -57,7 +57,7 @@ func TestWebUpgradeRepoOwner(t *testing.T) {
 	f2 := newFake(t)
 	f2.putRepo(t)
 	f2.owners["/repo"] = Account{Name: "root", UID: 0, Home: "/root"}
-	c2, out, _ := newTestContext(t, f2, prompt.Fail{}, "--service-install", "--user", "onmaru", "--listen", "127.0.0.1:8090",
+	c2, out, _ := newTestContext(t, f2, prompt.Fail{}, "--service-install", "--user", "maru", "--listen", "127.0.0.1:8090",
 		"--omv-url", "http://127.0.0.1", "--smart-refresh-at", "00:00", "--workbench-url", "", "--public-origin", "", "--helper",
 		"--elevate-group", "sudo", "--web-upgrade", "--build-path", "/usr/bin")
 	c2.IsRoot = true
@@ -120,7 +120,7 @@ func TestWebUpgradeBuildPathStages(t *testing.T) {
 		t.Fatalf("stage 2: %v\n%s", err, out2)
 	}
 	env, _ := f.read(t, config.UpgradeEnvFile)
-	if !strings.Contains(env, "\nONMARU_UPGRADE_PATH=/opt/go/bin:/usr/bin\n") || !strings.Contains(env, "\nONMARU_UPGRADE_USER=alice\n") {
+	if !strings.Contains(env, "\nMARU_UPGRADE_PATH=/opt/go/bin:/usr/bin\n") || !strings.Contains(env, "\nMARU_UPGRADE_USER=alice\n") {
 		t.Errorf("upgrade env\n%s", env)
 	}
 	if !strings.Contains(out2.String(), config.UpgradeEnvFile+" unchanged") {
@@ -129,13 +129,13 @@ func TestWebUpgradeBuildPathStages(t *testing.T) {
 	if got, _ := f.read(t, upgradeInstallerDst); got != "#!/bin/sh\n" {
 		t.Errorf("installer copy not replaced: %q", got)
 	}
-	if !slices.Contains(f.log, "systemctl enable --now onmaru-upgrade.path") || slices.ContainsFunc(f.log, func(l string) bool {
-		return strings.Contains(l, "restart onmaru-upgrade") || strings.Contains(l, "onmaru-upgrade.service")
+	if !slices.Contains(f.log, "systemctl enable --now maru-upgrade.path") || slices.ContainsFunc(f.log, func(l string) bool {
+		return strings.Contains(l, "restart maru-upgrade") || strings.Contains(l, "maru-upgrade.service")
 	}) {
 		t.Errorf("log %q", f.log)
 	}
 	unit, _ := f.read(t, helperServiceUnit)
-	if !strings.Contains(unit, "\nRuntimeDirectory=onmaru-upgrade\n") {
+	if !strings.Contains(unit, "\nRuntimeDirectory=maru-upgrade\n") {
 		t.Errorf("helper unit\n%s", unit)
 	}
 }
@@ -163,8 +163,8 @@ func TestWebUpgradeRemoved(t *testing.T) {
 			if _, ok := f.read(t, config.InstallRecordFile); !ok {
 				t.Error("install record removed")
 			}
-			if !slices.Contains(f.log, "systemctl disable --now onmaru-upgrade.path") ||
-				slices.ContainsFunc(f.log, func(l string) bool { return strings.Contains(l, "onmaru-upgrade.service") }) {
+			if !slices.Contains(f.log, "systemctl disable --now maru-upgrade.path") ||
+				slices.ContainsFunc(f.log, func(l string) bool { return strings.Contains(l, "maru-upgrade.service") }) {
 				t.Errorf("log %q", f.log)
 			}
 			if unit, ok := f.read(t, helperServiceUnit); ok && strings.Contains(unit, "RuntimeDirectory") {

@@ -6,24 +6,24 @@ import (
 	"strings"
 	"testing"
 
-	"onmaru/installer/internal/prompt"
+	"maru/installer/internal/prompt"
 )
 
 // testRegistry는 레지스트리 동작을 시험하는 합성 설정 목록이다(옵션 꼴마다 하나).
 func testRegistry() Registry {
 	return Registry{
 		{Name: "name", Flag: FlagValue, Arg: "NAME", Usage: L("a name", "이름"),
-			Env:      []EnvLine{{File: OnmaruEnv, Key: "ONMARU_NAME"}, {File: HelperEnv, Comment: "Copy.", Key: "ONMARU_HELPER_NAME"}},
+			Env:      []EnvLine{{File: MaruEnv, Key: "MARU_NAME"}, {File: HelperEnv, Comment: "Copy.", Key: "MARU_HELPER_NAME"}},
 			Default:  func(*Context) string { return "def" },
-			Load:     func(c *Context) (string, bool) { return c.Installed.Env.Get("ONMARU_NAME") },
+			Load:     func(c *Context) (string, bool) { return c.Installed.Env.Get("MARU_NAME") },
 			Prompt:   &PromptSpec{Title: L("Name", "이름")},
 			Validate: func(_ *Context, v string) error { return map[bool]error{true: errors.New("bad name")}[v == "bad"] },
 			Summary:  &SummarySpec{Label: L("name", "이름")}},
 		{Name: "off", Flag: FlagValueEmptyOK, Arg: "URL", Usage: L("off", "끔"),
-			Env:    []EnvLine{{File: OnmaruEnv, Comment: "Empty is off.", Key: "ONMARU_OFF"}},
+			Env:    []EnvLine{{File: MaruEnv, Comment: "Empty is off.", Key: "MARU_OFF"}},
 			Prompt: &PromptSpec{Title: L("Off", "끔"), Dash: true}},
 		{Name: "flag", Flag: FlagBool, Usage: L("a flag", "플래그"),
-			Env: []EnvLine{{File: OnmaruEnv, Key: "ONMARU_FLAG", Value: func(c *Context) string {
+			Env: []EnvLine{{File: MaruEnv, Key: "MARU_FLAG", Value: func(c *Context) string {
 				return map[bool]string{true: "true", false: "false"}[c.Values.Bool("flag")]
 			}}}},
 		{Name: "feature", Flag: FlagToggle, Usage: L("feature", "기능"),
@@ -31,10 +31,10 @@ func testRegistry() Registry {
 			Prompt:  &PromptSpec{Kind: PromptConfirm, Title: L("Feature?", "기능?")}},
 		{Name: "group", Flag: FlagValue, Arg: "GROUP", Usage: L("group", "그룹"),
 			When:   func(v Values) bool { return v.Get("feature") == "yes" },
-			Env:    []EnvLine{{File: HelperEnv, Key: "ONMARU_GROUP"}},
+			Env:    []EnvLine{{File: HelperEnv, Key: "MARU_GROUP"}},
 			Prompt: &PromptSpec{Title: L("Group", "그룹")}},
 		{Name: "kept", Flag: FlagNone,
-			Env: []EnvLine{{File: OnmaruEnv, Comment: "Kept as is.\nSecond line.", Key: "ONMARU_KEPT", Preserve: true, Default: "dflt"}}},
+			Env: []EnvLine{{File: MaruEnv, Comment: "Kept as is.\nSecond line.", Key: "MARU_KEPT", Preserve: true, Default: "dflt"}}},
 	}
 }
 
@@ -95,7 +95,7 @@ func TestRegistryMissingAndAsk(t *testing.T) {
 
 func TestRegistryLoad(t *testing.T) {
 	reg := testRegistry()
-	c := &Context{Installed: &Installed{Env: ParseEnv([]byte("ONMARU_NAME=old\n"))}, Values: Values{}}
+	c := &Context{Installed: &Installed{Env: ParseEnv([]byte("MARU_NAME=old\n"))}, Values: Values{}}
 	reg.load(c)
 	if c.Values.Get("name") != "old" || len(c.Values) != 1 {
 		t.Errorf("values %v", c.Values)
@@ -110,20 +110,20 @@ func TestRegistryLoad(t *testing.T) {
 func TestRegistryRenderEnv(t *testing.T) {
 	reg := testRegistry()
 	c := &Context{Values: Values{"name": "n", "off": "", "feature": "yes", "group": "g"}}
-	existing := ParseEnv([]byte("ONMARU_KEPT=\"v\"\nONMARU_NAME=old\nONMARU_OTHER=1\n#ONMARU_C=2\nONMARU_HELPER_NAME=h\n"))
-	got := string(reg.renderEnv(c, OnmaruEnv, existing))
-	want := envHeaders[OnmaruEnv] + "ONMARU_NAME=n\n# Empty is off.\nONMARU_OFF=\nONMARU_FLAG=false\n" +
-		"# Kept as is.\n# Second line.\nONMARU_KEPT=v\n" + keptComment + "ONMARU_OTHER=1\nONMARU_HELPER_NAME=h\n"
+	existing := ParseEnv([]byte("MARU_KEPT=\"v\"\nMARU_NAME=old\nMARU_OTHER=1\n#MARU_C=2\nMARU_HELPER_NAME=h\n"))
+	got := string(reg.renderEnv(c, MaruEnv, existing))
+	want := envHeaders[MaruEnv] + "MARU_NAME=n\n# Empty is off.\nMARU_OFF=\nMARU_FLAG=false\n" +
+		"# Kept as is.\n# Second line.\nMARU_KEPT=v\n" + keptComment + "MARU_OTHER=1\nMARU_HELPER_NAME=h\n"
 	if got != want {
-		t.Errorf("onmaru env\n--- got\n%s--- want\n%s", got, want)
+		t.Errorf("maru env\n--- got\n%s--- want\n%s", got, want)
 	}
 	// 보존할 값이 없으면 기본값을 주석으로, 관리하지 않는 줄이 없으면 보존 주석도 쓰지 않는다.
-	got = string(reg.renderEnv(c, OnmaruEnv, nil))
-	if !strings.Contains(got, "#ONMARU_KEPT=dflt\n") || strings.Contains(got, keptComment) {
+	got = string(reg.renderEnv(c, MaruEnv, nil))
+	if !strings.Contains(got, "#MARU_KEPT=dflt\n") || strings.Contains(got, keptComment) {
 		t.Errorf("env without existing file\n%s", got)
 	}
 	got = string(reg.renderEnv(c, HelperEnv, existing))
-	want = envHeaders[HelperEnv] + "# Copy.\nONMARU_HELPER_NAME=n\nONMARU_GROUP=g\n" + keptComment + "ONMARU_KEPT=\"v\"\nONMARU_NAME=old\nONMARU_OTHER=1\n"
+	want = envHeaders[HelperEnv] + "# Copy.\nMARU_HELPER_NAME=n\nMARU_GROUP=g\n" + keptComment + "MARU_KEPT=\"v\"\nMARU_NAME=old\nMARU_OTHER=1\n"
 	if got != want {
 		t.Errorf("helper env\n--- got\n%s--- want\n%s", got, want)
 	}

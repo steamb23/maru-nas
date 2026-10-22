@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"onmaru/installer/internal/prompt"
+	"maru/installer/internal/prompt"
 )
 
 // FlagKind는 설정의 명령줄 옵션 꼴이다.
@@ -27,23 +27,23 @@ const (
 type EnvFileID int
 
 const (
-	// OnmaruEnv는 /etc/default/onmaru다.
-	OnmaruEnv EnvFileID = iota
-	// HelperEnv는 /etc/default/onmaru-helper다. 도우미를 설치할 때만 쓴다.
+	// OnmaruEnv는 /etc/default/maru다.
+	MaruEnv EnvFileID = iota
+	// HelperEnv는 /etc/default/maru-helper다. 도우미를 설치할 때만 쓴다.
 	HelperEnv
-	// UpgradeEnv는 /etc/default/onmaru-upgrade다(config.UpgradeEnvFile). 대시보드에서 업그레이드를 켤 때만 쓴다.
+	// UpgradeEnv는 /etc/default/maru-upgrade다(config.UpgradeEnvFile). 대시보드에서 업그레이드를 켤 때만 쓴다.
 	UpgradeEnv
 )
 
 // envHeaders는 환경 파일 맨 앞의 주석이다.
 var envHeaders = map[EnvFileID]string{
-	OnmaruEnv: "# onmaru settings. Written by install.sh; re-run it to change them.\n# See README.md for every option.\n",
-	HelperEnv: "# onmaru-helper settings. Written by install.sh; re-run it to change them.\n",
-	UpgradeEnv: "# Upgrading from the dashboard (onmaru-upgrade.service). Written by install.sh; re-run it to change them.\n" +
+	MaruEnv:   "# maru settings. Written by install.sh; re-run it to change them.\n# See README.md for every option.\n",
+	HelperEnv: "# maru-helper settings. Written by install.sh; re-run it to change them.\n",
+	UpgradeEnv: "# Upgrading from the dashboard (maru-upgrade.service). Written by install.sh; re-run it to change them.\n" +
 		"# The service runs git and the build as the repository owner, then the new installer as root.\n",
 }
 
-// keptComment는 레지스트리가 관리하지 않는 기존 ONMARU_* 줄을 보존할 때 그 앞에 쓰는 주석이다.
+// keptComment는 레지스트리가 관리하지 않는 기존 MARU_* 줄을 보존할 때 그 앞에 쓰는 주석이다.
 const keptComment = "# Kept from the previous file (not managed by install.sh).\n"
 
 // EnvLine은 설정이 환경 파일에 쓰는 줄 하나다.
@@ -380,7 +380,7 @@ func (r Registry) managedKeys(file EnvFileID) map[string]bool {
 	return keys
 }
 
-// renderEnv는 환경 파일 내용을 만든다. existing은 기존 파일이다(보존할 값, 관리하지 않는 ONMARU_* 줄).
+// renderEnv는 환경 파일 내용을 만든다. existing은 기존 파일이다(보존할 값, 관리하지 않는 MARU_* 줄).
 func (r Registry) renderEnv(c *Context, file EnvFileID, existing *EnvFile) []byte {
 	var b strings.Builder
 	b.WriteString(envHeaders[file])

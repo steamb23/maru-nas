@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"onmaru/backend/config"
-	"onmaru/installer/internal/prompt"
+	"maru/backend/config"
+	"maru/installer/internal/prompt"
 )
 
 // fakeSystem은 테스트용 System이다. 파일은 임시 디렉터리(가짜 루트) 아래에서 실제로 읽고 쓰고, 명령은 실행하지 않고
@@ -216,9 +216,9 @@ func (f *fakeSystem) copyTree(t *testing.T, dir string) {
 // putRepo는 가짜 저장소(/repo)에 빌드 결과를 만든다.
 func (f *fakeSystem) putRepo(t *testing.T) {
 	t.Helper()
-	f.put(t, "/repo/bin/onmaru", "#!/bin/sh\n", 0o755)
-	f.put(t, "/repo/bin/onmaru-helper", "#!/bin/sh\n", 0o755)
-	f.put(t, "/repo/bin/onmaru-install", "#!/bin/sh\n", 0o755)
+	f.put(t, "/repo/bin/maru", "#!/bin/sh\n", 0o755)
+	f.put(t, "/repo/bin/maru-helper", "#!/bin/sh\n", 0o755)
+	f.put(t, "/repo/bin/maru-install", "#!/bin/sh\n", 0o755)
 	f.put(t, "/repo/"+distIndexRel, "<!doctype html>\n", 0o644)
 	f.put(t, "/repo/install.sh", "#!/bin/sh\n", 0o755)
 }
@@ -255,7 +255,7 @@ func newTestContext(t *testing.T, sys System, p prompt.Prompter, args ...string)
 		Err:         out,
 		Interactive: true,
 		RepoDir:     "/repo",
-		Self:        "/repo/bin/onmaru-install",
+		Self:        "/repo/bin/maru-install",
 		Exec: func(path string, argv []string, _ []string) error {
 			calls = append(calls, execCall{path, argv})
 			return errExecIntercepted

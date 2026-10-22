@@ -5,7 +5,7 @@
 // Root 아래의 가짜 홈(home/<사용자>)과 가짜 데이터 디스크(srv/disk1)에서만 한다. id 연산은 실제
 // 권한 대신 가짜 계정의 uid·그룹(root 범위면 root)을 돌려준다.
 //
-// 운영 바이너리(cmd/onmaru, cmd/onmaru-helper)에서 import하지 않는다.
+// 운영 바이너리(cmd/maru, cmd/maru-helper)에서 import하지 않는다.
 package helperfake
 
 import (
@@ -20,9 +20,9 @@ import (
 	"sync"
 	"time"
 
-	"onmaru/backend/internal/helper/daemon"
-	"onmaru/backend/internal/helper/proto"
-	"onmaru/backend/internal/helper/worker"
+	"maru/backend/internal/helper/daemon"
+	"maru/backend/internal/helper/proto"
+	"maru/backend/internal/helper/worker"
 )
 
 // 가짜 그룹 ID(합성 값)
@@ -95,7 +95,7 @@ func Start(socket, root string, users []User, opts Options) (*Server, error) {
 		acc.passwords[u.Name] = u.Password
 	}
 	// upgrade.apply는 /run 대신 Root 아래의 요청 디렉터리에 쓴다(UpgradeDir).
-	upgradeDir := filepath.Join(root, "run", "onmaru-upgrade")
+	upgradeDir := filepath.Join(root, "run", "maru-upgrade")
 	if err := os.MkdirAll(upgradeDir, 0o700); err != nil {
 		return nil, err
 	}
@@ -141,7 +141,7 @@ func (s *Server) Close() {
 func (s *Server) Home(user string) string { return filepath.Join(s.Root, "home", user) }
 
 // UpgradeDir은 upgrade.apply가 적용 요청을 쓰는 가짜 요청 디렉터리다.
-func (s *Server) UpgradeDir() string { return filepath.Join(s.Root, "run", "onmaru-upgrade") }
+func (s *Server) UpgradeDir() string { return filepath.Join(s.Root, "run", "maru-upgrade") }
 
 // Disk는 가짜 데이터 디스크(/srv 아래 마운트) 경로다.
 func (s *Server) Disk() string { return filepath.Join(s.Root, "srv", "disk1") }

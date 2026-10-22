@@ -6,18 +6,18 @@ import (
 	"strconv"
 	"strings"
 
-	"onmaru/backend/config"
-	"onmaru/installer/internal/prompt"
+	"maru/backend/config"
+	"maru/installer/internal/prompt"
 )
 
-// settingListen은 onmaru의 수신 주소다. 리버스 프록시가 접속하는 방식(루프백 TCP, Unix 소켓, 모든 주소의 TCP)을
+// settingListen은 maru의 수신 주소다. 리버스 프록시가 접속하는 방식(루프백 TCP, Unix 소켓, 모든 주소의 TCP)을
 // 골라 정하고, 모든 주소의 TCP는 위험 동의를 받아 allow-non-loopback을 함께 정한다.
 var settingListen = &Setting{
 	Name:  nameListen,
 	Flag:  FlagValue,
 	Arg:   "ADDR",
 	Usage: L(config.DefaultListen+", unix:"+socketPath+", or host:port", config.DefaultListen+", unix:"+socketPath+", 또는 host:port"),
-	Env:   []EnvLine{{File: OnmaruEnv, Key: config.EnvListen}},
+	Env:   []EnvLine{{File: MaruEnv, Key: config.EnvListen}},
 	// 루프백 외 주소 허용은 수신 주소와 짝이므로 수신 주소를 기존 설치에서 읽을 때만 함께 읽는다.
 	Load: func(c *Context) (string, bool) {
 		v := c.Installed.Env.Value(config.EnvListen)
@@ -48,7 +48,7 @@ var settingAllowNonLoopback = &Setting{
 	Flag:  FlagBool,
 	Usage: L("allow a non-loopback --listen address (dangerous)", "루프백이 아닌 --listen 주소를 허용합니다(위험)"),
 	Env: []EnvLine{{
-		File:  OnmaruEnv,
+		File:  MaruEnv,
 		Key:   config.EnvAllowNonLoopback,
 		Value: func(c *Context) string { return strconv.FormatBool(c.Values.Bool(nameAllowNonLoopback)) },
 	}},
@@ -126,7 +126,7 @@ const (
 	listenAny      = "any"
 )
 
-// askListen은 리버스 프록시가 onmaru에 접속하는 방식을 고르게 하고 수신 주소를 정한다.
+// askListen은 리버스 프록시가 maru에 접속하는 방식을 고르게 하고 수신 주소를 정한다.
 // 기본 선택은 기존 설치의 수신 주소를 따른다.
 func askListen(c *Context) error {
 	cur := currentListen(c)
@@ -139,7 +139,7 @@ func askListen(c *Context) error {
 	}
 	choice, err := c.P.Select(prompt.Select{
 		ID:    "listen-mode",
-		Title: c.L("How should the reverse proxy reach onmaru?", "리버스 프록시가 onmaru에 어떻게 접속하나요?"),
+		Title: c.L("How should the reverse proxy reach maru?", "리버스 프록시가 maru에 어떻게 접속하나요?"),
 		Options: []prompt.Option{
 			{Value: listenLoopback,
 				Label: c.L("TCP on loopback ("+config.DefaultListen+")", "루프백 TCP ("+config.DefaultListen+")"),
@@ -150,7 +150,7 @@ func askListen(c *Context) error {
 					"프록시가 Docker 컨테이너일 때: "+runtimeDir+" 을 컨테이너에 마운트합니다.")},
 			{Value: listenAny,
 				Label: c.L("TCP on any address (DANGEROUS)", "모든 주소의 TCP (위험)"),
-				Help:  c.L("Anyone who can reach the address talks to onmaru directly.", "그 주소에 닿는 누구나 onmaru에 직접 접속할 수 있습니다.")},
+				Help:  c.L("Anyone who can reach the address talks to maru directly.", "그 주소에 닿는 누구나 maru에 직접 접속할 수 있습니다.")},
 		},
 		Default: mode,
 	})

@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"onmaru/backend/config"
+	"maru/backend/config"
 )
 
 // stepWebUpgrade는 대시보드에서 업그레이드를 허용하기로 했으면 업그레이드 서비스를 설치하고, 아니면 이전에 설치한 것을
@@ -17,7 +17,7 @@ func stepWebUpgrade(c *Context) error {
 	return removeWebUpgrade(c)
 }
 
-// installWebUpgrade는 root 소유 설치기 복사본, /etc/default/onmaru-upgrade, 경로·서비스 유닛을 쓴다. 업그레이드 서비스는
+// installWebUpgrade는 root 소유 설치기 복사본, /etc/default/maru-upgrade, 경로·서비스 유닛을 쓴다. 업그레이드 서비스는
 // 저장소 안의 실행 파일이 아니라 이 복사본을 root로 실행한다. 설치할 때마다(대시보드에서 업그레이드한 설치 포함) 지금
 // 설치기로 바꾸므로, 다음 업그레이드는 이번에 설치한 버전의 업그레이드 서비스가 진행한다.
 func installWebUpgrade(c *Context) error {
@@ -41,8 +41,8 @@ func installWebUpgrade(c *Context) error {
 	}
 	data := c.unitData()
 	for _, u := range []struct{ tmpl, path string }{
-		{"onmaru-upgrade.service", upgradeServiceUnit},
-		{"onmaru-upgrade.path", upgradePathUnit},
+		{"maru-upgrade.service", upgradeServiceUnit},
+		{"maru-upgrade.path", upgradePathUnit},
 	} {
 		b, err := renderUnit(u.tmpl, data)
 		if err != nil {
@@ -70,7 +70,7 @@ func inPath(sys System, dirs, name string) bool {
 }
 
 // stepWebUpgradePath는 업그레이드 요청을 지켜보는 경로 유닛을 켠다. 유닛이 바뀌었으면(지켜보는 경로가 바뀌었을 수 있다)
-// 다시 시작한다. 업그레이드 서비스(onmaru-upgrade.service)는 건드리지 않는다. 대시보드에서 업그레이드할 때 그 서비스
+// 다시 시작한다. 업그레이드 서비스(maru-upgrade.service)는 건드리지 않는다. 대시보드에서 업그레이드할 때 그 서비스
 // 안에서 이 설치기가 돌기 때문이다(경로 유닛을 다시 시작해도 서비스는 멈추지 않는다).
 func stepWebUpgradePath(c *Context) error {
 	unit := upgradeName + ".path"

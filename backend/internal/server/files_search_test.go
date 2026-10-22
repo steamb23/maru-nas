@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"onmaru/backend/internal/api"
-	"onmaru/backend/internal/omv/omvfake"
+	"maru/backend/internal/api"
+	"maru/backend/internal/omv/omvfake"
 )
 
 // searchEvents는 GET /api/files/search 응답의 사건들이다.

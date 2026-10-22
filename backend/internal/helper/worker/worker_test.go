@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"onmaru/backend/internal/helper/proto"
+	"maru/backend/internal/helper/proto"
 )
 
 func TestParseMountInfo(t *testing.T) {

@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"onmaru/backend/internal/api"
+	"maru/backend/internal/api"
 )
 
 const sampleList = `{"total": 3, "data": [

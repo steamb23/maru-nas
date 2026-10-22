@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"onmaru/backend/config"
+	"maru/backend/config"
 )
 
 // fixture의 시계는 실제 시각에서 시작한다(확인 요청의 mtime과 비교한다).
@@ -39,7 +39,7 @@ func (f *fixture) put(path, content string) {
 }
 
 func (f *fixture) enable() {
-	f.put(config.UpgradeEnvFile, "# comment\nONMARU_UPGRADE_REPO=/home/alice/old\nONMARU_UPGRADE_REPO=\"/home/alice/onmaru\"\nONMARU_UPGRADE_USER=alice\n")
+	f.put(config.UpgradeEnvFile, "# comment\nMARU_UPGRADE_REPO=/home/alice/old\nMARU_UPGRADE_REPO=\"/home/alice/maru-nas\"\nMARU_UPGRADE_USER=alice\n")
 }
 
 func (f *fixture) status(st config.UpgradeStatus) {
@@ -76,7 +76,7 @@ func TestReadEnvAndStatus(t *testing.T) {
 	f.status(config.UpgradeStatus{State: config.UpgradeStateChecked, UpdatedAt: f.stamp(-time.Hour),
 		Check: &config.UpgradeCheck{Mode: config.UpgradeModeRemote, Target: "0123456789abcdef0123456789abcdef01234567"}})
 	s := f.m.Read()
-	if !s.Enabled || s.Repo != "/home/alice/onmaru" || s.User != "alice" {
+	if !s.Enabled || s.Repo != "/home/alice/maru-nas" || s.User != "alice" {
 		t.Fatalf("env: %+v", s)
 	}
 	if s.Status == nil || s.Status.State != config.UpgradeStateChecked || s.Status.Check.Target == "" || s.Running() || s.Busy() {

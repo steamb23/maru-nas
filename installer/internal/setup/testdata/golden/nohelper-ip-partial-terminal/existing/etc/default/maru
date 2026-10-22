@@ -1,0 +1,5 @@
+# maru settings. Written by install.sh; re-run it to change them.
+MARU_LISTEN=unix:/run/maru/maru.sock
+MARU_OMV_URL=http://127.0.0.1
+MARU_TERMINAL=
+#MARU_SSH_ADDR=127.0.0.1:22

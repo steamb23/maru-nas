@@ -1,0 +1,36 @@
+# Written by maru install.sh
+[Unit]
+Description=Onmaru privileged helper
+Requires=maru-helper.socket
+After=maru-helper.socket
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/default/maru-helper
+ExecStart=/usr/local/bin/maru-helper
+
+# Runs as root, but may only drop privileges to a user (SETUID/SETGID) and stop its own
+# workers (KILL). Add capabilities here only together with a new root operation.
+CapabilityBoundingSet=CAP_SETUID CAP_SETGID CAP_KILL
+NoNewPrivileges=yes
+ProtectSystem=strict
+# User-scope file operations write on data disks and in home directories.
+ReadWritePaths=-/srv -/home
+PrivateTmp=yes
+PrivateDevices=yes
+PrivateNetwork=yes
+RestrictAddressFamilies=AF_UNIX
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+UMask=0077

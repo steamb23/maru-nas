@@ -55,7 +55,7 @@
     "installing": "새 버전을 설치하고 있습니다. 다시 시작이 끝나면 로그인 화면이 나옵니다.",
     "waiting": "온마루에 다시 연결되기를 기다리고 있습니다…",
     "elapsed": "{{time}} 지남",
-    "stuck": "온마루가 다시 시작되지 않습니다. SSH로 저장소에서 ./install.sh를 실행해 복구하세요. 로그는 journalctl -u onmaru-upgrade에서 볼 수 있습니다."
+    "stuck": "온마루가 다시 시작되지 않습니다. SSH로 저장소에서 ./install.sh를 실행해 복구하세요. 로그는 journalctl -u maru-upgrade에서 볼 수 있습니다."
   },
   "desktop": {
     "label": "바탕화면",
@@ -248,7 +248,7 @@
         "dots": "\".\"와 \"..\"는 이름으로 쓸 수 없습니다.",
         "chars": "이름에 \"/\"를 쓸 수 없습니다.",
         "tooLong": "이름이 너무 깁니다. UTF-8로 255바이트까지 쓸 수 있습니다.",
-        "reserved": "\".onmaru-upload-\"로 시작하는 이름은 올리는 중인 파일이 쓰므로 쓸 수 없습니다."
+        "reserved": "\".maru-upload-\"로 시작하는 이름은 올리는 중인 파일이 쓰므로 쓸 수 없습니다."
       },
       "restoreTitle": "다른 이름으로 되돌리기",
       "restore": "되돌리기"
@@ -866,7 +866,7 @@
       "runtimeDesc": "서버가 시작할 때 정해진 값과 그 출처입니다.",
       "overriddenBadge": "여기서 바꿈",
       "howTo": "다른 설정 바꾸기",
-      "howToDesc": "이 값들은 /etc/default/onmaru의 환경 변수로 정합니다. 고친 뒤 서비스를 다시 시작해야 반영됩니다. 수신 주소를 바꾸면 리버스 프록시 설정도 함께 바꿔 주세요.",
+      "howToDesc": "이 값들은 /etc/default/maru의 환경 변수로 정합니다. 고친 뒤 서비스를 다시 시작해야 반영됩니다. 수신 주소를 바꾸면 리버스 프록시 설정도 함께 바꿔 주세요.",
       "howToInstall": "저장소에서 ./install.sh --reinstall을 다시 실행해 질문에 답하는 방법도 있습니다.",
       "copy": "명령 복사",
       "copied": "복사했습니다",
@@ -904,7 +904,7 @@
       },
       "stateDesc": {
         "disabled": "./install.sh --reinstall을 다시 실행해 도우미 설치를 고르세요.",
-        "unavailable": "온마루가 도우미에 연결하지 못했습니다. 서버에서 systemctl status onmaru-helper.socket을 확인하세요.",
+        "unavailable": "온마루가 도우미에 연결하지 못했습니다. 서버에서 systemctl status maru-helper.socket을 확인하세요.",
         "none": "로그인할 때 도우미가 이 계정을 받지 않았습니다(시스템 계정이거나 연결하지 못한 경우 등). 다시 로그인하면 다시 시도합니다.",
         "reauth": "도우미가 다시 시작되어 이 세션을 잊었습니다. 로그아웃한 뒤 다시 로그인하세요.",
         "active": "이 세션은 도우미를 쓸 수 있습니다."
@@ -931,7 +931,7 @@
         "title": "대시보드에서 업그레이드가 꺼져 있습니다",
         "notEnabled": "저장소 소유자 계정으로 저장소에서 다음 명령을 실행하면 켤 수 있습니다.",
         "noHelper": "권한 도우미가 필요합니다. 저장소 소유자 계정으로 저장소에서 다음 명령을 실행하면 함께 설치됩니다.",
-        "stateDir": "상태 디렉터리를 기본 위치(/var/lib/onmaru)에서 옮긴 설치에서는 쓸 수 없습니다.",
+        "stateDir": "상태 디렉터리를 기본 위치(/var/lib/maru)에서 옮긴 설치에서는 쓸 수 없습니다.",
         "how": "저장소는 root가 아닌 일반 계정으로 클론해야 합니다."
       },
       "check": "새 버전 확인",
@@ -939,9 +939,9 @@
       "checkRemote": "원격에서 가져와 확인",
       "checkLocal": "로컬 저장소만 확인",
       "pending": "확인 요청을 보내고 시작을 기다리고 있습니다…",
-      "stalled": "업그레이드 서비스가 요청을 처리하지 않고 있습니다. 서버에서 onmaru-upgrade.path가 켜져 있는지 확인하세요.",
+      "stalled": "업그레이드 서비스가 요청을 처리하지 않고 있습니다. 서버에서 maru-upgrade.path가 켜져 있는지 확인하세요.",
       "checking": "확인 중: {{stage}}…",
-      "interrupted": "업그레이드 서비스가 도중에 멈춘 것 같습니다. journalctl -u onmaru-upgrade에서 로그를 보고 다시 확인하세요.",
+      "interrupted": "업그레이드 서비스가 도중에 멈춘 것 같습니다. journalctl -u maru-upgrade에서 로그를 보고 다시 확인하세요.",
       "checkedAt": "마지막 확인: {{time}}",
       "stages": {
         "inspect": "저장소 확인",
@@ -953,7 +953,7 @@
       },
       "log": "로그",
       "checkFailed": "확인하지 못했습니다({{stage}})",
-      "checkFailedDesc": "아무것도 바뀌지 않았습니다. 전체 로그는 journalctl -u onmaru-upgrade에 있습니다.",
+      "checkFailedDesc": "아무것도 바뀌지 않았습니다. 전체 로그는 journalctl -u maru-upgrade에 있습니다.",
       "latest": "최신 버전입니다.",
       "outdated": "확인한 뒤에 설치가 바뀌었습니다. 다시 확인하세요.",
       "newVersion": "새 버전",
@@ -1063,7 +1063,7 @@
       "verifyNow": "지금 확인",
       "passkeys": "패스키",
       "passkeysDesc": "이 기기의 화면 잠금이나 보안 키로 확인합니다. 가장 권하는 방법입니다.",
-      "passkeysOff": "관리자가 공개 주소(ONMARU_PUBLIC_ORIGIN)를 설정하지 않아 패스키를 쓸 수 없습니다.",
+      "passkeysOff": "관리자가 공개 주소(MARU_PUBLIC_ORIGIN)를 설정하지 않아 패스키를 쓸 수 없습니다.",
       "passkeysUnsupported": "이 브라우저는 이 주소에서 패스키를 쓸 수 없습니다. 패스키는 믿을 수 있는 인증서의 HTTPS가 필요합니다.",
       "passkeyCreated": "{{created}} 추가",
       "passkeyUsed": "{{created}} 추가 · 마지막 사용 {{used}}",
@@ -1125,7 +1125,7 @@
       "noAutoLogout": "OpenMediaVault 자동 로그아웃이 꺼져 있어 확인한 세션이 로그아웃할 때까지 남습니다. OMV 웹 UI에서 자동 로그아웃을 켜세요.",
       "passkeys": "패스키",
       "passkeysOn": "{{rpId}}에서 쓸 수 있습니다.",
-      "passkeysOff": "패스키를 쓰려면 대시보드 공개 주소(/etc/default/onmaru의 ONMARU_PUBLIC_ORIGIN, 또는 ./install.sh --reinstall)를 설정하세요. 인증 앱은 설정 없이 쓸 수 있습니다.",
+      "passkeysOff": "패스키를 쓰려면 대시보드 공개 주소(/etc/default/maru의 MARU_PUBLIC_ORIGIN, 또는 ./install.sh --reinstall)를 설정하세요. 인증 앱은 설정 없이 쓸 수 있습니다.",
       "available": "사용 가능",
       "unavailable": "사용 불가",
       "passkeyLogin": "패스키로 로그인",

@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"onmaru/backend/internal/api"
-	"onmaru/backend/internal/prefs"
-	"onmaru/backend/internal/security"
+	"maru/backend/internal/api"
+	"maru/backend/internal/prefs"
+	"maru/backend/internal/security"
 )
 
 // passkeyUser는 패스키를 하나 등록한 user의 브라우저와 그 패스키다.

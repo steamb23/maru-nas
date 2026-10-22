@@ -1,7 +1,7 @@
 package setup
 
 import (
-	"onmaru/installer/internal/prompt"
+	"maru/installer/internal/prompt"
 )
 
 // installMode는 이 실행의 설치 방식이다. 1단계와 직접 실행한 2단계가 같은 규칙(resolveMode)으로 정한다.
@@ -28,7 +28,7 @@ func (c *Context) autoUpgrade() bool { return c.mode == modeUpgrade && !c.Opts.U
 // offerChange는 요약 뒤에 "설정 바꾸기"를 고를 수 있는지다(터미널에서 실제로 설치할 때만).
 func (c *Context) offerChange() bool { return c.autoUpgrade() && c.Interactive && !c.Sys.DryRun() }
 
-// resolveMode는 설치 방식을 정한다. 설치되어 있다는 것은 유닛 파일과 /etc/default/onmaru가 모두 있다는 뜻이다.
+// resolveMode는 설치 방식을 정한다. 설치되어 있다는 것은 유닛 파일과 /etc/default/maru가 모두 있다는 뜻이다.
 //   - --upgrade: 기존 설치가 있어야 한다(없으면 오류)
 //   - --reinstall: 모든 설정을 다시 묻는다(새 시스템에서는 새 설치와 같다)
 //   - 옵션 없음: 설치되어 있으면 업그레이드, 둘 중 하나만 있으면 경고하고 다시 설치, 둘 다 없으면 새 설치

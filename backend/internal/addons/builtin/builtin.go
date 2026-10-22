@@ -2,14 +2,14 @@
 package builtin
 
 import (
-	"onmaru/backend/internal/addons"
-	"onmaru/backend/internal/addons/containers"
-	"onmaru/backend/internal/addons/network"
-	"onmaru/backend/internal/addons/services"
-	"onmaru/backend/internal/addons/smart"
-	"onmaru/backend/internal/addons/storage"
-	"onmaru/backend/internal/addons/sysinfo"
-	"onmaru/backend/internal/addons/temperature"
+	"maru/backend/internal/addons"
+	"maru/backend/internal/addons/containers"
+	"maru/backend/internal/addons/network"
+	"maru/backend/internal/addons/services"
+	"maru/backend/internal/addons/smart"
+	"maru/backend/internal/addons/storage"
+	"maru/backend/internal/addons/sysinfo"
+	"maru/backend/internal/addons/temperature"
 )
 
 // Deps는 내장 애드온의 provider가 쓰는 입력이다.

@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"testing"
 
-	"onmaru/backend/internal/api"
-	"onmaru/backend/internal/prefs"
+	"maru/backend/internal/api"
+	"maru/backend/internal/prefs"
 )
 
 func TestAvatarImage(t *testing.T) {

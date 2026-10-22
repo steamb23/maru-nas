@@ -19,7 +19,7 @@ import (
 	"syscall"
 	"time"
 
-	"onmaru/backend/config"
+	"maru/backend/config"
 )
 
 // 업그레이드 서비스(--upgrade-service)가 명령을 실행하고 파일을 다루는 부분. 흐름은 upgrade_service.go에 있다.
@@ -39,7 +39,7 @@ const (
 // 읽는 크기의 상한.
 const (
 	maxOutput = 4 << 20
-	// maxCheckRequest는 onmaru가 쓰는 확인 요청, maxRootFile은 root가 쓰는 설정 파일과 적용 요청(설정 32개 × 값 512바이트)이다.
+	// maxCheckRequest는 maru가 쓰는 확인 요청, maxRootFile은 root가 쓰는 설정 파일과 적용 요청(설정 32개 × 값 512바이트)이다.
 	maxCheckRequest = 4 << 10
 	maxRootFile     = 64 << 10
 	maxStatusFile   = 4 << 20
@@ -51,7 +51,7 @@ const (
 // rootPath는 root로 실행하는 마지막 설치 단계의 PATH다(systemd 서비스 기본값과 같다).
 const rootPath = "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
-// upgradeConfig는 /etc/default/onmaru-upgrade(config.UpgradeEnvFile)다. 저장소 경로는 이 파일에서만 정한다
+// upgradeConfig는 /etc/default/maru-upgrade(config.UpgradeEnvFile)다. 저장소 경로는 이 파일에서만 정한다
 // (서비스의 설치기는 저장소 밖의 root 소유 복사본이다).
 type upgradeConfig struct {
 	Repo, User, Path string
@@ -325,7 +325,7 @@ func takeFile(path string, max int64) ([]byte, error) {
 	return data, rerr
 }
 
-// writeStatus는 상태 파일을 원자적으로 쓴다(root 소유 0644, onmaru와 다른 사용자가 읽는다).
+// writeStatus는 상태 파일을 원자적으로 쓴다(root 소유 0644, maru와 다른 사용자가 읽는다).
 func (s *upgradeService) writeStatus() error {
 	s.status.Format = config.UpgradeStatusFormat
 	s.status.UpdatedAt = s.stamp()

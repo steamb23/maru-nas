@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"time"
 
-	"onmaru/backend/internal/api"
-	"onmaru/backend/internal/auth"
-	"onmaru/backend/internal/security"
+	"maru/backend/internal/api"
+	"maru/backend/internal/auth"
+	"maru/backend/internal/security"
 )
 
 // 인증 수단 관리(관리 창 필요): TOTP 설정·삭제, 복구 코드 다시 만들기, 기기 추가 코드. 패스키는 passkey.go.

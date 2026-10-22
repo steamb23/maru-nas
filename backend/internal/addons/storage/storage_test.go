@@ -8,7 +8,7 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"onmaru/backend/internal/api"
+	"maru/backend/internal/api"
 )
 
 func readMounts(t *testing.T) []Mount {

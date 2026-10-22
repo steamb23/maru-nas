@@ -9,8 +9,8 @@ import (
 	"sort"
 	"testing"
 
-	"onmaru/backend/internal/addons"
-	"onmaru/backend/internal/api"
+	"maru/backend/internal/addons"
+	"maru/backend/internal/api"
 )
 
 func TestParseStatus(t *testing.T) {

@@ -1,0 +1,17 @@
+# Written by maru install.sh
+[Unit]
+Description=Onmaru dashboard upgrade
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+# Started by {{.UpgradeName}}.path for a check or an upgrade requested from the dashboard. git and the
+# build run as the repository owner ({{.UpgradeEnvFile}}); only the last step runs the new installer
+# as root. This is a root-owned copy of the installer, not the one in the repository.
+Type=oneshot
+ExecStart={{.UpgradeInstallerDst}} --upgrade-service
+# Builds take minutes (npm ci, frontend, Go).
+TimeoutStartSec={{.UpgradeTimeout}}
+Nice=10
+PrivateTmp=yes
+NoNewPrivileges=yes

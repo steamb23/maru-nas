@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"onmaru/backend/internal/helper/helperfake"
-	"onmaru/backend/internal/helper/proto"
+	"maru/backend/internal/helper/helperfake"
+	"maru/backend/internal/helper/proto"
 )
 
 func start(t *testing.T) (*Client, *helperfake.Server) {
@@ -88,7 +88,7 @@ func TestFileOps(t *testing.T) {
 	}
 	tk := res.Ticket
 	home := fake.Home("user")
-	content := bytes.Repeat([]byte("onmaru "), 100000)
+	content := bytes.Repeat([]byte("maru "), 100000)
 	e, err := c.Write(ctx, tk, home+"/big.txt", false, bytes.NewReader(content), int64(len(content)))
 	if err != nil || e.Size != int64(len(content)) {
 		t.Fatalf("write: %+v %v", e, err)
@@ -109,13 +109,13 @@ func TestFileOps(t *testing.T) {
 		t.Fatal("short upload waited for the idle timeout")
 	}
 
-	rr, body, err := c.Read(ctx, tk, home+"/big.txt", 7, 14)
+	rr, body, err := c.Read(ctx, tk, home+"/big.txt", 5, 10)
 	if err != nil {
 		t.Fatal(err)
 	}
 	got, err := io.ReadAll(body)
 	body.Close()
-	if err != nil || string(got) != "onmaru onmaru " || rr.FileSize != int64(len(content)) || body.Size != 14 {
+	if err != nil || string(got) != "maru maru " || rr.FileSize != int64(len(content)) || body.Size != 10 {
 		t.Fatalf("read: %q %+v %v", got, rr, err)
 	}
 	if _, _, err := c.Read(ctx, tk, home+"/missing", 0, 0); proto.CodeOf(err) != proto.CodeNotFound {

@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"onmaru/backend/internal/security"
+	"maru/backend/internal/security"
 )
 
 // 시험용 값은 모두 합성한 것이다.

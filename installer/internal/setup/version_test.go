@@ -7,7 +7,7 @@ import (
 	"slices"
 	"testing"
 
-	"onmaru/backend/config"
+	"maru/backend/config"
 )
 
 func TestParseVersion(t *testing.T) {

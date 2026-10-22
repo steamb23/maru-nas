@@ -10,11 +10,11 @@ import (
 	"testing"
 	"time"
 
-	"onmaru/backend/internal/api"
-	"onmaru/backend/internal/auth"
-	"onmaru/backend/internal/prefs"
-	"onmaru/backend/internal/security"
-	"onmaru/backend/internal/terminal"
+	"maru/backend/internal/api"
+	"maru/backend/internal/auth"
+	"maru/backend/internal/prefs"
+	"maru/backend/internal/security"
+	"maru/backend/internal/terminal"
 )
 
 // strongAdmin은 OMV 2차 인증을 마친 관리자(totp, 보안 강화 모드에서도 twoFactor)의 브라우저다.

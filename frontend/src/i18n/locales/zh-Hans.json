@@ -392,7 +392,7 @@
       "runtimeDesc": "服务器启动时确定的值及其来源。",
       "overriddenBadge": "已在此更改",
       "howTo": "更改其他设置",
-      "howToDesc": "这些值是 /etc/default/onmaru 中的环境变量。编辑后需重启服务才能生效。如果更改了监听地址，也请同时更新反向代理的设置。",
+      "howToDesc": "这些值是 /etc/default/maru 中的环境变量。编辑后需重启服务才能生效。如果更改了监听地址，也请同时更新反向代理的设置。",
       "howToInstall": "也可以在仓库中重新运行 ./install.sh --reinstall 并回答提问。",
       "copy": "复制命令",
       "copied": "已复制",

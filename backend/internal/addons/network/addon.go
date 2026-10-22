@@ -3,8 +3,8 @@ package network
 import (
 	"context"
 
-	"onmaru/backend/internal/addons"
-	"onmaru/backend/internal/api"
+	"maru/backend/internal/addons"
+	"maru/backend/internal/api"
 )
 
 // ID는 네트워크 애드온의 id다.

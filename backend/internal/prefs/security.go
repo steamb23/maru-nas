@@ -12,7 +12,7 @@ import (
 	"slices"
 	"strings"
 
-	"onmaru/backend/internal/security"
+	"maru/backend/internal/security"
 )
 
 // 보안 강화 모드의 수단 기록(security.Store 구현): <dir>/security/<인코딩한 사용자 이름>.json.

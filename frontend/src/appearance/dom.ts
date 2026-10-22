@@ -12,9 +12,9 @@ import {
   viewBeforeSessionCheck,
 } from './wallpapers'
 
-const THEME_KEY = 'onmaru.theme'
-const LOGIN_BACKGROUND_KEY = 'onmaru.loginBackground'
-const WALLPAPER_KEY = 'onmaru.wallpaper'
+const THEME_KEY = 'maru.theme'
+const LOGIN_BACKGROUND_KEY = 'maru.loginBackground'
+const WALLPAPER_KEY = 'maru.wallpaper'
 
 // applyTheme은 <html data-theme>로 테마를 정한다. auto는 속성을 지워 브라우저(OS) 설정을 따르게 한다.
 export function applyTheme(mode: ThemeMode) {

@@ -8,12 +8,12 @@ import (
 	"path/filepath"
 	"time"
 
-	"onmaru/backend/config"
-	"onmaru/backend/internal/helper/proto"
+	"maru/backend/config"
+	"maru/backend/internal/helper/proto"
 )
 
 // upgradeApply는 대시보드에서 업그레이드의 적용 요청을 요청 디렉터리(cfg.UpgradeDir)에 쓴다(root 범위). 그러면
-// onmaru-upgrade.path가 업그레이드 서비스를 실행한다. 대상 커밋과 설정 이름·값의 꼴만 검사하고 명령은 받지 않는다.
+// maru-upgrade.path가 업그레이드 서비스를 실행한다. 대상 커밋과 설정 이름·값의 꼴만 검사하고 명령은 받지 않는다.
 // 요청한 사용자는 티켓에서 정한다. 진행할 수 있는지(마지막 확인과 같은 대상인지, 저장소 상태, 설정 값)는 업그레이드
 // 서비스가 모두 다시 확인하므로 여기서는 상태 파일을 읽지 않는다. 처리하지 않은 요청이 있으면 새 요청으로 바꾼다.
 func upgradeApply(job Job, cfg Config) error {

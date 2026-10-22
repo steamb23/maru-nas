@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"onmaru/backend/internal/helper/proto"
+	"maru/backend/internal/helper/proto"
 )
 
 func (e *env) at(t time.Time) {

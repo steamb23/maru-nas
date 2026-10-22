@@ -12,7 +12,7 @@ set -uo pipefail
 [[ ${CLAUDE_CODE_REMOTE:-} == true ]] || exit 0
 
 root="${CLAUDE_PROJECT_DIR:-$(cd "$(dirname "$0")/../.." && pwd)}"
-log="${TMPDIR:-/tmp}/onmaru-cloud-session.log"
+log="${TMPDIR:-/tmp}/maru-cloud-session.log"
 
 # 훅 입력(JSON 한 줄)의 source: startup, resume, compact 등
 event="$(sed -n 's/.*"source"[[:space:]]*:[[:space:]]*"\([a-z]*\)".*/\1/p' | head -n 1)"

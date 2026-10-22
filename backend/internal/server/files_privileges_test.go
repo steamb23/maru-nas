@@ -6,11 +6,11 @@ import (
 	"strings"
 	"testing"
 
-	"onmaru/backend/internal/api"
-	"onmaru/backend/internal/auth"
-	"onmaru/backend/internal/files"
-	"onmaru/backend/internal/helper/proto"
-	"onmaru/backend/internal/omv/omvfake"
+	"maru/backend/internal/api"
+	"maru/backend/internal/auth"
+	"maru/backend/internal/files"
+	"maru/backend/internal/helper/proto"
+	"maru/backend/internal/omv/omvfake"
 )
 
 func TestFilesFollowPrivileges(t *testing.T) {

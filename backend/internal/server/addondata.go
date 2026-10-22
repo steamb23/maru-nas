@@ -9,10 +9,10 @@ import (
 	"slices"
 	"sync/atomic"
 
-	"onmaru/backend/internal/addons"
-	"onmaru/backend/internal/api"
-	"onmaru/backend/internal/auth"
-	"onmaru/backend/internal/omv"
+	"maru/backend/internal/addons"
+	"maru/backend/internal/api"
+	"maru/backend/internal/auth"
+	"maru/backend/internal/omv"
 )
 
 // addonData는 애드온 하나의 현황 데이터를 돌려준다(GET /api/addons/{id}).

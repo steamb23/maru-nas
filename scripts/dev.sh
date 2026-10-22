@@ -2,13 +2,13 @@
 # 개발 서버 실행: 백엔드(go run, 루프백)를 백그라운드로, Vite(LAN 공개)를 포그라운드로 띄운다.
 # Ctrl+C로 Vite를 끄면 백엔드도 함께 종료된다.
 #
-#   scripts/dev.sh                    실제 OMV(ONMARU_OMV_URL)에 연결
+#   scripts/dev.sh                    실제 OMV(MARU_OMV_URL)에 연결
 #   scripts/dev.sh --fake             가짜 OMV(cmd/fakeomv, 가짜 계정)와 가짜 권한 도우미를 함께 띄워 연결
 #   scripts/dev.sh --branch <브랜치>  그 브랜치가 체크아웃된 git 워크트리의 코드로 실행(--fake와 함께 쓸 수 있다)
 #
-# frontend/.env.local의 ONMARU_*·DEV_* 값을 환경 변수로 내보내 백엔드와 Vite에 적용한다. 셸 환경 변수가 우선한다.
+# frontend/.env.local의 MARU_*·DEV_* 값을 환경 변수로 내보내 백엔드와 Vite에 적용한다. 셸 환경 변수가 우선한다.
 # git 워크트리에서 실행하거나 --branch로 워크트리를 고르면 주 체크아웃의 frontend/.env.local과 .dev-state를 함께 쓴다.
-# 워크트리 자신의 frontend/.env.local이 있으면 그 값이 우선하고, ONMARU_STATE_DIR로 상태 디렉터리를 따로 둘 수 있다.
+# 워크트리 자신의 frontend/.env.local이 있으면 그 값이 우선하고, MARU_STATE_DIR로 상태 디렉터리를 따로 둘 수 있다.
 # --branch는 이 스크립트가 그 워크트리의 backend·frontend를 실행하므로, 대상 브랜치의 dev.sh 변경은 쓰이지 않는다.
 set -euo pipefail
 
@@ -65,44 +65,44 @@ env_files=("$root/frontend/.env.local")
 for env_file in "${env_files[@]}"; do
   [[ -f "$env_file" ]] || continue
   while IFS='=' read -r key value; do
-    [[ "$key" =~ ^(ONMARU|DEV)_[A-Z_]+$ ]] || continue
+    [[ "$key" =~ ^(MARU|DEV)_[A-Z_]+$ ]] || continue
     [[ -n "${!key:-}" ]] && continue
     value="${value%\"}"; value="${value#\"}"; value="${value%\'}"; value="${value#\'}"
     export "$key=$value"
   done < "$env_file"
 done
 
-export ONMARU_LISTEN="${ONMARU_LISTEN:-127.0.0.1:8090}"
+export MARU_LISTEN="${MARU_LISTEN:-127.0.0.1:8090}"
 if [[ $fake == 1 ]]; then
   export FAKEOMV_LISTEN="${FAKEOMV_LISTEN:-127.0.0.1:8091}"
-  export ONMARU_OMV_URL="http://$FAKEOMV_LISTEN"
+  export MARU_OMV_URL="http://$FAKEOMV_LISTEN"
   # "OMV 워크벤치" 링크 앱은 가짜 OMV의 안내 페이지를 연다. 루프백 주소라 NAS 안의 브라우저에서만 열린다.
-  export ONMARU_WORKBENCH_URL="http://$FAKEOMV_LISTEN/"
+  export MARU_WORKBENCH_URL="http://$FAKEOMV_LISTEN/"
 fi
 # 사용자 설정(위젯 배치)은 주 체크아웃의 .dev-state에 둔다. 가짜 계정과 실제 계정의 이름이 겹칠 수 있으므로 나눈다.
-export ONMARU_STATE_DIR="${ONMARU_STATE_DIR:-$main_root/.dev-state/$([[ $fake == 1 ]] && echo fake || echo real)}"
+export MARU_STATE_DIR="${MARU_STATE_DIR:-$main_root/.dev-state/$([[ $fake == 1 ]] && echo fake || echo real)}"
 if [[ $fake == 1 ]]; then
   # 가짜 권한 도우미는 가짜 OMV 프로세스가 상태 디렉터리의 소켓에 띄운다(파일 연산은 helper-root 아래에서만).
-  mkdir -p "$ONMARU_STATE_DIR"
-  export FAKEHELPER_SOCKET="$ONMARU_STATE_DIR/helper.sock"
-  export ONMARU_HELPER_SOCKET="$FAKEHELPER_SOCKET"
+  mkdir -p "$MARU_STATE_DIR"
+  export FAKEHELPER_SOCKET="$MARU_STATE_DIR/helper.sock"
+  export MARU_HELPER_SOCKET="$FAKEHELPER_SOCKET"
   # 웹 터미널은 가짜 sshd에 붙는다. 호스트 공개 키는 가짜 OMV 프로세스가 시작할 때마다 새로 만들어 쓴다.
-  # 받는 인증 방법은 FAKESSH_AUTH(예: publickey)로 고른다. 웹 터미널 허용은 설정 앱이나 ONMARU_TERMINAL로 켠다.
+  # 받는 인증 방법은 FAKESSH_AUTH(예: publickey)로 고른다. 웹 터미널 허용은 설정 앱이나 MARU_TERMINAL로 켠다.
   export FAKESSH_LISTEN="${FAKESSH_LISTEN:-127.0.0.1:8092}"
-  export FAKESSH_HOST_KEY="$ONMARU_STATE_DIR/ssh_host_ed25519_key.pub"
-  export ONMARU_SSH_ADDR="$FAKESSH_LISTEN"
-  export ONMARU_SSH_HOST_KEYS="$FAKESSH_HOST_KEY"
+  export FAKESSH_HOST_KEY="$MARU_STATE_DIR/ssh_host_ed25519_key.pub"
+  export MARU_SSH_ADDR="$FAKESSH_LISTEN"
+  export MARU_SSH_HOST_KEYS="$FAKESSH_HOST_KEY"
   # 대시보드에서 업그레이드는 가짜 업그레이드 서비스(가짜 OMV 프로세스)가 이 가짜 루트 아래의 설정·상태 파일을 쓴다.
   # 시나리오는 FAKEUPGRADE_SCENARIO(web, manual, latest, check-fail, apply-fail, disabled)로 고른다.
-  export ONMARU_DEV_UPGRADE_ROOT="${ONMARU_DEV_UPGRADE_ROOT:-$ONMARU_STATE_DIR/upgrade-root}"
+  export MARU_DEV_UPGRADE_ROOT="${MARU_DEV_UPGRADE_ROOT:-$MARU_STATE_DIR/upgrade-root}"
   # 파일 탐색기는 가짜 도우미의 가짜 디스크(helper-root/srv 아래 폴더)를 데이터 디스크로 본다. 가짜 OMV가 그 아래에
   # 합성 파일과 공유 폴더를 만들고, FAKEFILES_LARGE=<n>이면 큰 폴더도 만든다.
-  export ONMARU_DEV_FILES_SRV="${ONMARU_DEV_FILES_SRV:-$ONMARU_STATE_DIR/helper-root/srv}"
+  export MARU_DEV_FILES_SRV="${MARU_DEV_FILES_SRV:-$MARU_STATE_DIR/helper-root/srv}"
 fi
 
 # 이미 떠 있는 서버가 있으면 시작하지 않는다. 일부만 떠서 다른 서버(예: 실제 OMV에 연결된
 # 백엔드)에 붙는 일을 막는다. Vite 포트(DEV_PORT)는 vite.config.ts의 server.port와 같은 기본값을 쓴다.
-ports=("${ONMARU_LISTEN##*:}" "${DEV_PORT:-5173}")
+ports=("${MARU_LISTEN##*:}" "${DEV_PORT:-5173}")
 [[ $fake == 1 ]] && ports+=("${FAKEOMV_LISTEN##*:}" "${FAKESSH_LISTEN##*:}")
 for port in "${ports[@]}"; do
   if (exec 3<>"/dev/tcp/127.0.0.1/$port") 2>/dev/null; then
@@ -135,10 +135,10 @@ if [[ $fake == 1 ]]; then
   pids+=($!)
 fi
 
-echo "[dev] backend: http://$ONMARU_LISTEN (omv: ${ONMARU_OMV_URL:-http://127.0.0.1}, workbench: ${ONMARU_WORKBENCH_URL:-off}, helper: ${ONMARU_HELPER_SOCKET:-off}, ssh: ${ONMARU_SSH_ADDR:-auto})"
+echo "[dev] backend: http://$MARU_LISTEN (omv: ${MARU_OMV_URL:-http://127.0.0.1}, workbench: ${MARU_WORKBENCH_URL:-off}, helper: ${MARU_HELPER_SOCKET:-off}, ssh: ${MARU_SSH_ADDR:-auto})"
 [[ $root != "$main_root" ]] && echo "[dev] worktree: $root"
-echo "[dev] state: $ONMARU_STATE_DIR"
-(cd "$root/backend" && exec setsid go run ./cmd/onmaru) &
+echo "[dev] state: $MARU_STATE_DIR"
+(cd "$root/backend" && exec setsid go run ./cmd/maru) &
 pids+=($!)
 
 cd "$root/frontend"

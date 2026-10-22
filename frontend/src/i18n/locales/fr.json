@@ -404,7 +404,7 @@
       "runtimeDesc": "Valeurs avec lesquelles le serveur a démarré et leur origine.",
       "overriddenBadge": "Modifié ici",
       "howTo": "Modifier les autres paramètres",
-      "howToDesc": "Ces valeurs sont des variables d'environnement dans /etc/default/onmaru. Redémarrez le service après les avoir modifiées. Si vous changez l'adresse d'écoute, mettez aussi à jour le proxy inverse.",
+      "howToDesc": "Ces valeurs sont des variables d'environnement dans /etc/default/maru. Redémarrez le service après les avoir modifiées. Si vous changez l'adresse d'écoute, mettez aussi à jour le proxy inverse.",
       "howToInstall": "Vous pouvez aussi relancer ./install.sh --reinstall depuis le dépôt et répondre à ses questions.",
       "copy": "Copier les commandes",
       "copied": "Copié",

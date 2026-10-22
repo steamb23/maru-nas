@@ -6,8 +6,8 @@ import (
 	"slices"
 	"testing"
 
-	"onmaru/backend/internal/api"
-	"onmaru/backend/internal/prefs"
+	"maru/backend/internal/api"
+	"maru/backend/internal/prefs"
 )
 
 func TestSiteInfoIsPublic(t *testing.T) {
@@ -140,7 +140,7 @@ func TestSiteImages(t *testing.T) {
 
 func TestServerOverrides(t *testing.T) {
 	var smartCalls [][2]int
-	runtime := []api.RuntimeSetting{{Flag: "listen", Env: "ONMARU_LISTEN", Value: "127.0.0.1:8090", Source: api.RuntimeSourceDefault}}
+	runtime := []api.RuntimeSetting{{Flag: "listen", Env: "MARU_LISTEN", Value: "127.0.0.1:8090", Source: api.RuntimeSourceDefault}}
 	site := prefs.NewMemoryStore()
 	e := newEnv(t, envOptions{
 		site:         site,

@@ -4,7 +4,7 @@ import (
 	"errors"
 	"regexp"
 
-	"onmaru/backend/config"
+	"maru/backend/config"
 )
 
 // smartAtRE는 설치기가 받는 HH:MM 꼴이다(두 자리 시·분). 백엔드(config.ParseRefreshAt)는 한 자리 시도 받는다.
@@ -16,7 +16,7 @@ var settingSmartRefreshAt = &Setting{
 	Flag:  FlagValue,
 	Arg:   "HH:MM",
 	Usage: L("daily SMART refresh time", "SMART 정보를 매일 다시 가져올 시각"),
-	Env:   []EnvLine{{File: OnmaruEnv, Key: config.EnvSmartRefreshAt}},
+	Env:   []EnvLine{{File: MaruEnv, Key: config.EnvSmartRefreshAt}},
 	Default: func(c *Context) string {
 		if v := c.Installed.Env.Value(config.EnvSmartRefreshAt); v != "" {
 			return v

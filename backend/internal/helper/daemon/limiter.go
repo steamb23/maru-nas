@@ -6,10 +6,10 @@ import (
 	"sync"
 	"time"
 
-	"onmaru/backend/internal/helper/proto"
+	"maru/backend/internal/helper/proto"
 )
 
-// 비밀번호 확인 실패 제한. onmaru의 로그인 제한과 별개로, onmaru가 뚫려 비밀번호를 대입하는 경우를 막는다.
+// 비밀번호 확인 실패 제한. maru의 로그인 제한과 별개로, maru가 뚫려 비밀번호를 대입하는 경우를 막는다.
 // unix_chkpwd는 pam_faillock을 거치지 않으므로 계정이 영구히 잠기지는 않는다.
 const (
 	failWindow = 5 * time.Minute

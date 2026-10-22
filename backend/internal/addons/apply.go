@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"onmaru/backend/internal/api"
+	"maru/backend/internal/api"
 )
 
 // applyLock은 이 백엔드의 OMV 설정 변경·적용(ApplyChange)을 하나씩 실행하게 한다. 적용이 끝나기 전에는 OMV가

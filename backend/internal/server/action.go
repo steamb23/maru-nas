@@ -7,9 +7,9 @@ import (
 	"net/http"
 	"sync"
 
-	"onmaru/backend/internal/addons"
-	"onmaru/backend/internal/api"
-	"onmaru/backend/internal/auth"
+	"maru/backend/internal/addons"
+	"maru/backend/internal/api"
+	"maru/backend/internal/auth"
 )
 
 // maxActionBodyBytes는 조작 요청 본문의 최대 크기다.

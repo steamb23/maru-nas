@@ -13,15 +13,15 @@ import (
 	"testing"
 	"time"
 
-	"onmaru/backend/config"
-	"onmaru/installer/internal/prompt"
+	"maru/backend/config"
+	"maru/installer/internal/prompt"
 )
 
 // 업그레이드 서비스 시험은 실제 git 저장소(원격 bare 저장소와 그 클론)와, 업그레이드 계획을 내고 설치 인자를 기록하는
 // 가짜 설치기를 쓴다. git·go·make·npm·tar가 있어야 하고 지금 계정이 저장소 소유자다(권한을 바꾸지 않는다).
 
 // fakeInstallerSource는 시험 저장소의 installer/main.go다. --upgrade-plan은 public-origin 하나를 묻는 계획을 내고
-// (값 bad는 검사를 통과하지 못한다), --service-install은 인자를 저장소의 installed-args에, 설치 기록을 ONMARU_TEST_ROOT
+// (값 bad는 검사를 통과하지 못한다), --service-install은 인자를 저장소의 installed-args에, 설치 기록을 MARU_TEST_ROOT
 // 아래에 쓴다. VERSION은 커밋마다 바꾼다.
 const fakeInstallerSource = `package main
 
@@ -82,7 +82,7 @@ func install(args []string) {
 		}
 	}
 	rec, _ := json.Marshal(map[string]any{"format": 1, "version": version, "revision": rev, "installedAt": "2026-10-19T00:00:00Z"})
-	path := filepath.Join(os.Getenv("ONMARU_TEST_ROOT"), "/var/lib/onmaru-upgrade/installed.json")
+	path := filepath.Join(os.Getenv("MARU_TEST_ROOT"), "/var/lib/maru-upgrade/installed.json")
 	os.MkdirAll(filepath.Dir(path), 0o755)
 	os.WriteFile(path, rec, 0o644)
 }
@@ -91,14 +91,14 @@ func install(args []string) {
 // fakeRepoFiles는 시험 저장소의 파일이다. make build가 bin/에 세 실행 파일을 빌드한다(git 저장소 안이라 커밋이 들어간다).
 var fakeRepoFiles = map[string]string{
 	".gitignore":                "bin/\nfrontend/node_modules/\ninstalled-args\n",
-	"go.mod":                    "module fakeonmaru\n\ngo 1.21\n",
-	"cmd/onmaru/main.go":        "package main\n\nfunc main() {}\n",
-	"cmd/onmaru-helper/main.go": "package main\n\nfunc main() {}\n",
+	"go.mod":                    "module fakemaru\n\ngo 1.21\n",
+	"cmd/maru/main.go":          "package main\n\nfunc main() {}\n",
+	"cmd/maru-helper/main.go":   "package main\n\nfunc main() {}\n",
 	"installer/go.mod":          "module fakeinstaller\n\ngo 1.21\n",
 	"backend/README":            "backend\n",
 	"vendor/icons/colloid/icon": "icon\n",
-	"Makefile": "build:\n\tgo build -o bin/onmaru ./cmd/onmaru\n\tgo build -o bin/onmaru-helper ./cmd/onmaru-helper\n" +
-		"\tcd installer && go build -o ../bin/onmaru-install .\n",
+	"Makefile": "build:\n\tgo build -o bin/maru ./cmd/maru\n\tgo build -o bin/maru-helper ./cmd/maru-helper\n" +
+		"\tcd installer && go build -o ../bin/maru-install .\n",
 }
 
 // serviceFixture는 업그레이드 서비스 시험 환경이다. origin(bare)에 커밋 A·B가 있고, work는 A를 체크아웃한 클론이다
@@ -243,7 +243,7 @@ func (f *serviceFixture) serve() config.UpgradeStatus {
 	s := &upgradeService{
 		root: f.root, tmp: f.tmp, out: &f.out,
 		now:      func() time.Time { return time.Date(2026, 10, 19, 1, 2, 3, 0, time.UTC) },
-		extraEnv: append(slices.Clone(f.gitEnv), "ONMARU_TEST_ROOT="+f.root),
+		extraEnv: append(slices.Clone(f.gitEnv), "MARU_TEST_ROOT="+f.root),
 	}
 	if err := s.serve(); err != nil {
 		f.t.Fatalf("serve: %v\n%s", err, f.out.String())
@@ -469,7 +469,7 @@ func TestUpgradeServiceCheckReasons(t *testing.T) {
 }
 
 // 요청은 내용과 상관없이 읽은 뒤 지운다. 적용 요청이 먼저다. 대시보드에서 업그레이드가 꺼져 있으면(설정 파일 없음)
-// 요청을 지우기만 하고 상태 파일을 만들지 않는다. onmaru가 쓴 확인 요청은 심볼릭 링크를 따라가지 않는다.
+// 요청을 지우기만 하고 상태 파일을 만들지 않는다. maru가 쓴 확인 요청은 심볼릭 링크를 따라가지 않는다.
 func TestUpgradeServiceRequests(t *testing.T) {
 	f := newServiceFixture(t)
 	s := func() error {

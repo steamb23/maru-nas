@@ -1,7 +1,7 @@
 --lang
 en
 --user
-svc_onmaru
+svc_maru
 --listen
 [::1]:9000
 --omv-url

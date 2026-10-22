@@ -5,7 +5,7 @@
 // 쓴 ~/.ssh/authorized_keys를 읽어 확인하고 expiry-time·from 옵션도 해석하므로, 도우미 임시 키 흐름을
 // 처음부터 끝까지 시험할 수 있다. 셸은 몇 가지 명령만 아는 장난감 셸이다(실제 명령을 실행하지 않는다).
 //
-// 운영 바이너리(cmd/onmaru, cmd/onmaru-helper)에서 import하지 않는다.
+// 운영 바이너리(cmd/maru, cmd/maru-helper)에서 import하지 않는다.
 package sshfake
 
 import (
@@ -98,7 +98,7 @@ func Start(addr string, opts Options) (*Server, error) {
 // HostKey는 호스트 공개 키의 authorized_keys 형식(".pub" 파일 내용)이다.
 func (s *Server) HostKey() []byte { return ssh.MarshalAuthorizedKey(s.hostKey.PublicKey()) }
 
-// WriteHostKey는 호스트 공개 키를 path(".pub" 파일)에 쓴다. onmaru의 -ssh-host-keys가 이 파일을 가리키게 한다.
+// WriteHostKey는 호스트 공개 키를 path(".pub" 파일)에 쓴다. maru의 -ssh-host-keys가 이 파일을 가리키게 한다.
 func (s *Server) WriteHostKey(path string) error {
 	return os.WriteFile(path, s.HostKey(), 0o644)
 }
@@ -366,12 +366,12 @@ func (sh *shell) size() (int, int) {
 func (sh *shell) out(s string) { sh.ch.Write([]byte(strings.ReplaceAll(s, "\n", "\r\n"))) }
 
 func (sh *shell) prompt() {
-	sh.out("\x1b[1;32m" + sh.user + "@onmaru-fake\x1b[0m:\x1b[1;34m~\x1b[0m$ ")
+	sh.out("\x1b[1;32m" + sh.user + "@maru-fake\x1b[0m:\x1b[1;34m~\x1b[0m$ ")
 }
 
 // run은 셸을 실행하고 종료 코드를 돌려준다.
 func (sh *shell) run() int {
-	sh.out("Fake shell for onmaru development. Type \"help\".\n")
+	sh.out("Fake shell for maru development. Type \"help\".\n")
 	sh.prompt()
 	var line []rune
 	buf := make([]byte, 1024)
