@@ -91,7 +91,7 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 | `make dev` | 개발 서버. 백엔드 `127.0.0.1:8090`(`go run`) + Vite `0.0.0.0:5173`(`http://<NAS-IP>:5173/`), Ctrl+C로 둘 다 종료. 실제 OMV에 연결하므로 `frontend/.env.local`에 `MARU_OMV_URL`(이 NAS의 OMV 주소)을 둔다 |
 | `make dev-fake` | `make dev`에 가짜 OMV(`127.0.0.1:8091`), 가짜 권한 도우미(상태 디렉터리의 `helper.sock`, 파일 연산은 `helper-root/` 아래만), 가짜 sshd(`127.0.0.1:8092`, 장난감 셸)를 함께 띄워 연결한다 |
 | `make dev-pick` | 워크트리와 OMV 연결(실제·가짜)을 번호로 골라 개발 서버를 띄운다(`scripts/dev-pick.sh`). 입력을 기다리므로 Claude는 쓰지 않는다 |
-| `make build` | 프론트 빌드 → `backend/internal/web/static/dist/` → `bin/maru` 단일 실행 파일, 권한 도우미 `bin/maru-helper`(`CGO_ENABLED=0`), 설치기 `bin/maru-install` |
+| `make build` | 대상 없이 `make`만 실행해도 같다. 프론트 빌드 → `backend/internal/web/static/dist/` → `bin/maru` 단일 실행 파일, 권한 도우미 `bin/maru-helper`(`CGO_ENABLED=0`), 설치기 `bin/maru-install` |
 | `make lint` | `gofmt -l`, `go vet`(backend·installer 두 모듈), oxlint, `tsc -b` |
 | `make test` | `go test -count=1 ./...`(backend·installer 두 모듈. 모듈 밖 생성물 검사가 캐시로 통과하지 않게), `vitest run` |
 | `make check` | lint + test |

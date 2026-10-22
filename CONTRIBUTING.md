@@ -50,7 +50,7 @@ Useful commands (run from the repository root):
 | Command | What it does |
 |---|---|
 | `make check` | lint (`gofmt`, `go vet`, oxlint, `tsc`) and tests (`go test`, Vitest) |
-| `make build` | production build into `bin/maru`, the privileged helper `bin/maru-helper` and the installer `bin/maru-install` |
+| `make build` | default target (plain `make`); production build into `bin/maru`, the privileged helper `bin/maru-helper` and the installer `bin/maru-install` |
 | `make types` | regenerate TypeScript from Go structs and addon manifests |
 
 ## Documentation
