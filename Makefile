@@ -1,5 +1,9 @@
 .PHONY: dev dev-fake dev-pick types build build-frontend build-backend build-installer lint test check
 
+# 대상 없이 make만 실행하면 빌드한다. 끝나지 않는 개발 서버(dev)가 기본이면
+# 대상 없이 make를 부르는 도구(GitHub CodeQL의 Go autobuild 등)가 멈춘다.
+.DEFAULT_GOAL := build
+
 # 개발 서버 (백엔드 127.0.0.1:8090 + Vite 0.0.0.0:5173)
 # BRANCH=<브랜치>: 그 브랜치가 체크아웃된 git 워크트리의 코드로 실행한다(설정·상태는 주 체크아웃의 것)
 dev:

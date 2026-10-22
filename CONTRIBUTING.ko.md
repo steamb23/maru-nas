@@ -50,7 +50,7 @@ make dev-fake
 | 명령 | 내용 |
 |---|---|
 | `make check` | 린트(`gofmt`, `go vet`, oxlint, `tsc`)와 테스트(`go test`, Vitest) |
-| `make build` | 프로덕션 빌드(`bin/maru`, 권한 도우미 `bin/maru-helper`, 설치기 `bin/maru-install`) |
+| `make build` | 기본 대상(대상 없이 `make`). 프로덕션 빌드(`bin/maru`, 권한 도우미 `bin/maru-helper`, 설치기 `bin/maru-install`) |
 | `make types` | Go 구조체와 애드온 manifest에서 TypeScript 다시 생성 |
 
 ## 문서
