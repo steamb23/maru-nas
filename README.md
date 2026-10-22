@@ -113,7 +113,7 @@ git pull
 
 ## 문서
 
-설치한 뒤 운영하면서 찾아보는 내용은 [docs/](docs/README.md)에 있습니다. GitHub에서 그대로 읽을 수 있습니다.
+설치한 뒤 운영하면서 찾아보는 내용은 [문서 사이트](https://steamb23.github.io/maru-nas/)에 있습니다. 사이트는 최신 릴리스(`stable`) 기준이고, 같은 문서를 저장소의 [docs/](docs/README.md)에서 GitHub로도 읽을 수 있습니다.
 
 | 문서 | 내용 |
 |---|---|

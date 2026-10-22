@@ -1,16 +1,17 @@
 # 마루 NAS 문서 사이트(Zensical). 문서 원본은 docs/이고 GitHub에서도 그대로 읽힌다.
 # 미리보기: zensical serve, 검사: zensical build --strict (CONTRIBUTING.md의 "Documentation")
+# 배포: stable을 push하면 .github/workflows/docs.yml이 GitHub Pages에 올린다
 
 [project]
 site_name = "마루 NAS"
 site_description = "A suspiciously normal desktop-like dashboard for openmediavault."
+site_url = "https://steamb23.github.io/maru-nas/"
 repo_url = "https://github.com/steamb23/maru-nas"
 repo_name = "steamb23/maru-nas"
 # github.com 저장소의 기본값은 master 브랜치라 직접 둔다
 edit_uri = "edit/main/docs/"
 docs_dir = "docs"
 site_dir = "site"
-# site_url은 배포할 곳을 정할 때 넣는다
 nav = [
   { "소개" = "README.md" },
   { "설치와 운영" = [
