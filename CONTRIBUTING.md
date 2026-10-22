@@ -13,7 +13,17 @@ Thank you for your interest in Maru NAS, a desktop-like web dashboard for openme
 
 ## Development setup
 
-Tool versions and installation steps are in the "빌드 및 설치" section of `README.md`. In short: Go 1.27.1 or later, Node.js 22.12 or later, git, make.
+You need Go 1.27.1 or later, Node.js 22.12 or later, npm, git and make. On Debian 13 (and OMV 8, which is built on it) with none of them installed:
+
+```sh
+sudo apt update
+sudo apt install git make nodejs npm
+sudo apt install -t trixie-backports golang-go
+```
+
+Debian's Node.js is 20.19. It builds the project and passes the tests, but Vitest 5 (the test runner) officially supports only 22.12 and later, so prefer the release from [nodejs.org](https://nodejs.org/) if you can. On other systems, install Go from [go.dev/dl](https://go.dev/dl/) and Node.js from nodejs.org. More about the tools (for example Go 1.24 from the default Debian repository) is in [docs/install.md](docs/install.md#빌드-도구).
+
+Then get the code and start the development server:
 
 ```sh
 git clone https://github.com/steamb23/maru-nas.git
@@ -33,6 +43,8 @@ make dev-fake
 
 To test against a real OMV, put `MARU_OMV_URL=<your OMV address>` in `frontend/.env.local` and run `make dev`. Never commit that file.
 
+The development backend listens on `127.0.0.1:8090` by default, the same address as an installed maru service. If maru is installed on the same machine, either install it on a Unix socket or another port (`install.sh` warns when the port is taken), or start the development server on other ports, for example `MARU_LISTEN=127.0.0.1:8190 DEV_PORT=5174 make dev-fake`.
+
 Useful commands (run from the repository root):
 
 | Command | What it does |
@@ -41,12 +53,32 @@ Useful commands (run from the repository root):
 | `make build` | production build into `bin/maru`, the privileged helper `bin/maru-helper` and the installer `bin/maru-install` |
 | `make types` | regenerate TypeScript from Go structs and addon manifests |
 
+## Documentation
+
+`README.md` keeps only the introduction, the quick start, the documentation index and pointers for contributors. User documentation lives in `docs/` and is built into a site with [Zensical](https://zensical.org/) (`zensical.toml`). It is written in Korean for now; an English translation will follow.
+
+- Pages must stay readable on GitHub without building the site. Use only Markdown that GitHub renders: GitHub alerts (`> [!NOTE]`, `> [!TIP]`, `> [!WARNING]`) are fine, Zensical-only syntax (`!!!` admonitions, `===` tabs, attribute lists) is not.
+- Indent nested lists, and code blocks inside lists, by four spaces. GitHub accepts two, but the site's Markdown engine needs four.
+- Do not put `|` in a table cell, even inside code.
+- Link pages with relative `.md` paths and their heading anchors (`configuration.md#omv-워크벤치-열기`). Link files outside `docs/` with absolute GitHub URLs. Do not repeat the same heading within a page, or its anchor will differ between GitHub and the site.
+- User pages describe what users do, the conditions and limits, and the risks. Internal details belong in the design notes under `.claude/`.
+- If you add or change an installer option or a flag, update the tables in `docs/install-options.md` (a test checks it) and `docs/configuration.md`.
+
+To preview and check the site, install the pinned Zensical version with pipx or in a virtual environment (Debian and Ubuntu refuse a system-wide `pip install`):
+
+```sh
+python3 -m venv .venv
+.venv/bin/pip install zensical==0.0.71
+.venv/bin/zensical serve           # preview at http://localhost:8000/
+.venv/bin/zensical build --strict  # the check CI runs; fails on broken links and anchors
+```
+
 ## Branches and pull requests
 
 - Work on a branch from `main` named `<type>/<short-description>`, lowercase with hyphens. Types: `feat` (new feature or app), `fix` (bug fix), `docs`, `i18n` (translations), `chore` (build, CI, cleanup), `refactor` (no behavior change).
 - Fork the repository and open a pull request against `main`. One change per pull request.
 - Pull requests are rebased onto `main` without merge commits. Force-pushing your own pull request branch is fine.
-- CI runs `make check` and `make build` on every pull request and must pass. Run `make check` locally before pushing.
+- CI runs `make check` and `make build`, and builds the documentation with `zensical build --strict`, on every pull request. All must pass. Run `make check` locally before pushing, and the documentation build too if you changed `docs/` or `zensical.toml`.
 - `main` is the development branch. Releases are tagged `v<version>` and the `stable` branch always points at the latest release.
 
 ## Commit messages and language

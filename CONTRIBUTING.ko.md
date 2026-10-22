@@ -13,7 +13,17 @@ openmediavault 8용 데스크톱형 웹 대시보드 마루 NAS에 관심을 가
 
 ## 개발 환경 준비
 
-도구 버전과 설치 방법은 `README.md`의 "빌드 및 설치"에 있습니다. 요약하면 Go 1.27.1 이상, Node.js 22.12 이상, git, make가 필요합니다.
+Go 1.27.1 이상, Node.js 22.12 이상, npm, git, make가 필요합니다. 이 도구가 하나도 없는 Debian 13(그 위에 만든 OMV 8 포함)에서는 다음처럼 설치합니다.
+
+```sh
+sudo apt update
+sudo apt install git make nodejs npm
+sudo apt install -t trixie-backports golang-go
+```
+
+Debian의 Node.js는 20.19입니다. 빌드도 되고 테스트도 통과하지만 테스트 도구 Vitest 5는 22.12 이상만 공식 지원하므로, 할 수 있다면 [nodejs.org](https://nodejs.org/)의 배포본을 권합니다. 다른 시스템에서는 Go를 [go.dev/dl](https://go.dev/dl/)에서, Node.js를 nodejs.org에서 설치합니다. 도구에 대한 더 자세한 내용(기본 Debian 저장소의 Go 1.24 등)은 [docs/install.md](docs/install.md#빌드-도구)에 있습니다.
+
+그다음 코드를 받아 개발 서버를 띄웁니다.
 
 ```sh
 git clone https://github.com/steamb23/maru-nas.git
@@ -33,6 +43,8 @@ make dev-fake
 
 실제 OMV로 확인하려면 `frontend/.env.local`에 `MARU_OMV_URL=<OMV 주소>`를 두고 `make dev`를 실행합니다. 이 파일은 커밋하지 않습니다.
 
+개발 서버의 백엔드도 기본으로 `127.0.0.1:8090`을 써서 설치한 maru 서비스와 주소가 같습니다. 같은 머신에 maru를 설치했다면 서비스를 Unix 소켓이나 다른 포트로 설치하거나(`install.sh`는 포트가 사용 중이면 경고합니다), 개발 서버를 다른 포트로 띄웁니다. 예: `MARU_LISTEN=127.0.0.1:8190 DEV_PORT=5174 make dev-fake`
+
 자주 쓰는 명령(저장소 루트에서 실행):
 
 | 명령 | 내용 |
@@ -41,12 +53,32 @@ make dev-fake
 | `make build` | 프로덕션 빌드(`bin/maru`, 권한 도우미 `bin/maru-helper`, 설치기 `bin/maru-install`) |
 | `make types` | Go 구조체와 애드온 manifest에서 TypeScript 다시 생성 |
 
+## 문서
+
+`README.md`에는 소개, 빠른 시작, 문서 목록, 기여 안내만 둡니다. 사용자 문서는 `docs/`에 있고 [Zensical](https://zensical.org/)(`zensical.toml`)로 사이트를 만듭니다. 지금은 한국어로 쓰며 영어 번역은 나중에 합니다.
+
+- 사이트를 빌드하지 않아도 GitHub에서 읽혀야 합니다. GitHub가 그리는 마크다운만 씁니다. GitHub 알림(`> [!NOTE]`, `> [!TIP]`, `> [!WARNING]`)은 되고, Zensical 전용 문법(`!!!` 알림, `===` 탭, 속성 목록)은 쓰지 않습니다.
+- 중첩 목록과 목록 안 코드 블록은 4칸 들여씁니다. GitHub는 2칸도 받지만 사이트의 마크다운 엔진은 4칸이 필요합니다.
+- 표 칸 안에는 코드 안이라도 `|`를 넣지 않습니다.
+- 페이지 사이는 상대 경로 `.md`와 제목 앵커로 겁니다(`configuration.md#omv-워크벤치-열기`). `docs/` 밖의 파일은 GitHub 절대 주소로 겁니다. 한 페이지 안에 같은 제목을 두 번 쓰면 GitHub와 사이트의 앵커가 달라지므로 쓰지 않습니다.
+- 사용자 문서에는 사용자가 할 일과 조건, 한도, 위험을 씁니다. 내부 구현은 `.claude/`의 설계 문서에 둡니다.
+- 설치기 옵션이나 플래그를 더하거나 바꾸면 `docs/install-options.md`(테스트가 검사합니다)와 `docs/configuration.md`의 표도 고칩니다.
+
+사이트를 미리 보고 검사하려면 고정한 Zensical 버전을 pipx나 가상 환경에 설치합니다(Debian과 Ubuntu는 시스템 전체 `pip install`을 거부합니다).
+
+```sh
+python3 -m venv .venv
+.venv/bin/pip install zensical==0.0.71
+.venv/bin/zensical serve           # http://localhost:8000/ 에서 미리보기
+.venv/bin/zensical build --strict  # CI가 하는 검사. 깨진 링크·앵커가 있으면 실패
+```
+
 ## 브랜치와 풀 리퀘스트
 
 - `main`에서 `<종류>/<짧은-설명>`(영어 소문자, 하이픈) 브랜치를 만들어 작업합니다. 종류는 `feat`(새 기능·앱), `fix`(버그 수정), `docs`(문서), `i18n`(번역), `chore`(빌드·CI·정리), `refactor`(동작 변화 없는 구조 변경)입니다.
 - 저장소를 포크한 뒤 `main`을 대상으로 풀 리퀘스트를 올립니다. 풀 리퀘스트 하나에 변경 하나만 담습니다.
 - 풀 리퀘스트는 머지 커밋 없이 `main`에 rebase로 병합됩니다. 자기 풀 리퀘스트 브랜치에는 force-push해도 됩니다.
-- 모든 풀 리퀘스트에서 CI가 `make check`와 `make build`를 실행하며 통과해야 합니다. push하기 전에 `make check`를 먼저 돌려 주세요.
+- 모든 풀 리퀘스트에서 CI가 `make check`와 `make build`, 문서 빌드(`zensical build --strict`)를 실행하며 모두 통과해야 합니다. push하기 전에 `make check`를 먼저 돌리고, `docs/`나 `zensical.toml`을 바꿨다면 문서 빌드도 돌려 주세요.
 - `main`은 개발 브랜치입니다. 릴리스에는 `v<버전>` 태그를 붙이고, `stable` 브랜치는 항상 최신 릴리스를 가리킵니다.
 
 ## 커밋 메시지와 언어
