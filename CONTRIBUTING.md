@@ -55,7 +55,7 @@ Useful commands (run from the repository root):
 
 ## Documentation
 
-`README.md` keeps only the introduction, the quick start, the documentation index and pointers for contributors. User documentation lives in `docs/` and is built into a site with [Zensical](https://zensical.org/) (`zensical.toml`). It is written in Korean for now; an English translation will follow.
+`README.md` keeps only the introduction, the quick start, the documentation index and pointers for contributors. User documentation lives in `docs/` and is built into a site with [Zensical](https://zensical.org/) (`zensical.toml`). It is written in Korean for now; an English translation will follow. The site at <https://steamb23.github.io/maru-nas/> is published from the `stable` branch, so a documentation change in `main` shows up there with the next release.
 
 - Pages must stay readable on GitHub without building the site. Use only Markdown that GitHub renders: GitHub alerts (`> [!NOTE]`, `> [!TIP]`, `> [!WARNING]`) are fine, Zensical-only syntax (`!!!` admonitions, `===` tabs, attribute lists) is not.
 - Indent nested lists, and code blocks inside lists, by four spaces. GitHub accepts two, but the site's Markdown engine needs four.

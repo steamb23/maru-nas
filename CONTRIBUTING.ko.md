@@ -55,7 +55,7 @@ make dev-fake
 
 ## 문서
 
-`README.md`에는 소개, 빠른 시작, 문서 목록, 기여 안내만 둡니다. 사용자 문서는 `docs/`에 있고 [Zensical](https://zensical.org/)(`zensical.toml`)로 사이트를 만듭니다. 지금은 한국어로 쓰며 영어 번역은 나중에 합니다.
+`README.md`에는 소개, 빠른 시작, 문서 목록, 기여 안내만 둡니다. 사용자 문서는 `docs/`에 있고 [Zensical](https://zensical.org/)(`zensical.toml`)로 사이트를 만듭니다. 지금은 한국어로 쓰며 영어 번역은 나중에 합니다. 사이트(<https://steamb23.github.io/maru-nas/>)는 `stable` 브랜치에서 배포하므로, `main`에서 고친 문서는 다음 릴리스 때 사이트에 반영됩니다.
 
 - 사이트를 빌드하지 않아도 GitHub에서 읽혀야 합니다. GitHub가 그리는 마크다운만 씁니다. GitHub 알림(`> [!NOTE]`, `> [!TIP]`, `> [!WARNING]`)은 되고, Zensical 전용 문법(`!!!` 알림, `===` 탭, 속성 목록)은 쓰지 않습니다.
 - 중첩 목록과 목록 안 코드 블록은 4칸 들여씁니다. GitHub는 2칸도 받지만 사이트의 마크다운 엔진은 4칸이 필요합니다.

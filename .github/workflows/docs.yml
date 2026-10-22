@@ -1,0 +1,51 @@
+# 문서 사이트(docs/, zensical.toml)를 GitHub Pages에 배포한다.
+# README의 설치 안내가 stable을 받으므로 사이트도 최신 릴리스(stable) 기준이다. 릴리스 절차에서 stable을 push하면 배포된다.
+# 저장소 설정: Pages의 Source는 "GitHub Actions", Environments의 github-pages는 stable에서 배포를 허용해야 한다.
+# 빌드 검사는 ci.yml의 docs 잡이 main·PR에서 한다. 액션 버전은 Zensical 공식 문서의 워크플로를 따른다.
+name: Documentation
+
+on:
+  push:
+    branches: [stable]
+  # Actions 화면에서 다시 배포할 때. 아래 if가 stable일 때만 배포한다
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 배포는 하나씩 하고, 진행 중인 배포는 끊지 않는다
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/stable'
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/configure-pages@v6
+
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+
+      # ci.yml의 docs 잡과 같은 버전으로 고정한다
+      - name: Install Zensical
+        run: pip install zensical==0.0.71
+
+      - name: Build docs
+        run: zensical build --strict --clean
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: site
+
+      - uses: actions/deploy-pages@v5
+        id: deployment
