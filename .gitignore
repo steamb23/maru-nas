@@ -14,6 +14,11 @@ node_modules/
 /backend/internal/web/static/dist/
 /frontend/dist/
 
+# 문서 사이트(zensical build의 결과물과 캐시, 미리보기용 가상 환경)
+/site/
+/.cache/
+/.venv/
+
 # 개발 서버 상태(사용자 설정)
 /.dev-state/
 

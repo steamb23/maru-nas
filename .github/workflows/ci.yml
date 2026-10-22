@@ -1,4 +1,4 @@
-# main으로의 push와 모든 PR을 make check(lint·test)와 make build로 검사한다.
+# main으로의 push와 모든 PR을 make check(lint·test)와 make build로 검사하고, 문서 사이트(docs/)가 빌드되는지 본다.
 # 도구 버전은 CLAUDE.md "명령어"의 요구 사항을 따른다: Go는 backend/go.mod, Node.js는 22(Vitest 5 공식 지원).
 name: CI
 
@@ -46,3 +46,21 @@ jobs:
 
       - name: Build
         run: make build
+
+  # docs/와 zensical.toml을 Zensical로 빌드해 깨진 링크·앵커를 찾는다(--strict는 경고도 실패로 본다).
+  # 배포는 하지 않는다
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      # 알파(0.0.x)라 며칠마다 새 버전이 나오므로 고정한다. 올릴 때는 CONTRIBUTING.md의 미리보기 명령도 함께 고친다
+      - name: Install Zensical
+        run: pip install zensical==0.0.71
+
+      - name: Build docs
+        run: zensical build --strict

@@ -1,0 +1,73 @@
+# 마루 NAS 문서 사이트(Zensical). 문서 원본은 docs/이고 GitHub에서도 그대로 읽힌다.
+# 미리보기: zensical serve, 검사: zensical build --strict (CONTRIBUTING.md의 "Documentation")
+
+[project]
+site_name = "마루 NAS"
+site_description = "A suspiciously normal desktop-like dashboard for openmediavault."
+repo_url = "https://github.com/steamb23/maru-nas"
+repo_name = "steamb23/maru-nas"
+# github.com 저장소의 기본값은 master 브랜치라 직접 둔다
+edit_uri = "edit/main/docs/"
+docs_dir = "docs"
+site_dir = "site"
+# site_url은 배포할 곳을 정할 때 넣는다
+nav = [
+  { "소개" = "README.md" },
+  { "설치와 운영" = [
+    "install.md",
+    "install-options.md",
+    "upgrade.md",
+    "reverse-proxy.md",
+    "configuration.md",
+  ] },
+  { "기능" = [
+    "settings-app.md",
+    "files.md",
+    "terminal.md",
+  ] },
+  { "보안" = [
+    "helper.md",
+    "security.md",
+    "passkey-login.md",
+  ] },
+]
+
+[project.theme]
+language = "ko"
+features = [
+  "content.action.edit",
+  "content.code.copy",
+  "navigation.footer",
+  "navigation.sections",
+  "search.highlight",
+]
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme)"
+toggle.icon = "lucide/sun-moon"
+toggle.name = "밝은 화면으로"
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme: light)"
+scheme = "default"
+toggle.icon = "lucide/sun"
+toggle.name = "어두운 화면으로"
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme: dark)"
+scheme = "slate"
+toggle.icon = "lucide/moon"
+toggle.name = "시스템 설정 따르기"
+
+# 이 키를 두면 기본 확장 묶음 대신 아래만 쓴다(toc·tables·superfences는 항상 들어간다).
+# docs/는 GitHub에서도 읽혀야 하므로 GitHub가 그리지 못하는 문법(!!!, ===, 속성 목록)의 확장은 켜지 않는다.
+[project.markdown_extensions]
+toc.permalink = true
+# 기본 slugify는 한글을 지워 앵커가 _1, _2가 된다. GitHub처럼 한글을 남긴다
+toc.slugify.object = "pymdownx.slugs.slugify"
+toc.slugify.kwds.case = "lower"
+# GitHub 알림(> [!NOTE])을 사이트에서도 상자로 그린다
+pymdownx.quotes.callouts = true
+pymdownx.highlight = {}
+pymdownx.inlinehilite = {}
+pymdownx.superfences = {}
