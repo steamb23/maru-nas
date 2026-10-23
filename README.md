@@ -115,7 +115,7 @@ To uninstall, run `./install.sh --uninstall`.
 
 ## Documentation
 
-What you look up while running Maru NAS after installation is on the [documentation site](https://steamb23.github.io/maru-nas/). The site follows the latest release (`stable`), and you can read the same pages on GitHub in [docs/](docs/README.md).
+What you look up while running Maru NAS after installation is on the [documentation site](https://steamb23.github.io/maru-nas/). The site normally follows the latest release (`stable`), but between releases it may already show the documentation of `main`, the code in development. You can read the same pages on GitHub in [docs/](docs/README.md).
 
 | Page | Contents |
 |---|---|

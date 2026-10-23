@@ -28,4 +28,4 @@
 | [보안 강화 모드](security.ko.md) | 민감한 기능 앞의 비밀번호 재확인과 2차 인증(패스키, 인증 앱, 복구 코드) |
 | [패스키로 로그인](passkey-login.ko.md) | 비밀번호 없이 패스키로 로그인하기와 그 한계 |
 
-이 문서는 저장소의 `docs/`에서 GitHub로 그대로 읽을 수 있고, [Zensical](https://zensical.org/)로 만든 [문서 사이트](https://steamb23.github.io/maru-nas/)로도 볼 수 있습니다. 사이트는 최신 릴리스(`stable`) 기준이고, 개발 중인 내용은 [`main`의 docs/](https://github.com/steamb23/maru-nas/tree/main/docs)에 먼저 반영됩니다. 고치는 방법은 [CONTRIBUTING.ko.md](https://github.com/steamb23/maru-nas/blob/main/CONTRIBUTING.ko.md)의 "문서"에 있습니다.
+이 문서는 저장소의 `docs/`에서 GitHub로 그대로 읽을 수 있고, [Zensical](https://zensical.org/)로 만든 [문서 사이트](https://steamb23.github.io/maru-nas/)로도 볼 수 있습니다. 사이트는 보통 최신 릴리스(`stable`) 기준이고, 개발 중인 내용은 [`main`의 docs/](https://github.com/steamb23/maru-nas/tree/main/docs)에 먼저 반영됩니다. 릴리스 사이에는 사이트에 `main`의 문서가 먼저 올라가 있을 수 있습니다. 고치는 방법은 [CONTRIBUTING.ko.md](https://github.com/steamb23/maru-nas/blob/main/CONTRIBUTING.ko.md)의 "문서"에 있습니다.

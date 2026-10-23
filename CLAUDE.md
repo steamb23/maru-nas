@@ -100,7 +100,7 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 
 개별 실행: `cd backend && go test ./internal/addons/sysinfo -run TestParseMemInfo`, `cd installer && go test ./internal/setup -run TestGolden`, `cd frontend && npx vitest run src/icons`
 
-문서 사이트: `zensical serve`(미리보기), `zensical build --strict`(깨진 링크·앵커 검사, CI의 `docs` 잡과 같다). 사이트(`https://steamb23.github.io/maru-nas/`)는 `stable`을 push하면 `.github/workflows/docs.yml`이 GitHub Pages에 배포하므로 최신 릴리스 기준이다. Zensical은 Python 도구라 `make`에 넣지 않았고, 설치 방법과 고정 버전은 `CONTRIBUTING.md`의 "Documentation"에 있다
+문서 사이트: `zensical serve`(미리보기), `zensical build --strict`(깨진 링크·앵커 검사, CI의 `docs` 잡과 같다). 사이트(`https://steamb23.github.io/maru-nas/`)는 `stable`을 push하면 `.github/workflows/docs.yml`이 GitHub Pages에 배포하므로 최신 릴리스 기준이다. 릴리스 사이에 문서만 먼저 올릴 때는 사용자가 Actions 화면에서 main을 골라 그 워크플로를 수동으로 실행하고, 다음 `stable` push가 다시 덮어쓴다. Zensical은 Python 도구라 `make`에 넣지 않았고, 설치 방법과 고정 버전은 `CONTRIBUTING.md`의 "Documentation"에 있다
 
 개발 서버 환경 변수와 워크트리:
 
@@ -173,6 +173,6 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
   1. `main`에 버전 커밋을 만든다(`Version` 상수, 이전 버전 태그 이후의 변경 요약)
   2. 그 커밋에 주석 태그를 붙인다: `git tag -a v<버전> -m "v<버전>"`. 붙인 태그는 옮기지 않는다
   3. `stable`을 그 태그로 fast-forward한다: `git branch -f stable v<버전>`. `stable`은 앞으로만 가고 되감지 않으며, 태그 없는 커밋을 가리키게 하지 않는다
-  4. `main`, 태그, `stable`을 push하고(`git push origin main v<버전> stable`) GitHub Release에 변경 요약을 올린다. `stable` push가 문서 사이트를 다시 배포한다(`.github/workflows/docs.yml`. 저장소 설정에서 Pages의 Source는 GitHub Actions, `github-pages` 환경은 `stable`에서 배포를 허용해야 한다)
+  4. `main`, 태그, `stable`을 push하고(`git push origin main v<버전> stable`) GitHub Release에 변경 요약을 올린다. `stable` push가 문서 사이트를 다시 배포한다(`.github/workflows/docs.yml`. 저장소 설정에서 Pages의 Source는 GitHub Actions, `github-pages` 환경은 `stable`과 `main`에서 배포를 허용해야 한다)
   - 첫 공개 릴리스에서 `stable`을 처음 만든다. 그 전에는 `stable`이 없으므로 `README.md`·`docs/install.md`의 `git clone -b stable`은 동작하지 않는다
   - 릴리스 뒤에 급한 수정이 필요하면 `main`에서 고치고 패치 버전으로 위 절차를 반복한다. 릴리스 브랜치를 따로 만들지 않는다
