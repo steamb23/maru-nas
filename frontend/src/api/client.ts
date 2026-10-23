@@ -84,6 +84,7 @@ import type {
   ServerSettings,
   ServerSettingsRequest,
   SessionInfo,
+  SetUpgradeChannelRequest,
   SharedFolder,
   Shortcut,
   ShortcutsRequest,
@@ -773,6 +774,7 @@ export async function dropElevation(): Promise<HelperStatus> {
 // 대시보드에서 업그레이드(GET·POST /api/upgrade*, 관리자). 상태는 업그레이드 서비스의 상태 파일 그대로다(upgrade.gen.ts).
 
 const UPGRADE_DISABLED_REASONS = ['not-enabled', 'no-helper', 'state-dir'] as const
+const UPGRADE_CHANNELS = ['', 'stable', 'main'] as const
 
 // isNullable은 값이 없거나(undefined·null) guard를 통과하는지다. Go 포인터 필드는 null로 온다.
 function isNullable<T>(v: unknown, guard: (x: unknown) => x is T): v is T | undefined | null {
@@ -820,6 +822,10 @@ function isUpgradeCheck(v: unknown): v is config.UpgradeCheck {
   return (
     isObj(v) &&
     isStr(v.mode) &&
+    isOptional(v.channel, (c) => isOneOf(c, UPGRADE_CHANNELS)) &&
+    isOptional(v.branch, isStr) &&
+    isOptional(v.switch, isBool) &&
+    isOptional(v.dropped, isNum) &&
     isBool(v.upToDate) &&
     isBool(v.web) &&
     isArrayOf(v.commits, isUpgradeCommit) &&
@@ -835,7 +841,9 @@ function isUpgradeStatus(v: unknown): v is config.UpgradeStatus {
     isStr(v.updatedAt) &&
     isNullable(v.check, isUpgradeCheck) &&
     isNullable(v.apply, (a): a is config.UpgradeApply => isObj(a) && isStr(a.target) && isStr(a.user)) &&
-    isNullable(v.error, (e): e is config.UpgradeError => isObj(e) && isLocalizedText(e.text))
+    isNullable(v.error, (e): e is config.UpgradeError => isObj(e) && isLocalizedText(e.text)) &&
+    isOptional(v.branch, isStr) &&
+    isOptional(v.detached, isBool)
   )
 }
 
@@ -849,7 +857,8 @@ export function isUpgradeInfo(v: unknown): v is UpgradeInfo {
     isBool(v.interrupted) &&
     isStr(v.version) &&
     isNullable(v.installed, (r): r is config.InstallRecord => isObj(r) && isStr(r.version) && isStr(r.revision)) &&
-    isNullable(v.status, isUpgradeStatus)
+    isNullable(v.status, isUpgradeStatus) &&
+    isOneOf(v.channel, UPGRADE_CHANNELS)
   )
 }
 
@@ -868,6 +877,12 @@ export function fetchUpgrade(signal?: AbortSignal): Promise<UpgradeInfo> {
 export function requestUpgradeCheck(mode: StartUpgradeCheckRequest['mode']): Promise<UpgradeInfo> {
   const body: StartUpgradeCheckRequest = { mode }
   return upgradeInfo('/upgrade/check', postJSON('/upgrade/check', { body }))
+}
+
+// setUpgradeChannel은 원격 확인이 따라갈 업데이트 채널을 바꾼다(빈 값이면 지금 브랜치). 저장소와 설치는 그대로다.
+export function setUpgradeChannel(channel: SetUpgradeChannelRequest['channel']): Promise<UpgradeInfo> {
+  const body: SetUpgradeChannelRequest = { channel }
+  return upgradeInfo('/upgrade/channel', request('PUT', '/upgrade/channel', { body }).then((r) => r.json()))
 }
 
 // applyUpgrade는 마지막 확인의 대상 커밋으로 업그레이드를 요청한다. 상승하지 않았으면 elevation_required다.

@@ -1,14 +1,14 @@
-// 설정의 업데이트 페이지(관리자): 대시보드에서 업그레이드(.claude/docs/upgrade.md). 확인을 요청하고, 확인 결과(새 버전, 커밋,
-// 새 설정 질문, 수동 재설치 안내)를 보이고, root 권한 상승 뒤 업그레이드를 요청한다. 계산은 update.ts, 업그레이드를
-// 요청한 뒤 다시 시작하기를 기다리는 일은 upgrade/watch.ts(앱 전체 감시)가 한다.
+// 설정의 업데이트 페이지(관리자): 대시보드에서 업그레이드(.claude/docs/upgrade.md). 업데이트 채널을 고르고, 확인을 요청하고,
+// 확인 결과(새 버전, 커밋, 새 설정 질문, 수동 재설치 안내)를 보이고, root 권한 상승 뒤 업그레이드를 요청한다. 계산은
+// update.ts, 업그레이드를 요청한 뒤 다시 시작하기를 기다리는 일은 upgrade/watch.ts(앱 전체 감시)가 한다.
 //
 // 설치기 문구(사유, 질문, 할 일, 오류)는 업그레이드 서비스가 상태 파일에 쓴 영어·한국어 두 가지뿐이다(pickText).
 import type { ParseKeys, TFunction } from 'i18next'
-import { useEffect, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { createPoller } from '../addons/common/poller'
 import { formatDateTime } from '../addons/common/format'
-import { ApiError, applyUpgrade, fetchHelperStatus, fetchUpgrade, requestUpgradeCheck } from '../api/client'
+import { ApiError, applyUpgrade, fetchHelperStatus, fetchUpgrade, requestUpgradeCheck, setUpgradeChannel } from '../api/client'
 import type { HelperStatus, UpgradeInfo } from '../api/types.gen'
 import type { UpgradeCheck, UpgradeError, UpgradeQuestion } from '../api/upgrade.gen'
 import type { WindowViewProps } from '../addons/types'
@@ -23,12 +23,18 @@ import {
   type Answers,
   answerError,
   applyStep,
+  type Channel,
+  type ChannelCard,
+  channelCards,
+  channelValue,
   describe,
   helpLines,
   initialAnswers,
   installedVersion,
+  isDevTarget,
   manualCommands,
   pickText,
+  repoBranch,
   settingsFor,
   type StageName,
   stageName,
@@ -52,6 +58,8 @@ export function UpdatePage({ active }: WindowViewProps) {
   const [helper, setHelper] = useState<HelperStatus | null>(null)
   const [actionError, setActionError] = useState<ActionError | null>(null)
   const [busy, setBusy] = useState(false)
+  // savingChannel은 저장 중인 업데이트 채널이다. 저장하는 동안 고른 카드를 먼저 보인다.
+  const [savingChannel, setSavingChannel] = useState<Channel | null>(null)
   const watchPhase = useUpgradeWatch((s) => s.phase)
   const watchInfo = useUpgradeWatch((s) => s.info)
   const startWatch = useUpgradeWatch((s) => s.start)
@@ -127,11 +135,42 @@ export function UpdatePage({ active }: WindowViewProps) {
     }
   }
 
+  const onChannel = async (next: Channel) => {
+    if (!info || next === info.channel) return
+    // 개발 채널은 릴리스 전 커밋을 받으므로 고르기 전에 한 번 묻는다.
+    if (
+      next === 'main' &&
+      !(await dialogs.confirm({
+        title: t('settings.update.channel.confirmMainTitle'),
+        message: t('settings.update.channel.confirmMainMessage'),
+        confirmLabel: t('settings.update.channel.confirmMain'),
+      }))
+    ) {
+      return
+    }
+    setSavingChannel(next)
+    setActionError(null)
+    try {
+      setLoad({ status: 'ready', info: await setUpgradeChannel(next) })
+    } catch (err) {
+      setActionError(actionErrorOf(err))
+      await reload()
+    } finally {
+      setSavingChannel(null)
+    }
+  }
+
   const onApply = async (check: UpgradeCheck, settings: Record<string, string>) => {
+    const overwrite = (check.dropped ?? 0) > 0
+    const extra = overwrite
+      ? t('settings.update.confirmOverwrite')
+      : check.switch && check.channel
+        ? t('settings.update.confirmSwitch', { branch: check.channel })
+        : ''
     const ok = await dialogs.confirm({
-      title: t('settings.update.confirmTitle'),
-      message: t('settings.update.confirmMessage'),
-      confirmLabel: t('settings.update.apply'),
+      title: t(overwrite ? 'settings.update.confirmOverwriteTitle' : 'settings.update.confirmTitle'),
+      message: extra ? `${t('settings.update.confirmMessage')} ${extra}` : t('settings.update.confirmMessage'),
+      confirmLabel: applyLabel(t, check),
     })
     if (!ok || !check.target) return
     setBusy(true)
@@ -171,7 +210,18 @@ export function UpdatePage({ active }: WindowViewProps) {
             <DisabledSection info={info} />
           ) : (
             <>
-              <CheckSection info={info} busy={busy || state.busy || watching} onCheck={(m) => void onCheck(m)} />
+              <ChannelSection
+                info={info}
+                channel={savingChannel ?? info.channel}
+                busy={busy || state.busy || watching || savingChannel !== null}
+                onChange={(c) => void onChannel(c)}
+              />
+              <CheckSection
+                info={info}
+                channel={savingChannel ?? info.channel}
+                busy={busy || state.busy || watching || savingChannel !== null}
+                onCheck={(m) => void onCheck(m)}
+              />
               {watching || state.activity === 'applying' || state.activity === 'interrupted' ? (
                 <ApplyProgress info={info} waiting={watching && state.activity !== 'applying'} />
               ) : (
@@ -193,7 +243,16 @@ export function UpdatePage({ active }: WindowViewProps) {
   )
 }
 
-// actionErrorOf는 확인·업그레이드 요청의 오류 문구다.
+// applyLabel은 업그레이드 단추의 문구다. 채널을 바꾸면 그 브랜치를, 이전 버전을 덮어쓰면 그렇다고 적는다.
+function applyLabel(t: TFunction, check: UpgradeCheck): string {
+  if (check.switch && (check.channel === 'stable' || check.channel === 'main')) {
+    const overwrite = (check.dropped ?? 0) > 0
+    return t(`settings.update.${overwrite ? 'overwriteTo' : 'applyTo'}.${check.channel}`)
+  }
+  return t('settings.update.apply')
+}
+
+// actionErrorOf는 확인·업그레이드·채널 저장 요청의 오류 문구다.
 function actionErrorOf(err: unknown): ActionError {
   if (!(err instanceof ApiError)) return { key: 'settings.update.errors.network' }
   switch (err.code) {
@@ -218,14 +277,111 @@ function actionErrorOf(err: unknown): ActionError {
 function VersionSection({ info }: { info: UpgradeInfo }) {
   const { t } = useTranslation()
   const { version, revision } = installedVersion(info)
+  const branch = repoBranch(info)
   return (
     <SettingsSection title={t('settings.update.current')}>
       <SettingsCard>
         <SettingsRow label={t('settings.update.version')}>
-          <code className="update-value selectable">{versionLabel(version, revision)}</code>
+          <span className="update-value-line">
+            <code className="update-value selectable">{versionLabel(version, revision)}</code>
+            {branch.kind === 'branch' && branch.name === 'main' && (
+              <span className="settings-badge update-dev">{t('settings.update.devBuild')}</span>
+            )}
+          </span>
         </SettingsRow>
+        {branch.kind !== 'unknown' && (
+          <SettingsRow label={t('settings.update.branch')}>
+            {branch.kind === 'branch' ? (
+              <code className="update-value selectable">{branch.name}</code>
+            ) : (
+              <span className="update-value">{t('settings.update.branchDetached')}</span>
+            )}
+          </SettingsRow>
+        )}
       </SettingsCard>
     </SettingsSection>
+  )
+}
+
+// ChannelSection은 업데이트 채널 카드다. 고르면 바로 저장하고, 다음 원격 확인부터 그 채널을 본다.
+function ChannelSection({
+  info,
+  channel,
+  busy,
+  onChange,
+}: {
+  info: UpgradeInfo
+  channel: Channel
+  busy: boolean
+  onChange: (channel: Channel) => void
+}) {
+  const { t } = useTranslation()
+  const name = useId()
+  const branch = repoBranch(info)
+  const { cards, selected } = channelCards(channel, branch)
+  return (
+    <SettingsSection title={t('settings.update.channel.title')} description={t('settings.update.channel.desc')}>
+      <div className="update-channels" role="radiogroup" aria-label={t('settings.update.channel.title')}>
+        {cards.map((card) => (
+          <label key={card} className="update-channel">
+            <input
+              type="radio"
+              className="picker-input"
+              name={name}
+              value={card}
+              checked={selected === card}
+              disabled={busy}
+              onChange={() => onChange(channelValue(card))}
+            />
+            <ChannelCardText card={card} branch={branch} />
+          </label>
+        ))}
+      </div>
+      {selected === 'main' ? (
+        <p className="update-warn">{t('settings.update.channel.mainWarning')}</p>
+      ) : (
+        <p className="settings-hint">{t('settings.update.channel.hint')}</p>
+      )}
+    </SettingsSection>
+  )
+}
+
+function ChannelCardText({ card, branch }: { card: ChannelCard; branch: ReturnType<typeof repoBranch> }) {
+  const { t } = useTranslation()
+  let title: string
+  let desc: string
+  let code: string | null = card
+  switch (card) {
+    case 'stable':
+      title = t('settings.update.channel.stable')
+      desc = t('settings.update.channel.stableDesc')
+      break
+    case 'main':
+      title = t('settings.update.channel.main')
+      desc = t('settings.update.channel.mainDesc')
+      break
+    case 'current':
+      if (branch.kind === 'detached') {
+        title = t('settings.update.channel.detached')
+        desc = t('settings.update.channel.detachedDesc')
+        code = null
+      } else {
+        title = t('settings.update.channel.current')
+        desc = t(branch.kind === 'branch' ? 'settings.update.channel.currentDesc' : 'settings.update.channel.currentUnknownDesc')
+        code = branch.kind === 'branch' ? branch.name : null
+      }
+      break
+  }
+  return (
+    <>
+      <span className="update-channel-head">
+        <span className="update-channel-dot" aria-hidden="true" />
+        <span className="update-channel-name">{title}</span>
+        {code && <code className="update-channel-branch">{code}</code>}
+        {card === 'stable' && <span className="settings-badge update-recommended">{t('settings.update.channel.recommended')}</span>}
+      </span>
+      <span className="update-channel-desc">{desc}</span>
+    </>
   )
 }
 
@@ -248,10 +404,12 @@ function DisabledSection({ info }: { info: UpgradeInfo }) {
 
 function CheckSection({
   info,
+  channel,
   busy,
   onCheck,
 }: {
   info: UpgradeInfo
+  channel: Channel
   busy: boolean
   onCheck: (mode: 'remote' | 'local') => void
 }) {
@@ -263,7 +421,7 @@ function CheckSection({
     <SettingsSection title={t('settings.update.check')} description={t('settings.update.checkDesc')}>
       <div className="settings-actions">
         <button type="button" className="addon-button primary" disabled={busy} onClick={() => onCheck('remote')}>
-          {t('settings.update.checkRemote')}
+          {channel ? t('settings.update.checkChannel', { channel }) : t('settings.update.checkRemote')}
         </button>
         <button type="button" className="addon-button" disabled={busy} onClick={() => onCheck('local')}>
           {t('settings.update.checkLocal')}
@@ -346,6 +504,8 @@ function CheckResult({
       return <SettingsNotice>{t('settings.update.latest')}</SettingsNotice>
     case 'outdated':
       return <SettingsNotice tone="error">{t('settings.update.outdated')}</SettingsNotice>
+    case 'channel':
+      return <SettingsNotice>{t('settings.update.channel.changed')}</SettingsNotice>
   }
   if (!check) return null
   return (
@@ -368,9 +528,12 @@ function TargetSection({ check }: { check: UpgradeCheck }) {
     <SettingsSection title={t('settings.update.newVersion')}>
       <SettingsCard>
         <SettingsRow label={t('settings.update.version')}>
-          <code className="update-value selectable">
-            {versionLabel(plan?.version || t('settings.update.unknown'), check.target)}
-          </code>
+          <span className="update-value-line">
+            <code className="update-value selectable">
+              {versionLabel(plan?.version || t('settings.update.unknown'), check.target)}
+            </code>
+            {isDevTarget(check) && <span className="settings-badge update-dev">{t('settings.update.devBuild')}</span>}
+          </span>
         </SettingsRow>
         <SettingsRow label={t('settings.update.source')}>
           <span className="update-value">
@@ -379,7 +542,23 @@ function TargetSection({ check }: { check: UpgradeCheck }) {
               : t('settings.update.sourceRemote', { upstream: check.upstream ?? '' })}
           </span>
         </SettingsRow>
+        {check.switch && check.channel && (
+          <SettingsRow label={t('settings.update.branch')} description={t('settings.update.switchBranch')}>
+            <span className="update-value-line">
+              {check.branch ? (
+                <code className="update-value selectable">{check.branch}</code>
+              ) : (
+                <span className="update-value">{t('settings.update.branchDetached')}</span>
+              )}
+              <span>→</span>
+              <code className="update-value selectable">{check.channel}</code>
+            </span>
+          </SettingsRow>
+        )}
       </SettingsCard>
+      {(check.dropped ?? 0) > 0 && (
+        <p className="update-warn">{t('settings.update.dropped', { count: check.dropped ?? 0 })}</p>
+      )}
       {check.commits.length > 0 && (
         <details className="update-commits">
           <summary>
@@ -489,7 +668,7 @@ function UpgradeSection({
               disabled={busy || settings === null}
               onClick={() => settings && onApply(check, settings)}
             >
-              {t('settings.update.apply')}
+              {applyLabel(t, check)}
             </button>
             {settings === null && <span className="settings-hint">{t('settings.update.answerAll')}</span>}
           </div>

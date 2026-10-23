@@ -150,3 +150,126 @@ code.update-value {
 .update-stages li.stopped {
   color: light-dark(#c5352b, #f28b82);
 }
+
+/* 값 옆에 꼬리표·화살표를 함께 놓는 줄 */
+.update-value-line {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+}
+
+/* 개발 버전(main) 꼬리표 */
+.settings-badge.update-dev {
+  background: light-dark(#fff1d6, #4a3a1a);
+  color: light-dark(#7a4a00, #f3cf8a);
+}
+
+/* 업데이트 채널 카드. 칸은 숨긴 라디오 버튼(pickers.css의 .picker-input)을 품은 label이다. */
+.update-channels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.update-channel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid var(--window-border);
+  border-radius: 10px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.update-channel:hover {
+  background: var(--hover-bg);
+}
+
+/* 고르면 선택 테두리가 바뀌므로 줄어들지 않고 배경만 바뀐다. */
+.update-channel:active:not(:has(.picker-input:disabled)) {
+  background: var(--press-bg);
+}
+
+.update-channel:has(.picker-input:checked) {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.update-channel:has(.picker-input:focus-visible) {
+  outline: 2px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  outline-offset: 2px;
+}
+
+.update-channel:has(.picker-input:disabled) {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.update-channel-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+/* 라디오 점: 고르면 가운데가 찬다. */
+.update-channel-dot {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border: 2px solid light-dark(#9aa3ad, #6b737d);
+  border-radius: 50%;
+}
+
+.update-channel:has(.picker-input:checked) .update-channel-dot {
+  border-color: var(--accent);
+}
+
+.update-channel:has(.picker-input:checked) .update-channel-dot::after {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.update-channel-name {
+  font-weight: 600;
+}
+
+.update-channel-branch {
+  min-width: 0;
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  font-size: 12px;
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+
+.settings-badge.update-recommended {
+  margin-left: auto;
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: light-dark(#1d58b8, #9cc2ff);
+}
+
+.update-channel-desc {
+  padding-left: 24px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+/* 주의 문구(개발 채널, 이전 버전으로 덮어쓰기) */
+.update-warn {
+  margin: 10px 0 0;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: light-dark(#fff6e5, #3d3020);
+  color: light-dark(#6b4300, #f3d39a);
+  font-size: 13px;
+  line-height: 1.5;
+}
