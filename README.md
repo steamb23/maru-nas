@@ -18,7 +18,7 @@ Maru NAS is a desktop-like web dashboard that runs on OpenMediaVault 8. Windows,
 ## Features
 
 - **Status windows and widgets**: see system information, storage, network, temperatures and disk health (SMART) in windows or as desktop widgets.
-- **Simple operations**: start, stop and restart containers (compose plugin), and turn core services on and off.
+- **Simple operations**: start, stop and restart containers (compose plugin), and turn core services on and off. Administrators can also shut down, restart or put the NAS to sleep from the profile menu.
 - **[File explorer](docs/en/files.md)**: browse your home folder and shared folders with your own permissions, upload, download, and delete to the trash.
 - **[Web terminal](docs/en/terminal.md)**: open an SSH shell on this NAS in a window, as the account you signed in with.
 - **[Security hardening mode](docs/en/security.md)**: ask for the password again, or for a passkey or an authenticator app, before sensitive features. You can also [sign in with a passkey](docs/en/passkey-login.md).

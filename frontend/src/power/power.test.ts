@@ -69,5 +69,7 @@ describe('sendOutcome', () => {
     expect(sendOutcome(new ApiError(403, 'admin', 'admin_required'))).toBe('actions.error.admin_required')
     expect(sendOutcome(new ApiError(400, 'bad', 'bad_request'))).toBe('actions.error.unknown')
     expect(sendOutcome(new ApiError(404, 'not found'))).toBe('actions.error.unknown')
+    // 백엔드 자신의 500(코드 없음)은 보낸 것으로 보지 않는다.
+    expect(sendOutcome(new ApiError(500, 'action failed'))).toBe('actions.error.unknown')
   })
 })

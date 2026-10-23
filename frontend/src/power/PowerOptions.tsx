@@ -70,6 +70,11 @@ export function PowerBody({ store, onCancel, onSent }: BodyProps) {
     lastStep.current = step
   }, [step])
 
+  // 보내다 실패하면 단추가 다시 켜진 뒤(렌더 뒤) "뒤로"에 포커스를 돌려준다. 꺼진 단추에서 포커스를 잃었다.
+  useEffect(() => {
+    if (error && !sending) backRef.current?.focus()
+  }, [error, sending])
+
   const sleep = sleepState(power.info, power.failed)
   const sleepMode = sleep.kind === 'available' ? sleep.modeKey : undefined
 

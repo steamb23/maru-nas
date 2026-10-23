@@ -99,10 +99,10 @@ const ERROR_KEYS: Partial<Record<string, ParseKeys>> = {
 }
 
 // sendOutcome은 조작 요청의 실패를 판단한다. 백엔드가 오류 코드와 함께 거절했으면 그 문구 키를 돌려준다.
-// 그 밖(연결 끊김, 프록시의 5xx 오류 페이지)은 시스템이 내려가며 응답이 끊긴 것으로 보고 'sent'다.
+// 연결 끊김과 프록시의 오류 페이지(502·503·504, 코드 없음)는 시스템이 내려가며 응답이 끊긴 것으로 보고 'sent'다.
 // 401은 API 클라이언트가 로그인 화면으로 보내므로 여기서는 실패 문구만 정한다.
 export function sendOutcome(err: unknown): 'sent' | ParseKeys {
   if (!(err instanceof ApiError)) return 'sent'
-  if (!err.code) return err.status >= 500 ? 'sent' : 'actions.error.unknown'
+  if (!err.code) return err.status >= 502 && err.status <= 504 ? 'sent' : 'actions.error.unknown'
   return ERROR_KEYS[err.code] ?? 'actions.error.unknown'
 }
