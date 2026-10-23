@@ -13,23 +13,23 @@ edit_uri = "edit/main/docs/"
 docs_dir = "docs"
 site_dir = "site"
 nav = [
-  { "소개" = "README.md" },
+  { "소개" = "README.ko.md" },
   { "설치와 운영" = [
-    "install.md",
-    "install-options.md",
-    "upgrade.md",
-    "reverse-proxy.md",
-    "configuration.md",
+    "install.ko.md",
+    "install-options.ko.md",
+    "upgrade.ko.md",
+    "reverse-proxy.ko.md",
+    "configuration.ko.md",
   ] },
   { "기능" = [
-    "settings-app.md",
-    "files.md",
-    "terminal.md",
+    "settings-app.ko.md",
+    "files.ko.md",
+    "terminal.ko.md",
   ] },
   { "보안" = [
-    "helper.md",
-    "security.md",
-    "passkey-login.md",
+    "helper.ko.md",
+    "security.ko.md",
+    "passkey-login.ko.md",
   ] },
 ]
 
