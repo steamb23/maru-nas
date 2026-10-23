@@ -11,6 +11,7 @@ import type {
   LoadAverage,
   MemoryDetail,
   NetTotals,
+  PowerInfo,
   Process,
   SystemStatsResponse,
   TaskCounts,
@@ -84,8 +85,14 @@ export function isSystemStatsResponse(v: unknown): v is SystemStatsResponse {
     isOptional(v.network, isNetTotals) &&
     isOptional(v.disk, isDiskTotals) &&
     isOptional(v.tasks, isTaskCounts) &&
-    isOptional(v.processes, isProcessList)
+    isOptional(v.processes, isProcessList) &&
+    isOptional(v.power, isPowerInfo)
   )
+}
+
+// isPowerInfo는 OMV 전원 관리의 대기 방식(?power=1, 전원 모달)을 검사한다.
+export function isPowerInfo(v: unknown): v is PowerInfo {
+  return isObj(v) && isStr(v.standbyMode) && isArrayOf(v.standbyModes, isStr)
 }
 
 // StatsPoint는 그래프의 한 점이다. t 시각까지 직전 샘플 이후의 평균이며, 구할 수 없는 값은 null이다.

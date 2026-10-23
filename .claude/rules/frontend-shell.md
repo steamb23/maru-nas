@@ -133,6 +133,8 @@ paths:
   - 제목이 잘린 버튼과 아이콘 버튼에만 `title` 툴팁을 붙인다
   - 접힌 창을 최소화하면 "더 보기" 버튼으로 줄어들고(`useWindowAnimation.ts`의 `minimizeTarget`), 닫으면 퇴장 애니메이션 없이 뺀다(닫히는 순간 접혀 있었는지를 `useClosingWindows`의 snapshot에 남긴다)
 - 프로필 메뉴 항목은 `profileMenu.ts`의 `PROFILE_MENU_ITEMS`에 데이터로 둔다(`requires`로 거름: `admin`은 관리자만, `workbench`는 OMV 웹 UI 주소가 있을 때만). 항목은 `action`과 `submenu` 두 종류다. `action` 항목을 추가하면 `ProfileMenu.tsx`의 `actions`에 동작도 넣는다
+- "전원"(관리자, 로그아웃 바로 위 같은 묶음)은 데스크톱 대화상자를 연다(`power/powerDialog.tsx`, 내용 `PowerOptions.tsx`, 계산 `power.ts`). 타일 세 개(시스템 종료·다시 시작·절전) 중 하나를 고르면 같은 대화상자가 확인 단계(뒤로·실행, 포커스는 뒤로)로 바뀐다. 제목과 본문이 단계를 함께 보므로 대화상자마다 작은 저장소(`dialogStore.ts`)를 둔다. 조작은 시스템 정보 애드온의 `shutdown`·`reboot`·`standby`이고(`.claude/docs/addons.md`의 "시스템 정보"), 절전은 열 때 받은 OMV 대기 방식(`?power=1`)이 전원 끄기이거나 지원되지 않거나 받지 못했으면 이유와 함께 막는다(`sleepState`)
+  - 조작을 보내면(백엔드가 코드로 거절하지 않았으면. 연결 끊김·프록시 5xx도 보낸 것으로 본다, `sendOutcome`) 전원 감시(`power/watch.ts`의 순수 `step`·`screenView`, 저장소는 `watchStore.ts`)가 2초마다 `/api/health`를 받고 App이 `Screen` 대신 전원 화면(`PowerScreen.tsx`, 재시작 화면과 같은 틀)을 그린다. 끊겼다가 다시 답하면 새로 고친다(업그레이드 결과 힌트는 남기지 않는다). 2분이 지나도 끊기지 않으면 "대시보드로 돌아가기"(새로 고침)를, 다시 시작이 5분 넘게 돌아오지 않으면 확인할 곳을 안내한다
 - 프로필 메뉴 머리글(아바타·이름·역할)은 메뉴 항목 버튼이며 누르면 설정 창의 프로필 페이지를 연다. 메뉴에 따로 "설정" 항목은 두지 않는다. `ProfileMenu`는 데스크톱 크기를 모르므로 `Desktop`이 `onOpenSettings`를 `Taskbar`를 거쳐 넘긴다
 - 아바타 그리기는 `ProfileAvatar` 한 곳에 모은다. 프로필 사진(`profile/store.ts`, 로그인한 동안 불러옴)이 있으면 원형 이미지로, 없거나 받지 못하면 기본 아이콘으로 그린다
 

@@ -55,6 +55,15 @@ describe('profileMenu', () => {
     expect(PROFILE_MENU_ITEMS.some((i) => i.id === 'language' && i.kind === 'submenu' && !i.requires)).toBe(true)
   })
 
+  it('전원은 관리자에게만, 로그아웃 바로 위 같은 묶음에 보인다', () => {
+    const ids = (admin: boolean) => visibleItems(PROFILE_MENU_ITEMS, { admin, workbench: false }).map((i) => i.id)
+    expect(ids(false)).not.toContain('power')
+    expect(ids(true).slice(-2)).toEqual(['power', 'logout'])
+    const power = PROFILE_MENU_ITEMS.find((i) => i.id === 'power')
+    const logout = PROFILE_MENU_ITEMS.find((i) => i.id === 'logout')
+    expect(power).toMatchObject({ kind: 'action', requires: 'admin', group: logout?.group })
+  })
+
   it('OMV 워크벤치 열기는 맨 위 그룹이며 주소가 있을 때만 보인다', () => {
     expect(PROFILE_MENU_ITEMS[0]).toMatchObject({ kind: 'action', id: 'workbench', requires: 'workbench' })
   })

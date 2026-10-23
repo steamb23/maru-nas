@@ -15,6 +15,8 @@ import { useSessionKeeper } from './auth/useSessionKeeper'
 import { Desktop } from './shell/Desktop'
 import { installNativeGuard } from './shell/nativeGuard'
 import { Wallpaper } from './shell/Wallpaper'
+import { PowerScreen } from './power/PowerScreen'
+import { usePowerWatch } from './power/watchStore'
 import { RestartScreen } from './upgrade/RestartScreen'
 import { showsRestartScreen } from './upgrade/watch'
 import { useUpgradeWatch } from './upgrade/watchStore'
@@ -46,11 +48,14 @@ function Screen() {
   }
 }
 
-// Root는 업그레이드로 다시 시작하는 동안이면 재시작 화면, 아니면 인증 상태의 화면이다. 재시작 화면은 401로 세션이
-// 끝나도 남아 있다가 maru가 돌아오면 페이지를 새로 고친다(upgrade/watch.ts).
+// Root는 업그레이드로 다시 시작하는 동안이면 재시작 화면, 전원 조작을 보낸 뒤면 전원 화면, 아니면 인증 상태의
+// 화면이다. 두 화면은 401로 세션이 끝나도 남아 있다가 maru가 돌아오면 페이지를 새로 고친다(upgrade/watch.ts,
+// power/watch.ts).
 function Root() {
   const restarting = useUpgradeWatch((s) => showsRestartScreen(s.phase))
-  return restarting ? <RestartScreen /> : <Screen />
+  const powering = usePowerWatch((s) => s.phase !== 'idle')
+  if (restarting) return <RestartScreen />
+  return powering ? <PowerScreen /> : <Screen />
 }
 
 export default function App() {

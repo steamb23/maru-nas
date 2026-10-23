@@ -24,6 +24,9 @@ import panStart from '@colloid/actions/symbolic/pan-start-symbolic.svg?url'
 import processStop from '@colloid/actions/symbolic/process-stop-symbolic.svg?url'
 import systemLockScreen from '@colloid/actions/symbolic/system-lock-screen-symbolic.svg?url'
 import systemLogOut from '@colloid/actions/symbolic/system-log-out-symbolic.svg?url'
+import systemReboot from '@colloid/actions/symbolic/system-reboot-symbolic.svg?url'
+import systemShutdown from '@colloid/actions/symbolic/system-shutdown-symbolic.svg?url'
+import systemSuspend from '@colloid/actions/symbolic/system-suspend-symbolic.svg?url'
 import viewAppGrid from '@colloid/actions/symbolic/view-app-grid-symbolic.svg?url'
 import viewReveal from '@colloid/actions/symbolic/view-reveal-symbolic.svg?url'
 import viewGrid from '@colloid/actions/symbolic/view-grid-symbolic.svg?url'
@@ -96,6 +99,9 @@ export const COLLOID_ICONS = {
   'window-restore-symbolic': { url: windowRestore, kind: 'symbolic' },
   'window-new-symbolic': { url: windowNew, kind: 'symbolic' },
   'system-log-out-symbolic': { url: systemLogOut, kind: 'symbolic' },
+  'system-shutdown-symbolic': { url: systemShutdown, kind: 'symbolic' },
+  'system-reboot-symbolic': { url: systemReboot, kind: 'symbolic' },
+  'system-suspend-symbolic': { url: systemSuspend, kind: 'symbolic' },
   'object-select-symbolic': { url: objectSelect, kind: 'symbolic' },
   'pan-start-symbolic': { url: panStart, kind: 'symbolic' },
   'pan-end-symbolic': { url: panEnd, kind: 'symbolic' },

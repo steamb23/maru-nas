@@ -7,6 +7,7 @@ import { useCapabilitiesStore } from '../addons/capabilities'
 import { useAuthStore } from '../auth/store'
 import { useAvatarStore } from '../profile/store'
 import { setLanguage, useLanguage } from '../i18n'
+import { openPowerDialog } from '../power/powerDialog'
 import { SUPPORTED_LANGUAGES, languageName } from '../i18n/languages'
 import { IconImage } from '../icons/IconImage'
 import type { SettingsPageId } from '../settings/pages'
@@ -85,6 +86,7 @@ export function ProfileMenu({ onOpenSettings }: { onOpenSettings: (page: Setting
   const actions: Record<ProfileMenuActionId, () => void> = {
     // 팝업 차단을 피하려고 클릭 처리 안에서 바로 연다.
     workbench: () => openLink('workbench'),
+    power: openPowerDialog,
     // 로그아웃하면 열린 창이 모두 닫히므로 데스크톱 범위 모달로 한 번 묻는다.
     logout: async () => {
       const ok = await dialogs.confirm({

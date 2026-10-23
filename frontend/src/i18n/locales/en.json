@@ -89,8 +89,54 @@
     "roleUser": "User",
     "logout": "Sign out",
     "logoutConfirm": "Sign out? All open windows will be closed.",
+    "power": "Power",
     "openWorkbench": "Open OMV Workbench",
     "openProfile": "Open profile"
+  },
+  "power": {
+    "title": "Power",
+    "shutdown": "Shut down",
+    "reboot": "Restart",
+    "standby": "Sleep",
+    "notice": "All signed-in users will lose their sessions, and file transfers in progress will stop.",
+    "checking": "Checking…",
+    "unavailable": "Unavailable",
+    "mode": {
+      "suspend": "Suspend to RAM",
+      "hibernate": "Hibernate"
+    },
+    "sleepPoweroff": "Sleep is unavailable because the standby mode in OMV power management is set to power off.",
+    "sleepUnsupported": "Sleep is unavailable because this NAS does not support the standby mode set in OMV power management.",
+    "sleepUnknown": "Sleep is unavailable because the standby mode could not be checked.",
+    "back": "Back",
+    "sending": "Sending…",
+    "confirm": {
+      "shutdownTitle": "Shut down the system?",
+      "shutdownMessage": "All signed-in users will lose their sessions, and file transfers in progress will stop. To turn it back on, press the power button on the NAS.",
+      "rebootTitle": "Restart?",
+      "rebootMessage": "All signed-in users will lose their sessions, and file transfers in progress will stop. When the NAS is back, you return to the sign-in screen.",
+      "standbyTitle": "Go to sleep?",
+      "standbyMessage": "All signed-in users will lose their sessions, and file transfers in progress will stop. When you wake the NAS with its power button or Wake-on-LAN, you return to the sign-in screen."
+    },
+    "error": {
+      "busy": "Another power action is already in progress.",
+      "omv": "OMV could not process the request. Try again in a moment."
+    },
+    "screen": {
+      "rebootTitle": "Restarting the NAS",
+      "rebootMessage": "When the NAS is back, you return to the sign-in screen.",
+      "rebootStuck": "The NAS has not come back. Check the NAS screen or its power state.",
+      "shuttingDownTitle": "Shutting down the NAS",
+      "shutdownTitle": "The NAS is off",
+      "shutdownMessage": "To turn it back on, press the power button on the NAS. This page switches to the sign-in screen once it is on.",
+      "enteringStandbyTitle": "Going to sleep",
+      "standbyTitle": "The NAS is asleep",
+      "standbyMessage": "Wake it with its power button or Wake-on-LAN, and this page reconnects automatically.",
+      "mode": "Standby mode: {{mode}}",
+      "elapsed": "{{time}} elapsed",
+      "notDown": "The NAS is still responding. The request may not have been carried out.",
+      "back": "Back to the dashboard"
+    }
   },
   "apps": {
     "systemInfo": "System Information",

@@ -1,0 +1,156 @@
+/* 전원 모달의 내용(PowerOptions.tsx). 모달 틀과 단추는 Modal.css와 .addon-button을 쓴다. */
+.power-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.power-title-icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--hover-bg);
+}
+
+.power-title-icon.danger {
+  background: light-dark(rgb(217 48 37 / 0.12), rgb(197 53 43 / 0.22));
+  color: light-dark(#b3261e, #f28b82);
+}
+
+.power-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.power-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-height: 124px;
+  padding: 18px 8px 12px;
+  border: 1px solid var(--window-border);
+  border-radius: 10px;
+  background: light-dark(rgb(0 0 0 / 0.035), rgb(255 255 255 / 0.04));
+  text-align: center;
+  cursor: pointer;
+  transition:
+    scale var(--press-out) ease,
+    box-shadow var(--press-out) ease;
+}
+
+.power-tile.danger {
+  border-color: light-dark(rgb(217 48 37 / 0.45), rgb(255 123 114 / 0.5));
+  background: light-dark(rgb(217 48 37 / 0.06), rgb(197 53 43 / 0.14));
+}
+
+.power-tile.danger .power-tile-icon {
+  color: light-dark(#d93025, #ff7b72);
+}
+
+.power-tile:hover:not([aria-disabled='true']) {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 50%, transparent);
+}
+
+.power-tile.danger:hover:not([aria-disabled='true']) {
+  box-shadow: 0 0 0 2px light-dark(rgb(217 48 37 / 0.5), rgb(255 123 114 / 0.5));
+}
+
+.power-tile:active:not([aria-disabled='true']) {
+  scale: var(--press-scale);
+  transition-duration: var(--press-in);
+}
+
+.power-tile:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.power-tile[aria-disabled='true'] {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.power-tile-label {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.power-tile-detail {
+  min-height: 16px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.power-reason,
+.power-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 12px 0 0;
+  line-height: 1.45;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.power-reason .symbolic-icon,
+.power-error .symbolic-icon {
+  flex: none;
+  margin-top: 1px;
+}
+
+.power-reason .symbolic-icon {
+  color: light-dark(#b35c00, #ffb04a);
+}
+
+.power-error {
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: light-dark(rgb(217 48 37 / 0.08), rgb(197 53 43 / 0.2));
+  color: light-dark(#b3261e, #ffb4ab);
+}
+
+.power-notice {
+  margin-top: 12px;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+/* 확인 단계: "뒤로"는 왼쪽, 실행은 오른쪽 */
+.power-confirm-buttons .power-back {
+  margin-right: auto;
+}
+
+.addon-button.danger .power-spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-right: 6px;
+  vertical-align: -1px;
+  border: 2px solid rgb(255 255 255 / 0.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: power-spin 0.9s linear infinite;
+}
+
+@keyframes power-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 애니메이션을 꺼도 멈춘 원으로 남지 않게 천천히 돈다(진행 중이라는 표시, 재시작 화면과 같다). */
+:root[data-animations='off'] .power-spinner {
+  animation-duration: 2.7s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .power-spinner {
+    animation-duration: 2.7s;
+  }
+}

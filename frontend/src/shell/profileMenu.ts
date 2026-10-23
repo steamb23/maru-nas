@@ -2,11 +2,11 @@
 //
 // 항목은 두 종류다. action 항목은 누르면 ProfileMenu.tsx의 actions에 있는 동작을 실행한다
 // (ProfileMenuActionId에 추가하면 동작을 빠뜨렸을 때 타입 오류가 난다). submenu 항목은 누르면 하위 메뉴를 연다.
-// 나중에 개인 설정, 정보, 재시작·종료(admin) 같은 항목이 들어갈 자리다. 같은 group끼리 묶고 group 사이에 구분선을 그린다.
+// 같은 group끼리 묶고 group 사이에 구분선을 그린다.
 import type { ParseKeys } from 'i18next'
 import type { IconName } from '../icons/resolver'
 
-export type ProfileMenuActionId = 'workbench' | 'logout'
+export type ProfileMenuActionId = 'workbench' | 'power' | 'logout'
 export type ProfileMenuSubmenuId = 'language'
 
 interface ItemBase {
@@ -42,6 +42,15 @@ export const PROFILE_MENU_ITEMS: readonly ProfileMenuItem[] = [
     labelKey: 'language.label',
     icon: 'preferences-desktop-locale-symbolic',
     group: 'preferences',
+  },
+  // 시스템 종료·다시 시작·절전 모달을 연다(power/powerDialog.tsx). OMV의 전원 RPC가 관리자 전용이다.
+  {
+    kind: 'action',
+    id: 'power',
+    labelKey: 'profile.power',
+    icon: 'system-shutdown-symbolic',
+    group: 'session',
+    requires: 'admin',
   },
   { kind: 'action', id: 'logout', labelKey: 'profile.logout', icon: 'system-log-out-symbolic', group: 'session' },
 ]

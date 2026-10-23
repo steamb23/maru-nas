@@ -89,8 +89,54 @@
     "roleUser": "사용자",
     "logout": "로그아웃",
     "logoutConfirm": "로그아웃할까요? 열려 있는 창은 모두 닫힙니다.",
+    "power": "전원",
     "openWorkbench": "OMV 워크벤치 열기",
     "openProfile": "프로필 열기"
+  },
+  "power": {
+    "title": "전원",
+    "shutdown": "시스템 종료",
+    "reboot": "다시 시작",
+    "standby": "절전",
+    "notice": "접속한 모든 사용자의 세션과 진행 중인 파일 전송이 끊깁니다.",
+    "checking": "확인 중…",
+    "unavailable": "사용할 수 없음",
+    "mode": {
+      "suspend": "RAM 절전",
+      "hibernate": "최대 절전"
+    },
+    "sleepPoweroff": "OMV 전원 관리의 대기 모드가 '전원 끄기'라서 절전할 수 없습니다.",
+    "sleepUnsupported": "이 NAS는 OMV 전원 관리에 설정된 대기 모드를 지원하지 않아 절전할 수 없습니다.",
+    "sleepUnknown": "절전 방식을 확인하지 못해 절전할 수 없습니다.",
+    "back": "뒤로",
+    "sending": "보내는 중…",
+    "confirm": {
+      "shutdownTitle": "시스템을 종료할까요?",
+      "shutdownMessage": "접속한 모든 사용자의 세션과 진행 중인 파일 전송이 끊깁니다. 다시 켜려면 NAS의 전원 단추를 눌러야 합니다.",
+      "rebootTitle": "다시 시작할까요?",
+      "rebootMessage": "접속한 모든 사용자의 세션과 진행 중인 파일 전송이 끊깁니다. 다시 켜지면 로그인 화면으로 돌아갑니다.",
+      "standbyTitle": "절전으로 들어갈까요?",
+      "standbyMessage": "접속한 모든 사용자의 세션과 진행 중인 파일 전송이 끊깁니다. 전원 단추나 Wake-on-LAN으로 깨우면 로그인 화면으로 돌아갑니다."
+    },
+    "error": {
+      "busy": "다른 전원 조작이 이미 진행 중입니다.",
+      "omv": "OMV가 요청을 처리하지 못했습니다. 잠시 뒤 다시 시도하세요."
+    },
+    "screen": {
+      "rebootTitle": "NAS를 다시 시작하는 중",
+      "rebootMessage": "다시 켜지면 로그인 화면으로 돌아갑니다.",
+      "rebootStuck": "NAS가 다시 켜지지 않습니다. NAS의 화면이나 전원 상태를 확인하세요.",
+      "shuttingDownTitle": "NAS를 끄는 중",
+      "shutdownTitle": "NAS가 꺼졌습니다",
+      "shutdownMessage": "다시 켜려면 NAS의 전원 단추를 누르세요. 켜지면 자동으로 로그인 화면으로 바뀝니다.",
+      "enteringStandbyTitle": "절전으로 들어가는 중",
+      "standbyTitle": "NAS가 절전 상태입니다",
+      "standbyMessage": "전원 단추나 Wake-on-LAN으로 깨우면 자동으로 다시 연결합니다.",
+      "mode": "절전 방식: {{mode}}",
+      "elapsed": "{{time}} 지남",
+      "notDown": "NAS가 아직 응답합니다. 요청이 처리되지 않았을 수 있습니다.",
+      "back": "대시보드로 돌아가기"
+    }
   },
   "apps": {
     "systemInfo": "시스템 정보",
