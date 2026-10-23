@@ -357,7 +357,7 @@ func (s *upgradeService) check(mode, channel string) (*config.UpgradeCheck, erro
 	if goErr != "" {
 		reason(config.UpgradeReasonGo, L(
 			"Go cannot build this version: "+goErr+". Update Go (see docs/install.md), then check again",
-			"Go로 이 버전을 빌드할 수 없습니다: "+goErr+". Go를 업데이트한 뒤(docs/install.md 참고) 다시 확인하세요"))
+			"Go로 이 버전을 빌드할 수 없습니다: "+goErr+". Go를 업데이트한 뒤(docs/install.ko.md 참고) 다시 확인하세요"))
 		return done()
 	}
 	if plan.Format != config.UpgradePlanFormat {
@@ -737,7 +737,7 @@ func (s *upgradeService) apply(prev config.UpgradeStatus, req config.UpgradeAppl
 	install := append([]string{"--service-install", "--upgrade", "--plain", "--lang", "en"}, args...)
 	if err := s.run(cmdOpts{dir: s.cfg.Repo, timeout: installTimeout}, filepath.Join(s.cfg.Repo, installerBinSrcRel), install...); err != nil {
 		return "", uerr("the new installer failed. maru may not be running; run ./install.sh from the repository over SSH to recover (see the log and docs/upgrade.md)",
-			"새 설치기가 실패했습니다. maru가 돌고 있지 않을 수 있습니다. SSH로 저장소에서 ./install.sh를 실행해 복구하세요(로그와 docs/upgrade.md 참고)")
+			"새 설치기가 실패했습니다. maru가 돌고 있지 않을 수 있습니다. SSH로 저장소에서 ./install.sh를 실행해 복구하세요(로그와 docs/upgrade.ko.md 참고)")
 	}
 	version := ""
 	if rec := s.readRecord(); rec != nil && rec.Revision == req.Target {

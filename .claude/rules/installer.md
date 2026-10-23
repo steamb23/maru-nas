@@ -57,7 +57,7 @@ paths:
 
 ## 업그레이드 서비스(--web-upgrade, --upgrade-service)
 
-설계는 `.claude/docs/upgrade.md`, 사용자 설명은 `docs/upgrade.md`의 "대시보드에서 업그레이드". 경로·형식은 `backend/config`(`upgrade.go`, `upgrade_request.go`)에 있다.
+설계는 `.claude/docs/upgrade.md`, 사용자 설명은 `docs/upgrade.ko.md`의 "대시보드에서 업그레이드". 경로·형식은 `backend/config`(`upgrade.go`, `upgrade_request.go`)에 있다.
 
 - 설정: `--web-upgrade`(`FlagToggle`, 도우미를 설치할 때만)와 `--build-path`(묻지 않는 `FlagValue`). 켜면 `stepWebUpgrade`가 설치기 복사본(`/usr/local/lib/maru/maru-install`, `bin/maru-install`에서), `/etc/default/maru-upgrade`(저장소 경로·빌드 계정·빌드 PATH), `maru-upgrade.service`·`.path`를 쓰고, 도우미 유닛에 `RuntimeDirectory=maru-upgrade`가 들어간다. 끄거나 도우미를 지우면(제거 포함) `removeWebUpgrade`가 경로 유닛을 끄고 이것들과 남은 요청·상태 파일을 지운다. 돌고 있는 업그레이드 서비스는 멈추지 않는다
   - 값: 설정 파일이 있으면 켜짐이다. 이 설정이 없던 버전의 설치는 꺼진 것으로 읽어 묻지 않는다. 새 설치의 기본값은 저장소 소유자가 일반 사용자일 때 켜짐이고, root 소유 저장소에서는 켤 수 없다(`Validate`). 소유자는 `System.FileOwner(c.RepoDir)`로 읽는다
@@ -89,7 +89,7 @@ paths:
    - 설정 정의 안의 함수에서 다른 설정 값은 `name*` 상수로 읽는다(설정 변수를 직접 가리키면 패키지 초기화 순환이 생긴다)
 2. `settings.go`의 목록에 한 줄 더한다
 3. 백엔드 플래그도 생기면 `backend/config`에 키·기본값을 두고 `cmd/maru/main.go`의 플래그와 `runtimeEntry` 목록에서 쓴다
-4. `docs/install-options.md`의 옵션 표(`TestDocsListEveryOption`), 백엔드 플래그면 `docs/configuration.md`의 항목 표, `setting_test.go`의 검사 표와 왕복 표에 더한다
+4. `docs/install-options.md`의 옵션 표(`TestDocsListEveryOption`), 백엔드 플래그면 `docs/configuration.md`의 항목 표(두 문서 모두 한국어 `.ko.md`도 함께), `setting_test.go`의 검사 표와 왕복 표에 더한다
 5. 환경 파일 출력이 바뀌면 골든(`testdata/golden/*/want`)도 고친다. 골든은 bash `install.sh`의 출력에서 시작했으므로 바꾼 이유를 커밋 메시지에 적는다
 
 ## 단계를 더할 때
@@ -107,7 +107,7 @@ paths:
 - 비TTY에서 설정 질문이 필요하면(빠진 설정, 검사를 통과하지 못한 기존 값) 멈추지 않고 그 옵션 목록을 알린 뒤 2로 끝낸다. 확인 질문(진행할까요, 그래도 계속할까요)도 비TTY에서는 묻지 않고 오류로 끝낸다. 업그레이드(옵션 없는 비TTY 실행, `--upgrade`), 설정을 모두 준 `--service-install`, `--dry-run`은 진행 확인을 하지 않는다
 - 종료 코드: 잘못된 옵션(함께 쓸 수 없는 방식·동작 옵션 포함)·비TTY의 빠진 설정 2, 오류(`--upgrade`인데 설치되어 있지 않음 포함) 1, 계획을 낸 `--upgrade-plan` 0, "진행할까요?"·제거 확인에서 아니요와 업그레이드 "취소" 0, "그래도 계속할까요?"·기존 실행 파일로 설치할지 확인에서 아니요 1, 중단(Ctrl+C) 130
 - 유닛 하드닝을 바꾸면 `.claude/docs/helper.md`, `.claude/rules/helper.md`도 함께 보고, 사용자에게 보이는 영향(쓸 수 있는 경로 등)이 바뀌면 `docs/helper.md`도 고친다
-- maru 유닛의 `RuntimeDirectoryPreserve=yes`는 `/run/maru`를 재시작 사이에도 남긴다. 디렉터리가 새로 만들어지면 컨테이너 프록시의 바인드 마운트가 이전 디렉터리를 계속 가리켜 연결이 끊기기 때문이다. 제거(`--uninstall`)는 지우므로 다시 설치한 뒤 프록시 컨테이너를 다시 만들어야 한다(`docs/install.md`의 "제거")
+- maru 유닛의 `RuntimeDirectoryPreserve=yes`는 `/run/maru`를 재시작 사이에도 남긴다. 디렉터리가 새로 만들어지면 컨테이너 프록시의 바인드 마운트가 이전 디렉터리를 계속 가리켜 연결이 끊기기 때문이다. 제거(`--uninstall`)는 지우므로 다시 설치한 뒤 프록시 컨테이너를 다시 만들어야 한다(`docs/install.ko.md`의 "제거")
 - 생성하는 `/etc/default/maru`의 머리 주석 `# See README.md for every option.`(`setting.go`의 `MaruEnv`)은 README가 설정 문서(`docs/configuration.md`)로 이어 주므로 일부러 그대로 둔다. 바꾸면 골든(bash 출력과 같은 케이스 포함)이 바뀌고 기존 설치마다 업그레이드 때 `.bak`이 한 번 생긴다. 다음에 `MaruEnv`의 내용이 어차피 바뀔 때 `docs/configuration.md`로 바꾼다
 - 테스트는 root·sudo·실제 systemctl을 쓰지 않는다(가짜 루트와 명령 기록). 실제 설치는 사용자가 하거나 테스트 VM에서 확인한다
 - `ROADMAP.md`의 항목(도우미 추가 기준 경로 질문 등)은 요청하기 전에 구현하지 않는다. 설정 하나와 템플릿 한 줄로 더할 수 있는 구조만 유지한다

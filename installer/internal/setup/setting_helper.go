@@ -52,7 +52,7 @@ Without it, features that need it are unavailable. See docs/helper.md.`,
 			`권한 도우미(maru-helper)는 root로 도는 별도 서비스입니다.
 로그인한 사용자 자신의 Linux 계정 권한으로(예: 파일 접근), 그리고 관리자가 비밀번호를 다시 입력하면
 5분 동안 정해진 root 연산을 maru가 실행할 수 있게 합니다. 설치하지 않으면 그런 기능을 쓸 수 없습니다.
-docs/helper.md를 참고하세요.`),
+docs/helper.ko.md를 참고하세요.`),
 	},
 	Validate: func(c *Context, v string) error {
 		if v != "yes" && v != "no" {

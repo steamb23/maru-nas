@@ -222,7 +222,7 @@ func planNode(c *Context, p *config.UpgradePlan) error {
 	}
 	p.Manual = append(p.Manual, config.UpgradeReason{ID: config.UpgradeReasonNode, Text: L(
 		"Node.js "+found+" is installed but this version needs "+requireNode+"; update Node.js first (see docs/install.md)",
-		"Node.js "+found+"이(가) 설치되어 있지만 이 버전에는 "+requireNode+"이(가) 필요합니다. 먼저 Node.js를 업데이트하세요(docs/install.md 참고)").localized(),
+		"Node.js "+found+"이(가) 설치되어 있지만 이 버전에는 "+requireNode+"이(가) 필요합니다. 먼저 Node.js를 업데이트하세요(docs/install.ko.md 참고)").localized(),
 		Command: config.UpgradeCommandInstall})
 	return nil
 }

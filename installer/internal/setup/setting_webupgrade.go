@@ -65,7 +65,7 @@ See docs/upgrade.md.`,
 있습니다. root로 도는 서비스(maru-upgrade)가 이 저장소의 소유자 계정으로 git과 빌드를 실행한 뒤 새 버전을 root로
 설치합니다. 업그레이드에는 root 권한 상승(비밀번호 재입력)이 필요합니다.
 ./install.sh와 마찬가지로 이 저장소를 바꿀 수 있는 계정은 업그레이드를 통해 root로 코드를 실행할 수 있습니다.
-docs/upgrade.md를 참고하세요.`),
+docs/upgrade.ko.md를 참고하세요.`),
 	},
 	Validate: func(c *Context, v string) error {
 		switch v {
