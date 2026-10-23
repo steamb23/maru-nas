@@ -1,6 +1,6 @@
 # 권한 도우미(maru-helper)
 
-대시보드(`maru`)는 권한 없는 전용 사용자로 돌고 권한을 올릴 수 없다(`NoNewPrivileges=yes`). OMV RPC로 할 수 없는 일 중 로그인한 사용자 자신의 Linux 권한이 필요한 일(파일 탐색기의 파일 접근)과 root가 필요한 일(웹에서 가동 설정 바꾸기 등)은 root로 도는 별도 실행 파일 `maru-helper`가 맡는다. 사용자 대상 설명은 `docs/en/helper.md`.
+대시보드(`maru`)는 권한 없는 전용 사용자로 돌고 권한을 올릴 수 없다(`NoNewPrivileges=yes`). OMV RPC로 할 수 없는 일 중 로그인한 사용자 자신의 Linux 권한이 필요한 일(파일 탐색기의 파일 접근)과 root가 필요한 일(웹에서 가동 설정 바꾸기 등)은 root로 도는 별도 실행 파일 `maru-helper`가 맡는다. 사용자 대상 설명은 `docs/ko/helper.md`.
 
 ## 위협 모델
 
@@ -9,7 +9,7 @@
   1. 소켓 상대의 uid(`SO_PEERCRED`)가 maru 서비스 사용자(`-client-user`)인지
   2. 자기가 비밀번호를 직접 확인하고 발급한 티켓인지
   3. 자기가 `/etc/passwd`·`/etc/group`·`/etc/login.defs`에서 직접 읽은 계정·그룹
-- 남는 위험(`docs/en/helper.md`의 "Remaining risks"에도 적는다): maru가 뚫리면 그때 로그인한 사용자의 티켓을 쓸 수 있고, 그 뒤 입력되는 비밀번호를 가로챌 수 있다. root 연산은 상승한 티켓으로 5분 동안, 정해진 목록의 연산만 가능하다
+- 남는 위험(`docs/ko/helper.md`의 "남는 위험"에도 적는다): maru가 뚫리면 그때 로그인한 사용자의 티켓을 쓸 수 있고, 그 뒤 입력되는 비밀번호를 가로챌 수 있다. root 연산은 상승한 티켓으로 5분 동안, 정해진 목록의 연산만 가능하다
 - 대시보드에서 업그레이드(`upgrade.apply`, 아래 "대시보드에서 업그레이드")를 켜면 상승한 티켓으로 할 수 있는 일이 `id`에서 "설치된 저장소로 업그레이드"로 넓어진다. 업그레이드는 저장소에서 빌드한 코드를 root로 실행하므로 저장소 소유자 계정은 업그레이드로 root 코드를 실행할 수 있다(sudo로 `./install.sh`를 실행할 때와 같다). OMV 관리자는 원래 root와 같은 일을 할 수 있으므로 관리자에게 새로운 권한은 아니며, 끌 수 있는 선택 설정(`--no-web-upgrade`)이다
 - 디스크 휴지통 만들기(`trash.prepare`, 아래 "휴지통")는 상승한 티켓으로 `/srv` 아래 마운트 지점 맨 위에 1777(sticky) `.Trash` 폴더 하나만 만든다(경로는 받지 않고 디스크만 받는다). 그 디스크에서 모든 사용자가 자기 휴지통(`.Trash/<uid>`)을 만들 수 있게 되는 것뿐이고, sticky 비트 때문에 남의 휴지통 폴더는 지우거나 옮길 수 없다. OMV 관리자는 원래 root와 같은 일을 할 수 있으므로 새 권한은 아니다
 - 웹 터미널의 임시 SSH 키(`ssh.authorize`)는 새 권한이 아니다. 티켓을 가진 쪽은 원래 `fs.write`로 사용자 홈의 `~/.ssh/authorized_keys`를 쓸 수 있다. 그래도 키 줄은 worker가 직접 만들고(옵션을 maru가 정할 수 없다) ed25519 공개 키만 받는다
@@ -163,7 +163,7 @@ FreeDesktop 휴지통 규격을 trash-cli의 `trash-put`과 같은 곳·형식�
 
 1. 기능이 정말 OMV RPC로 안 되는지 먼저 확인한다(OMV 소스 `/usr/share/openmediavault/engined/rpc/`)
 2. `proto`에 연산 이름과 인자·결과 타입을 더하고 `proto.Actions[ScopeRoot]`에 넣는다. 임의 명령·셸·브라우저가 보낸 경로가 exec 인자로 가는 연산은 만들지 않는다. 인자는 worker가 허용 목록으로 검사하고 실행 인자는 직접 만든다
-3. `worker`에 구현하고, 필요한 권한만 유닛에 더한다(`CapabilityBoundingSet`, `ReadWritePaths` 등). 설치기의 유닛 템플릿(`installer/internal/setup/templates/maru-helper.service.tmpl`)과 골든도 함께 고치고, 사용자에게 보이는 연산이면 `docs/en/helper.md`의 root 권한 연산 목록("Root operations" 항목)에 더한다
+3. `worker`에 구현하고, 필요한 권한만 유닛에 더한다(`CapabilityBoundingSet`, `ReadWritePaths` 등). 설치기의 유닛 템플릿(`installer/internal/setup/templates/maru-helper.service.tmpl`)과 골든도 함께 고치고, 사용자에게 보이는 연산이면 `docs/ko/helper.md`의 "root 권한 연산" 항목에 더한다
 4. 감사 로그(`daemon.audit`)에 필요한 세부가 남는지 확인한다(root 범위는 인자의 경로를 남긴다)
 5. maru 쪽은 관리자 전용 API(`requireAdmin`)로 부르고, `elevation_required`(403)를 받은 화면은 `requestElevation`(`shell/elevationDialog.tsx`)으로 상승한 뒤 다시 시도한다
 6. 테스트: `proto.Allowed`의 범위 검사, worker 단위 테스트, 데몬의 상승 필요·그룹 재확인, 서버 테스트(helperfake)
