@@ -7,8 +7,10 @@ import (
 	"io"
 	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -22,10 +24,10 @@ import (
 // 처리하고(적용이 먼저), 진행과 결과는 상태 파일(config.UpgradeStatusFile)에 쓴다. 설계는 .claude/docs/upgrade.md,
 // 명령 실행·파일 처리는 upgrade_exec.go에 있다.
 //
-//   - 확인: 저장소 상태를 보고(원격이면 git fetch 뒤 추적 브랜치, 로컬이면 HEAD) 대상 커밋을 정한 뒤, 대상 커밋의 설치기만
-//     소유자로 임시 빌드해 --upgrade-plan을 실행한다. 저장소 코드는 root로 실행하지 않는다
-//   - 적용: 마지막 확인과 저장소 상태를 다시 확인하고, 입력한 설정 값을 새 버전의 계획으로 검사한 뒤 fast-forward(원격),
-//     소유자로 빌드, 새 설치기를 root로 --service-install --upgrade로 실행한다
+//   - 확인: 저장소 상태를 보고(원격이면 git fetch 뒤 추적 브랜치나 채널 브랜치, 로컬이면 HEAD) 대상 커밋을 정한 뒤, 대상
+//     커밋의 설치기만 소유자로 임시 빌드해 --upgrade-plan을 실행한다. 저장소 코드는 root로 실행하지 않는다
+//   - 적용: 마지막 확인과 저장소 상태를 다시 확인하고, 입력한 설정 값을 새 버전의 계획으로 검사한 뒤 fast-forward(원격.
+//     채널을 바꾸면 채널 브랜치로 옮긴다), 소유자로 빌드, 새 설치기를 root로 --service-install --upgrade로 실행한다
 //
 // 작업 실패는 상태 파일에 남기고 0으로 끝낸다(경로 유닛이 계속 지켜보게). 상태 파일을 쓰지 못하면 오류다.
 
@@ -149,11 +151,16 @@ func (s *upgradeService) runCheck(data []byte, rerr, cfgErr error) error {
 	}
 	var req config.UpgradeCheckRequest
 	if rerr != nil || json.Unmarshal(data, &req) != nil || req.Format != config.UpgradeRequestFormat ||
-		(req.Mode != config.UpgradeModeRemote && req.Mode != config.UpgradeModeLocal) {
+		(req.Mode != config.UpgradeModeRemote && req.Mode != config.UpgradeModeLocal) || !config.ValidUpgradeChannel(req.Channel) {
 		return s.finishFailed(config.UpgradeStateCheckFailed, uerr("the check request from the dashboard is not valid",
 			"대시보드의 확인 요청이 올바르지 않습니다"))
 	}
-	chk, err := s.check(req.Mode)
+	// 채널은 원격 확인만 따른다.
+	channel := req.Channel
+	if req.Mode == config.UpgradeModeLocal {
+		channel = config.UpgradeChannelCurrent
+	}
+	chk, err := s.check(req.Mode, channel)
 	if err != nil {
 		return s.finishFailed(config.UpgradeStateCheckFailed, err)
 	}
@@ -163,7 +170,8 @@ func (s *upgradeService) runCheck(data []byte, rerr, cfgErr error) error {
 }
 
 // check는 확인 하나다. 대시보드에서 업그레이드할 수 없는 상태는 수동 재설치 사유로 담고, 확인 자체를 못 하면 오류다.
-func (s *upgradeService) check(mode string) (*config.UpgradeCheck, error) {
+// channel은 원격 확인이 따를 채널이다(config.UpgradeChannel*, 빈 값이면 지금 브랜치의 추적 브랜치).
+func (s *upgradeService) check(mode, channel string) (*config.UpgradeCheck, error) {
 	chk := &config.UpgradeCheck{Mode: mode, Commits: []config.UpgradeCommit{}, Manual: []config.UpgradeReason{}}
 	reason := func(id string, t Text) {
 		chk.Manual = append(chk.Manual, config.UpgradeReason{ID: id, Text: t.localized(), Command: config.UpgradeCommandInstall})
@@ -203,13 +211,38 @@ func (s *upgradeService) check(mode string) (*config.UpgradeCheck, error) {
 		return nil, uerr("cannot read the current commit of the repository", "저장소의 지금 커밋을 읽을 수 없습니다")
 	}
 	chk.Head = head
+	branch, detached, err := s.currentBranch()
+	if err != nil {
+		return nil, uerr("cannot read the current branch of the repository", "저장소의 지금 브랜치를 읽을 수 없습니다")
+	}
+	chk.Branch = branch
+	s.status.Branch, s.status.Detached = branch, detached
 	target := head
-	if mode == config.UpgradeModeRemote {
+	switch {
+	case mode == config.UpgradeModeRemote && channel != config.UpgradeChannelCurrent:
+		// 채널 브랜치만 이름을 정해 가져온다(브랜치 하나만 받은 클론도 fetch 설정과 상관없이 받는다).
+		remote := config.UpgradeChannelRemote + "/" + channel
+		chk.Channel, chk.Upstream, chk.Switch = channel, remote, branch != channel
+		if err := s.stage(config.UpgradeStageFetch); err != nil {
+			return nil, err
+		}
+		refspec := "+refs/heads/" + channel + ":refs/remotes/" + remote
+		if err := s.run(cmdOpts{owner: true, dir: s.cfg.Repo, timeout: fetchTimeout}, "git", "-C", s.cfg.Repo, "fetch", config.UpgradeChannelRemote, refspec); err != nil {
+			return nil, uerr("git fetch of the "+channel+" branch from "+config.UpgradeChannelRemote+" failed. The repository owner's git settings and credentials are used without asking for passwords; check the network, that "+config.UpgradeChannelRemote+" has a "+channel+" branch, and that fetching works for that account without a prompt (see the log)",
+				config.UpgradeChannelRemote+"에서 "+channel+" 브랜치를 가져오지(git fetch) 못했습니다. 저장소 소유자 계정의 git 설정과 자격 증명을 비밀번호를 묻지 않고 씁니다. 네트워크와, "+config.UpgradeChannelRemote+"에 "+channel+" 브랜치가 있는지, 그 계정에서 묻는 것 없이 가져올 수 있는지 확인하세요(로그 참고)")
+		}
+		if err := s.stage(config.UpgradeStageInspect); err != nil {
+			return nil, err
+		}
+		if target, err = s.git("rev-parse", "--verify", "refs/remotes/"+remote+"^{commit}"); err != nil {
+			return nil, uerr("cannot read the commit of "+remote, remote+"의 커밋을 읽을 수 없습니다")
+		}
+	case mode == config.UpgradeModeRemote:
 		up, err := s.git("rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}")
 		if err != nil || up == "" {
 			reason(config.UpgradeReasonNoUpstream, L(
-				"the checkout has no upstream branch to fetch (a tag or a commit is checked out, or the branch tracks nothing). Use \"Check the local repository\" after updating it over SSH, or check out a branch such as stable",
-				"체크아웃에 가져올 추적 브랜치가 없습니다(태그나 커밋을 체크아웃했거나 브랜치가 아무것도 추적하지 않습니다). SSH로 저장소를 갱신한 뒤 \"로컬 저장소만 확인\"을 쓰거나 stable 같은 브랜치를 체크아웃하세요"))
+				"the checkout has no upstream branch to fetch (a tag or a commit is checked out, or the branch tracks nothing). Choose the stable or main update channel, or use \"Check the local repository\" after updating it over SSH",
+				"체크아웃에 가져올 추적 브랜치가 없습니다(태그나 커밋을 체크아웃했거나 브랜치가 아무것도 추적하지 않습니다). 업데이트 채널에서 stable이나 main을 고르거나, SSH로 저장소를 갱신한 뒤 \"로컬 저장소만 확인\"을 쓰세요"))
 			return done()
 		}
 		chk.Upstream = up
@@ -239,7 +272,19 @@ func (s *upgradeService) check(mode string) (*config.UpgradeCheck, error) {
 			"the work tree has uncommitted changes. Commit or discard them over SSH, then check again",
 			"작업 트리에 커밋하지 않은 변경이 있습니다. SSH로 커밋하거나 되돌린 뒤 다시 확인하세요"))
 	}
-	if mode == config.UpgradeModeRemote {
+	switch {
+	case chk.Switch:
+		// 채널 브랜치가 로컬에 이미 있으면 대상으로 옮기므로, 원격에 없는 커밋이 있으면 잃지 않게 멈춘다.
+		ok, err := s.branchContained(channel, target)
+		if err != nil {
+			return nil, err
+		}
+		if !ok {
+			reason(config.UpgradeReasonDiverged, L(
+				"the local "+channel+" branch has commits that are not on "+chk.Upstream+". Reconcile or delete it over SSH, then check again",
+				"로컬 "+channel+" 브랜치에 "+chk.Upstream+"에 없는 커밋이 있습니다. SSH로 정리하거나 지운 뒤 다시 확인하세요"))
+		}
+	case mode == config.UpgradeModeRemote:
 		ok, err := s.gitTest("merge-base", "--is-ancestor", head, target)
 		if err != nil {
 			return nil, err
@@ -271,6 +316,14 @@ func (s *upgradeService) check(mode string) (*config.UpgradeCheck, error) {
 	case rec.Revision == target:
 		chk.UpToDate = true
 		return done()
+	case chk.Switch:
+		// 채널을 바꿀 때는 설치된 커밋에서 이어지지 않는 대상(이전 버전)도 덮어써서 설치한다. 빠지는 커밋 수를 알린다.
+		if chk.Commits, chk.CommitsTruncated, err = s.commits(rec.Revision, target); err != nil {
+			return nil, err
+		}
+		if chk.Dropped, err = s.countCommits(target, rec.Revision); err != nil {
+			return nil, err
+		}
 	default:
 		ok, err := s.gitTest("merge-base", "--is-ancestor", rec.Revision, target)
 		if err != nil {
@@ -365,6 +418,38 @@ func (s *upgradeService) prepareSSH() {
 func (s *upgradeService) dirty() (bool, error) {
 	out, err := s.git("status", "--porcelain", "--untracked-files=no")
 	return out != "", err
+}
+
+// currentBranch는 체크아웃한 브랜치 이름이다. 브랜치가 아닌 체크아웃(태그·커밋)이면 빈 값과 detached다.
+func (s *upgradeService) currentBranch() (branch string, detached bool, err error) {
+	out, err := s.git("symbolic-ref", "--quiet", "--short", "HEAD")
+	var ee *exec.ExitError
+	switch {
+	case err == nil:
+		return clip(out, 200), false, nil
+	case errors.As(err, &ee) && ee.ExitCode() == 1:
+		return "", true, nil
+	}
+	return "", false, err
+}
+
+// branchContained는 로컬 브랜치 name이 없거나 target에 포함되는지다(그 브랜치를 target으로 옮겨도 커밋을 잃지 않는다).
+func (s *upgradeService) branchContained(name, target string) (bool, error) {
+	ref := "refs/heads/" + name
+	exists, err := s.gitTest("rev-parse", "--verify", "--quiet", ref+"^{commit}")
+	if err != nil || !exists {
+		return err == nil, err
+	}
+	return s.gitTest("merge-base", "--is-ancestor", ref, target)
+}
+
+// countCommits는 from..to의 커밋 수다.
+func (s *upgradeService) countCommits(from, to string) (int, error) {
+	out, err := s.git("rev-list", "--count", from+".."+to, "--")
+	if err != nil {
+		return 0, err
+	}
+	return strconv.Atoi(out)
 }
 
 // commits는 from..to의 커밋이다(새것부터, 최대 config.MaxUpgradeCommits개).
@@ -532,14 +617,26 @@ func (s *upgradeService) apply(prev config.UpgradeStatus, req config.UpgradeAppl
 			return "", moved
 		}
 	case config.UpgradeModeRemote:
-		if ok, err := s.gitTest("merge-base", "--is-ancestor", head, req.Target); err != nil || !ok {
+		if chk.Switch {
+			// 채널을 바꾸는 적용은 확인한 체크아웃(브랜치와 HEAD) 그대로일 때만 진행한다.
+			branch, _, err := s.currentBranch()
+			if err != nil || head != chk.Head || branch != chk.Branch || chk.Channel == config.UpgradeChannelCurrent || !config.ValidUpgradeChannel(chk.Channel) {
+				return "", moved
+			}
+			if ok, err := s.branchContained(chk.Channel, req.Target); err != nil || !ok {
+				return "", moved
+			}
+		} else if ok, err := s.gitTest("merge-base", "--is-ancestor", head, req.Target); err != nil || !ok {
 			return "", moved
 		}
 	default:
 		return "", moved
 	}
-	if ok, err := s.gitTest("merge-base", "--is-ancestor", rec.Revision, req.Target); err != nil || !ok {
-		return "", moved
+	// 채널을 바꾸는 적용은 이전 버전도 덮어써서 설치한다. 그 밖에는 설치된 커밋에서 이어져야 한다.
+	if !chk.Switch {
+		if ok, err := s.gitTest("merge-base", "--is-ancestor", rec.Revision, req.Target); err != nil || !ok {
+			return "", moved
+		}
 	}
 
 	// 설정 값은 빌드하기 전에 새 버전의 검사로 확인한다.
@@ -569,17 +666,43 @@ func (s *upgradeService) apply(prev config.UpgradeStatus, req config.UpgradeAppl
 	if err := s.stage(config.UpgradeStageUpdate); err != nil {
 		return "", err
 	}
-	if head != req.Target {
-		if err := s.run(cmdOpts{owner: true, dir: s.cfg.Repo, timeout: fetchTimeout}, "git", "-C", s.cfg.Repo, "merge", "--ff-only", "--quiet", req.Target); err != nil {
+	repoCmd := cmdOpts{owner: true, dir: s.cfg.Repo, timeout: fetchTimeout}
+	switch {
+	case chk.Switch:
+		// 채널 브랜치를 대상 커밋으로 만들거나 옮겨 체크아웃하고, 원격의 채널 브랜치를 추적하게 한다.
+		remote := config.UpgradeChannelRemote + "/" + chk.Channel
+		if err := s.run(repoCmd, "git", "-C", s.cfg.Repo, "checkout", "--quiet", "-B", chk.Channel, req.Target); err != nil {
+			return "", uerr("cannot switch the repository to the "+chk.Channel+" branch (see the log)", "저장소를 "+chk.Channel+" 브랜치로 바꿀 수 없습니다(로그 참고)")
+		}
+		track := func() error {
+			return s.run(repoCmd, "git", "-C", s.cfg.Repo, "branch", "--quiet", "--set-upstream-to="+remote, chk.Channel)
+		}
+		if err := track(); err != nil {
+			// 브랜치 하나만 받은 클론(--single-branch, --depth)은 원격의 fetch 설정에 채널 브랜치가 없어 추적할 수 없다.
+			// 그 브랜치도 가져오도록 더한 뒤 다시 한다.
+			fmt.Fprintf(s.log, "note: %s does not fetch the %s branch; adding it to the fetch refspecs\n", config.UpgradeChannelRemote, chk.Channel)
+			if err = s.run(repoCmd, "git", "-C", s.cfg.Repo, "remote", "set-branches", "--add", config.UpgradeChannelRemote, chk.Channel); err == nil {
+				err = track()
+			}
+			if err != nil {
+				return "", uerr("cannot make the "+chk.Channel+" branch track "+remote+" (see the log)", chk.Channel+" 브랜치가 "+remote+"을(를) 추적하게 할 수 없습니다(로그 참고)")
+			}
+		}
+	case head != req.Target:
+		if err := s.run(repoCmd, "git", "-C", s.cfg.Repo, "merge", "--ff-only", "--quiet", req.Target); err != nil {
 			return "", uerr("cannot fast-forward the repository to "+req.Target+" (see the log)", "저장소를 "+req.Target+"(으)로 fast-forward할 수 없습니다(로그 참고)")
 		}
 	}
 	// fast-forward는 서브모듈(아이콘)을 옮기지 않는다. 옮긴 커밋이 가리키는 서브모듈로 맞춘다.
-	if err := s.run(cmdOpts{owner: true, dir: s.cfg.Repo, timeout: fetchTimeout}, "git", "-C", s.cfg.Repo, "submodule", "update", "--init", "--depth", "1"); err != nil {
+	if err := s.run(repoCmd, "git", "-C", s.cfg.Repo, "submodule", "update", "--init", "--depth", "1"); err != nil {
 		return "", uerr("cannot update the git submodules (see the log)", "git 서브모듈을 갱신할 수 없습니다(로그 참고)")
 	}
 	if head, err = s.git("rev-parse", "--verify", "HEAD^{commit}"); err != nil || head != req.Target {
 		return "", moved
+	}
+	// 화면이 지금 브랜치를 보이도록 다음 단계에서 상태 파일에 함께 쓴다.
+	if branch, detached, err := s.currentBranch(); err == nil {
+		s.status.Branch, s.status.Detached = branch, detached
 	}
 
 	if err := s.stage(config.UpgradeStageBuild); err != nil {

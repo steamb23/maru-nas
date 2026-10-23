@@ -226,7 +226,12 @@ func (f *serviceFixture) record(rev, version string) {
 
 func (f *serviceFixture) requestCheck(mode string) {
 	f.t.Helper()
-	data, _ := json.Marshal(config.UpgradeCheckRequest{Format: config.UpgradeRequestFormat, Mode: mode})
+	f.requestChannelCheck(mode, config.UpgradeChannelCurrent)
+}
+
+func (f *serviceFixture) requestChannelCheck(mode, channel string) {
+	f.t.Helper()
+	data, _ := json.Marshal(config.UpgradeCheckRequest{Format: config.UpgradeRequestFormat, Mode: mode, Channel: channel})
 	f.put(upgradeCheckRequest, string(data), 0o644)
 }
 
@@ -357,6 +362,109 @@ func TestUpgradeServiceRemote(t *testing.T) {
 	f.requestApply(f.revB, map[string]string{"public-origin": "https://desk.example.lan"})
 	if st = f.serve(); st.State != config.UpgradeStateApplyFailed || !strings.Contains(errorText(st), "Check again") {
 		t.Errorf("second apply %+v %q", st, errorText(st))
+	}
+}
+
+// 업데이트 채널: 채널을 고른 원격 확인은 origin의 그 브랜치를 이름으로 가져와(클론의 fetch 설정과 상관없이) 대상으로
+// 삼는다. 지금 브랜치와 다르면 업그레이드할 때 저장소를 채널 브랜치로 옮기고, 이전 버전이어도 덮어써서 설치한다.
+func TestUpgradeServiceChannel(t *testing.T) {
+	f := newServiceFixture(t)
+	f.git(f.seed, "push", "-q", "origin", f.revA+":refs/heads/stable")
+	f.git(f.work, "config", "remote.origin.fetch", "+refs/heads/main:refs/remotes/origin/main")
+	good := map[string]string{"public-origin": "https://desk.example.lan"}
+	check := func(channel string) config.UpgradeStatus {
+		t.Helper()
+		f.requestChannelCheck(config.UpgradeModeRemote, channel)
+		st := f.serve()
+		if st.State != config.UpgradeStateChecked || st.Check == nil {
+			t.Fatalf("check %q: %+v %q\n%s", channel, st, errorText(st), f.out.String())
+		}
+		return st
+	}
+	apply := func(target string) config.UpgradeStatus {
+		t.Helper()
+		f.requestApply(target, good)
+		st := f.serve()
+		if st.State != config.UpgradeStateApplied {
+			t.Fatalf("apply %s: %+v %q\n%s", target, st, errorText(st), f.out.String())
+		}
+		return st
+	}
+	branchOf := func() string { return f.git(f.work, "rev-parse", "--abbrev-ref", "HEAD") }
+
+	// main(A)에서 stable 채널: 설치된 A와 같아 최신이고, 브랜치는 그대로 둔다.
+	st := check(config.UpgradeChannelStable)
+	if chk := st.Check; chk.Channel != config.UpgradeChannelStable || chk.Upstream != "origin/stable" || chk.Branch != "main" ||
+		!chk.Switch || !chk.UpToDate || chk.Web || st.Branch != "main" || st.Detached {
+		t.Errorf("stable at the installed commit: %+v (status branch %q)", chk, st.Branch)
+	}
+	// main 채널은 지금 브랜치라 옮기지 않고 fast-forward한다.
+	st = check(config.UpgradeChannelMain)
+	if chk := st.Check; chk.Switch || chk.Target != f.revB || !chk.Web || chk.Dropped != 0 || len(chk.Commits) != 1 {
+		t.Errorf("main: %+v", chk)
+	}
+	if st = apply(f.revB); st.Branch != "main" || branchOf() != "main" {
+		t.Errorf("after main: status branch %q, work tree on %s", st.Branch, branchOf())
+	}
+
+	// main(B)에서 stable(A): 이전 버전이지만 채널을 바꾸므로 덮어써서 설치한다.
+	st = check(config.UpgradeChannelStable)
+	if chk := st.Check; !chk.Switch || chk.Target != f.revA || chk.Dropped != 1 || len(chk.Commits) != 0 || !chk.Web || len(chk.Manual) != 0 {
+		t.Errorf("stable from main: %+v", chk)
+	}
+	st = apply(f.revA)
+	if st.Apply.Version != "0.9.0" || st.Branch != "stable" || st.Detached || branchOf() != "stable" {
+		t.Errorf("after stable: %+v branch %q, work tree on %s", st.Apply, st.Branch, branchOf())
+	}
+	if up := f.git(f.work, "rev-parse", "--abbrev-ref", "stable@{upstream}"); up != "origin/stable" {
+		t.Errorf("stable tracks %q", up)
+	}
+	if head := f.git(f.work, "rev-parse", "HEAD"); head != f.revA {
+		t.Errorf("work tree at %s, want %s", head, f.revA)
+	}
+
+	// stable(A)에서 다시 main(B): 로컬 main은 B까지라 옮겨도 잃는 커밋이 없다.
+	st = check(config.UpgradeChannelMain)
+	if chk := st.Check; !chk.Switch || chk.Branch != "stable" || chk.Target != f.revB || chk.Dropped != 0 || len(chk.Commits) != 1 || !chk.Web {
+		t.Errorf("main from stable: %+v", chk)
+	}
+	// 확인한 뒤 브랜치가 바뀌면 옮기지 않는다.
+	f.git(f.work, "checkout", "-q", "-b", "other")
+	f.requestApply(f.revB, good)
+	if st = f.serve(); st.State != config.UpgradeStateApplyFailed || !strings.Contains(errorText(st), "repository changed") || branchOf() != "other" {
+		t.Errorf("branch changed: %s %q on %s", st.State, errorText(st), branchOf())
+	}
+	f.git(f.work, "checkout", "-q", "stable")
+	check(config.UpgradeChannelMain)
+	if st = apply(f.revB); st.Branch != "main" || branchOf() != "main" {
+		t.Errorf("after main again: status branch %q, work tree on %s", st.Branch, branchOf())
+	}
+
+	// 로컬 stable 브랜치에 원격에 없는 커밋이 있으면 덮어쓰지 않는다.
+	f.git(f.work, "checkout", "-q", "stable")
+	f.write(f.work, "backend/README", "local\n")
+	f.git(f.work, "commit", "-q", "-am", "local")
+	f.git(f.work, "checkout", "-q", "main")
+	if chk := check(config.UpgradeChannelStable).Check; chk.Web || !slices.Equal(reasonIDs(chk.Manual), []string{config.UpgradeReasonDiverged}) {
+		t.Errorf("local stable commits: %+v", chk.Manual)
+	}
+
+	// 브랜치가 아닌 체크아웃(태그·커밋)도 채널 브랜치로 옮길 수 있다. 지금 브랜치를 따르면 추적 브랜치가 없다.
+	f.git(f.work, "branch", "-q", "-D", "stable")
+	f.git(f.work, "checkout", "-q", "--detach", f.revB)
+	st = check(config.UpgradeChannelStable)
+	if chk := st.Check; chk.Branch != "" || !st.Detached || st.Branch != "" || !chk.Switch || chk.Target != f.revA || chk.Dropped != 1 || !chk.Web {
+		t.Errorf("detached: %+v (status branch %q detached %t)", chk, st.Branch, st.Detached)
+	}
+	if chk := check(config.UpgradeChannelCurrent).Check; !slices.Equal(reasonIDs(chk.Manual), []string{config.UpgradeReasonNoUpstream}) || chk.Channel != "" {
+		t.Errorf("detached without a channel: %+v", chk)
+	}
+
+	// origin에 없는 채널 브랜치는 가져오지 못한다.
+	f.git(f.seed, "push", "-q", "origin", ":refs/heads/stable")
+	f.requestChannelCheck(config.UpgradeModeRemote, config.UpgradeChannelStable)
+	if st = f.serve(); st.State != config.UpgradeStateCheckFailed || !strings.Contains(errorText(st), "has a stable branch") {
+		t.Errorf("missing channel branch: %s %q", st.State, errorText(st))
 	}
 }
 
@@ -496,6 +604,10 @@ func TestUpgradeServiceRequests(t *testing.T) {
 	f.requestCheck("sideways")
 	if st := f.serve(); st.State != config.UpgradeStateCheckFailed || !strings.Contains(errorText(st), "check request from the dashboard is not valid") {
 		t.Errorf("bad mode %+v %q", st, errorText(st))
+	}
+	f.requestChannelCheck(config.UpgradeModeRemote, "refs/heads/x")
+	if st := f.serve(); st.State != config.UpgradeStateCheckFailed || !strings.Contains(errorText(st), "check request from the dashboard is not valid") {
+		t.Errorf("bad channel %+v %q", st, errorText(st))
 	}
 	secret := filepath.Join(f.root, "secret")
 	f.put("/secret", `{"format":1,"mode":"local"}`, 0o600)

@@ -267,12 +267,32 @@ export const UpgradeModeRemote = "remote";
  */
 export const UpgradeModeLocal = "local";
 /**
+ * UpgradeChannelCurrent(빈 값)는 지금 브랜치의 추적 브랜치를 따른다(채널을 고르지 않은 설치).
+ */
+export const UpgradeChannelCurrent = "";
+/**
+ * UpgradeChannelStable은 릴리스 브랜치 stable을 따른다.
+ */
+export const UpgradeChannelStable = "stable";
+/**
+ * UpgradeChannelMain은 개발 브랜치 main을 따른다.
+ */
+export const UpgradeChannelMain = "main";
+/**
+ * UpgradeChannelRemote는 채널 브랜치를 가져오는 원격 저장소 이름이다(클론한 저장소).
+ */
+export const UpgradeChannelRemote = "origin";
+/**
  * UpgradeCheckRequest는 maru가 자기 상태 디렉터리에 남기는 확인 요청이다(UpgradeCheckRequestName). 업그레이드
- * 서비스는 이 파일을 믿지 않고 확인 방식만 읽는다.
+ * 서비스는 이 파일을 믿지 않고 확인 방식과 채널(정한 값 중 하나)만 읽는다.
  */
 export interface UpgradeCheckRequest {
   format: number /* int */;
   mode: string;
+  /**
+   * Channel은 원격 확인이 따라갈 채널이다(UpgradeChannel*). 로컬 확인에서는 쓰지 않는다.
+   */
+  channel?: '' | 'stable' | 'main';
 }
 /**
  * UpgradeApplyRequest는 도우미의 root 연산 upgrade.apply가 UpgradeRequestDir에 쓰는 적용 요청이다.
@@ -373,7 +393,8 @@ export const UpgradeReasonGo = "go";
  */
 export const UpgradeReasonNoUpstream = "no-upstream";
 /**
- * UpgradeReasonDiverged: 원격 확인인데 지금 체크아웃에서 추적 브랜치로 fast-forward할 수 없다(로컬 커밋).
+ * UpgradeReasonDiverged: 원격 확인인데 지금 체크아웃에서 추적 브랜치로 fast-forward할 수 없다(로컬 커밋). 채널을
+ * 바꿀 때는 그 채널의 로컬 브랜치에 원격에 없는 커밋이 있다.
  */
 export const UpgradeReasonDiverged = "diverged";
 /**
@@ -385,7 +406,8 @@ export const UpgradeReasonDirty = "dirty";
  */
 export const UpgradeReasonCommitMissing = "commit-missing";
 /**
- * UpgradeReasonNotDescendant: 대상이 설치된 커밋에서 이어진 커밋이 아니다(되돌아가는 설치).
+ * UpgradeReasonNotDescendant: 대상이 설치된 커밋에서 이어진 커밋이 아니다(되돌아가는 설치). 채널을 바꾸는 원격
+ * 확인은 덮어써서 설치하므로 이 사유를 쓰지 않는다(UpgradeCheck.Switch).
  */
 export const UpgradeReasonNotDescendant = "not-descendant";
 /**
@@ -418,6 +440,12 @@ export interface UpgradeStatus {
    * Error는 마지막 확인·적용이 실패한 이유다. 성공하면 null이다.
    */
   error?: UpgradeError;
+  /**
+   * Branch는 업그레이드 서비스가 마지막으로 본 저장소의 브랜치다(확인할 때, 적용이 저장소를 갱신한 뒤에 쓴다).
+   * Detached면 브랜치가 아닌 체크아웃(태그·커밋)이다. 둘 다 비었으면 모른다(아직 보지 않았거나 이전 서비스).
+   */
+  branch?: string;
+  detached?: boolean;
 }
 /**
  * UpgradeCheck는 확인 결과다.
@@ -425,17 +453,34 @@ export interface UpgradeStatus {
 export interface UpgradeCheck {
   mode: string;
   /**
+   * Channel은 원격 확인이 따른 채널이다(UpgradeChannel*). 지금 브랜치를 따른 원격 확인과 로컬 확인은 빈 값이다.
+   */
+  channel?: '' | 'stable' | 'main';
+  /**
    * CheckedAt은 확인을 마친 시각(RFC 3339, UTC)이다.
    */
   checkedAt: string;
   /**
-   * Upstream은 원격 확인의 추적 브랜치(예: origin/stable)다.
+   * Upstream은 원격 확인의 추적 브랜치(예: origin/stable)다. 채널을 따르면 그 채널의 원격 브랜치다.
    */
   upstream?: string;
   /**
    * Head는 확인할 때의 저장소 HEAD 커밋이다.
    */
   head: string;
+  /**
+   * Branch는 확인할 때 체크아웃한 브랜치다. 브랜치가 아니면(태그·커밋) 빈 값이다.
+   */
+  branch?: string;
+  /**
+   * Switch는 업그레이드하면 저장소를 채널 브랜치로 바꾼다는 뜻이다(Channel이 있고 Branch와 다르다). 이때는 대상이
+   * 설치된 커밋에서 이어지지 않아도(이전 버전이어도) 덮어써서 설치한다.
+   */
+  switch?: boolean;
+  /**
+   * Dropped는 설치된 커밋에는 있지만 대상에는 없는 커밋 수다(Switch로 이전 버전을 덮어쓸 때).
+   */
+  dropped?: number /* int */;
   /**
    * Target은 대상 커밋이다. 정하지 못했으면(추적 브랜치 없음 등) 빈 값이다.
    */
