@@ -1,7 +1,5 @@
 # Maru NAS documentation
 
-한국어: [마루 NAS 문서](README.ko.md)
-
 Maru NAS is a desktop-like web dashboard that runs on OpenMediaVault 8. If you are installing it for the first time, follow the [quick start](https://github.com/steamb23/maru-nas#quick-start) in the repository README. These pages cover what you look up while running it after installation.
 
 ## Installation and operation

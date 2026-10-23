@@ -1,7 +1,5 @@
 # Reverse proxy
 
-한국어: [리버스 프록시](reverse-proxy.ko.md)
-
 The dashboard listens only on a loopback address or a Unix socket, and a reverse proxy in front of it handles HTTPS. The install script does not configure the proxy. The examples below use Caddy, and any other proxy works if it meets the [proxy requirements](#proxy-requirements).
 
 The proxy configuration decides the host and path of the dashboard. You can put it at the root of its own subdomain, or under a path prefix (for example `/desk/`) on the same domain as OMV.

@@ -1,7 +1,5 @@
 # File explorer
 
-한국어: [파일 탐색기](files.ko.md)
-
 "Files" in "All apps" and on the desktop is a window for browsing your home folder and the OMV shared folders. Signing in once with your OMV account shows every shared folder with your own file system permissions.
 
 Files are handled by the [privileged helper](helper.md) with the signed-in user's permissions, so if the helper is not installed, the window explains why when it opens and cannot be used. Administrators can put a check in front of the file explorer with the [security hardening mode](security.md).

@@ -1,7 +1,5 @@
 # Configuration
 
-한국어: [설정](configuration.ko.md)
-
 After installation, Maru NAS is configured with environment variables in `/etc/default/maru` or with command-line flags. After changing a value, restart it with `sudo systemctl restart maru`. Values the installer asks for are safer to change with `./install.sh --reinstall` ([Changing settings](install.md#changing-settings)).
 
 Administrators can see the values in use and where each one comes from (default, environment variable, command-line flag) on the "Server" page of the [Settings app](settings-app.md).

@@ -1,7 +1,5 @@
 # Security hardening mode
 
-한국어: [보안 강화 모드](security.ko.md)
-
 Security-sensitive features such as the web terminal, root elevation and the file explorer can be limited to sessions that have passed one more check. The goal is that a browser left open, a stolen session cookie or a leaked password alone is not enough to use those features. It is off by default.
 
 ## Security policy

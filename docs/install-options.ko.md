@@ -1,7 +1,5 @@
 # 설치 옵션
 
-English: [Install options](install-options.md)
-
 `./install.sh`의 옵션입니다. 옵션 없이 실행하면 처음에는 설정을 묻고 설치하며, 이미 설치되어 있으면 설치된 설정으로 업그레이드합니다. 흐름은 [설치](install.ko.md), 업그레이드할 때의 동작은 [업그레이드](upgrade.ko.md)에 있습니다.
 
 ## 설치 방식

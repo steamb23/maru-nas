@@ -1,7 +1,5 @@
 # Privileged helper
 
-한국어: [권한 도우미](helper.ko.md)
-
 The privileged helper (`maru-helper`) is a separate service that runs as root. The dashboard itself runs as a dedicated unprivileged user and cannot raise its privileges, so the following work goes through the helper.
 
 - **User operations**: read and write files as the signed-in user's own Linux account (uid, primary group, supplementary groups). The kernel decides from ownership and ACLs what can actually be opened, so the same permissions apply as over SSH. Only that user's home directory and the data disks mounted under `/srv` are in scope. The [file explorer](files.md) uses these, and the one-time SSH key of the [web terminal](terminal.md) is also added and removed with these rights.

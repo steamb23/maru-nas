@@ -1,7 +1,5 @@
 # Passkey sign-in
 
-한국어: [패스키로 로그인](passkey-login.ko.md)
-
 Sign in with a registered passkey instead of typing your password. It is turned on per browser and works regardless of the levels in the [security policy](security.md#security-policy).
 
 ## Requirements
