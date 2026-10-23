@@ -284,9 +284,6 @@ func errorText(st config.UpgradeStatus) string {
 	return st.Error.Text.En
 }
 
-// 원격 확인: 소유자로 git fetch를 하고 추적 브랜치(origin/main = B)를 대상으로 정한다. 대상 커밋의 설치기만 임시로 빌드해
-// 계획을 받고 작업 트리는 그대로 둔다. 적용: 답한 설정 값을 새 버전으로 검사한 뒤 fast-forward, 빌드, 새 설치기를
-// --service-install --upgrade로 실행한다.
 func TestParseID(t *testing.T) {
 	for s, want := range map[string]int{"0": 0, "1000": 1000, "2147483647": 2147483647} {
 		if got, err := parseID(s); err != nil || got != want {
@@ -301,6 +298,9 @@ func TestParseID(t *testing.T) {
 	}
 }
 
+// 원격 확인: 소유자로 git fetch를 하고 추적 브랜치(origin/main = B)를 대상으로 정한다. 대상 커밋의 설치기만 임시로 빌드해
+// 계획을 받고 작업 트리는 그대로 둔다. 적용: 답한 설정 값을 새 버전으로 검사한 뒤 fast-forward, 빌드, 새 설치기를
+// --service-install --upgrade로 실행한다.
 func TestUpgradeServiceRemote(t *testing.T) {
 	f := newServiceFixture(t)
 	f.requestCheck(config.UpgradeModeRemote)
