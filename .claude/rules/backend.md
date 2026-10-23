@@ -13,7 +13,7 @@ paths:
 - `-workbench-url`(`MARU_WORKBENCH_URL`, 기본 빈 값)은 브라우저가 OMV 웹 UI를 열 주소다. 백엔드는 접속하지 않고 `/api/capabilities`로 알려 주기만 한다. http(s) URL 또는 `/`·`./`·`../`로 시작하는 경로만 받고, scheme 없는 호스트 이름·query·fragment는 거부한다(`config.CheckWorkbenchURL`. 설정 앱에서 덮어쓰는 값과 설치기의 입력도 같은 함수로 검사한다)
 - `backend/config`는 백엔드와 설치기(별도 모듈 `installer/`)가 함께 쓰는 공개 패키지다. 마루 NAS 버전(`Version`), 대시보드에서 업그레이드의 파일 형식(`upgrade.go`, `upgrade_request.go`. tygo가 `frontend/src/api/upgrade.gen.ts`로 내보낸다)과 서비스 상수(`upgrade_service.go`, 내보내지 않음), 환경 변수 키·기본값 상수와 설정 검사 함수(`CheckListen`, `CheckOMVURL`, `CheckHelperSocket`, `CheckWorkbenchURL`, `ParseRefreshAt`, `ParsePublicOrigin`, `ValidGroupName`)를 둔다. 플래그 정의와 `runtimeEntry` 목록은 이 상수를 쓴다. 표준 라이브러리만 쓰고 `backend/internal`을 import하지 않는다(`TestStandardLibraryOnly`). 여기서 규칙을 바꾸면 설치기에도 그대로 적용되므로 설치기 테스트도 돌린다(`.claude/rules/installer.md`)
 - 대시보드 설정은 `internal/prefs`가 상태 디렉터리(`-state-dir`, `MARU_STATE_DIR`, 없으면 systemd의 `STATE_DIRECTORY`)에 저장한다: 사용자별 JSON(`users/`, `Store`), 전역 설정(`site.json`, `SiteStore`), 배경 이미지(`images/`, `ImageStore`), 보안 강화 모드의 수단 기록(`security/`, `security.Store`. 읽을 수 없는 파일은 `.corrupt`로 옮기지 않고 오류로 돌려준다, `.claude/rules/security.md`). 비우면 메모리에만 둔다. 대시보드 자신의 상태만 두며 OMV 설정이나 시스템 파일은 쓰지 않는다. `make dev`는 `.dev-state/real`, `make dev-fake`는 `.dev-state/fake`를 쓴다(커밋 안 함). git 워크트리에서 실행하거나 `BRANCH=<브랜치>`로 워크트리를 골라도 주 체크아웃의 `.dev-state`를 쓰므로, 상태 형식(`version`)을 바꾸는 브랜치이거나 주 체크아웃과 개발 서버를 동시에 띄울 때는 `MARU_STATE_DIR`로 따로 둔다
-  - 설정 변경 API는 부분별로 둔다(`PUT /api/preferences/widgets`, `…/shortcuts`, `…/drawer`, `…/system-info`, `…/files`(파일 탐색기 보기), `…/appearance`, 전역은 `PUT /api/site/login`, `…/defaults`, `…/server`, `…/security`, 업데이트 채널은 `PUT /api/upgrade/channel`). 서로 덮어쓰지 않게 하며, 저장소는 설정 파일을 읽고 쓰는 동안 잠가 한쪽 저장이 다른 쪽을 지우지 않게 한다
+  - 설정 변경 API는 부분별로 둔다(`PUT /api/preferences/widgets`, `…/shortcuts`, `…/drawer`, `…/system-info`, `…/files`(파일 탐색기 보기), `…/notifications`(알림 읽음 상태), `…/appearance`, 전역은 `PUT /api/site/login`, `…/defaults`, `…/server`, `…/security`, 업데이트 채널은 `PUT /api/upgrade/channel`). 서로 덮어쓰지 않게 하며, 저장소는 설정 파일을 읽고 쓰는 동안 잠가 한쪽 저장이 다른 쪽을 지우지 않게 한다
 - 전역 설정 쓰기(`/api/site/*`)는 `requireAdmin`(관리자가 아니면 403 `admin_required`)을 거친다. 로그인 화면이 쓰는 `GET /api/site`(화면 꾸밈 정보만, 가동 설정·주소는 넣지 않음)와 로그인 배경 이미지만 인증 없이 준다
 - 배경 이미지는 자리(`prefs.SiteImage`, `prefs.UserWallpaper`)마다 하나다. 올리기는 원시 이미지 본문(`image/png|jpeg|webp`, 20MiB 이하, multipart 아님)이고 형식은 내용으로 다시 판별해 저장한다(SVG·HTML 거부). 보낼 때는 `serveImage`로 저장 형식, `nosniff`, `Content-Security-Policy: default-src 'none'; sandbox`, ETag(내용 해시 리비전)를 붙인다. 이미지를 지우면 그 이미지를 가리키던 배경 서술자도 지운다
 - 웹에서 덮어쓰는 가동 설정은 재시작 없이 바뀌는 워크벤치 주소, SMART 확인 시각, 웹 터미널 허용(`-terminal`, 값은 `"true"`·`"false"` 문자열)뿐이다. 덮어쓴 값은 `site.json`에 두고 `handler.over`에 올려 바로 반영한다(`/api/capabilities`, `smart.Cache.SetRefreshAt`). 가동 설정 현황(값·출처)은 `main.go`가 `flag.Visit`·환경 변수로 만들어 `Config.Runtime`으로 넘긴다. 플래그를 더하면 그 목록에도 넣는다
@@ -35,6 +35,17 @@ paths:
 - `Smart.getList`는 대기 중인 디스크를 깨운다. 주기적으로 부르지 말고 `smart.Cache`를 거친다(온도는 `Peek`만)
 - OMV가 매번 프로세스를 실행하는 느린 읽기 RPC(`Services.getStatus`, `Compose.getContainers`)는 `addons.SharedCache`로 세션 사이에 짧게(5초) 함께 쓴다. 결과가 사용자와 무관한 RPC에만 쓰고, `Request.Refresh`면 건너뛰며, 상태를 바꾸는 조작은 끝난 뒤(실패해도) `Invalidate`한다
 - `/proc`·`/sys`를 읽는 코드는 파서(`io.Reader` 입력)와 읽기(`fs.FS` 주입)를 나눠 `testdata/`의 합성 픽스처로 테스트한다(`internal/addons/sysinfo` 참고)
+
+## 알림
+
+화면 쪽은 `.claude/rules/frontend-shell.md`의 "알림", 나중에 붙일 출처는 `.claude/docs/roadmap.md`의 "알림".
+
+- 서버 알림은 `internal/notify`가 출처(`Source`: `Name`, `Admin`, `Collect`)를 모아 만든다. `Center`는 결과를 모든 세션이 함께 쓰도록 30초 보관하고, 지난 뒤 처음 묻는 요청에서 다시 읽는다(`addons.Detector`와 같은 지연 캐시이며 고루틴이 없다. 서버 백그라운드 작업이 아니다). 읽지 못한 출처는 직전 결과를 유지한다. 수집은 요청이 끊겨도 끝까지 하고(`context.WithoutCancel`) 출처마다 5초 제한이다
+  - 출처가 준 알림은 형식을 검사해 맞지 않으면 버린다: id(`ValidID`), 리비전(`ValidRevision`), 수준, 코드(`knownCodes`, `api.Notice.Code`의 tstype과 같아야 한다. `TestCodesMatchTSType`), RFC 3339 `since`, 동작(`app`은 앱·페이지 id 형식, `workbench`는 앞 슬래시 없는 라우트, `power`는 값 없음). 다른 출처와 겹치는 id는 앞 출처의 것을 남기고, 출처마다 20개·`items` 20개까지 둔다
+  - 리비전은 내용이 바뀔 때만 달라져야 한다(`Revision`: 정렬한 조각의 해시). 파일 수정 시각을 쓰지 않는다(내용이 같아도 매일 다시 쓰는 파일이 있다)
+  - 운영 출처는 아직 없다(`main.go`의 `notify.New()`). 출처를 더할 때는 문구 키(프론트 `notifications/messages.ts`)와 코드 유니온을 함께 더한다. 직접 읽는 출처는 `/proc`·`/sys`처럼 파서와 `fs.FS` 읽기를 나눈다
+- `GET /api/notifications`(`requireSession`)는 이 세션이 볼 알림(관리자 전용 출처는 관리자에게만, 서버가 거른다)과 그중 읽은 것(`seen`, 지금 알림의 id만)을 준다. `PUT /api/preferences/notifications`는 읽음 상태(id → 리비전, 128개까지, 형식 검사) 전체를 바꾼다. 프론트는 지금 목록에 있는 id만 보내므로 저장 크기가 묶인다. 빈 목록이면 `seen`은 `{}`다
+- 개발 서버: `MARU_DEV_NOTICES`(개발 전용 환경 변수, 플래그·가동 설정 목록·설치기 레지스트리에 넣지 않음)가 있으면 그 파일(`{admin: [...], everyone: [...]}`)을 읽는 출처 둘을 두고 보관 시간을 2초로 줄인다(`cmd/maru/devnotices.go`, 리비전이 비면 내용으로 채움). `make dev-fake`가 상태 디렉터리의 `dev-notices.json`으로 정하고, 가짜 OMV 프로세스가 `FAKENOTICES`(sample, none, many, rotate) 시나리오대로 쓴다. rotate는 `FAKENOTICES_STEP`(기본 30s)마다 개수를 바꿔 토스트를 확인하게 한다
 
 ## 파일 탐색기
 

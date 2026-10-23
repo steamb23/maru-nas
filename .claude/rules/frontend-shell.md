@@ -4,6 +4,7 @@ paths:
   - "frontend/src/windows/**"
   - "frontend/src/widgets/**"
   - "frontend/src/shortcuts/**"
+  - "frontend/src/notifications/**"
   - "frontend/src/settings/**"
   - "frontend/src/appearance/**"
   - "frontend/src/App.tsx"
@@ -13,7 +14,7 @@ paths:
 
 # 데스크톱 셸과 창 시스템
 
-`src/windows/`(창 저장소·앱 목록·위치 제한·타일링), `src/widgets/`(위젯 그리드·배치·저장소), `src/shortcuts/`(바로가기 목록·저장소), `src/shell/`의 `*Anim.ts`, `taskbarDrag.ts`, `taskbarFit.ts`, `clock.ts`, `profileMenu.ts`, `contextMenu.ts`, `contextMenuStore.ts`, `windowMenu.ts`, `menuNav.ts`, `modalStack.ts`, `dialogs.ts`, `appDrawerStore.ts`, `appDrawerPrefsStore.ts`, `appSort.ts`, `gridNav.ts`, `appSearch.ts`, `hangul.ts`는 DOM에 의존하지 않는 계산 모듈이다. 컴포넌트는 이 결과를 그리기만 한다.
+`src/windows/`(창 저장소·앱 목록·위치 제한·타일링), `src/widgets/`(위젯 그리드·배치·저장소), `src/shortcuts/`(바로가기 목록·저장소), `src/shell/`의 `*Anim.ts`, `taskbarDrag.ts`, `taskbarFit.ts`, `clock.ts`, `profileMenu.ts`, `contextMenu.ts`, `contextMenuStore.ts`, `windowMenu.ts`, `menuNav.ts`, `modalStack.ts`, `dialogs.ts`, `appDrawerStore.ts`, `appDrawerPrefsStore.ts`, `appSort.ts`, `gridNav.ts`, `appSearch.ts`, `hangul.ts`, `src/notifications/`의 `model.ts`, `items.ts`, `messages.ts`, `store.ts`는 DOM에 의존하지 않는 계산 모듈이다. 컴포넌트는 이 결과를 그리기만 한다.
 
 ## 창 순서와 DOM
 
@@ -124,7 +125,7 @@ paths:
 
 ## 작업표시줄 트레이와 프로필 메뉴
 
-- 트레이는 `[시계][프로필]` 순서이며 프로필 버튼이 오른쪽 끝에 고정된다
+- 트레이는 `[시계][알림][프로필]` 순서이며 프로필 버튼이 오른쪽 끝에 고정된다. 알림 버튼은 아래 "알림" 절에 있다
 - "모든 앱" 버튼과 창 버튼 목록은 함께 정렬된다. 정렬은 사용자 화면 설정(`appearance.taskbarAlign`, 계산은 `appearance/taskbar.ts`)이고 기본은 가운데(관리자 기본값 없음)다. 가운데는 `.taskbar.centered`에서 앞쪽 빈 칸(`::before`)과 트레이를 같은 비율로 늘려 전체 너비의 가운데에 두며, 창이 없으면 빈 목록 앞의 gap을 지운다. 드래그 정렬이 `ul`의 자식을 재므로 "모든 앱" 버튼은 목록 밖에 둔다
 - 창 버튼이 다 들어가지 않으면 단계적으로 줄인다(계산은 `taskbarFit.ts`, 측정은 `Taskbar`의 `measureFit`). 스크롤과 두 줄 감싸기는 쓰지 않는다(드래그 정렬의 슬롯, 터치 끌기, 최소화 목표, 고정된 `--taskbar-reserve`와 맞지 않는다)
   - 제목 모드: 모든 버튼에 같은 최대 너비(`--task-cap`)를 걸어 긴 제목부터 말줄임으로 줄인다. 최대 너비가 `TASK_LABEL_MIN`(한글 세 글자와 말줄임표)보다 작아지면 아이콘 모드(`ul.icons`)로 바꾼다
@@ -137,6 +138,21 @@ paths:
   - 조작을 보내면(백엔드가 코드로 거절하지 않았으면. 연결 끊김·프록시 5xx도 보낸 것으로 본다, `sendOutcome`) 전원 감시(`power/watch.ts`의 순수 `step`·`screenView`, 저장소는 `watchStore.ts`)가 2초마다 `/api/health`를 받고 App이 `Screen` 대신 전원 화면(`PowerScreen.tsx`, 재시작 화면과 같은 틀)을 그린다. 끊겼다가 다시 답하면 새로 고친다(업그레이드 결과 힌트는 남기지 않는다). 2분이 지나도 끊기지 않으면 "대시보드로 돌아가기"(새로 고침)를, 다시 시작이 5분 넘게 돌아오지 않으면 확인할 곳을 안내한다
 - 프로필 메뉴 머리글(아바타·이름·역할)은 메뉴 항목 버튼이며 누르면 설정 창의 프로필 페이지를 연다. 메뉴에 따로 "설정" 항목은 두지 않는다. `ProfileMenu`는 데스크톱 크기를 모르므로 `Desktop`이 `onOpenSettings`를 `Taskbar`를 거쳐 넘긴다
 - 아바타 그리기는 `ProfileAvatar` 한 곳에 모은다. 프로필 사진(`profile/store.ts`, 로그인한 동안 불러옴)이 있으면 원형 이미지로, 없거나 받지 못하면 기본 아이콘으로 그린다
+
+## 알림
+
+시안은 Design 캔버스 "알림 시스템 시안"의 B(오른쪽 패널), T(토스트), S(상태)다. 서버 쪽은 `.claude/rules/backend.md`의 "알림", 나중에 붙일 출처(APT 업데이트·재부팅 권장)와 백그라운드 작업은 `.claude/docs/roadmap.md`의 "알림".
+
+- 알림은 두 가지다. 서버 알림(`api.Notice`)은 백엔드가 알리는 상태라 조건이 풀리면 사라지고 사용자가 지울 수 없으며, 읽음 상태(id → 리비전)를 사용자별로 저장한다. 클라이언트 알림(`ClientEvent`)은 이 탭에서 생긴 일이라 탭의 메모리에만 두고(최대 50개, 새로 고치면 사라짐) 지울 수 있다. 문구는 저장하지 않고 코드와 치환값만 두며 `notifications/messages.ts`가 키를 고른다
+- `src/notifications/`는 다른 기능을 import하지 않는 잎 모듈이다(`files/`·`shell/`·`windows/` 금지). 다른 기능은 `notify.ts`의 `notify()`만 부른다(지금은 `files/transferNotices.ts`). 동작 실행(`shell/noticeAction.ts`의 `runNoticeAction`: 앱·설정 페이지, 워크벤치 라우트, 전원 대화상자)과 화면은 `shell/`에 둔다
+- 저장소(`notifications/store.ts`)는 서버 알림, 읽음 상태, 클라이언트 알림, 토스트, 센터 열림(`centerOpen`)을 함께 둔다. `SignedIn`의 `useNotifications`가 로그인한 동안 60초마다(숨긴 탭에서 멈추고 다시 보이면 바로) `/api/notifications`를 받고, 언마운트하면 `clear`로 비운다. 로그인하지 않은 동안의 `notify()`(로그아웃 뒤 끝난 파일 작업 등)와 응답은 버린다
+  - 읽음 저장은 저장 큐로 보내고 지금 목록에 있는 id만 담는다. 저장 전에 받은 응답이 읽음 표시를 되돌리지 않게 이 탭에서 읽은 값(`overrides`)을 서버가 같은 값을 줄 때까지 얹는다(`mergeSeen`·`settleOverrides`)
+- 읽음: 알림 센터를 열면 모두 읽음이 되어 배지가 사라진다. 열기 전에 읽지 않았던 항목(`fresh`)은 열린 동안 점과 굵은 제목을 남긴다. 토스트를 닫거나 동작을 누르면 그 알림을 읽고, 시간이 지나 내려간 토스트는 읽지 않은 채 둔다
+- 토스트: 클라이언트 알림은 늘 띄운다. 서버 알림은 이 탭의 첫 응답 뒤에 새로 생기거나 리비전이 바뀐 읽지 않은 것만 띄운다(로그인할 때마다 같은 알림이 뜨지 않게, `noticesToToast`). 센터가 열려 있으면 띄우지 않고 읽음으로 둔다
+- 알림 버튼(`NotificationButton`): 트레이 자식이라 작업표시줄의 `measureFit`이 너비를 잰다. 처음부터 늘 그리고 프로필 버튼과 같은 정사각형이며, 배지(읽지 않은 수, 9 초과 `9+`, 읽지 않은 오류가 있으면 빨강)는 위에 겹쳐 너비를 바꾸지 않는다
+- 알림 센터(`NotificationCenter`): 작업표시줄의 `backdrop-filter` 안에 둘 수 없으므로 `Desktop`이 "모든 앱" 화면 다음, 작업표시줄 앞에 그린다. 화면 오른쪽 위에서 작업표시줄 위까지 400px 패널이고 바탕화면을 막지 않는다(`role="dialog"`, 열면 패널에 포커스). 패널·알림 버튼 밖 누르기, Esc(포커스를 알림 버튼으로), 알림 버튼, 데스크톱 범위 모달(`blocked`)로 닫는다. "오늘"·"이전" 묶음과 "3분 전" 같은 시각은 `items.ts`(`buildCenter`, `ageText`)가 계산하고, 시각을 주지 않은 서버 알림은 오늘의 맨 앞에 둔다. "모두 지우기"는 클라이언트 알림만 지운다. 열기·닫기 값은 `notificationAnim.ts`
+- 토스트(`ToastLayer`): `Desktop`이 작업표시줄 다음, 컨텍스트 메뉴·모달 호스트 앞에 그리고 `blocked`면 `inert`다. 오른쪽 아래 360px에 최근 것이 아래로 세 개까지 보이고 나머지는 "+N개 더"로 접는다(`visibleToasts`). 정보·성공 5초, 경고 8초 뒤 내려가고 오류는 남는다(`toastDuration`). 남은 시간은 막대의 CSS 키프레임이 재고 끝(`animationend`)에 내리며, 포인터나 포커스가 레이어에 있으면 `animation-play-state`로 함께 멈춘다. 애니메이션을 끈 설정에서는 막대만 숨긴다. 목록은 `aria-live="polite"`이고 오류 토스트는 `role="alert"`이며 포커스를 가져가지 않는다. 빈 자리는 포인터를 받지 않는다
+- "모든 앱" 화면은 토스트를 누르는 것을 바깥으로 보지 않는다(`KEEP_OPEN`). 로그인·로그아웃 전환에서 알림 센터와 토스트도 데스크톱과 함께 움직인다(`DESKTOP_PARTS`)
 
 ## 설정 앱
 

@@ -10,6 +10,16 @@
 - **검색 결과에서 쓰기 작업**: 찾은 항목을 바로 끌어 옮기거나 지웁니다. 지금은 "위치 열기"로 그 폴더에 가서 합니다.
 - **루트 파일시스템의 공유 폴더**(openmediavault-sharerootfs, 예: `/kvm`): 도우미의 기준 디렉터리(홈과 `/srv` 아래 마운트) 밖입니다. root가 정하는 도우미의 추가 기준 경로 설정으로 엽니다. `install.sh`가 묻고 도우미 유닛의 `ReadWritePaths`에도 더하며, `/`는 받지 않습니다. mergerfs 풀(`/srv/mergerfs/<이름>`)은 이미 기준 안에 있습니다.
 
+## 알림
+
+알림 틀(작업표시줄의 알림 버튼, 알림 센터, 토스트, 서버 알림 API, 클라이언트 알림)은 만들었습니다(`.claude/rules/backend.md`·`.claude/rules/frontend-shell.md`의 "알림"). 운영 출처는 아직 없습니다. 남은 일입니다.
+
+- **시스템 패키지 업데이트(APT)와 재부팅 권장**(관리자 전용 출처): OMV RPC 없이 직접 읽습니다. 업데이트는 `/var/lib/openmediavault/apt/upgradeindex.json`(OMV `omv-mkaptidx`가 apt 후크로 다시 만들고 apt-daily가 매일 갱신, 0644), 재부팅은 `/run/reboot-required`가 있는지와 `/run/reboot-required.pkgs`입니다. OMV `System.getInformation`의 `availablePkgUpdates`·`rebootRequired`와 같은 출처이며 maru 유닛(`ProtectSystem=strict`)에서 읽힙니다.
+    - 리비전은 정렬한 `이름@버전`과 `.pkgs` 줄의 해시입니다. 인덱스는 내용이 같아도 매일 다시 쓰이고 제자리에서 쓰이므로(이름 바꾸기가 아님) 깨진 파일을 읽으면 직전 결과를 유지합니다(`notify.Center`가 이미 그렇게 합니다).
+    - 동작은 워크벤치의 업데이트 관리 화면(라우트는 OMV 8.0~8.5 워크벤치 소스에서 확인)과 전원 대화상자(다시 시작)입니다. 문구 키와 코드 유니온(`api.Notice.Code`)을 함께 더합니다.
+    - 개발 fixture는 합성 `upgradeindex.json`·`reboot-required`를 둔 가짜 루트(`MARU_DEV_NOTIFY_ROOT`, `os.DirFS`)로 바꿉니다.
+- **서버 백그라운드 작업 표시**: 알림 센터에 "백그라운드 작업" 구역을 더합니다. 브라우저 없이 서버에서 끝까지 실행할 수 있는 작업(예: 패키지 업데이트)에만 쓰고, 사용자가 작업 중에 창을 닫았거나 세션이 만료되었을 때만 보입니다. 브라우저가 진행하는 파일 복사·올리기는 대상이 아닙니다. 작업이 진행 중이면 더 자주 받습니다. 시안 B의 "나중에: 백그라운드 작업" 자리를 따릅니다.
+
 ## 웹 터미널의 sshd 쪽 보강
 
 OMV SSH 설정의 추가 옵션에 `AuthenticationMethods publickey,keyboard-interactive`를 두고 root가 PAM OTP를 설정하면, 도우미의 임시 키만으로는 들어갈 수 없으므로 maru가 뚫려도 OTP가 필요합니다. maru의 keyboard-interactive 중계 확인이 남아 있습니다. 보안 강화 모드(`docs/en/security.md`)는 maru가 확인하므로 maru 자체가 뚫린 경우는 막지 못하며, 이 보강이 그 부분을 채웁니다.
