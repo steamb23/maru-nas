@@ -7,6 +7,7 @@
 package prefs
 
 import (
+	"maps"
 	"slices"
 	"sync"
 
@@ -28,6 +29,8 @@ type Store interface {
 	SetSystemInfo(username string, sysinfo api.SystemInfoPrefs) error
 	// SetFiles는 파일 탐색기 보기 설정만 바꾼다. 다른 설정은 그대로 둔다. 검사는 호출하는 쪽이 한다.
 	SetFiles(username string, files api.FilesPrefs) error
+	// SetNotifications는 알림 읽음 상태만 바꾼다. 다른 설정은 그대로 둔다. 검사는 호출하는 쪽이 한다.
+	SetNotifications(username string, n api.NotificationPrefs) error
 	// UpdateAppearance는 화면 설정만 바꾼다. apply는 지금 값(저장한 적 없으면 빈 값)을 받아 고친다.
 	// 읽기부터 쓰기까지 잠그므로 조건부 변경(올린 이미지를 지울 때 그 이미지를 가리키던 배경 지우기 등)에도 쓴다.
 	UpdateAppearance(username string, apply func(*api.AppearancePrefs)) error
@@ -84,6 +87,11 @@ func (m *MemoryStore) SetFiles(username string, files api.FilesPrefs) error {
 	return nil
 }
 
+func (m *MemoryStore) SetNotifications(username string, n api.NotificationPrefs) error {
+	m.update(username, func(p *api.Preferences) { p.Notifications = cloneNotifications(&n) })
+	return nil
+}
+
 func (m *MemoryStore) UpdateAppearance(username string, apply func(*api.AppearancePrefs)) error {
 	m.update(username, func(p *api.Preferences) { p.Appearance = applyAppearance(p.Appearance, apply) })
 	return nil
@@ -119,7 +127,20 @@ func clonePrefs(p api.Preferences) api.Preferences {
 		p.Files = &f
 	}
 	p.Appearance = cloneAppearance(p.Appearance)
+	p.Notifications = cloneNotifications(p.Notifications)
 	return p
+}
+
+// cloneNotifications는 읽음 상태를 복사한다. 읽은 것이 없으면 nil 맵 대신 빈 맵이다.
+func cloneNotifications(n *api.NotificationPrefs) *api.NotificationPrefs {
+	if n == nil {
+		return nil
+	}
+	seen := maps.Clone(n.Seen)
+	if seen == nil {
+		seen = map[string]string{}
+	}
+	return &api.NotificationPrefs{Seen: seen}
 }
 
 // applyAppearance는 지금 화면 설정(없으면 빈 값)의 복사본에 apply를 적용한 새 값이다.

@@ -390,3 +390,44 @@ func TestStoreFiles(t *testing.T) {
 		})
 	}
 }
+
+func TestStoreNotifications(t *testing.T) {
+	for name, s := range stores(t) {
+		t.Run(name, func(t *testing.T) {
+			if p, _ := s.Get("alice"); p.Notifications != nil {
+				t.Fatalf("new user notification prefs: %+v", *p.Notifications)
+			}
+			if err := s.SetFiles("alice", api.FilesPrefs{View: api.FilesViewGrid}); err != nil {
+				t.Fatal(err)
+			}
+			in := map[string]string{"sample-a": "r1", "sample-b": "r2"}
+			if err := s.SetNotifications("alice", api.NotificationPrefs{Seen: in}); err != nil {
+				t.Fatal(err)
+			}
+			// 넘긴 맵을 바꿔도 저장값은 그대로다.
+			in["sample-a"] = "changed"
+			p, err := s.Get("alice")
+			if err != nil || p.Notifications == nil || p.Notifications.Seen["sample-a"] != "r1" || p.Notifications.Seen["sample-b"] != "r2" {
+				t.Fatalf("after set: %+v, %v", p.Notifications, err)
+			}
+			if p.Files == nil || p.Files.View != api.FilesViewGrid {
+				t.Errorf("notification save dropped files prefs: %+v", p.Files)
+			}
+			// 돌려준 맵을 바꿔도 저장값은 그대로다.
+			p.Notifications.Seen["sample-b"] = "changed"
+			if p, _ := s.Get("alice"); p.Notifications.Seen["sample-b"] != "r2" {
+				t.Errorf("stored seen changed: %+v", p.Notifications.Seen)
+			}
+			// 비우면 빈 맵(null이 아님)이다.
+			if err := s.SetNotifications("alice", api.NotificationPrefs{}); err != nil {
+				t.Fatal(err)
+			}
+			if p, _ := s.Get("alice"); p.Notifications == nil || p.Notifications.Seen == nil || len(p.Notifications.Seen) != 0 {
+				t.Errorf("after clear: %+v", p.Notifications)
+			}
+			if p, _ := s.Get("bob"); p.Notifications != nil {
+				t.Errorf("bob sees %+v", *p.Notifications)
+			}
+		})
+	}
+}

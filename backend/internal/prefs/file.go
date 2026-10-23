@@ -83,6 +83,10 @@ func (s *FileStore) SetFiles(username string, files api.FilesPrefs) error {
 	return s.update(username, func(p *api.Preferences) { p.Files = &files })
 }
 
+func (s *FileStore) SetNotifications(username string, n api.NotificationPrefs) error {
+	return s.update(username, func(p *api.Preferences) { p.Notifications = cloneNotifications(&n) })
+}
+
 func (s *FileStore) UpdateAppearance(username string, apply func(*api.AppearancePrefs)) error {
 	return s.update(username, func(p *api.Preferences) { p.Appearance = applyAppearance(p.Appearance, apply) })
 }

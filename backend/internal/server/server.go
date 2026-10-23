@@ -16,6 +16,7 @@ import (
 	"maru/backend/internal/auth"
 	"maru/backend/internal/buildinfo"
 	"maru/backend/internal/files"
+	"maru/backend/internal/notify"
 	"maru/backend/internal/omv"
 	"maru/backend/internal/prefs"
 	"maru/backend/internal/security"
@@ -102,6 +103,8 @@ type Config struct {
 	FilesSrvDir string
 	// Upgrade는 대시보드에서 업그레이드의 파일(상태 파일, 설정 파일, 확인 요청)이다. nil이면 꺼진 것으로 본다.
 	Upgrade *upgrade.Manager
+	// Notify는 서버 알림을 모은다. nil이면 알림 출처가 없다.
+	Notify *notify.Center
 	// Security는 보안 강화 모드의 수단 기록 저장소다. nil이면 메모리에 둔다.
 	Security security.Store
 	// RP는 패스키의 신뢰 당사자(-public-origin)다. nil이면 패스키를 쓸 수 없다(TOTP·복구 코드만 쓴다).
@@ -187,6 +190,9 @@ func New(cfg Config) http.Handler {
 	}
 	if cfg.Security == nil {
 		cfg.Security = prefs.NewMemoryStore()
+	}
+	if cfg.Notify == nil {
+		cfg.Notify = notify.New()
 	}
 	if cfg.Upgrade == nil {
 		// 경로가 비어 있으면 설정 파일이 없는 것으로 읽혀 꺼짐(not-enabled)이다.
@@ -306,6 +312,8 @@ func New(cfg Config) http.Handler {
 	mux.HandleFunc("PUT /api/preferences/drawer", h.requireSession(h.setDrawer))
 	mux.HandleFunc("PUT /api/preferences/system-info", h.requireSession(h.setSystemInfo))
 	mux.HandleFunc("PUT /api/preferences/files", h.requireSession(h.setFilesPrefs))
+	mux.HandleFunc("PUT /api/preferences/notifications", h.requireSession(h.setNotificationPrefs))
+	mux.HandleFunc("GET /api/notifications", h.requireSession(h.notifications))
 	mux.HandleFunc("PUT /api/preferences/appearance", h.requireSession(h.setAppearance))
 	mux.HandleFunc("GET /api/preferences/wallpaper-image", h.requireSession(h.wallpaperImage))
 	mux.HandleFunc("PUT /api/preferences/wallpaper-image", h.requireSession(h.putWallpaperImage))

@@ -739,6 +739,10 @@ export interface Preferences {
    */
   appearance?: AppearancePrefs;
   /**
+   * Notifications는 알림 읽음 상태다. 한 번도 저장하지 않았으면 없다.
+   */
+  notifications?: NotificationPrefs;
+  /**
    * WallpaperImage는 이 사용자가 올린 바탕화면 이미지의 정보다. 올리지 않았으면 없다.
    * 설정 파일에 저장하지 않고 응답할 때 이미지 저장소에서 붙인다.
    */
@@ -988,6 +992,119 @@ export interface FilesPrefs {
  */
 export interface FilesPrefsRequest {
   files?: FilesPrefs;
+}
+/**
+ * 알림 수준. Notice.Level에 들어간다.
+ */
+export const NoticeInfo = "info";
+/**
+ * 알림 수준. Notice.Level에 들어간다.
+ */
+export const NoticeSuccess = "success";
+/**
+ * 알림 수준. Notice.Level에 들어간다.
+ */
+export const NoticeWarning = "warning";
+/**
+ * 알림 수준. Notice.Level에 들어간다.
+ */
+export const NoticeError = "error";
+/**
+ * 서버 알림 코드. Notice.Code에 들어가며 프론트가 코드로 문구를 고른다.
+ */
+/**
+ * NoticeSample은 개발 서버의 가짜 알림(MARU_DEV_NOTICES)과 테스트에만 쓰는 코드다. 운영 알림 출처는 쓰지 않는다.
+ */
+export const NoticeSample = "sample";
+/**
+ * NoticeActionApp은 대시보드 앱을 연다. 앱이 설정이면 Page의 페이지로 연다.
+ */
+export const NoticeActionApp = "app";
+/**
+ * NoticeActionWorkbench는 OMV 워크벤치의 Route 화면을 워크벤치 탭으로 연다.
+ */
+export const NoticeActionWorkbench = "workbench";
+/**
+ * NoticeActionPower는 전원 대화상자를 연다.
+ */
+export const NoticeActionPower = "power";
+/**
+ * NoticeAction은 알림을 눌렀을 때 할 일이다.
+ */
+export interface NoticeAction {
+  kind: 'app' | 'workbench' | 'power';
+  /**
+   * App은 Kind가 app일 때 프론트 앱 id다. 프론트가 모르는 id면 동작을 보이지 않는다.
+   */
+  app?: string;
+  /**
+   * Page는 App이 설정일 때 열 페이지 id다.
+   */
+  page?: string;
+  /**
+   * Route는 Kind가 workbench일 때 OMV 워크벤치 라우트다(앞 슬래시 없이, 예: system/updatemgmt/updates).
+   */
+  route?: string;
+}
+/**
+ * Notice는 서버가 알리는 상태 하나다(업데이트가 있음 등). 조건이 풀리면 목록에서 빠지며 사용자가 지울 수 없다.
+ * 문구는 보내지 않고 Code와 값(Count, Items)만 보낸다.
+ */
+export interface Notice {
+  /**
+   * ID는 알림의 고정 이름이다. 읽음 상태(NotificationPrefs.Seen)의 키다.
+   */
+  id: string;
+  code: 'sample';
+  /**
+   * Level은 Notice* 수준 중 하나다.
+   */
+  level: 'info' | 'success' | 'warning' | 'error';
+  /**
+   * Revision은 내용이 바뀔 때만 달라지는 값이다(내용 해시). 바뀌면 다시 읽지 않은 알림이 된다.
+   */
+  revision: string;
+  /**
+   * Since는 조건이 생긴 시각(RFC 3339)이다. 출처가 모르면 없다.
+   */
+  since?: string;
+  /**
+   * Count는 개수(업데이트할 패키지 수 등)다. 문구의 복수형에 쓴다.
+   */
+  count?: number /* int */;
+  /**
+   * Items는 이름 목록(패키지 이름 등)이다. 앞쪽 일부만 담는다.
+   */
+  items?: string[];
+  action?: NoticeAction;
+}
+/**
+ * NotificationsResponse는 GET /api/notifications의 응답이다.
+ */
+export interface NotificationsResponse {
+  /**
+   * Notices는 이 사용자가 볼 수 있는 서버 알림이다(관리자 전용 알림은 관리자에게만).
+   */
+  notices: Notice[];
+  /**
+   * Seen은 이 사용자가 읽은 알림의 id → Revision이다. 지금 Notices에 있는 id만 담는다.
+   */
+  seen: { [key: string]: string};
+}
+/**
+ * NotificationPrefs는 사용자의 알림 읽음 상태다.
+ */
+export interface NotificationPrefs {
+  /**
+   * Seen은 읽은 서버 알림의 id → 읽을 때의 Revision이다. 프론트는 지금 목록에 있는 id만 보낸다.
+   */
+  seen: { [key: string]: string};
+}
+/**
+ * NotificationPrefsRequest는 PUT /api/preferences/notifications의 요청 본문이다.
+ */
+export interface NotificationPrefsRequest {
+  notifications?: NotificationPrefs;
 }
 /**
  * Shortcut은 바탕화면 바로가기 하나다. 지금은 앱만 가리킨다. 폴더나 OMV 페이지를 가리키는

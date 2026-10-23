@@ -152,6 +152,9 @@ func (failingStore) SetSystemInfo(string, api.SystemInfoPrefs) error {
 func (failingStore) SetFiles(string, api.FilesPrefs) error {
 	return errors.New("disk on fire")
 }
+func (failingStore) SetNotifications(string, api.NotificationPrefs) error {
+	return errors.New("disk on fire")
+}
 func (failingStore) UpdateAppearance(string, func(*api.AppearancePrefs)) error {
 	return errors.New("disk on fire")
 }
@@ -169,6 +172,9 @@ func TestPreferencesStoreError(t *testing.T) {
 			SystemInfo: &api.SystemInfoPrefs{CPUScale: api.CPUScaleMachine, CPUGraph: api.CPUGraphOverall},
 		},
 		"/api/preferences/files": api.FilesPrefsRequest{Files: &api.FilesPrefs{View: api.FilesViewGrid}},
+		"/api/preferences/notifications": api.NotificationPrefsRequest{
+			Notifications: &api.NotificationPrefs{Seen: map[string]string{}},
+		},
 	} {
 		rec := b.do(http.MethodPut, path, body)
 		wantStatus(t, rec, http.StatusInternalServerError)
