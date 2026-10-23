@@ -22,7 +22,8 @@ export type Activity = 'none' | 'pending' | 'stalled' | 'checking' | 'applying' 
 // 업그레이드 서비스가 그 확인으로 진행하지 않으므로 다시 확인해야 한다).
 // failed: 확인 실패. latest: 최신. web: 대시보드에서 업그레이드할 수 있음. manual: 수동 재설치 필요.
 // outdated: 확인한 뒤 설치가 바뀌었음(실행 중인 커밋이 확인의 설치 기록과 다름).
-export type CheckOutcome = 'none' | 'failed' | 'latest' | 'web' | 'manual' | 'outdated'
+// channel: 확인한 뒤 업데이트 채널을 바꿨음(원격 확인이 지금 고른 채널로 한 것이 아님).
+export type CheckOutcome = 'none' | 'failed' | 'latest' | 'web' | 'manual' | 'outdated' | 'channel'
 
 // ApplyOutcome은 마지막 업그레이드의 결과다(상태가 applied·apply-failed일 때).
 export type ApplyOutcome = 'none' | 'applied' | 'failed'
@@ -46,7 +47,7 @@ export function describe(info: UpgradeInfo): UpdateState {
   }
   let check: CheckOutcome = 'none'
   if (st?.state === 'check-failed') check = 'failed'
-  else if (st?.state === 'checked' && st.check) check = checkOutcome(st.check, info.revision)
+  else if (st?.state === 'checked' && st.check) check = checkOutcome(st.check, info)
   let apply: ApplyOutcome = 'none'
   if (st?.state === 'applied') apply = 'applied'
   else if (st?.state === 'apply-failed') apply = 'failed'
@@ -54,9 +55,11 @@ export function describe(info: UpgradeInfo): UpdateState {
   return { activity, stage: st?.stage || null, check, apply, busy }
 }
 
-function checkOutcome(check: UpgradeCheck, running: string | undefined): CheckOutcome {
+function checkOutcome(check: UpgradeCheck, info: UpgradeInfo): CheckOutcome {
+  if (check.mode === 'remote' && (check.channel ?? '') !== info.channel) return 'channel'
   if (check.upToDate) return 'latest'
   const installed = check.installed?.revision
+  const running = info.revision
   if (installed && running && installed !== running) return 'outdated'
   return check.web ? 'web' : 'manual'
 }
@@ -167,4 +170,46 @@ function shellQuote(s: string): string {
 // helpLines는 질문 설명을 줄로 나눈다(설치기 설명은 여러 줄일 수 있다).
 export function helpLines(text: string): string[] {
   return text.split('\n').filter((l) => l.trim() !== '')
+}
+
+// 업데이트 채널(.claude/docs/upgrade.md의 "업데이트 채널"). 값은 site.json의 upgrade.channel이고 빈 값이면 지금
+// 브랜치의 추적 브랜치를 따른다.
+export type Channel = UpgradeInfo['channel']
+
+// RepoBranch는 업그레이드 서비스가 마지막으로 본 저장소의 브랜치다. 확인한 적이 없거나 이전 서비스면 모른다.
+export type RepoBranch = { kind: 'unknown' } | { kind: 'detached' } | { kind: 'branch'; name: string }
+
+export function repoBranch(info: UpgradeInfo): RepoBranch {
+  const st = info.status
+  if (st?.detached) return { kind: 'detached' }
+  if (st?.branch) return { kind: 'branch', name: st.branch }
+  return { kind: 'unknown' }
+}
+
+// ChannelCard는 업데이트 채널 카드 하나다. current는 지금 브랜치를 따른다(채널 빈 값).
+export type ChannelCard = 'stable' | 'main' | 'current'
+
+// channelCards는 보일 카드와 고른 카드다. 저장소가 stable·main 브랜치에 있으면 채널을 고르지 않은 설치도 그
+// 브랜치의 카드로 보이고 "지금 브랜치" 카드는 숨긴다(따라가는 브랜치가 같다). 다른 브랜치에 있거나, 브랜치가
+// 아니거나, 아직 모르면 "지금 브랜치" 카드를 함께 보인다.
+export function channelCards(channel: Channel, branch: RepoBranch): { cards: ChannelCard[]; selected: ChannelCard } {
+  const on = branch.kind === 'branch' && (branch.name === 'stable' || branch.name === 'main') ? branch.name : null
+  return {
+    cards: on ? ['stable', 'main'] : ['stable', 'main', 'current'],
+    selected: channel !== '' ? channel : (on ?? 'current'),
+  }
+}
+
+// channelValue는 카드가 고르는 채널 값이다.
+export function channelValue(card: ChannelCard): Channel {
+  return card === 'current' ? '' : card
+}
+
+// isDevTarget은 확인의 대상이 개발 브랜치(main)에서 왔는지다. 채널을 고르지 않았으면 추적 브랜치로 판단한다.
+export function isDevTarget(check: UpgradeCheck): boolean {
+  if (check.mode !== 'remote') return false
+  if (check.channel) return check.channel === 'main'
+  // 추적 브랜치는 "원격/브랜치" 꼴이다(origin/main).
+  const up = check.upstream ?? ''
+  return up.slice(up.indexOf('/') + 1) === 'main' && up.includes('/')
 }

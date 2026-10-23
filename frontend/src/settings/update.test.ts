@@ -4,11 +4,15 @@ import type { UpgradeCheck, UpgradeQuestion, UpgradeStatus } from '../api/upgrad
 import {
   answerError,
   applyStep,
+  channelCards,
+  channelValue,
   describe,
   initialAnswers,
   installedVersion,
+  isDevTarget,
   manualCommands,
   pickText,
+  repoBranch,
   settingsFor,
   stageName,
   validSettingValue,
@@ -88,6 +92,18 @@ group('describe', () => {
     expect(describe(info({ state: 'checked', check: check() }, { revision: REV_B })).check).toBe('outdated')
     // 실행 중인 커밋을 모르면(go run) 비교하지 않는다.
     expect(describe(info({ state: 'checked', check: check() }, { revision: undefined })).check).toBe('web')
+  })
+
+  it('hides a remote check made for another update channel', () => {
+    const main = check({ channel: 'main', upstream: 'origin/main' })
+    expect(describe(info({ state: 'checked', check: main }, { channel: 'main' })).check).toBe('web')
+    expect(describe(info({ state: 'checked', check: main }, { channel: 'stable' })).check).toBe('channel')
+    // 최신이라는 결과도 다른 채널의 것이면 쓰지 않는다.
+    expect(describe(info({ state: 'checked', check: check({ upToDate: true, web: false }) }, { channel: 'main' })).check).toBe(
+      'channel',
+    )
+    // 로컬 확인은 채널과 상관없다.
+    expect(describe(info({ state: 'checked', check: check({ mode: 'local' }) }, { channel: 'main' })).check).toBe('web')
   })
 
   it('does not offer a check that was already used', () => {
@@ -207,5 +223,38 @@ group('manualCommands', () => {
     expect(manualCommands('/home/alice/maru-nas', './install.sh --reinstall')).toBe('cd /home/alice/maru-nas\n./install.sh --reinstall')
     expect(manualCommands("/home/al ice/it's", './install.sh')).toBe("cd '/home/al ice/it'\\''s'\n./install.sh")
     expect(manualCommands(undefined, undefined)).toBe('./install.sh')
+  })
+})
+
+group('update channel', () => {
+  it('reads the branch the upgrade service saw last', () => {
+    expect(repoBranch(info(null))).toEqual({ kind: 'unknown' })
+    expect(repoBranch(info({ branch: 'main' }))).toEqual({ kind: 'branch', name: 'main' })
+    expect(repoBranch(info({ detached: true }))).toEqual({ kind: 'detached' })
+  })
+
+  it('shows the branch card only when the repository is not on stable or main', () => {
+    const stable = { kind: 'branch', name: 'stable' } as const
+    // 채널을 고르지 않은 stable 체크아웃은 stable 카드로 보인다.
+    expect(channelCards('', stable)).toEqual({ cards: ['stable', 'main'], selected: 'stable' })
+    expect(channelCards('main', stable)).toEqual({ cards: ['stable', 'main'], selected: 'main' })
+    expect(channelCards('', { kind: 'branch', name: 'my-patches' })).toEqual({
+      cards: ['stable', 'main', 'current'],
+      selected: 'current',
+    })
+    expect(channelCards('stable', { kind: 'detached' })).toEqual({ cards: ['stable', 'main', 'current'], selected: 'stable' })
+    expect(channelCards('', { kind: 'unknown' }).selected).toBe('current')
+    expect(channelValue('current')).toBe('')
+    expect(channelValue('main')).toBe('main')
+  })
+
+  it('marks a target from main as a development version', () => {
+    expect(isDevTarget(check({ channel: 'main', upstream: 'origin/main' }))).toBe(true)
+    expect(isDevTarget(check({ channel: 'stable', upstream: 'origin/stable' }))).toBe(false)
+    // 채널을 고르지 않았으면 추적 브랜치로 본다.
+    expect(isDevTarget(check({ upstream: 'origin/main' }))).toBe(true)
+    expect(isDevTarget(check({ upstream: 'origin/feature/main' }))).toBe(false)
+    expect(isDevTarget(check({ upstream: 'main' }))).toBe(false)
+    expect(isDevTarget(check({ mode: 'local', channel: 'main' }))).toBe(false)
   })
 })
