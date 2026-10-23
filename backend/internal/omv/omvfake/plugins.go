@@ -146,8 +146,9 @@ func DefaultPluginData() PluginData {
 		ServiceSettings: defaultServiceSettings(),
 		CPUTemp:         47,
 		FailContainers:  []string{"broken"},
-		StandbyMode:     "suspend",
-		StandbyModes:    []string{"poweroff", "suspend"},
+		// 순정 OMV 설치본의 기본은 poweroff지만, 개발 서버에서 절전을 쓸 수 있는 화면이 보이도록 suspend로 둔다.
+		StandbyMode:  "suspend",
+		StandbyModes: []string{"poweroff", "suspend"},
 	}
 }
 

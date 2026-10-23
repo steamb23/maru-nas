@@ -116,7 +116,7 @@
       "rebootTitle": "Restart?",
       "rebootMessage": "All signed-in users will lose their sessions, and file transfers in progress will stop. When the NAS is back, you return to the sign-in screen.",
       "standbyTitle": "Go to sleep?",
-      "standbyMessage": "All signed-in users will lose their sessions, and file transfers in progress will stop. When you wake the NAS with its power button or Wake-on-LAN, you return to the sign-in screen."
+      "standbyMessage": "All signed-in users will be disconnected, and file transfers in progress will stop. When you wake the NAS with its power button or Wake-on-LAN, this page reconnects."
     },
     "error": {
       "busy": "Another power action is already in progress.",
