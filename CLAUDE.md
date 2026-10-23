@@ -43,8 +43,8 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
   - 설치는 루트의 `install.sh`(영어·한국어 안내)가 한다. `install.sh`는 Go 설치기(`installer/` → `bin/maru-install`, huh TUI)를 빌드해 실행하는 부트스트랩이고, 설치기가 systemd 유닛과 `/etc/default/maru`를 직접 만든다. 리버스 프록시는 설정하지 않는다. Claude는 작성만 하고 실행은 사용자가 한다(확인은 Go 테스트와 `--dry-run`)
     - 흐름(1단계 빌드 → sudo 2단계), 설치 방식(새 설치, `--reinstall`, 업그레이드), 설정·단계를 더하는 절차는 `.claude/rules/installer.md`, 사용자 설명은 `docs/install.md`·`docs/install-options.md`·`docs/upgrade.md`
     - 대시보드에서 업그레이드(`--web-upgrade`, 설계는 `.claude/docs/upgrade.md`): 설치기가 root 소유 복사본과 `maru-upgrade.service`·`.path`를 설치한다. 그 서비스(설치기의 `--upgrade-service`)가 저장소 소유자 권한으로 git·빌드를 하고 새 설치기를 root로 실행한다. maru는 확인 요청과 상태 파일만(설정 앱의 업데이트 페이지, `/api/upgrade*`), 도우미는 적용 요청(`upgrade.apply`)만 다룬다. 상세는 `.claude/rules/installer.md`의 "업그레이드 서비스", maru 쪽은 `.claude/rules/backend.md`의 "대시보드에서 업그레이드"
-  - `README.md`는 처음 보는 사람을 위한 소개, 빠른 시작(빌드 도구가 없는 OMV에 SSH로 접속한 상태에서 로그인까지), 문서 목록, 기여 안내만 둔다. 그 밖의 사용자 대상 설치·설정·프록시·기능 안내는 `docs/`(Zensical 사이트, `zensical.toml`)에 둔다. 플래그를 추가·변경하면 `docs/configuration.md`의 항목 표, 설치 옵션이면 `docs/install-options.md`의 표(`TestDocsListEveryOption`)와 설치기 레지스트리도 함께 고친다. 문서의 표는 한국어 `.ko.md`에서도 고친다
-  - 사용자 문서(`README.md`, `docs/`)는 영어(`<이름>.md`)와 한국어(`<이름>.ko.md`)를 함께 두고, 한쪽을 고치면 같은 커밋에서 다른 쪽도 고친다. 다른 언어 판으로 가는 링크는 `README.md`·`README.ko.md`의 첫 줄에만 두고(`docs/` 페이지는 사이트의 언어 선택과 목차로 오간다), 영어 문서의 화면 이름·문구는 `en.json`과 설치기의 영어 문구에 맞춘다. 문서 사이트는 영어 목차를 기본으로 하고 한국어 문서를 목차의 "한국어" 아래에 같은 순서로 둔다(`zensical.toml`)
+  - `README.md`는 처음 보는 사람을 위한 소개, 빠른 시작(빌드 도구가 없는 OMV에 SSH로 접속한 상태에서 로그인까지), 문서 목록, 기여 안내만 둔다. 그 밖의 사용자 대상 설치·설정·프록시·기능 안내는 `docs/`(Zensical 사이트, `zensical.toml`·`zensical.ko.toml`)에 둔다. 플래그를 추가·변경하면 `docs/configuration.md`의 항목 표, 설치 옵션이면 `docs/install-options.md`의 표(`TestDocsListEveryOption`)와 설치기 레지스트리도 함께 고친다. 문서의 표는 한국어 `.ko.md`에서도 고친다
+  - 사용자 문서(`README.md`, `docs/`)는 영어(`<이름>.md`)와 한국어(`<이름>.ko.md`)를 함께 두고, 한쪽을 고치면 같은 커밋에서 다른 쪽도 고친다. 다른 언어 판으로 가는 링크는 `README.md`·`README.ko.md`의 첫 줄에만 두고(`docs/` 페이지는 사이트의 언어 선택과 목차로 오간다), 영어 문서의 화면 이름·문구는 `en.json`과 설치기의 영어 문구에 맞춘다. 문서 사이트는 언어마다 따로 빌드한다. `zensical.toml`이 영어 페이지를 `site/`에, `zensical.ko.toml`이 한국어 페이지를 `site-ko/`에 빌드하고, 배포할 때 `site-ko/`를 `site/ko/`로 옮긴다. 두 설정의 목차는 같은 순서로 두고, 언어에 따른 항목(이름, 주소, 목차, 화면 문구) 밖의 설정은 같게 둔다
   - `docs/`는 빌드하지 않아도 GitHub에서 읽혀야 한다. GitHub가 그리는 문법만 쓰고(알림은 `> [!NOTE]`·`[!TIP]`·`[!WARNING]`, Zensical 전용 `!!!`·`===`·속성 목록은 쓰지 않음), 중첩 목록과 목록 안 코드 블록은 4칸 들여쓰고, 표 칸에 `|`를 넣지 않는다. 페이지 사이 링크는 상대 경로 `.md`와 그 언어의 제목 앵커로 걸고(영어 페이지는 영어 페이지로, 한국어 페이지는 `.ko.md`로), `docs/` 밖 파일은 GitHub 절대 주소로 건다. 앵커가 GitHub와 사이트에서 같도록 한 페이지 안에 같은 제목을 두 번 쓰지 않는다
   - 사용자 문서에는 사용자가 할 일과 조건, 한도, 위험과 한계를 둔다. 내부 구현(파일 이름, 유닛 하드닝 목록, 서비스 구성 등)은 `.claude/`의 설계 문서에 둔다
 - **백엔드는 얇은 API 서버**다. 역할은 (1) 현황 읽기: `/proc`·`/sys` 직접 읽기, root가 필요한 정보는 OMV RPC, (2) 설정 변경 요청을 OMV `rpc.php`로 전달, (3) 대시보드 설정(사용자별 위젯 배치·바로가기·화면 설정, 관리자의 전역 설정, 배경 이미지) 저장, 세 가지뿐이다. OMV RPC로 할 수 없는 권한 작업은 (4) 권한 도우미에 맡긴다. (5) 웹 터미널은 같은 호스트의 sshd에 SSH 클라이언트로 붙어 셸을 중계한다
@@ -100,7 +100,7 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 
 개별 실행: `cd backend && go test ./internal/addons/sysinfo -run TestParseMemInfo`, `cd installer && go test ./internal/setup -run TestGolden`, `cd frontend && npx vitest run src/icons`
 
-문서 사이트: `zensical serve`(미리보기), `zensical build --strict`(깨진 링크·앵커 검사, CI의 `docs` 잡과 같다). 사이트(`https://steamb23.github.io/maru-nas/`)는 `stable`을 push하면 `.github/workflows/docs.yml`이 GitHub Pages에 배포하므로 최신 릴리스 기준이다. 릴리스 사이에 문서만 먼저 올릴 때는 사용자가 Actions 화면에서 main을 골라 그 워크플로를 수동으로 실행하고, 다음 `stable` push가 다시 덮어쓴다. Zensical은 Python 도구라 `make`에 넣지 않았고, 설치 방법과 고정 버전은 `CONTRIBUTING.md`의 "Documentation"에 있다
+문서 사이트: `zensical serve`(영어 미리보기), `zensical serve -f zensical.ko.toml -a localhost:8001`(한국어 미리보기), `zensical build --strict`와 `zensical build --strict -f zensical.ko.toml`(깨진 링크·앵커 검사, CI의 `docs` 잡과 같다). 영어 빌드는 `site/`의 다른 파일을 지우므로 한국어 빌드를 `site/` 안에 두지 않는다. 사이트(`https://steamb23.github.io/maru-nas/`)는 `stable`을 push하면 `.github/workflows/docs.yml`이 GitHub Pages에 배포하므로 최신 릴리스 기준이다. 릴리스 사이에 문서만 먼저 올릴 때는 사용자가 Actions 화면에서 main을 골라 그 워크플로를 수동으로 실행하고, 다음 `stable` push가 다시 덮어쓴다. Zensical은 Python 도구라 `make`에 넣지 않았고, 설치 방법과 고정 버전은 `CONTRIBUTING.md`의 "Documentation"에 있다
 
 개발 서버 환경 변수와 워크트리:
 
@@ -152,8 +152,8 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
   - 처음부터 워크트리에서 시작한 세션(앱이 만든 `.claude/worktrees/<이름>-<해시>`, 브랜치 `claude/<이름>-<해시>`)은 새 워크트리를 만들지 않고 그 브랜치에서 작업한다. 이 세션은 `EnterWorktree`를 거치지 않았으므로 `ExitWorktree`로 주 체크아웃에 돌아갈 수 없다(아무 일도 하지 않는다). `main` 병합은 워크트리 안에서 `main` 위로 rebase한 뒤 `git -C <주 체크아웃> merge --ff-only <브랜치>`로 한다. 워크트리는 세션이 쓰고 있는 디렉터리이므로 `trash-put`·`git worktree prune`으로 지우지 않으며, 세션을 보관(archive)하면 앱이 정리한다
 - 작은 단위로 작업하고, 작업 단위 하나가 끝날 때마다 승인을 기다리지 않고 브랜치에 커밋한다
 - 브랜치의 작업이 모두 끝나면 변경 요약을 제시하고, `main` 병합은 사용자가 승인한 뒤에만 한다
-- 커밋 전에 `make check`를 실행한다. 프론트엔드나 embed 관련 변경이면 `make build`도 확인한다. `docs/`·`zensical.toml`을 바꿨으면 `zensical build --strict`도 확인한다
-- `main`으로의 push와 모든 PR은 GitHub Actions(`.github/workflows/ci.yml`)가 `make check`와 `make build`로, 문서는 `zensical build --strict`로 검사한다. 외부 기여는 fork → PR로 받고, 유지자가 `main`에 rebase 병합한다(머지 커밋 없음)
+- 커밋 전에 `make check`를 실행한다. 프론트엔드나 embed 관련 변경이면 `make build`도 확인한다. `docs/`나 `zensical.toml`·`zensical.ko.toml`을 바꿨으면 두 사이트의 `zensical build --strict`도 확인한다
+- `main`으로의 push와 모든 PR은 GitHub Actions(`.github/workflows/ci.yml`)가 `make check`와 `make build`로, 문서는 두 사이트의 `zensical build --strict`로 검사한다. 외부 기여는 fork → PR로 받고, 유지자가 `main`에 rebase 병합한다(머지 커밋 없음)
 - 커밋 메시지는 한국어로 쓴다(사용자와 Claude의 작업 언어). 외부 기여자의 커밋·주석 언어는 자유이고 영어 또는 한국어를 권장한다. 기여자용 안내는 `CONTRIBUTING.md`(영어 원본)와 `CONTRIBUTING.ko.md`이며, 기여자에게 보이는 규칙(브랜치 이름, 권한 규칙, 번역 절차 등)을 바꾸면 두 파일을 함께 고친다
 - 새 의존성을 추가하기 전에 이유와 대안을 먼저 설명한다
 - OMV RPC의 서비스·메서드 이름과 역할이 확실하지 않으면 추측하지 말고 OMV 소스(`/usr/share/openmediavault/engined/rpc/`, 로그인 관련은 `/var/www/openmediavault/rpc/session.inc`)를 읽는다

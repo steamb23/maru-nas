@@ -55,7 +55,7 @@ Useful commands (run from the repository root):
 
 ## Documentation
 
-`README.md` keeps only the introduction, the quick start, the documentation index and pointers for contributors. User documentation lives in `docs/` and is built into a site with [Zensical](https://zensical.org/) (`zensical.toml`). The README and every page come in English (`<name>.md`) and Korean (`<name>.ko.md`). The site at <https://steamb23.github.io/maru-nas/> is published from the `stable` branch, so a documentation change in `main` shows up there with the next release, unless the maintainer publishes `main` earlier by running the Documentation workflow manually.
+`README.md` keeps only the introduction, the quick start, the documentation index and pointers for contributors. User documentation lives in `docs/` and is built into a site with [Zensical](https://zensical.org/). The README and every page come in English (`<name>.md`) and Korean (`<name>.ko.md`). Each language is a separate site with its own navigation and search: `zensical.toml` builds the English pages, and `zensical.ko.toml` builds the Korean pages, which are published under `ko/`. The site at <https://steamb23.github.io/maru-nas/> is published from the `stable` branch, so a documentation change in `main` shows up there with the next release, unless the maintainer publishes `main` earlier by running the Documentation workflow manually.
 
 - Change the English and the Korean page together. If you do not write Korean, change only the English page and say so in the pull request; the maintainer updates the Korean page before merging.
 - Pages must stay readable on GitHub without building the site. Use only Markdown that GitHub renders: GitHub alerts (`> [!NOTE]`, `> [!TIP]`, `> [!WARNING]`) are fine, Zensical-only syntax (`!!!` admonitions, `===` tabs, attribute lists) is not.
@@ -64,14 +64,18 @@ Useful commands (run from the repository root):
 - Link pages with relative `.md` paths and their heading anchors, English pages to English pages (`configuration.md#opening-the-omv-workbench`) and Korean pages to Korean pages (`configuration.ko.md#omv-워크벤치-열기`). Link files outside `docs/` with absolute GitHub URLs. Do not repeat the same heading within a page, or its anchor will differ between GitHub and the site.
 - User pages describe what users do, the conditions and limits, and the risks. Internal details belong in the design notes under `.claude/`.
 - If you add or change an installer option or a flag, update the tables in `docs/install-options.md` (a test checks it) and `docs/configuration.md`, in both languages.
+- If you add a page, add it to the navigation of both `zensical.toml` and `zensical.ko.toml`.
 
 To preview and check the site, install the pinned Zensical version with pipx or in a virtual environment (Debian and Ubuntu refuse a system-wide `pip install`):
 
 ```sh
 python3 -m venv .venv
 .venv/bin/pip install zensical==0.0.71
-.venv/bin/zensical serve           # preview at http://localhost:8000/
-.venv/bin/zensical build --strict  # the check CI runs; fails on broken links and anchors
+.venv/bin/zensical serve                                   # English preview at http://localhost:8000/
+.venv/bin/zensical serve -f zensical.ko.toml -a localhost:8001  # Korean preview at http://localhost:8001/
+# the checks CI runs; they fail on broken links and anchors
+.venv/bin/zensical build --strict
+.venv/bin/zensical build --strict -f zensical.ko.toml
 ```
 
 ## Branches and pull requests
