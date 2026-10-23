@@ -1,5 +1,7 @@
 # 설정
 
+English: [Configuration](configuration.md)
+
 설치한 뒤의 설정은 `/etc/default/maru`의 환경 변수나 명령줄 플래그로 합니다. 값을 바꾼 뒤에는 `sudo systemctl restart maru`로 다시 시작해 주세요. 설치할 때 묻는 값은 `./install.sh --reinstall`로 바꾸는 편이 안전합니다([설정 바꾸기](install.ko.md#설정-바꾸기)).
 
 지금 쓰는 값과 그 출처(기본값, 환경 변수, 명령줄 플래그)는 관리자가 [설정 앱](settings-app.ko.md)의 "서버" 페이지에서 볼 수 있습니다.

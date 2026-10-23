@@ -1,5 +1,7 @@
 # 업그레이드
 
+English: [Upgrading](upgrade.md)
+
 ## SSH로 업그레이드
 
 저장소에서 실행합니다.
