@@ -38,6 +38,9 @@
 @import './shell/AppDrawer.css';
 @import './shell/Clock.css';
 @import './shell/ProfileMenu.css';
+@import './shell/NotificationButton.css';
+@import './shell/NotificationCenter.css';
+@import './shell/ToastLayer.css';
 @import './shell/ContextMenu.css';
 @import './shell/Modal.css';
 @import './shell/LinkNotice.css';

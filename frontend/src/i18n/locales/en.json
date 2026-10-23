@@ -83,6 +83,67 @@
     "closeAll": "Close all",
     "more": "More windows"
   },
+  "notifications": {
+    "button": "Notifications",
+    "buttonUnread_one": "Notifications, {{count}} unread",
+    "buttonUnread_other": "Notifications, {{count}} unread",
+    "title": "Notifications",
+    "clearAll": "Clear all",
+    "today": "Today",
+    "earlier": "Earlier",
+    "empty": "No new notifications",
+    "emptyHint": "System notices and task results appear here",
+    "dismiss": "Dismiss notification",
+    "close": "Close",
+    "toasts": "New notifications",
+    "more_one": "+{{count}} more",
+    "more_other": "+{{count}} more",
+    "collapse": "Collapse",
+    "closeAll": "Close all",
+    "action": {
+      "open": "Open",
+      "workbench": "View in OMV",
+      "power": "Power…",
+      "details": "View details"
+    },
+    "server": {
+      "sample": {
+        "title": "Sample notice",
+        "body": "This is a fake notice from the dev server.",
+        "bodyCount_one": "This is a fake notice from the dev server ({{count}} item).",
+        "bodyCount_other": "This is a fake notice from the dev server ({{count}} items)."
+      }
+    },
+    "client": {
+      "filesCopied": {
+        "title": "Copy finished",
+        "body_one": "Copied {{count}} item.",
+        "body_other": "Copied {{count}} items."
+      },
+      "filesUploaded": {
+        "title": "Upload finished",
+        "body_one": "Uploaded {{count}} file.",
+        "body_other": "Uploaded {{count}} files."
+      },
+      "filesDone": {
+        "title": "File tasks finished",
+        "body_one": "Finished {{count}} task.",
+        "body_other": "Finished {{count}} tasks."
+      },
+      "filesCopyFailed": {
+        "title": "Couldn't copy files",
+        "body_one": "Couldn't copy {{count}} item.",
+        "body_other": "Couldn't copy {{count}} items.",
+        "bodyStopped": "The copy stopped partway."
+      },
+      "filesUploadFailed": {
+        "title": "Couldn't upload files",
+        "body_one": "Couldn't upload {{count}} file.",
+        "body_other": "Couldn't upload {{count}} files.",
+        "bodyStopped": "The upload stopped partway."
+      }
+    }
+  },
   "profile": {
     "menu": "User menu ({{username}})",
     "roleAdmin": "Administrator",

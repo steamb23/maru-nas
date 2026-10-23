@@ -1,7 +1,9 @@
-// 데스크톱 셸: 바탕화면 바로가기, 위젯 레이어, 창 레이어, "모든 앱" 화면, 작업표시줄, 컨텍스트 메뉴,
-// 데스크톱 범위 모달.
+// 데스크톱 셸: 바탕화면 바로가기, 위젯 레이어, 창 레이어, "모든 앱" 화면, 알림 센터, 작업표시줄, 토스트,
+// 컨텍스트 메뉴, 데스크톱 범위 모달.
 import { useEffect, useEffectEvent, useLayoutEffect, useRef, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
+import type { NoticeAction } from '../api/types.gen'
+import { useNotificationStore } from '../notifications/store'
 import type { SettingsPageId } from '../settings/pages'
 import { useSettingsNavStore } from '../settings/navStore'
 import { useAuthStore } from '../auth/store'
@@ -14,6 +16,9 @@ import { useAppDrawerStore } from './appDrawerStore'
 import { ContextMenu } from './ContextMenu'
 import type { ContextMenuItem } from './contextMenu'
 import { DialogOutlet } from './DialogOutlet'
+import { NotificationCenter } from './NotificationCenter'
+import { ToastLayer } from './ToastLayer'
+import { runNoticeAction } from './noticeAction'
 import { type DesktopShortcutsHandle, DesktopShortcuts } from './DesktopShortcuts'
 import { Taskbar } from './Taskbar'
 import { TileDivider } from './TileDivider'
@@ -57,13 +62,14 @@ export function Desktop() {
     },
     accept: (e) => e.target === e.currentTarget || e.target === iconsRef.current,
   })
-  // 데스크톱 범위 모달. 열려 있으면 창·위젯·아이콘·작업표시줄을 모두 막고, 열린 컨텍스트 메뉴와 "모든 앱" 화면,
-  // 진행 중인 바로가기 끌기는 끝낸다.
+  // 데스크톱 범위 모달. 열려 있으면 창·위젯·아이콘·작업표시줄·토스트를 모두 막고, 열린 컨텍스트 메뉴와 "모든 앱" 화면,
+  // 알림 센터, 진행 중인 바로가기 끌기는 끝낸다.
   const { setHost: setModalHost, layer: modalLayer, blocked } = useModalHost()
   useEffect(() => {
     if (!blocked) return
     useContextMenuStore.getState().close()
     useAppDrawerStore.getState().close()
+    useNotificationStore.getState().setCenterOpen(false)
     shortcutsRef.current?.cancelDrag()
   }, [blocked])
   // "모든 앱" 화면이 열려 있으면 그 뒤의 데스크톱 영역(창·위젯·아이콘)은 입력을 받지 않는다. 작업표시줄은 그대로 쓴다.
@@ -106,6 +112,10 @@ export function Desktop() {
     launchApp('settings', bounds)
   }
 
+  // 알림 센터·토스트의 동작(앱·설정 열기, 워크벤치, 전원 대화상자)을 실행한다.
+  const runNotice = (action: NoticeAction) =>
+    runNoticeAction(action, { openApp: (id) => launchApp(id, bounds), openSettings })
+
   // 로그인하거나 세션을 복원해 처음 그려질 때 내용이 커지며 나타난다.
   useLayoutEffect(() => enterDesktop(rootRef.current), [])
 
@@ -133,7 +143,9 @@ export function Desktop() {
           ))}
         </div>
         <AppDrawer bounds={bounds} shortcuts={shortcutsRef} />
+        <NotificationCenter onAction={runNotice} />
         <Taskbar inert={blocked} onOpenSettings={openSettings} onNewWindow={(appId) => launchApp(appId, bounds)} />
+        <ToastLayer inert={blocked} onAction={runNotice} />
         <ContextMenu />
         <div className="modal-host modal-host-desktop" ref={setModalHost} />
         <DialogOutlet scope={DESKTOP_SCOPE} />

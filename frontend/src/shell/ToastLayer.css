@@ -1,0 +1,151 @@
+/* 토스트(ToastLayer, 시안 T). 데스크톱 수준에서 작업표시줄 다음에 그리며, 화면 오른쪽 아래 작업표시줄 위에 쌓는다.
+   카드의 아이콘 색(.notice-level-*), 동작·닫기 단추는 NotificationCenter.css의 것을 함께 쓴다. */
+.toast-layer {
+  position: absolute;
+  right: var(--float-gap);
+  bottom: calc(var(--taskbar-reserve) + var(--float-gap));
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  width: min(360px, calc(100% - 2 * var(--float-gap)));
+  color: var(--text);
+  /* 빈 자리는 아래 창을 가리지 않는다. */
+  pointer-events: none;
+}
+
+.toast-layer > * {
+  pointer-events: auto;
+}
+
+.toast-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.toast {
+  position: relative;
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) auto;
+  column-gap: 12px;
+  overflow: hidden;
+  padding: 12px 8px 12px 12px;
+  border: 1px solid var(--window-border);
+  border-radius: 10px;
+  background: var(--window-bg);
+  box-shadow: 0 8px 28px rgb(0 0 0 / 0.3);
+}
+
+.toast.notice-level-warning {
+  background: light-dark(#fff4e0, #47381c);
+}
+
+.toast.notice-level-error {
+  background: light-dark(#fde8e8, #4a2224);
+}
+
+.toast-main {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+}
+
+.toast-title {
+  font-size: 13px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.toast.notice-level-warning .toast-title {
+  color: light-dark(#8a5300, #ffd8a0);
+}
+
+.toast.notice-level-error .toast-title {
+  color: light-dark(#b42318, #ffb4ab);
+}
+
+.toast-body {
+  font-size: 12px;
+  color: var(--text-muted);
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.toast-action {
+  margin-top: 8px;
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+/* 남은 시간 막대. 다 줄어들면(animationend) 토스트를 내린다. */
+.toast-timer {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 3px;
+  background: color-mix(in srgb, var(--notice-color) 55%, transparent);
+  transform-origin: left center;
+  animation: toast-timer linear forwards;
+}
+
+@keyframes toast-timer {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+.toast-layer.paused .toast-timer {
+  animation-play-state: paused;
+}
+
+/* 애니메이션을 끄면 막대만 숨기고 시간은 그대로 잰다. */
+:root[data-animations='off'] .toast-timer {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast-timer {
+    opacity: 0;
+  }
+}
+
+.toast-controls {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.toast-pill {
+  align-self: flex-end;
+  padding: 5px 12px;
+  border: 1px solid var(--window-border);
+  border-radius: 999px;
+  background: var(--window-bg);
+  box-shadow: 0 4px 14px rgb(0 0 0 / 0.25);
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: scale var(--press-out) ease;
+}
+
+.toast-pill:hover {
+  background: light-dark(#eef0f3, #2f3338);
+}
+
+.toast-pill:active {
+  scale: var(--press-scale);
+  transition-duration: var(--press-in);
+}

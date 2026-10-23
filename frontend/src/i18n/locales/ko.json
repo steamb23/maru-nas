@@ -83,6 +83,67 @@
     "closeAll": "모두 닫기",
     "more": "창 더 보기"
   },
+  "notifications": {
+    "button": "알림",
+    "buttonUnread_one": "알림, 읽지 않음 {{count}}개",
+    "buttonUnread_other": "알림, 읽지 않음 {{count}}개",
+    "title": "알림",
+    "clearAll": "모두 지우기",
+    "today": "오늘",
+    "earlier": "이전",
+    "empty": "새 알림이 없습니다",
+    "emptyHint": "시스템 알림과 작업 결과가 여기에 표시됩니다",
+    "dismiss": "알림 지우기",
+    "close": "닫기",
+    "toasts": "새 알림",
+    "more_one": "+{{count}}개 더",
+    "more_other": "+{{count}}개 더",
+    "collapse": "접기",
+    "closeAll": "모두 닫기",
+    "action": {
+      "open": "열기",
+      "workbench": "OMV에서 보기",
+      "power": "전원…",
+      "details": "자세히 보기"
+    },
+    "server": {
+      "sample": {
+        "title": "예시 알림",
+        "body": "개발 서버의 가짜 알림입니다.",
+        "bodyCount_one": "개발 서버의 가짜 알림입니다(항목 {{count}}개).",
+        "bodyCount_other": "개발 서버의 가짜 알림입니다(항목 {{count}}개)."
+      }
+    },
+    "client": {
+      "filesCopied": {
+        "title": "복사를 마쳤습니다",
+        "body_one": "항목 {{count}}개를 복사했습니다.",
+        "body_other": "항목 {{count}}개를 복사했습니다."
+      },
+      "filesUploaded": {
+        "title": "올리기를 마쳤습니다",
+        "body_one": "파일 {{count}}개를 올렸습니다.",
+        "body_other": "파일 {{count}}개를 올렸습니다."
+      },
+      "filesDone": {
+        "title": "파일 작업을 마쳤습니다",
+        "body_one": "작업 {{count}}개를 마쳤습니다.",
+        "body_other": "작업 {{count}}개를 마쳤습니다."
+      },
+      "filesCopyFailed": {
+        "title": "파일을 복사하지 못했습니다",
+        "body_one": "항목 {{count}}개를 복사하지 못했습니다.",
+        "body_other": "항목 {{count}}개를 복사하지 못했습니다.",
+        "bodyStopped": "복사가 중간에 멈췄습니다."
+      },
+      "filesUploadFailed": {
+        "title": "파일을 올리지 못했습니다",
+        "body_one": "파일 {{count}}개를 올리지 못했습니다.",
+        "body_other": "파일 {{count}}개를 올리지 못했습니다.",
+        "bodyStopped": "올리기가 중간에 멈췄습니다."
+      }
+    }
+  },
   "profile": {
     "menu": "사용자 메뉴 ({{username}})",
     "roleAdmin": "관리자",

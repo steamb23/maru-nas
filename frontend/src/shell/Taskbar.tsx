@@ -22,6 +22,7 @@ import { APP_DRAWER_ID, useAppDrawerStore } from './appDrawerStore'
 import { Clock } from './Clock'
 import type { ContextMenuAction } from './contextMenu'
 import { useContextMenuStore } from './contextMenuStore'
+import { NotificationButton } from './NotificationButton'
 import { ProfileMenu } from './ProfileMenu'
 import { TASK_ENTER_MS, TASK_LEAVE_MS, withLeaving } from './taskbarAnim'
 import { type DragLayout, type Slot, dragLayout } from './taskbarDrag'
@@ -551,6 +552,7 @@ export function Taskbar({
         {/* 트레이: 시계, 그리고 오른쪽 끝에 고정된 프로필 메뉴 */}
         <div ref={trayRef} className="taskbar-tray">
           <Clock />
+          <NotificationButton />
           <ProfileMenu onOpenSettings={onOpenSettings} />
         </div>
       </nav>

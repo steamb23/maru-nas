@@ -60,6 +60,13 @@ export function unreadCount(notices: readonly Notice[], seen: SeenMap, events: r
   return notices.filter((n) => isUnread(n, seen)).length + events.filter((e) => !e.read).length
 }
 
+// unreadError는 읽지 않은 오류 알림이 있는지다(알림 버튼 배지를 빨갛게 한다).
+export function unreadError(notices: readonly Notice[], seen: SeenMap, events: readonly ClientEvent[]): boolean {
+  return (
+    notices.some((n) => n.level === 'error' && isUnread(n, seen)) || events.some((e) => e.level === 'error' && !e.read)
+  )
+}
+
 // seenAfterMark는 ids(없으면 모두)를 읽은 뒤의 읽음 상태다. 지금 목록에 없는 id는 뺀다(저장 크기를 묶어 둔다).
 export function seenAfterMark(notices: readonly Notice[], seen: SeenMap, ids?: readonly string[]): Record<string, string> {
   const marked = ids ? new Set(ids) : null

@@ -1,0 +1,52 @@
+/* 작업표시줄 트레이의 알림 버튼(NotificationButton). 프로필 버튼과 같은 정사각형이며, 배지는 버튼 너비를 바꾸지
+   않도록 버튼 위에 겹쳐 그린다. */
+.notification-button {
+  position: relative;
+  display: grid;
+  place-items: center;
+  height: 100%;
+  aspect-ratio: 1;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  transition: scale var(--press-out) ease;
+}
+
+.notification-button:hover,
+.notification-button[aria-expanded='true'] {
+  background: var(--hover-bg);
+}
+
+.notification-button:active {
+  background: var(--press-bg);
+  scale: var(--press-scale);
+  transition-duration: var(--press-in);
+}
+
+/* 배지 테두리는 작업표시줄의 불투명 바탕색으로 벨 그림과 떼어 놓는다. */
+.notification-badge {
+  position: absolute;
+  top: 4px;
+  right: 3px;
+  box-sizing: border-box;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--accent);
+  box-shadow: 0 0 0 2px light-dark(#f6f7f9, #1c1e22);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 읽지 않은 오류 알림이 있으면 빨갛게 한다. */
+.notification-badge.error {
+  background: #d93025;
+}

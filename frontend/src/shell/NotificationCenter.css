@@ -1,0 +1,254 @@
+/* 알림 센터(NotificationCenter, 시안 B). 데스크톱 수준에서 그리며 화면 오른쪽 위에서 작업표시줄 위까지 덮는다.
+   DOM에서 "모든 앱" 화면 다음, 작업표시줄 앞이다. 바탕화면을 어둡게 하거나 막지 않는다. */
+.notification-center {
+  position: absolute;
+  top: var(--float-gap);
+  right: var(--float-gap);
+  bottom: calc(var(--taskbar-reserve) + var(--float-gap));
+  z-index: 1;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: min(400px, calc(100% - 2 * var(--float-gap)));
+  padding: 12px;
+  border: 1px solid var(--window-border);
+  border-radius: 12px;
+  background: var(--window-bg);
+  box-shadow: 0 8px 28px rgb(0 0 0 / 0.3);
+  color: var(--text);
+  outline: none;
+}
+
+.notification-center-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 0 0 6px;
+}
+
+.notification-center-header h2 {
+  flex: 1;
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.notification-clear {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: scale var(--press-out) ease;
+}
+
+.notification-clear:hover {
+  background: var(--hover-bg);
+}
+
+.notification-clear:active {
+  background: var(--press-bg);
+  scale: var(--press-scale);
+  transition-duration: var(--press-in);
+}
+
+.notification-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.notification-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.notification-group-title {
+  margin: 0;
+  padding: 0 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.notification-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 48px 16px;
+  text-align: center;
+}
+
+.notification-empty-icon {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  margin-bottom: 6px;
+  border-radius: 50%;
+  background: var(--hover-bg);
+  color: var(--text-muted);
+}
+
+.notification-empty-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.notification-empty-hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+  word-break: keep-all;
+}
+
+/* 알림 카드. 토스트(ToastLayer.css)도 아이콘 색(.notice-level-*)과 본문 모양을 함께 쓴다. */
+.notice-card {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) auto;
+  column-gap: 12px;
+  padding: 12px;
+  border-radius: 10px;
+  background: light-dark(#f4f5f7, #2b2f35);
+}
+
+.notice-level-info {
+  --notice-color: var(--accent);
+}
+
+.notice-level-success {
+  --notice-color: light-dark(#1e7d3c, #7ad48f);
+}
+
+.notice-level-warning {
+  --notice-color: light-dark(#a35f00, #f5b54a);
+}
+
+.notice-level-error {
+  --notice-color: light-dark(#c5221f, #ff8a80);
+}
+
+.notice-icon {
+  margin-top: 1px;
+  background-color: var(--notice-color);
+}
+
+.notice-main {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.notice-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 400;
+  overflow-wrap: anywhere;
+}
+
+/* 알림 센터를 열기 전에 읽지 않았던 알림 */
+.notice-card.fresh .notice-title {
+  font-weight: 600;
+}
+
+.notice-body {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text-muted);
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.notice-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.notice-action {
+  padding: 5px 12px;
+  border: none;
+  border-radius: 6px;
+  background: var(--hover-bg);
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: scale var(--press-out) ease;
+}
+
+.notice-action:hover {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.notice-action:active {
+  background: color-mix(in srgb, var(--accent) 28%, transparent);
+  scale: var(--press-scale);
+  transition-duration: var(--press-in);
+}
+
+.notice-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.notice-time {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.notice-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.notice-dismiss {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  margin-right: -4px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: scale var(--press-out) ease;
+}
+
+.notice-dismiss:hover {
+  background: var(--hover-bg);
+  color: var(--text);
+}
+
+.notice-dismiss:active {
+  background: var(--press-bg);
+  scale: var(--press-scale);
+  transition-duration: var(--press-in);
+}

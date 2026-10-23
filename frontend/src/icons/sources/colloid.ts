@@ -5,6 +5,7 @@
 import documentEdit from '@colloid/actions/symbolic/document-edit-symbolic.svg?url'
 import documentOpen from '@colloid/actions/symbolic/document-open-symbolic.svg?url'
 import documentProperties from '@colloid/actions/symbolic/document-properties-symbolic.svg?url'
+import editClearAll from '@colloid/actions/symbolic/edit-clear-all-symbolic.svg?url'
 import editCopy from '@colloid/actions/symbolic/edit-copy-symbolic.svg?url'
 import editDelete from '@colloid/actions/symbolic/edit-delete-symbolic.svg?url'
 import editFind from '@colloid/actions/symbolic/edit-find-symbolic.svg?url'
@@ -83,9 +84,12 @@ import userHome from '@colloid/places/symbolic/user-home-symbolic.svg?url'
 import userTrash from '@colloid/places/symbolic/user-trash-symbolic.svg?url'
 import avatarDefault from '@colloid/status/symbolic/avatar-default-symbolic.svg?url'
 import channelSecure from '@colloid/status/symbolic/channel-secure-symbolic.svg?url'
+import dialogError from '@colloid/status/symbolic/dialog-error-symbolic.svg?url'
 import dialogInformation from '@colloid/status/symbolic/dialog-information-symbolic.svg?url'
 import dialogWarning from '@colloid/status/symbolic/dialog-warning-symbolic.svg?url'
 import download from '@colloid/status/symbolic/download-symbolic.svg?url'
+import notification from '@colloid/status/symbolic/notification-symbolic.svg?url'
+import processCompleted from '@colloid/status/symbolic/process-completed-symbolic.svg?url'
 import securityHigh from '@colloid/status/symbolic/security-high-symbolic.svg?url'
 import softwareUpdateAvailable from '@colloid/status/symbolic/software-update-available-symbolic.svg?url'
 import upload from '@colloid/status/symbolic/upload-symbolic.svg?url'
@@ -165,6 +169,11 @@ export const COLLOID_ICONS = {
   'download-symbolic': { url: download, kind: 'symbolic' },
   'dialog-information-symbolic': { url: dialogInformation, kind: 'symbolic' },
   'dialog-warning-symbolic': { url: dialogWarning, kind: 'symbolic' },
+  'dialog-error-symbolic': { url: dialogError, kind: 'symbolic' },
+  'process-completed-symbolic': { url: processCompleted, kind: 'symbolic' },
+  // 알림 버튼(작업표시줄)과 알림 센터의 빈 상태.
+  'notification-symbolic': { url: notification, kind: 'symbolic' },
+  'edit-clear-all-symbolic': { url: editClearAll, kind: 'symbolic' },
   'text-x-generic': { url: textXGeneric, kind: 'color' },
   'image-x-generic': { url: imageXGeneric, kind: 'color' },
   'video-x-generic': { url: videoXGeneric, kind: 'color' },

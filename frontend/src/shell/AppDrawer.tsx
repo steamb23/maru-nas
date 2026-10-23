@@ -69,7 +69,8 @@ const { close } = useAppDrawerStore.getState()
 // 바깥을 눌러도 닫지 않는 곳: 앱 타일, 검색 상자와 정렬 버튼, 타일·정렬 메뉴, 작업표시줄의 "모든 앱" 버튼
 // (누르면 닫는다)과 창 버튼·"더 보기" 버튼(창 버튼이나 "더 보기" 메뉴 항목을 누르면 Taskbar가 닫고 그 창을
 // 보인다. 여기서 먼저 닫으면 활성 창 버튼이 창을 최소화한다).
-const KEEP_OPEN = '.app-drawer-tile, .app-drawer-bar, .context-menu, .taskbar-launcher, .taskbar-items .task, .taskbar-more'
+const KEEP_OPEN =
+  '.app-drawer-tile, .app-drawer-bar, .context-menu, .taskbar-launcher, .taskbar-items .task, .taskbar-more, .toast-layer'
 
 // 정렬 설정을 불러오지 못했을 때 다시 시도하는 간격
 const PREFS_RETRY_MS = 10_000
