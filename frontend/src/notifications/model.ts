@@ -9,7 +9,7 @@ import type { Notice, NoticeAction } from '../api/types.gen'
 export type NoticeLevel = Notice['level']
 
 // 클라이언트 알림 코드. 문구는 messages.ts가 코드로 고른다.
-export type ClientEventCode = 'filesDone' | 'filesCopyFailed' | 'filesUploadFailed'
+export type ClientEventCode = 'filesCopied' | 'filesUploaded' | 'filesDone' | 'filesCopyFailed' | 'filesUploadFailed'
 
 // NotifyInput은 notify()로 넣는 클라이언트 알림이다. 문구 대신 코드와 치환값을 둔다(언어를 바꾸면 다시 그린다).
 export interface NotifyInput {

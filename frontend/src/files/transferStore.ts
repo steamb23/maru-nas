@@ -13,9 +13,11 @@
 // - 작업하는 동안은 세션 활동으로 알리고(입력 없이도 로그아웃되지 않게) 페이지를 떠나려 하면 경고한다
 // - 보안 확인 대화상자는 작업을 더한 탐색기 창에 띄우고, 그 창이 닫혔으면 작업 창, 그것도 없으면 바탕화면에 띄운다.
 //   띄울 곳은 확인이 필요해진 때 고른다
+// - 실패한 작업과, 작업 창이 열렸다가 모두 문제없이 끝난 작업은 알림으로도 알린다(transferNotices.ts)
 import { create } from 'zustand'
 import { ApiError, copyFiles, uploadFile } from '../api/client'
 import { reportActivity } from '../auth/activity'
+import { notify } from '../notifications/notify'
 import { type DialogScope, scopeId, useDialogStore } from '../shell/dialogs'
 import type { Size } from '../windows/geometry'
 import { type WindowStore, useWindowStore } from '../windows/store'
@@ -24,6 +26,7 @@ import { uploadError } from './messages'
 import { notifyFilesChanged } from './ops'
 import { type Root, joinPath } from './paths'
 import { withStepUp } from './stepUp'
+import { failedNotice, finishedNotice } from './transferNotices'
 import {
   type NewUpload,
   type UploadJob,
@@ -214,6 +217,9 @@ async function runJob(job: TransferJob) {
     window.clearInterval(activity)
     window.removeEventListener('beforeunload', onBeforeUnload)
   }
+  const ended = jobOf(job.id)
+  const failed = ended && failedNotice(ended)
+  if (failed) notify(failed)
 }
 
 async function runCopy(job: CopyJob, rt: Runtime) {
@@ -320,8 +326,12 @@ function finishQueue() {
   if (dismissed || entries.length === 0) return
   const wins = useWindowStore.getState().windows.filter((w) => w.appId === 'transfers')
   if (entries.every((e) => clean(e.job))) {
-    if (wins.length > 0) useWindowStore.getState().closeMany(wins.map((w) => w.id))
-    else setEntries(() => [])
+    // 작업 창이 열렸던(오래 걸린) 작업만 완료를 알린다. 창이 스스로 닫혀 결과가 보이지 않기 때문이다.
+    if (wins.length > 0) {
+      const done = finishedNotice(entries.map((e) => e.job))
+      if (done) notify(done)
+      useWindowStore.getState().closeMany(wins.map((w) => w.id))
+    } else setEntries(() => [])
   } else if (wins.length === 0 && lastBounds) {
     useWindowStore.getState().open('transfers', lastBounds)
   }
