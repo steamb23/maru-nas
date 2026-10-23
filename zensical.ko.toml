@@ -1,6 +1,5 @@
-# 마루 NAS 한국어 문서 사이트(Zensical). docs/*.ko.md만 site-ko/에 빌드하고, 배포할 때 영어 사이트(zensical.toml)의 ko/ 아래로 옮긴다.
-# 설명은 zensical.toml의 머리 주석을 본다
-# 두 파일은 언어에 따른 항목(이름, 주소, 목차, 화면 문구)만 다르고 나머지는 같게 둔다
+# 마루 NAS 한국어 문서 사이트(Zensical). 원본은 docs/ko/이고 site/ko/에 빌드한다. 설명은 zensical.toml의 머리 주석을 본다
+# 두 파일은 언어에 따른 항목(이름, 주소, 원본·빌드 위치, 목차, 화면 문구)만 다르고 나머지는 같게 둔다
 
 [project]
 site_name = "마루 NAS"
@@ -9,43 +8,34 @@ site_url = "https://steamb23.github.io/maru-nas/ko/"
 repo_url = "https://github.com/steamb23/maru-nas"
 repo_name = "steamb23/maru-nas"
 # github.com 저장소의 기본값은 master 브랜치라 직접 둔다
-edit_uri = "edit/main/docs/"
-docs_dir = "docs"
-site_dir = "site-ko"
-# 영어 문서는 zensical.toml이 빌드한다(gitignore 형식: 모든 .md를 빼고 .ko.md만 다시 넣는다)
-exclude_docs = """
-*.md
-!*.ko.md
-"""
+edit_uri = "edit/main/docs/ko/"
+docs_dir = "docs/ko"
+site_dir = "site/ko"
 nav = [
-  { "소개" = "README.ko.md" },
+  { "소개" = "README.md" },
   { "설치와 운영" = [
-    "install.ko.md",
-    "install-options.ko.md",
-    "upgrade.ko.md",
-    "reverse-proxy.ko.md",
-    "configuration.ko.md",
+    "install.md",
+    "install-options.md",
+    "upgrade.md",
+    "reverse-proxy.md",
+    "configuration.md",
   ] },
   { "기능" = [
-    "settings-app.ko.md",
-    "files.ko.md",
-    "terminal.ko.md",
+    "settings-app.md",
+    "files.md",
+    "terminal.md",
   ] },
   { "보안" = [
-    "helper.ko.md",
-    "security.ko.md",
-    "passkey-login.ko.md",
+    "helper.md",
+    "security.md",
+    "passkey-login.md",
   ] },
 ]
 
-# 사이트 주소(/maru-nas/ko/)로 들어오면 소개 페이지로 보낸다. README.ko.md는 첫 페이지(index)로 쓰이지 않는다
-[project.plugins.redirects.redirect_maps]
-"index.md" = "README.ko.md"
-
-# 머리글의 언어 선택. 각 언어 사이트의 첫 페이지로 간다(zensical.toml과 같게 둔다)
+# 머리글의 언어 선택(zensical.toml과 같게 둔다). 두 사이트의 페이지 이름이 같으므로 보던 페이지의 다른 언어로 간다
 [[project.extra.alternate]]
 name = "English"
-link = "/maru-nas/"
+link = "/maru-nas/en/"
 lang = "en"
 
 [[project.extra.alternate]]

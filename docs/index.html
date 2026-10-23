@@ -1,0 +1,32 @@
+<!doctype html>
+<!--
+  문서 사이트의 첫 주소(/maru-nas/)에 두는 페이지. 영어(en/)와 한국어(ko/) 사이트는 따로 빌드하므로(zensical.toml),
+  여기서 브라우저 언어를 보고 둘 중 하나로 보낸다. 배포할 때 .github/workflows/docs.yml이 site/index.html로 복사한다
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Maru NAS documentation</title>
+  <link rel="alternate" hreflang="en" href="https://steamb23.github.io/maru-nas/en/">
+  <link rel="alternate" hreflang="ko" href="https://steamb23.github.io/maru-nas/ko/">
+  <link rel="alternate" hreflang="x-default" href="https://steamb23.github.io/maru-nas/en/">
+  <script>
+    // 브라우저가 고른 언어 순서대로 보고, 영어·한국어 중 먼저 나오는 쪽으로 보낸다. 둘 다 없으면 영어다
+    (function () {
+      var langs = navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || ""];
+      var target = "en/";
+      for (var i = 0; i < langs.length; i++) {
+        var lang = String(langs[i]).toLowerCase();
+        if (lang === "ko" || lang.indexOf("ko-") === 0) { target = "ko/"; break; }
+        if (lang === "en" || lang.indexOf("en-") === 0) { break; }
+      }
+      location.replace(target + location.hash);
+    })();
+  </script>
+  <noscript><meta http-equiv="refresh" content="0; url=en/"></noscript>
+</head>
+<body>
+  <p><a href="en/">English</a> · <a href="ko/" lang="ko">한국어</a></p>
+</body>
+</html>

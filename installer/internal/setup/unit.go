@@ -11,7 +11,7 @@ import (
 )
 
 // templates는 systemd 유닛 템플릿이다. 유닛의 하드닝 줄을 바꾸는 일은 이 템플릿 파일을 고치는 것이다
-// (.claude/docs/helper.md를 함께 보고, 사용자에게 보이는 영향(쓸 수 있는 경로 등)이 바뀌면 docs/helper.md도 고친다).
+// (.claude/docs/helper.md를 함께 보고, 사용자에게 보이는 영향(쓸 수 있는 경로 등)이 바뀌면 docs/en/helper.md도 고친다).
 //
 //go:embed templates/*.tmpl
 var templateFS embed.FS

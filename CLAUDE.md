@@ -37,19 +37,19 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 
 - **배포**: 앞단 리버스 프록시(Caddy 등)가 HTTPS를 처리하고 대시보드를 둘 호스트·경로를 정한다(예: 별도 서브도메인 루트, 또는 OMV와 같은 도메인의 경로 접두사). 프론트는 상대 경로(`base: './'`)로 빌드하므로 경로 접두사에 묶이지 않고, 백엔드 라우트는 대시보드 루트(`/api/*`) 기준이다. OMV의 nginx 설정은 건드리지 않는다
   - 도메인 등 개인 환경 정보는 `*.local.md`(커밋 안 함)에 둔다. 커밋되는 파일에 도메인·IP를 하드코딩하지 않는다
-  - OMV 웹 UI(workbench)는 대시보드 안 창(iframe)이 아니라 이름 붙은 브라우저 탭으로 연다. 브라우저 기준 주소는 `-workbench-url`(`MARU_WORKBENCH_URL`)이며, 비우면 "OMV 워크벤치" 앱을 숨긴다(`docs/configuration.ko.md`의 "OMV 워크벤치 열기")
+  - OMV 웹 UI(workbench)는 대시보드 안 창(iframe)이 아니라 이름 붙은 브라우저 탭으로 연다. 브라우저 기준 주소는 `-workbench-url`(`MARU_WORKBENCH_URL`)이며, 비우면 "OMV 워크벤치" 앱을 숨긴다(`docs/ko/configuration.md`의 "OMV 워크벤치 열기")
 - **실행**: systemd 서비스로 Go 실행 파일 하나를 전용 일반 사용자로 실행한다. 프론트엔드는 `go:embed`로 포함한다. 수신은 기본적으로 루프백 TCP(`127.0.0.1:8090`)이고, Docker 안의 프록시처럼 루프백에 닿지 못하는 경우를 위해 Unix 소켓(`unix:/경로`)을 지원한다. 루프백이 아닌 주소는 `-allow-non-loopback`을 명시해야만 허용한다
   - Docker는 쓰지 않는다(호스트 `/proc`, `/sys`, 네트워크를 직접 봐야 하므로)
   - 설치는 루트의 `install.sh`(영어·한국어 안내)가 한다. `install.sh`는 Go 설치기(`installer/` → `bin/maru-install`, huh TUI)를 빌드해 실행하는 부트스트랩이고, 설치기가 systemd 유닛과 `/etc/default/maru`를 직접 만든다. 리버스 프록시는 설정하지 않는다. Claude는 작성만 하고 실행은 사용자가 한다(확인은 Go 테스트와 `--dry-run`)
-    - 흐름(1단계 빌드 → sudo 2단계), 설치 방식(새 설치, `--reinstall`, 업그레이드), 설정·단계를 더하는 절차는 `.claude/rules/installer.md`, 사용자 설명은 `docs/install.md`·`docs/install-options.md`·`docs/upgrade.md`
+    - 흐름(1단계 빌드 → sudo 2단계), 설치 방식(새 설치, `--reinstall`, 업그레이드), 설정·단계를 더하는 절차는 `.claude/rules/installer.md`, 사용자 설명은 `docs/en/install.md`·`docs/en/install-options.md`·`docs/en/upgrade.md`
     - 대시보드에서 업그레이드(`--web-upgrade`, 설계는 `.claude/docs/upgrade.md`): 설치기가 root 소유 복사본과 `maru-upgrade.service`·`.path`를 설치한다. 그 서비스(설치기의 `--upgrade-service`)가 저장소 소유자 권한으로 git·빌드를 하고 새 설치기를 root로 실행한다. maru는 확인 요청과 상태 파일만(설정 앱의 업데이트 페이지, `/api/upgrade*`), 도우미는 적용 요청(`upgrade.apply`)만 다룬다. 상세는 `.claude/rules/installer.md`의 "업그레이드 서비스", maru 쪽은 `.claude/rules/backend.md`의 "대시보드에서 업그레이드"
-  - `README.md`는 처음 보는 사람을 위한 소개, 빠른 시작(빌드 도구가 없는 OMV에 SSH로 접속한 상태에서 로그인까지), 문서 목록, 기여 안내만 둔다. 그 밖의 사용자 대상 설치·설정·프록시·기능 안내는 `docs/`(Zensical 사이트, `zensical.toml`·`zensical.ko.toml`)에 둔다. 플래그를 추가·변경하면 `docs/configuration.md`의 항목 표, 설치 옵션이면 `docs/install-options.md`의 표(`TestDocsListEveryOption`)와 설치기 레지스트리도 함께 고친다. 문서의 표는 한국어 `.ko.md`에서도 고친다
-  - 사용자 문서(`README.md`, `docs/`)는 영어(`<이름>.md`)와 한국어(`<이름>.ko.md`)를 함께 두고, 한쪽을 고치면 같은 커밋에서 다른 쪽도 고친다. 다른 언어 판으로 가는 링크는 `README.md`·`README.ko.md`의 첫 줄에만 두고(`docs/` 페이지는 사이트의 언어 선택과 목차로 오간다), 영어 문서의 화면 이름·문구는 `en.json`과 설치기의 영어 문구에 맞춘다. 문서 사이트는 언어마다 따로 빌드한다. `zensical.toml`이 영어 페이지를 `site/`에, `zensical.ko.toml`이 한국어 페이지를 `site-ko/`에 빌드하고, 배포할 때 `site-ko/`를 `site/ko/`로 옮긴다. 두 설정의 목차는 같은 순서로 두고, 언어에 따른 항목(이름, 주소, 목차, 화면 문구) 밖의 설정은 같게 둔다
-  - `docs/`는 빌드하지 않아도 GitHub에서 읽혀야 한다. GitHub가 그리는 문법만 쓰고(알림은 `> [!NOTE]`·`[!TIP]`·`[!WARNING]`, Zensical 전용 `!!!`·`===`·속성 목록은 쓰지 않음), 중첩 목록과 목록 안 코드 블록은 4칸 들여쓰고, 표 칸에 `|`를 넣지 않는다. 페이지 사이 링크는 상대 경로 `.md`와 그 언어의 제목 앵커로 걸고(영어 페이지는 영어 페이지로, 한국어 페이지는 `.ko.md`로), `docs/` 밖 파일은 GitHub 절대 주소로 건다. 앵커가 GitHub와 사이트에서 같도록 한 페이지 안에 같은 제목을 두 번 쓰지 않는다
+  - `README.md`는 처음 보는 사람을 위한 소개, 빠른 시작(빌드 도구가 없는 OMV에 SSH로 접속한 상태에서 로그인까지), 문서 목록, 기여 안내만 둔다. 그 밖의 사용자 대상 설치·설정·프록시·기능 안내는 `docs/`(Zensical 사이트, `zensical.toml`·`zensical.ko.toml`)에 둔다. 플래그를 추가·변경하면 `docs/en/configuration.md`의 항목 표, 설치 옵션이면 `docs/en/install-options.md`의 표(`TestDocsListEveryOption`)와 설치기 레지스트리도 함께 고친다. 문서의 표는 한국어(`docs/ko/`)에서도 고친다
+  - 사용자 문서는 영어(`README.md`, `docs/en/`)와 한국어(`README.ko.md`, `docs/ko/`)를 함께 두고, 한쪽을 고치면 같은 커밋에서 다른 쪽도 고친다. 두 폴더의 페이지는 파일 이름이 같다. 다른 언어 판으로 가는 링크는 `README.md`·`README.ko.md`의 첫 줄에만 두고(`docs/` 페이지는 사이트의 언어 선택과 목차로 오간다), 영어 문서의 화면 이름·문구는 `en.json`과 설치기의 영어 문구에 맞춘다. 문서 사이트는 언어마다 따로 빌드한다. `zensical.toml`이 `docs/en/`을 `site/en/`에, `zensical.ko.toml`이 `docs/ko/`를 `site/ko/`에 빌드하고, 배포할 때 사이트 첫 주소에 브라우저 언어로 둘 중 하나를 고르는 `docs/index.html`과 영어 사이트의 404 페이지를 둔다. 두 설정의 목차는 같은 순서로 두고, 언어에 따른 항목(이름, 주소, 원본·빌드 위치, 목차, 화면 문구) 밖의 설정은 같게 둔다
+  - `docs/`는 빌드하지 않아도 GitHub에서 읽혀야 한다. GitHub가 그리는 문법만 쓰고(알림은 `> [!NOTE]`·`[!TIP]`·`[!WARNING]`, Zensical 전용 `!!!`·`===`·속성 목록은 쓰지 않음), 중첩 목록과 목록 안 코드 블록은 4칸 들여쓰고, 표 칸에 `|`를 넣지 않는다. 페이지 사이 링크는 상대 경로 `.md`와 그 언어의 제목 앵커로 걸고(영어 페이지는 `docs/en/` 안에서, 한국어 페이지는 `docs/ko/` 안에서), `docs/` 밖 파일은 GitHub 절대 주소로 건다. 앵커가 GitHub와 사이트에서 같도록 한 페이지 안에 같은 제목을 두 번 쓰지 않는다
   - 사용자 문서에는 사용자가 할 일과 조건, 한도, 위험과 한계를 둔다. 내부 구현(파일 이름, 유닛 하드닝 목록, 서비스 구성 등)은 `.claude/`의 설계 문서에 둔다
 - **백엔드는 얇은 API 서버**다. 역할은 (1) 현황 읽기: `/proc`·`/sys` 직접 읽기, root가 필요한 정보는 OMV RPC, (2) 설정 변경 요청을 OMV `rpc.php`로 전달, (3) 대시보드 설정(사용자별 위젯 배치·바로가기·화면 설정, 관리자의 전역 설정, 배경 이미지) 저장, 세 가지뿐이다. OMV RPC로 할 수 없는 권한 작업은 (4) 권한 도우미에 맡긴다. (5) 웹 터미널은 같은 호스트의 sshd에 SSH 클라이언트로 붙어 셸을 중계한다
   - (3)은 상태 디렉터리(`-state-dir`, `internal/prefs`)에 대시보드 자신의 상태만 두며 OMV 설정·시스템 파일을 쓰지 않는다. 내용은 `.claude/rules/backend.md`
-  - 설정 앱(`src/settings/`)은 대시보드 설정, 자기 계정 프로필, 보안 수단, 정보만 다룬다. 전역에 적용되는 설정은 관리자만 바꾸고, 그 밖의 OMV·OS 설정은 넣지 않는다. 페이지 목록은 `docs/settings-app.md`
+  - 설정 앱(`src/settings/`)은 대시보드 설정, 자기 계정 프로필, 보안 수단, 정보만 다룬다. 전역에 적용되는 설정은 관리자만 바꾸고, 그 밖의 OMV·OS 설정은 넣지 않는다. 페이지 목록은 `docs/en/settings-app.md`
   - 웹에서 덮어쓰는 가동 설정은 재시작 없이 바뀌는 워크벤치 주소, SMART 확인 시각, 웹 터미널 허용뿐이다(`site.json`, 플래그보다 우선). 나머지는 root가 `/etc/default/maru`를 고친다
 - **권한 도우미**(`maru-helper`, `-helper-socket`, 설치기가 기본으로 설치): root로 도는 별도 실행 파일이 소켓 활성화로 maru 서비스 사용자의 연결만 받는다. 로그인할 때 비밀번호를 `unix_chkpwd`로 확인해 티켓을 주고, 연산을 그 사용자 권한으로 강등해 실행한다. root 연산은 권한 상승한 관리자 세션에서 5분 동안, 정해진 목록만 쓴다(지금은 `id`, 대시보드에서 업그레이드의 `upgrade.apply`, 파일 탐색기 디스크 휴지통의 `trash.prepare`). 상세는 `.claude/docs/helper.md`, 규칙은 `.claude/rules/helper.md`
 - **파일 탐색기**(`internal/files`, `src/files/`, 셸 앱): 홈 폴더와 공유 폴더를 도우미의 사용자 권한 연산으로 둘러보고 내려받고 올리고 하위 폴더까지 찾는다. 공유 폴더 목록은 관리자 세션이 받은 스냅숏(`site.json`)이고, 접근은 파일 시스템 권한을 따르며 관리자가 켜면 OMV 공유 폴더 권한도 따른다. 큰 폴더는 이름을 먼저 읽고 보이는 범위의 정보만 읽는다. 파일 미리보기는 따로 여는 셸 앱(`src/viewer/`)이다. 상세는 `.claude/rules/files.md`
@@ -85,7 +85,7 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 
 ## 명령어
 
-저장소 루트에서 실행한다. 처음 클론했다면 `git submodule update --init --depth 1`과 `npm --prefix frontend ci`를 먼저 실행한다. 도구 버전은 Go 1.27.1 이상(`backend/go.mod`), Node.js 20.19 이상 또는 22.12 이상(Vite 8)이고, Vitest 5는 Node.js 22.12 이상을 공식 지원한다. 도구 설치 방법은 `docs/install.ko.md`의 "빌드 도구"에 있다.
+저장소 루트에서 실행한다. 처음 클론했다면 `git submodule update --init --depth 1`과 `npm --prefix frontend ci`를 먼저 실행한다. 도구 버전은 Go 1.27.1 이상(`backend/go.mod`), Node.js 20.19 이상 또는 22.12 이상(Vite 8)이고, Vitest 5는 Node.js 22.12 이상을 공식 지원한다. 도구 설치 방법은 `docs/ko/install.md`의 "빌드 도구"에 있다.
 
 | 명령 | 내용 |
 |---|---|
@@ -100,7 +100,7 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 
 개별 실행: `cd backend && go test ./internal/addons/sysinfo -run TestParseMemInfo`, `cd installer && go test ./internal/setup -run TestGolden`, `cd frontend && npx vitest run src/icons`
 
-문서 사이트: `zensical serve`(영어 미리보기), `zensical serve -f zensical.ko.toml -a localhost:8001`(한국어 미리보기), `zensical build --strict`와 `zensical build --strict -f zensical.ko.toml`(깨진 링크·앵커 검사, CI의 `docs` 잡과 같다). 영어 빌드는 `site/`의 다른 파일을 지우므로 한국어 빌드를 `site/` 안에 두지 않는다. 사이트(`https://steamb23.github.io/maru-nas/`)는 `stable`을 push하면 `.github/workflows/docs.yml`이 GitHub Pages에 배포하므로 최신 릴리스 기준이다. 릴리스 사이에 문서만 먼저 올릴 때는 사용자가 Actions 화면에서 main을 골라 그 워크플로를 수동으로 실행하고, 다음 `stable` push가 다시 덮어쓴다. Zensical은 Python 도구라 `make`에 넣지 않았고, 설치 방법과 고정 버전은 `CONTRIBUTING.md`의 "Documentation"에 있다
+문서 사이트: `zensical serve`(영어 미리보기), `zensical serve -f zensical.ko.toml -a localhost:8001`(한국어 미리보기), `zensical build --strict`와 `zensical build --strict -f zensical.ko.toml`(깨진 링크·앵커 검사, CI의 `docs` 잡과 같다). 두 빌드는 각자의 `site_dir`(`site/en/`, `site/ko/`) 밖의 파일을 건드리지 않는다. 사이트(`https://steamb23.github.io/maru-nas/`)는 `stable`을 push하면 `.github/workflows/docs.yml`이 GitHub Pages에 배포하므로 최신 릴리스 기준이다. 릴리스 사이에 문서만 먼저 올릴 때는 사용자가 Actions 화면에서 main을 골라 그 워크플로를 수동으로 실행하고, 다음 `stable` push가 다시 덮어쓴다. Zensical은 Python 도구라 `make`에 넣지 않았고, 설치 방법과 고정 버전은 `CONTRIBUTING.md`의 "Documentation"에 있다
 
 개발 서버 환경 변수와 워크트리:
 
@@ -169,10 +169,10 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
   - 패치(`0.y.z`): 버그 수정, 번역·문구·문서 수정. 설정과 저장 형식은 그대로일 때
   - `1.0.0`: 깃허브에 공개하면서 설치·업그레이드 방법과 상태 디렉터리 형식의 호환을 약속할 수 있을 때
 - 커밋마다 올리지 않는다(정보 페이지에 커밋 해시가 나온다). 올릴 때는 버전 커밋 하나를 만들고, 공개 배포부터는 그 커밋에 `v<버전>` 태그를 붙인다
-- 릴리스 절차(공개 배포부터). 태그는 고정이고 `stable` 브랜치가 "최신 릴리스"를 가리키는 움직이는 이름이다. `README.md`의 빠른 시작과 `docs/install.md`(두 언어 모두)는 `stable`을 받는다
+- 릴리스 절차(공개 배포부터). 태그는 고정이고 `stable` 브랜치가 "최신 릴리스"를 가리키는 움직이는 이름이다. `README.md`·`README.ko.md`의 빠른 시작과 `docs/en/install.md`·`docs/ko/install.md`는 `stable`을 받는다
   1. `main`에 버전 커밋을 만든다(`Version` 상수, 이전 버전 태그 이후의 변경 요약)
   2. 그 커밋에 주석 태그를 붙인다: `git tag -a v<버전> -m "v<버전>"`. 붙인 태그는 옮기지 않는다
   3. `stable`을 그 태그로 fast-forward한다: `git branch -f stable v<버전>`. `stable`은 앞으로만 가고 되감지 않으며, 태그 없는 커밋을 가리키게 하지 않는다
   4. `main`, 태그, `stable`을 push하고(`git push origin main v<버전> stable`) GitHub Release에 변경 요약을 올린다. `stable` push가 문서 사이트를 다시 배포한다(`.github/workflows/docs.yml`. 저장소 설정에서 Pages의 Source는 GitHub Actions, `github-pages` 환경은 `stable`과 `main`에서 배포를 허용해야 한다)
-  - 첫 공개 릴리스에서 `stable`을 처음 만든다. 그 전에는 `stable`이 없으므로 `README.md`·`docs/install.md`의 `git clone -b stable`은 동작하지 않는다
+  - 첫 공개 릴리스에서 `stable`을 처음 만든다. 그 전에는 `stable`이 없으므로 `README.md`·`docs/en/install.md`의 `git clone -b stable`은 동작하지 않는다
   - 릴리스 뒤에 급한 수정이 필요하면 `main`에서 고치고 패치 버전으로 위 절차를 반복한다. 릴리스 브랜치를 따로 만들지 않는다

@@ -19,11 +19,11 @@ Maru NAS is a desktop-like web dashboard that runs on OpenMediaVault 8. Windows,
 
 - **Status windows and widgets**: see system information, storage, network, temperatures and disk health (SMART) in windows or as desktop widgets.
 - **Simple operations**: start, stop and restart containers (compose plugin), and turn core services on and off.
-- **[File explorer](docs/files.md)**: browse your home folder and shared folders with your own permissions, upload, download, and delete to the trash.
-- **[Web terminal](docs/terminal.md)**: open an SSH shell on this NAS in a window, as the account you signed in with.
-- **[Security hardening mode](docs/security.md)**: ask for the password again, or for a passkey or an authenticator app, before sensitive features. You can also [sign in with a passkey](docs/passkey-login.md).
-- **[Upgrading from the dashboard](docs/upgrade.md#upgrading-from-the-dashboard)**: upgrade to a new version from the Settings app, without SSH.
-- **[OMV Workbench link](docs/configuration.md#opening-the-omv-workbench)**: open the OMV web UI in a new tab when you need deep configuration.
+- **[File explorer](docs/en/files.md)**: browse your home folder and shared folders with your own permissions, upload, download, and delete to the trash.
+- **[Web terminal](docs/en/terminal.md)**: open an SSH shell on this NAS in a window, as the account you signed in with.
+- **[Security hardening mode](docs/en/security.md)**: ask for the password again, or for a passkey or an authenticator app, before sensitive features. You can also [sign in with a passkey](docs/en/passkey-login.md).
+- **[Upgrading from the dashboard](docs/en/upgrade.md#upgrading-from-the-dashboard)**: upgrade to a new version from the Settings app, without SSH.
+- **[OMV Workbench link](docs/en/configuration.md#opening-the-omv-workbench)**: open the OMV web UI in a new tab when you need deep configuration.
 
 ## Quick start
 
@@ -31,8 +31,8 @@ Start from an SSH session on a freshly installed OMV 8. Even with no build tools
 
 You need:
 
-- OpenMediaVault 8.0 or later ([differences between versions](docs/install.md#omv-versions))
-- A regular user in the sudo group, signed in over SSH. The user created by the OMV installation image is one ([accounts and SSH](docs/install.md#accounts-and-ssh))
+- OpenMediaVault 8.0 or later ([differences between versions](docs/en/install.md#omv-versions))
+- A regular user in the sudo group, signed in over SSH. The user created by the OMV installation image is one ([accounts and SSH](docs/en/install.md#accounts-and-ssh))
 - Internet access while building (github.com, registry.npmjs.org, proxy.golang.org) and about 1.1 GB of free space
 
 ### 1. Install the build tools
@@ -43,7 +43,7 @@ sudo apt install git make nodejs npm
 sudo apt install -t trixie-backports golang-go
 ```
 
-The last line installs Go 1.27 from Debian backports, which OMV enables by default. You need `go version` 1.27 or later and `node --version` 20.19 or later. If you use Go 1.24 from the default repository, see [Build tools](docs/install.md#build-tools).
+The last line installs Go 1.27 from Debian backports, which OMV enables by default. You need `go version` 1.27 or later and `node --version` 20.19 or later. If you use Go 1.24 from the default repository, see [Build tools](docs/en/install.md#build-tools).
 
 ### 2. Download and install
 
@@ -99,12 +99,12 @@ Caddy uses only port 443 and does not change the OMV settings. `https://<address
 
 Open `https://<address>/desk/` in your browser and sign in with your OMV account.
 
-- `tls internal` uses a certificate Caddy creates itself, so the browser warns at first. To remove the warning or to use passkeys, add Caddy's root certificate to your devices ([Reverse proxy](docs/reverse-proxy.md#caddy-example-keeping-the-omv-default-port)).
-- Subdomains, Caddy in Docker and other proxies are covered in [Reverse proxy](docs/reverse-proxy.md).
+- `tls internal` uses a certificate Caddy creates itself, so the browser warns at first. To remove the warning or to use passkeys, add Caddy's root certificate to your devices ([Reverse proxy](docs/en/reverse-proxy.md#caddy-example-keeping-the-omv-default-port)).
+- Subdomains, Caddy in Docker and other proxies are covered in [Reverse proxy](docs/en/reverse-proxy.md).
 
 ### Upgrading and uninstalling
 
-Running the script from the repository again upgrades with the installed settings. Administrators can also upgrade from the dashboard, on the "Update" page of the Settings app ([Upgrading](docs/upgrade.md)).
+Running the script from the repository again upgrades with the installed settings. Administrators can also upgrade from the dashboard, on the "Update" page of the Settings app ([Upgrading](docs/en/upgrade.md)).
 
 ```sh
 git pull
@@ -115,21 +115,21 @@ To uninstall, run `./install.sh --uninstall`.
 
 ## Documentation
 
-What you look up while running Maru NAS after installation is on the [documentation site](https://steamb23.github.io/maru-nas/). The site normally follows the latest release (`stable`), but between releases it may already show the documentation of `main`, the code in development. You can read the same pages on GitHub in [docs/](docs/README.md).
+What you look up while running Maru NAS after installation is on the [documentation site](https://steamb23.github.io/maru-nas/en/). The site normally follows the latest release (`stable`), but between releases it may already show the documentation of `main`, the code in development. You can read the same pages on GitHub in [docs/en/](docs/en/README.md).
 
 | Page | Contents |
 |---|---|
-| [Installation](docs/install.md) | Requirements and differences between OMV versions, build tools, the install script, reinstalling, automation, uninstalling |
-| [Install options](docs/install-options.md) | Every option of `install.sh` |
-| [Upgrading](docs/upgrade.md) | Upgrading over SSH, upgrading from the dashboard |
-| [Reverse proxy](docs/reverse-proxy.md) | Listen modes, proxy requirements, installing Caddy and examples |
-| [Configuration](docs/configuration.md) | Every setting in `/etc/default/maru`, values changed on the web, backups, opening the OMV Workbench |
-| [Settings app](docs/settings-app.md) | Pages of the Settings app and who can use them |
-| [File explorer](docs/files.md) | Visible folders and permissions, uploading and downloading, the trash, moving and copying |
-| [Web terminal](docs/terminal.md) | Turning it on, authentication, SSH settings and security |
-| [Privileged helper](docs/helper.md) | The service that does the work needing user or root rights, and its security design |
-| [Security hardening mode](docs/security.md) | Password re-check and two-step verification (passkeys, authenticator apps, recovery codes), recovery |
-| [Passkey sign-in](docs/passkey-login.md) | Signing in with a passkey instead of a password, and its limits |
+| [Installation](docs/en/install.md) | Requirements and differences between OMV versions, build tools, the install script, reinstalling, automation, uninstalling |
+| [Install options](docs/en/install-options.md) | Every option of `install.sh` |
+| [Upgrading](docs/en/upgrade.md) | Upgrading over SSH, upgrading from the dashboard |
+| [Reverse proxy](docs/en/reverse-proxy.md) | Listen modes, proxy requirements, installing Caddy and examples |
+| [Configuration](docs/en/configuration.md) | Every setting in `/etc/default/maru`, values changed on the web, backups, opening the OMV Workbench |
+| [Settings app](docs/en/settings-app.md) | Pages of the Settings app and who can use them |
+| [File explorer](docs/en/files.md) | Visible folders and permissions, uploading and downloading, the trash, moving and copying |
+| [Web terminal](docs/en/terminal.md) | Turning it on, authentication, SSH settings and security |
+| [Privileged helper](docs/en/helper.md) | The service that does the work needing user or root rights, and its security design |
+| [Security hardening mode](docs/en/security.md) | Password re-check and two-step verification (passkeys, authenticator apps, recovery codes), recovery |
+| [Passkey sign-in](docs/en/passkey-login.md) | Signing in with a passkey instead of a password, and its limits |
 
 ## Contributing
 

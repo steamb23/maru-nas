@@ -47,7 +47,7 @@ jobs:
       - name: Build
         run: make build
 
-  # docs/와 zensical.toml·zensical.ko.toml을 Zensical로 빌드해 깨진 링크·앵커를 찾는다(--strict는 경고도 실패로 본다).
+  # docs/en/·docs/ko/를 zensical.toml·zensical.ko.toml로 빌드해 깨진 링크·앵커를 찾는다(--strict는 경고도 실패로 본다).
   # 배포는 하지 않는다
   docs:
     runs-on: ubuntu-latest

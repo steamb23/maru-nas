@@ -1,23 +1,21 @@
-# 마루 NAS 영어 문서 사이트(Zensical). 문서 원본은 docs/이고 GitHub에서도 그대로 읽힌다.
-# 한국어 문서(docs/*.ko.md)는 zensical.ko.toml로 site-ko/에 따로 빌드하고, 배포할 때 이 사이트의 ko/ 아래로 옮긴다.
-# 언어마다 목차·검색·화면 문구가 따로다. 이 빌드는 site/의 다른 파일을 지우므로 한국어 빌드를 site/ 안에 두지 않는다
+# 마루 NAS 영어 문서 사이트(Zensical). 원본은 docs/en/이고 GitHub에서도 그대로 읽힌다.
+# 한국어(docs/ko/)는 zensical.ko.toml이 따로 빌드한다. 언어마다 목차·검색·화면 문구가 따로이고, 두 사이트를 site/en/·site/ko/에 빌드한다.
+# 배포할 때 사이트 첫 주소(/maru-nas/)에는 브라우저 언어로 en/·ko/를 고르는 docs/index.html을 둔다(.github/workflows/docs.yml)
 # 미리보기: zensical serve(영어), zensical serve -f zensical.ko.toml(한국어). 둘을 함께 띄울 때는 -a로 포트를 나눈다
 # 검사: zensical build --strict와 zensical build --strict -f zensical.ko.toml (CONTRIBUTING.md의 "Documentation")
 # 배포: stable을 push하면 .github/workflows/docs.yml이 두 사이트를 GitHub Pages에 올린다(main은 Actions 화면에서 수동으로)
-# 두 파일은 언어에 따른 항목(이름, 주소, 목차, 화면 문구)만 다르고 나머지는 같게 둔다
+# 두 파일은 언어에 따른 항목(이름, 주소, 원본·빌드 위치, 목차, 화면 문구)만 다르고 나머지는 같게 둔다
 
 [project]
 site_name = "Maru NAS"
 site_description = "A suspiciously normal desktop-like dashboard for openmediavault."
-site_url = "https://steamb23.github.io/maru-nas/"
+site_url = "https://steamb23.github.io/maru-nas/en/"
 repo_url = "https://github.com/steamb23/maru-nas"
 repo_name = "steamb23/maru-nas"
 # github.com 저장소의 기본값은 master 브랜치라 직접 둔다
-edit_uri = "edit/main/docs/"
-docs_dir = "docs"
-site_dir = "site"
-# 한국어 문서는 zensical.ko.toml이 빌드한다
-exclude_docs = "*.ko.md"
+edit_uri = "edit/main/docs/en/"
+docs_dir = "docs/en"
+site_dir = "site/en"
 nav = [
   { "Introduction" = "README.md" },
   { "Installation and operation" = [
@@ -39,10 +37,10 @@ nav = [
   ] },
 ]
 
-# 머리글의 언어 선택. 각 언어 사이트의 첫 페이지로 간다(zensical.ko.toml과 같게 둔다)
+# 머리글의 언어 선택(zensical.ko.toml과 같게 둔다). 두 사이트의 페이지 이름이 같으므로 보던 페이지의 다른 언어로 간다
 [[project.extra.alternate]]
 name = "English"
-link = "/maru-nas/"
+link = "/maru-nas/en/"
 lang = "en"
 
 [[project.extra.alternate]]
