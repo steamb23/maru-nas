@@ -115,7 +115,7 @@ git pull
 
 ## 문서
 
-설치한 뒤 운영하면서 찾아보는 내용은 [문서 사이트](https://steamb23.github.io/maru-nas/)에 있습니다. 사이트는 보통 최신 릴리스(`stable`) 기준이지만, 릴리스 사이에는 개발 중인 `main`의 문서가 먼저 올라가 있을 수 있습니다. 같은 문서를 저장소의 [docs/](docs/README.ko.md)에서 GitHub로도 읽을 수 있습니다.
+설치한 뒤 운영하면서 찾아보는 내용은 [문서 사이트](https://steamb23.github.io/maru-nas/ko/)에 있습니다. 사이트는 보통 최신 릴리스(`stable`) 기준이지만, 릴리스 사이에는 개발 중인 `main`의 문서가 먼저 올라가 있을 수 있습니다. 같은 문서를 저장소의 [docs/](docs/README.ko.md)에서 GitHub로도 읽을 수 있습니다.
 
 | 문서 | 내용 |
 |---|---|

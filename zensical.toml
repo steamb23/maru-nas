@@ -1,6 +1,10 @@
-# 마루 NAS 문서 사이트(Zensical). 문서 원본은 docs/이고 GitHub에서도 그대로 읽힌다.
-# 미리보기: zensical serve, 검사: zensical build --strict (CONTRIBUTING.md의 "Documentation")
-# 배포: stable을 push하면 .github/workflows/docs.yml이 GitHub Pages에 올린다(main은 Actions 화면에서 수동으로)
+# 마루 NAS 영어 문서 사이트(Zensical). 문서 원본은 docs/이고 GitHub에서도 그대로 읽힌다.
+# 한국어 문서(docs/*.ko.md)는 zensical.ko.toml로 site-ko/에 따로 빌드하고, 배포할 때 이 사이트의 ko/ 아래로 옮긴다.
+# 언어마다 목차·검색·화면 문구가 따로다. 이 빌드는 site/의 다른 파일을 지우므로 한국어 빌드를 site/ 안에 두지 않는다
+# 미리보기: zensical serve(영어), zensical serve -f zensical.ko.toml(한국어). 둘을 함께 띄울 때는 -a로 포트를 나눈다
+# 검사: zensical build --strict와 zensical build --strict -f zensical.ko.toml (CONTRIBUTING.md의 "Documentation")
+# 배포: stable을 push하면 .github/workflows/docs.yml이 두 사이트를 GitHub Pages에 올린다(main은 Actions 화면에서 수동으로)
+# 두 파일은 언어에 따른 항목(이름, 주소, 목차, 화면 문구)만 다르고 나머지는 같게 둔다
 
 [project]
 site_name = "Maru NAS"
@@ -12,7 +16,8 @@ repo_name = "steamb23/maru-nas"
 edit_uri = "edit/main/docs/"
 docs_dir = "docs"
 site_dir = "site"
-# 영어 문서(*.md)가 기본이고, 한국어 문서(*.ko.md)는 "한국어" 아래에 같은 순서로 둔다
+# 한국어 문서는 zensical.ko.toml이 빌드한다
+exclude_docs = "*.ko.md"
 nav = [
   { "Introduction" = "README.md" },
   { "Installation and operation" = [
@@ -32,29 +37,9 @@ nav = [
     "security.md",
     "passkey-login.md",
   ] },
-  { "한국어" = [
-    { "소개" = "README.ko.md" },
-    { "설치와 운영" = [
-      "install.ko.md",
-      "install-options.ko.md",
-      "upgrade.ko.md",
-      "reverse-proxy.ko.md",
-      "configuration.ko.md",
-    ] },
-    { "기능" = [
-      "settings-app.ko.md",
-      "files.ko.md",
-      "terminal.ko.md",
-    ] },
-    { "보안" = [
-      "helper.ko.md",
-      "security.ko.md",
-      "passkey-login.ko.md",
-    ] },
-  ] },
 ]
 
-# 머리글의 언어 선택은 각 언어의 첫 페이지로 간다. docs/ 페이지 본문에는 다른 언어 링크를 두지 않는다
+# 머리글의 언어 선택. 각 언어 사이트의 첫 페이지로 간다(zensical.ko.toml과 같게 둔다)
 [[project.extra.alternate]]
 name = "English"
 link = "/maru-nas/"
@@ -62,7 +47,7 @@ lang = "en"
 
 [[project.extra.alternate]]
 name = "한국어"
-link = "/maru-nas/README.ko/"
+link = "/maru-nas/ko/"
 lang = "ko"
 
 [project.theme]

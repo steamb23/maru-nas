@@ -47,7 +47,7 @@ jobs:
       - name: Build
         run: make build
 
-  # docs/와 zensical.toml을 Zensical로 빌드해 깨진 링크·앵커를 찾는다(--strict는 경고도 실패로 본다).
+  # docs/와 zensical.toml·zensical.ko.toml을 Zensical로 빌드해 깨진 링크·앵커를 찾는다(--strict는 경고도 실패로 본다).
   # 배포는 하지 않는다
   docs:
     runs-on: ubuntu-latest
@@ -62,5 +62,8 @@ jobs:
       - name: Install Zensical
         run: pip install zensical==0.0.71
 
+      # 영어(zensical.toml)와 한국어(zensical.ko.toml) 사이트를 따로 빌드한다
       - name: Build docs
-        run: zensical build --strict
+        run: |
+          zensical build --strict
+          zensical build --strict -f zensical.ko.toml
