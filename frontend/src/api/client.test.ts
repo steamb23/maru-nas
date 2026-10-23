@@ -9,6 +9,7 @@ import {
   enrollPasskeyLogin,
   fetchAddon,
   fetchCapabilities,
+  fetchNotifications,
   fetchPreferences,
   fetchSession,
   fetchSystem,
@@ -16,6 +17,7 @@ import {
   hasAddonSources,
   isCapabilitiesResponse,
   isLoginResponse,
+  isNotice,
   isPreferences,
   isSecurityStatus,
   login,
@@ -25,6 +27,7 @@ import {
   passkeyLoginUnlock,
   runAddonAction,
   saveDrawer,
+  saveNotificationPrefs,
   saveShortcuts,
   saveWidgets,
   sendActivity,
@@ -233,6 +236,7 @@ describe('preferences', () => {
     ['모르는 정렬 방식(다른 버전)', { drawer: { sort: 'later' } }],
     ['시스템 정보 설정', { systemInfo: { cpuScale: 'core', cpuGraph: 'cores' } }],
     ['모르는 시스템 정보 값(다른 버전)', { systemInfo: { cpuScale: 'irix', cpuGraph: 'heatmap' } }],
+    ['알림 읽음 상태', { notifications: { seen: { 'sample-a': 'r1' } } }],
   ])('%s를 받는다', (_name, v) => {
     expect(isPreferences(v)).toBe(true)
   })
@@ -251,6 +255,8 @@ describe('preferences', () => {
     ['sort 없음', { drawer: {} }],
     ['systemInfo가 문자열', { systemInfo: 'core' }],
     ['cpuGraph 없음', { systemInfo: { cpuScale: 'core' } }],
+    ['읽음 상태 없음', { notifications: {} }],
+    ['읽음 리비전이 숫자', { notifications: { seen: { a: 1 } } }],
   ])('%s는 거부한다', (_name, v) => {
     expect(isPreferences(v)).toBe(false)
   })
@@ -645,5 +651,47 @@ describe('uploadFile', () => {
     off()
     expect(onUnauthorized).toHaveBeenCalledOnce()
     expect(FakeXHR.sent).toHaveLength(0)
+  })
+})
+
+describe('알림', () => {
+  const notice = {
+    id: 'sample-a',
+    code: 'sample',
+    level: 'warning',
+    revision: 'r1',
+    count: 3,
+    items: ['x'],
+    action: { kind: 'workbench', route: 'system/updatemgmt/updates' },
+  }
+
+  it('isNotice는 아는 코드·수준·동작만 받는다', () => {
+    expect(isNotice(notice)).toBe(true)
+    expect(isNotice({ ...notice, code: 'later' })).toBe(false)
+    expect(isNotice({ ...notice, level: 'fatal' })).toBe(false)
+    expect(isNotice({ ...notice, action: { kind: 'shell' } })).toBe(false)
+    expect(isNotice({ ...notice, count: '3' })).toBe(false)
+    expect(isNotice({ ...notice, revision: undefined })).toBe(false)
+  })
+
+  it('fetchNotifications는 모르는 알림만 빼고 돌려준다', async () => {
+    stubFetch(Response.json({ notices: [notice, { ...notice, id: 'new', code: 'later' }], seen: { 'sample-a': 'r1' } }))
+    await expect(fetchNotifications()).resolves.toEqual({ notices: [notice], seen: { 'sample-a': 'r1' } })
+  })
+
+  it('fetchNotifications는 형식이 다르면 던진다', async () => {
+    stubFetch(Response.json({ notices: {}, seen: {} }))
+    await expect(fetchNotifications()).rejects.toThrow('unexpected response shape')
+    stubFetch(Response.json({ notices: [], seen: null }))
+    await expect(fetchNotifications()).rejects.toThrow('unexpected response shape')
+  })
+
+  it('saveNotificationPrefs는 JSON 본문으로 PUT한다', async () => {
+    const fn = stubFetch(new Response(null, { status: 204 }))
+    await saveNotificationPrefs({ 'sample-a': 'r1' })
+    const [url, init] = fn.mock.calls[0]
+    expect(url).toMatch(/\/api\/preferences\/notifications$/)
+    expect(init?.method).toBe('PUT')
+    expect(JSON.parse(String(init?.body))).toEqual({ notifications: { seen: { 'sample-a': 'r1' } } })
   })
 })

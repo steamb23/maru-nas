@@ -10,6 +10,7 @@ import {
 } from './appearance/useAppearance'
 import { LoginScreen, OfflineScreen } from './auth/LoginScreen'
 import { useAuthStore } from './auth/store'
+import { useNotifications } from './notifications/useNotifications'
 import { useAvatarLoader } from './profile/useAvatar'
 import { useSessionKeeper } from './auth/useSessionKeeper'
 import { Desktop } from './shell/Desktop'
@@ -29,6 +30,7 @@ function SignedIn() {
   useCapabilities()
   useAppearanceLoader()
   useAvatarLoader()
+  useNotifications()
   return <Desktop />
 }
 

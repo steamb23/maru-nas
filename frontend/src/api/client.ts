@@ -49,6 +49,11 @@ import type {
   HelperStatus,
   ImageInfo,
   LoginResponse,
+  Notice,
+  NoticeAction,
+  NotificationPrefs,
+  NotificationPrefsRequest,
+  NotificationsResponse,
   OverridableSetting,
   PasskeyAssertion,
   PasskeyChallengeRequest,
@@ -489,6 +494,60 @@ export function isAppearancePrefs(v: unknown): v is AppearancePrefs {
   )
 }
 
+// isSeenMap은 알림 읽음 상태(id → 리비전)의 모양을 본다.
+function isSeenMap(v: unknown): v is Record<string, string> {
+  return isObj(v) && Object.values(v).every(isStr)
+}
+
+function isNotificationPrefs(v: unknown): v is NotificationPrefs {
+  return isObj(v) && isSeenMap(v.seen)
+}
+
+const NOTICE_LEVELS = ['info', 'success', 'warning', 'error'] as const satisfies readonly Notice['level'][]
+const NOTICE_CODES = ['sample'] as const satisfies readonly Notice['code'][]
+const NOTICE_ACTION_KINDS = ['app', 'workbench', 'power'] as const satisfies readonly NoticeAction['kind'][]
+
+function isNoticeAction(v: unknown): v is NoticeAction {
+  return (
+    isObj(v) &&
+    isOneOf(v.kind, NOTICE_ACTION_KINDS) &&
+    isOptional(v.app, isStr) &&
+    isOptional(v.page, isStr) &&
+    isOptional(v.route, isStr)
+  )
+}
+
+// isNotice는 이 화면이 그릴 수 있는 서버 알림인지 본다. 코드·수준·동작 종류를 모르면 false다.
+export function isNotice(v: unknown): v is Notice {
+  return (
+    isObj(v) &&
+    isStr(v.id) &&
+    isOneOf(v.code, NOTICE_CODES) &&
+    isOneOf(v.level, NOTICE_LEVELS) &&
+    isStr(v.revision) &&
+    isOptional(v.since, isStr) &&
+    isOptional(v.count, isNum) &&
+    isOptional(v.items, (x) => isArrayOf(x, isStr)) &&
+    isOptional(v.action, isNoticeAction)
+  )
+}
+
+// fetchNotifications는 서버 알림과 그중 읽은 것을 가져온다. 이 화면이 모르는 알림(업그레이드 뒤 새로 고치지 않은
+// 탭이 받은 새 코드 등)은 빼고 나머지만 돌려준다.
+export async function fetchNotifications(signal?: AbortSignal): Promise<NotificationsResponse> {
+  const data = await getJSON('/notifications', { signal })
+  if (!isObj(data) || !Array.isArray(data.notices) || !isSeenMap(data.seen)) {
+    throw new Error('/notifications: unexpected response shape')
+  }
+  return { notices: data.notices.filter(isNotice), seen: data.seen }
+}
+
+// saveNotificationPrefs는 알림 읽음 상태 전체를 저장한다. 다른 설정은 바꾸지 않는다.
+export async function saveNotificationPrefs(seen: Readonly<Record<string, string>>): Promise<void> {
+  const body: NotificationPrefsRequest = { notifications: { seen: { ...seen } } }
+  await request('PUT', '/preferences/notifications', { body })
+}
+
 export function isPreferences(v: unknown): v is Preferences {
   return (
     isObj(v) &&
@@ -498,6 +557,7 @@ export function isPreferences(v: unknown): v is Preferences {
     isOptional(v.systemInfo, isSystemInfoPrefs) &&
     isOptional(v.files, isFilesPrefs) &&
     isOptional(v.appearance, isAppearancePrefs) &&
+    isOptional(v.notifications, isNotificationPrefs) &&
     isOptional(v.wallpaperImage, isImageInfo) &&
     isOptional(v.avatarImage, isImageInfo)
   )
