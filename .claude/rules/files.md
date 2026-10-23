@@ -10,7 +10,7 @@ paths:
 
 # 파일 탐색기
 
-홈 폴더와 OMV 공유 폴더를 둘러보는 셸 앱 `files`다. 파일은 권한 도우미의 사용자 권한 연산으로 다루고(`.claude/docs/helper.md`의 "파일 탐색기 연산"), maru는 보이는 폴더 밖의 경로를 거르고 목록을 정렬·캐시한다. 사용자 설명은 `docs/en/files.md`, 남은 단계는 `.claude/docs/roadmap.md`.
+홈 폴더와 OMV 공유 폴더를 둘러보는 셸 앱 `files`다. 파일은 권한 도우미의 사용자 권한 연산으로 다루고(`.claude/docs/helper.md`의 "파일 탐색기 연산"), maru는 보이는 폴더 밖의 경로를 거르고 목록을 정렬·캐시한다. 사용자 설명은 `docs/ko/files.md`, 남은 단계는 `.claude/docs/roadmap.md`.
 
 ## 접근과 범위
 
