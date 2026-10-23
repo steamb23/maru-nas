@@ -13,6 +13,7 @@ function info(status: Partial<UpgradeStatus> | null, interrupted = false): Upgra
     interrupted,
     version: '0.3.1',
     status: status ? ({ format: 1, updatedAt: '', state: 'checked', ...status } as UpgradeStatus) : undefined,
+    channel: '',
   }
 }
 

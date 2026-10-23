@@ -822,6 +822,19 @@ export interface SiteSettings {
    * Files는 파일 탐색기의 전역 설정과 공유 폴더 스냅숏이다. 없으면 스냅숏이 없고 디스크 보기는 꺼짐이다.
    */
   files?: SiteFiles;
+  /**
+   * Upgrade는 대시보드에서 업그레이드의 설정이다. 없으면 업데이트 채널을 고르지 않은 것이다(지금 브랜치를 따른다).
+   */
+  upgrade?: SiteUpgrade;
+}
+/**
+ * SiteUpgrade는 대시보드에서 업그레이드의 전역 설정이다(.claude/docs/upgrade.md의 "업데이트 채널").
+ */
+export interface SiteUpgrade {
+  /**
+   * Channel은 원격 확인이 따라갈 업데이트 채널이다(config.UpgradeChannel*). 빈 값이면 지금 브랜치의 추적 브랜치다.
+   */
+  channel?: '' | 'stable' | 'main';
 }
 /**
  * SiteLogin은 로그인 화면 설정이다. 저장한 적 없으면 대시보드 기본 배경에 대기 연출을 켠다.
@@ -2106,15 +2119,26 @@ export interface UpgradeInfo {
    * Status는 업그레이드 서비스의 상태 파일이다. 없거나 읽을 수 없으면 null이다.
    */
   status?: config.UpgradeStatus;
+  /**
+   * Channel은 관리자가 고른 업데이트 채널이다(site.json). 빈 값이면 지금 브랜치의 추적 브랜치를 따른다.
+   */
+  channel: '' | 'stable' | 'main';
 }
 /**
  * StartUpgradeCheckRequest는 POST /api/upgrade/check의 본문이다.
  */
 export interface StartUpgradeCheckRequest {
   /**
-   * Mode는 확인 방식이다. remote는 git fetch 뒤 추적 브랜치, local은 지금 체크아웃(HEAD)을 대상으로 삼는다.
+   * Mode는 확인 방식이다. remote는 git fetch 뒤 업데이트 채널(고르지 않았으면 추적 브랜치), local은 지금
+   * 체크아웃(HEAD)을 대상으로 삼는다. 채널은 site.json의 값을 쓴다.
    */
   mode: 'remote' | 'local';
+}
+/**
+ * SetUpgradeChannelRequest는 PUT /api/upgrade/channel의 본문이다. 원격 확인이 따라갈 업데이트 채널을 site.json에 둔다.
+ */
+export interface SetUpgradeChannelRequest {
+  channel: '' | 'stable' | 'main';
 }
 /**
  * StartUpgradeRequest는 POST /api/upgrade/apply의 본문이다. root 권한 상승이 필요하다.

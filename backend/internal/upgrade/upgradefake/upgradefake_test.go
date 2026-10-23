@@ -49,8 +49,13 @@ func (f *fixture) wait(state string) *config.UpgradeStatus {
 
 func (f *fixture) check(mode string) {
 	f.t.Helper()
+	f.channelCheck(mode, config.UpgradeChannelCurrent)
+}
+
+func (f *fixture) channelCheck(mode, channel string) {
+	f.t.Helper()
 	f.now = f.now.Add(time.Minute) // 최근 확인 결과를 다시 쓰지 않게 한다.
-	if ok, err := f.m.RequestCheck(mode); !ok || err != nil {
+	if ok, err := f.m.RequestCheck(mode, channel); !ok || err != nil {
 		f.t.Fatal(ok, err)
 	}
 }
@@ -98,6 +103,33 @@ func TestWebScenario(t *testing.T) {
 	f.check(config.UpgradeModeRemote)
 	if st := f.wait(config.UpgradeStateChecked); !st.Check.UpToDate || st.Check.Web {
 		t.Fatalf("after upgrade = %+v", st.Check)
+	}
+}
+
+// 가짜 저장소는 stable에서 시작한다. main 채널로 옮긴 뒤 stable로 돌아오면 이전 버전을 덮어쓴다.
+func TestChannels(t *testing.T) {
+	f := start(t, "")
+	settings := map[string]string{"public-origin": "-", "smart-refresh-at": "03:00", "example-toggle": "no"}
+	f.channelCheck(config.UpgradeModeRemote, config.UpgradeChannelMain)
+	st := f.wait(config.UpgradeStateChecked)
+	if chk := st.Check; chk.Channel != config.UpgradeChannelMain || chk.Upstream != "origin/main" || chk.Branch != "stable" ||
+		!chk.Switch || chk.Target != targetRevision || !chk.Web || st.Branch != "stable" {
+		t.Fatalf("main = %+v (branch %q)", chk, st.Branch)
+	}
+	f.apply(targetRevision, settings)
+	if st = f.wait(config.UpgradeStateApplied); st.Branch != "main" {
+		t.Fatalf("after main: branch %q", st.Branch)
+	}
+
+	f.channelCheck(config.UpgradeModeRemote, config.UpgradeChannelStable)
+	st = f.wait(config.UpgradeStateChecked)
+	if chk := st.Check; !chk.Switch || chk.Branch != "main" || chk.Target != stableRevision || chk.Dropped != 5 || len(chk.Commits) != 0 ||
+		!chk.Web || chk.Plan.Version != config.Version {
+		t.Fatalf("stable from main = %+v", chk)
+	}
+	f.apply(stableRevision, settings)
+	if st = f.wait(config.UpgradeStateApplied); st.Branch != "stable" || st.Apply.Version != config.Version {
+		t.Fatalf("after stable: branch %q, apply %+v", st.Branch, st.Apply)
 	}
 }
 

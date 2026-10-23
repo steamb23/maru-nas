@@ -12,6 +12,7 @@ import (
 
 	"maru/backend/config"
 	"maru/backend/internal/api"
+	"maru/backend/internal/prefs"
 )
 
 const upgradeTarget = "0123456789abcdef0123456789abcdef01234567"
@@ -67,6 +68,8 @@ func TestUpgradeAdminOnly(t *testing.T) {
 	wantCode(t, b.do(http.MethodPost, "/api/upgrade/check", api.StartUpgradeCheckRequest{Mode: config.UpgradeModeRemote}),
 		http.StatusForbidden, api.ErrAdminRequired)
 	wantCode(t, b.do(http.MethodPost, "/api/upgrade/apply", api.StartUpgradeRequest{Target: upgradeTarget}),
+		http.StatusForbidden, api.ErrAdminRequired)
+	wantCode(t, b.do(http.MethodPut, "/api/upgrade/channel", api.SetUpgradeChannelRequest{Channel: config.UpgradeChannelMain}),
 		http.StatusForbidden, api.ErrAdminRequired)
 }
 
@@ -157,6 +160,73 @@ func TestUpgradeCheck(t *testing.T) {
 	if info := decode[api.UpgradeInfo](t, rec); !info.Pending {
 		t.Fatalf("other mode = %+v", info)
 	}
+}
+
+// 업데이트 채널은 site.json에 두고, 원격 확인 요청이 그 채널을 담는다. 확인한 뒤 채널을 바꾸면 그 결과로 업그레이드하지 않는다.
+func TestUpgradeChannel(t *testing.T) {
+	site := prefs.NewMemoryStore()
+	e := newEnv(t, envOptions{helper: true, upgrade: true, site: site})
+	e.enableUpgrade()
+	b := e.browser()
+	wantStatus(t, b.login("admin", "admin"), http.StatusOK)
+	if info := decode[api.UpgradeInfo](t, b.do(http.MethodGet, "/api/upgrade", nil)); info.Channel != config.UpgradeChannelCurrent {
+		t.Fatalf("default channel %q", info.Channel)
+	}
+	wantCode(t, b.do(http.MethodPut, "/api/upgrade/channel", api.SetUpgradeChannelRequest{Channel: "origin/main"}),
+		http.StatusBadRequest, api.ErrBadRequest)
+
+	rec := b.do(http.MethodPut, "/api/upgrade/channel", api.SetUpgradeChannelRequest{Channel: config.UpgradeChannelMain})
+	wantStatus(t, rec, http.StatusOK)
+	if info := decode[api.UpgradeInfo](t, rec); info.Channel != config.UpgradeChannelMain {
+		t.Fatalf("after set %q", info.Channel)
+	}
+	if v, err := site.GetSite(); err != nil || v.Upgrade == nil || v.Upgrade.Channel != config.UpgradeChannelMain {
+		t.Fatalf("site %+v %v", v.Upgrade, err)
+	}
+	if !strings.Contains(e.logs.String(), `upgrade channel set: user="admin" channel="main"`) {
+		t.Fatalf("channel change not logged:\n%s", e.logs.String())
+	}
+
+	// 원격 확인은 고른 채널을 담는다.
+	wantStatus(t, b.do(http.MethodPost, "/api/upgrade/check", api.StartUpgradeCheckRequest{Mode: config.UpgradeModeRemote}), http.StatusOK)
+	request := filepath.Join(e.upgradeState, config.UpgradeCheckRequestName)
+	data, err := os.ReadFile(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var req config.UpgradeCheckRequest
+	if json.Unmarshal(data, &req) != nil || req.Mode != config.UpgradeModeRemote || req.Channel != config.UpgradeChannelMain {
+		t.Fatalf("check request %s", data)
+	}
+	// 확인을 기다리는 동안에는 바꾸지 않는다.
+	wantCode(t, b.do(http.MethodPut, "/api/upgrade/channel", api.SetUpgradeChannelRequest{Channel: config.UpgradeChannelStable}),
+		http.StatusConflict, api.ErrUpgradeBusy)
+	if err := os.Remove(request); err != nil {
+		t.Fatal(err)
+	}
+
+	// main으로 끝난 확인이 있는데 채널을 stable로 바꾸면 그 결과로 업그레이드하지 않는다.
+	st := checkedStatus(upgradeTarget)
+	st.Check.Channel = config.UpgradeChannelMain
+	e.upgradeStatus(st)
+	wantStatus(t, b.do(http.MethodPut, "/api/upgrade/channel", api.SetUpgradeChannelRequest{Channel: config.UpgradeChannelStable}), http.StatusOK)
+	wantCode(t, b.do(http.MethodPost, "/api/upgrade/apply", api.StartUpgradeRequest{Target: upgradeTarget,
+		Settings: map[string]string{"public-origin": "-"}}), http.StatusConflict, api.ErrUpgradeOutdated)
+
+	// 빈 값은 채널을 고르지 않은 것(지금 브랜치)으로 되돌린다.
+	rec = b.do(http.MethodPut, "/api/upgrade/channel", api.SetUpgradeChannelRequest{Channel: config.UpgradeChannelCurrent})
+	wantStatus(t, rec, http.StatusOK)
+	if v, _ := site.GetSite(); v.Upgrade != nil || decode[api.UpgradeInfo](t, rec).Channel != config.UpgradeChannelCurrent {
+		t.Fatalf("cleared %+v", v.Upgrade)
+	}
+
+	// 도우미가 없으면(업그레이드를 쓸 수 없으면) 바꾸지 않는다.
+	e = newEnv(t, envOptions{upgrade: true})
+	e.enableUpgrade()
+	b = e.browser()
+	wantStatus(t, b.login("admin", "admin"), http.StatusOK)
+	wantCode(t, b.do(http.MethodPut, "/api/upgrade/channel", api.SetUpgradeChannelRequest{Channel: config.UpgradeChannelMain}),
+		http.StatusConflict, api.ErrUpgradeDisabled)
 }
 
 func TestUpgradeCheckWhileRunning(t *testing.T) {

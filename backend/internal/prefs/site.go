@@ -89,6 +89,10 @@ func cloneSite(v api.SiteSettings) api.SiteSettings {
 		f.Shares = slices.Clone(f.Shares)
 		v.Files = &f
 	}
+	if v.Upgrade != nil {
+		u := *v.Upgrade
+		v.Upgrade = &u
+	}
 	return v
 }
 

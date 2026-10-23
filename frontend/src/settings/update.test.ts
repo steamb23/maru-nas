@@ -27,6 +27,7 @@ function info(status: Partial<UpgradeStatus> | null, extra: Partial<UpgradeInfo>
     version: '0.3.1',
     revision: REV_A,
     status: status ? ({ format: 1, state: 'checked', updatedAt: '', ...status } as UpgradeStatus) : undefined,
+    channel: '',
     ...extra,
   }
 }

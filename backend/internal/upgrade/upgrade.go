@@ -145,10 +145,11 @@ func (m *Manager) Read() Snapshot {
 	return s
 }
 
-// RecentCheck는 상태 파일의 결과가 mode로 성공한 확인이고, 나온 지 checkReuse가 지나지 않았는지다. 실패한 확인은
-// 원인을 고친 뒤 바로 다시 확인할 수 있게 다시 쓰지 않는다.
-func (s Snapshot) RecentCheck(mode string, now time.Time) bool {
-	if s.Status == nil || s.Status.State != config.UpgradeStateChecked || s.Status.Check == nil || s.Status.Check.Mode != mode {
+// RecentCheck는 상태 파일의 결과가 mode(원격이면 channel도 같게)로 성공한 확인이고, 나온 지 checkReuse가 지나지
+// 않았는지다. 실패한 확인은 원인을 고친 뒤 바로 다시 확인할 수 있게 다시 쓰지 않는다.
+func (s Snapshot) RecentCheck(mode, channel string, now time.Time) bool {
+	if s.Status == nil || s.Status.State != config.UpgradeStateChecked || s.Status.Check == nil || s.Status.Check.Mode != mode ||
+		(mode == config.UpgradeModeRemote && s.Status.Check.Channel != channel) {
 		return false
 	}
 	at, err := time.Parse(time.RFC3339, s.Status.Check.CheckedAt)
@@ -156,12 +157,19 @@ func (s Snapshot) RecentCheck(mode string, now time.Time) bool {
 	return err == nil && age >= 0 && age < checkReuse
 }
 
-// RequestCheck는 확인 요청(mode는 config.UpgradeModeRemote 또는 UpgradeModeLocal)을 쓴다. 경로 유닛이 업그레이드
-// 서비스를 실행한다. 꺼져 있으면 ErrDisabled, 바쁘면 ErrBusy다. 최근에 같은 방식으로 성공한 확인이 있으면
-// (Snapshot.RecentCheck) 요청을 쓰지 않고 false를 돌려준다.
-func (m *Manager) RequestCheck(mode string) (requested bool, err error) {
+// RequestCheck는 확인 요청(mode는 config.UpgradeModeRemote 또는 UpgradeModeLocal)을 쓴다. channel은 원격 확인이
+// 따를 업데이트 채널(config.UpgradeChannel*)이고 로컬 확인에서는 쓰지 않는다. 경로 유닛이 업그레이드 서비스를 실행한다.
+// 꺼져 있으면 ErrDisabled, 바쁘면 ErrBusy다. 최근에 같은 방식으로 성공한 확인이 있으면(Snapshot.RecentCheck) 요청을
+// 쓰지 않고 false를 돌려준다.
+func (m *Manager) RequestCheck(mode, channel string) (requested bool, err error) {
 	if mode != config.UpgradeModeRemote && mode != config.UpgradeModeLocal {
 		return false, fmt.Errorf("unknown check mode %q", mode)
+	}
+	if !config.ValidUpgradeChannel(channel) {
+		return false, fmt.Errorf("unknown update channel %q", channel)
+	}
+	if mode == config.UpgradeModeLocal {
+		channel = config.UpgradeChannelCurrent
 	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -174,10 +182,10 @@ func (m *Manager) RequestCheck(mode string) (requested bool, err error) {
 		return false, ErrDisabled
 	case s.Busy():
 		return false, ErrBusy
-	case s.RecentCheck(mode, m.now()):
+	case s.RecentCheck(mode, channel, m.now()):
 		return false, nil
 	}
-	data, err := json.Marshal(config.UpgradeCheckRequest{Format: config.UpgradeRequestFormat, Mode: mode})
+	data, err := json.Marshal(config.UpgradeCheckRequest{Format: config.UpgradeRequestFormat, Mode: mode, Channel: channel})
 	if err != nil {
 		return false, err
 	}

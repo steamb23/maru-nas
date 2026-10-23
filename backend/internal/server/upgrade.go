@@ -27,6 +27,7 @@ func (h *handler) upgradeInfo(s upgrade.Snapshot) api.UpgradeInfo {
 		Enabled: true, Repo: s.Repo, User: s.User,
 		Pending: s.Pending, PendingStalled: s.PendingStalled, Interrupted: s.Interrupted,
 		Version: h.about.Version, Revision: h.about.Revision, Installed: s.Installed, Status: s.Status,
+		Channel: h.upgradeChannel(),
 	}
 	switch {
 	case !s.Enabled:
@@ -43,8 +44,59 @@ func (h *handler) upgradeState(w http.ResponseWriter, _ *http.Request, _ auth.Se
 	writeJSON(w, http.StatusOK, h.upgradeInfo(h.Upgrade.Read()))
 }
 
+// upgradeChannel은 관리자가 고른 업데이트 채널이다(site.json). 읽을 수 없거나 모르는 값(손으로 고친 파일 등)이면
+// 채널을 고르지 않은 것(지금 브랜치를 따른다)으로 본다.
+func (h *handler) upgradeChannel() string {
+	site, err := h.Site.GetSite()
+	if err != nil {
+		log.Printf("site settings: read: %v", err)
+		return config.UpgradeChannelCurrent
+	}
+	if site.Upgrade == nil {
+		return config.UpgradeChannelCurrent
+	}
+	if !config.ValidUpgradeChannel(site.Upgrade.Channel) {
+		log.Printf("site settings: ignoring unknown update channel %q", site.Upgrade.Channel)
+		return config.UpgradeChannelCurrent
+	}
+	return site.Upgrade.Channel
+}
+
+// upgradeSetChannel은 원격 확인이 따라갈 업데이트 채널을 site.json에 둔다. 바꾸기만 해서는 저장소와 설치가 그대로이고,
+// 다음 확인부터 그 채널을 본다. 진행 중인 확인·업그레이드는 고른 채널로 시작했으므로 그동안에는 바꾸지 않는다.
+func (h *handler) upgradeSetChannel(w http.ResponseWriter, r *http.Request, s auth.Session) {
+	var req api.SetUpgradeChannelRequest
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	if !config.ValidUpgradeChannel(req.Channel) {
+		writeError(w, http.StatusBadRequest, api.ErrBadRequest, "channel must be empty, stable or main")
+		return
+	}
+	snap := h.Upgrade.Read()
+	if info := h.upgradeInfo(snap); !info.Enabled {
+		writeError(w, http.StatusConflict, api.ErrUpgradeDisabled, "upgrading from the dashboard is not available: "+info.DisabledReason)
+		return
+	}
+	if snap.Busy() {
+		writeError(w, http.StatusConflict, api.ErrUpgradeBusy, "an upgrade check or upgrade is in progress")
+		return
+	}
+	if !h.updateSite(w, func(v *api.SiteSettings) {
+		v.Upgrade = nil
+		if req.Channel != config.UpgradeChannelCurrent {
+			v.Upgrade = &api.SiteUpgrade{Channel: req.Channel}
+		}
+	}) {
+		return
+	}
+	log.Printf("upgrade channel set: user=%q channel=%q ip=%s", s.Username, req.Channel, clientIP(r))
+	writeJSON(w, http.StatusOK, h.upgradeInfo(h.Upgrade.Read()))
+}
+
 // upgradeCheck는 확인 요청을 남긴다. 확인은 저장소 코드를 root로 실행하지 않으므로 상승을 요구하지 않는다(.claude/docs/upgrade.md).
-// 최근에 같은 방식으로 성공한 확인이 있으면 요청을 남기지 않고 그 결과를 그대로 돌려준다(upgrade.Snapshot.RecentCheck).
+// 원격 확인은 site.json의 업데이트 채널을 따른다. 최근에 같은 방식(같은 채널)으로 성공한 확인이 있으면 요청을 남기지 않고
+// 그 결과를 그대로 돌려준다(upgrade.Snapshot.RecentCheck).
 func (h *handler) upgradeCheck(w http.ResponseWriter, r *http.Request, s auth.Session) {
 	var req api.StartUpgradeCheckRequest
 	if !decodeJSON(w, r, &req) {
@@ -58,7 +110,8 @@ func (h *handler) upgradeCheck(w http.ResponseWriter, r *http.Request, s auth.Se
 		writeError(w, http.StatusConflict, api.ErrUpgradeDisabled, "upgrading from the dashboard is not available: "+info.DisabledReason)
 		return
 	}
-	requested, err := h.Upgrade.RequestCheck(req.Mode)
+	channel := h.upgradeChannel()
+	requested, err := h.Upgrade.RequestCheck(req.Mode, channel)
 	switch {
 	case errors.Is(err, upgrade.ErrDisabled):
 		writeError(w, http.StatusConflict, api.ErrUpgradeDisabled, "upgrading from the dashboard is not available")
@@ -72,7 +125,7 @@ func (h *handler) upgradeCheck(w http.ResponseWriter, r *http.Request, s auth.Se
 		return
 	}
 	if requested {
-		log.Printf("upgrade check requested: user=%q mode=%s ip=%s", s.Username, req.Mode, clientIP(r))
+		log.Printf("upgrade check requested: user=%q mode=%s channel=%q ip=%s", s.Username, req.Mode, channel, clientIP(r))
 	}
 	writeJSON(w, http.StatusOK, h.upgradeInfo(h.Upgrade.Read()))
 }
@@ -107,6 +160,11 @@ func (h *handler) upgradeApply(w http.ResponseWriter, r *http.Request, s auth.Se
 	st := snap.Status
 	if st == nil || st.State != config.UpgradeStateChecked || st.Check == nil || !st.Check.Web || st.Check.Target != req.Target {
 		writeError(w, http.StatusConflict, api.ErrUpgradeOutdated, "no finished check allows upgrading to this commit, check again")
+		return
+	}
+	// 확인한 뒤 업데이트 채널을 바꿨으면 그 결과로 업그레이드하지 않는다(화면도 결과를 숨긴다).
+	if st.Check.Mode == config.UpgradeModeRemote && st.Check.Channel != h.upgradeChannel() {
+		writeError(w, http.StatusConflict, api.ErrUpgradeOutdated, "the update channel changed since the check, check again")
 		return
 	}
 	ticket, ok := h.helperTicket(w, s)
