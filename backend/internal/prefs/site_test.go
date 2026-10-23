@@ -26,20 +26,22 @@ func TestSiteRoundTrip(t *testing.T) {
 			// 한 부분을 바꿔도 다른 부분은 그대로다.
 			if err := site.UpdateSite(func(v *api.SiteSettings) {
 				v.Defaults = &api.SiteDefaults{Theme: api.ThemeDark}
+				v.Upgrade = &api.SiteUpgrade{Channel: "main"}
 			}); err != nil {
 				t.Fatal(err)
 			}
 			got, _ = site.GetSite()
 			if got.Login == nil || got.Login.Background.Preset != "dusk" || got.Login.EasterEgg ||
 				got.Defaults == nil || got.Defaults.Theme != api.ThemeDark ||
-				got.Server == nil || *got.Server.WorkbenchURL != url {
+				got.Server == nil || *got.Server.WorkbenchURL != url || got.Upgrade == nil || got.Upgrade.Channel != "main" {
 				t.Fatalf("after update: %+v", got)
 			}
 			// 받은 값을 바꿔도 저장값은 그대로다.
 			got.Login.Background.Preset = "changed"
 			*got.Server.WorkbenchURL = "changed"
+			got.Upgrade.Channel = "changed"
 			again, _ := site.GetSite()
-			if again.Login.Background.Preset != "dusk" || *again.Server.WorkbenchURL != url {
+			if again.Login.Background.Preset != "dusk" || *again.Server.WorkbenchURL != url || again.Upgrade.Channel != "main" {
 				t.Errorf("stored value changed: %+v", again)
 			}
 		})

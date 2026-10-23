@@ -294,6 +294,7 @@ func New(cfg Config) http.Handler {
 	mux.HandleFunc("GET /api/security/users", h.requireAdmin(h.securityUsers))
 	mux.HandleFunc("DELETE /api/security/users/{name}", h.requireAdmin(h.resetSecurityUser))
 	mux.HandleFunc("GET /api/upgrade", h.requireAdmin(h.upgradeState))
+	mux.HandleFunc("PUT /api/upgrade/channel", h.requireAdmin(h.upgradeSetChannel))
 	mux.HandleFunc("POST /api/upgrade/check", h.requireAdmin(h.upgradeCheck))
 	mux.HandleFunc("POST /api/upgrade/apply", h.requireAdmin(h.upgradeApply))
 	mux.HandleFunc("GET /api/addons/{id}", h.requireSession(h.addonData))

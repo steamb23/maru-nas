@@ -41,10 +41,12 @@ const (
 // Scenarios는 받는 시나리오다.
 var Scenarios = []string{ScenarioWeb, ScenarioManual, ScenarioLatest, ScenarioCheckFail, ScenarioApplyFail, ScenarioDisabled}
 
-// 가짜 커밋. 설치된 커밋에서 대상까지 커밋 다섯 개가 있다.
+// 가짜 커밋. 설치된 커밋에서 대상까지 커밋 다섯 개가 있다. 가짜 저장소는 stable 브랜치에서 시작하고, main 채널로
+// 옮기면 대상까지 간다. main에서 stable 채널로 돌아오면 stable은 그보다 앞의 커밋(stableRevision)이라 덮어써서 설치한다.
 const (
 	installedRevision = "1111111111111111111111111111111111111111"
 	targetRevision    = "2222222222222222222222222222222222222222"
+	stableRevision    = "3333333333333333333333333333333333333333"
 )
 
 // Options는 Start의 설정이다.
@@ -73,6 +75,8 @@ type Service struct {
 	once     sync.Once
 	status   config.UpgradeStatus
 	revision string
+	// branch는 가짜 저장소의 지금 브랜치다.
+	branch string
 }
 
 // Start는 가짜 루트를 처음 상태로 되돌리고(설정 파일을 쓰고 상태 파일을 지운다) 요청을 보기 시작한다.
@@ -95,7 +99,7 @@ func Start(o Options) (*Service, error) {
 	if o.Logf == nil {
 		o.Logf = func(string, ...any) {}
 	}
-	s := &Service{o: o, stop: make(chan struct{}), done: make(chan struct{}), revision: installedRevision}
+	s := &Service{o: o, stop: make(chan struct{}), done: make(chan struct{}), revision: installedRevision, branch: config.UpgradeChannelStable}
 	envFile := s.path(config.UpgradeEnvFile)
 	if err := os.MkdirAll(filepath.Dir(envFile), 0o755); err != nil {
 		return nil, err
@@ -243,15 +247,23 @@ func (s *Service) check(data []byte) error {
 		return err
 	}
 	if json.Unmarshal(data, &req) != nil || req.Format != config.UpgradeRequestFormat ||
-		(req.Mode != config.UpgradeModeRemote && req.Mode != config.UpgradeModeLocal) {
+		(req.Mode != config.UpgradeModeRemote && req.Mode != config.UpgradeModeLocal) || !config.ValidUpgradeChannel(req.Channel) {
 		return s.fail(config.UpgradeStateCheckFailed, "the check request from the dashboard is not valid",
 			"대시보드의 확인 요청이 올바르지 않습니다", "")
 	}
-	s.o.Logf("fake upgrade: check (%s, scenario %s)", req.Mode, s.o.Scenario)
-	chk := &config.UpgradeCheck{Mode: req.Mode, Head: s.revision, Target: targetRevision,
+	s.o.Logf("fake upgrade: check (%s, channel %q, branch %s, scenario %s)", req.Mode, req.Channel, s.branch, s.o.Scenario)
+	chk := &config.UpgradeCheck{Mode: req.Mode, Head: s.revision, Branch: s.branch, Target: targetRevision,
 		Installed: s.record(), Commits: []config.UpgradeCommit{}, Manual: []config.UpgradeReason{}}
+	s.status.Branch, s.status.Detached = s.branch, false
 	if req.Mode == config.UpgradeModeRemote {
-		chk.Upstream = "origin/stable"
+		follow := s.branch
+		if req.Channel != config.UpgradeChannelCurrent {
+			chk.Channel, chk.Switch, follow = req.Channel, req.Channel != s.branch, req.Channel
+		}
+		chk.Upstream = "origin/" + follow
+		if chk.Switch && req.Channel == config.UpgradeChannelStable {
+			chk.Target = stableRevision
+		}
 		if err := s.stage(config.UpgradeStageFetch); err != nil {
 			return err
 		}
@@ -267,11 +279,16 @@ func (s *Service) check(data []byte) error {
 	} else {
 		chk.Head = targetRevision
 	}
-	if s.o.Scenario == ScenarioLatest || s.revision == targetRevision {
+	if s.o.Scenario == ScenarioLatest || s.revision == chk.Target {
 		chk.Target, chk.UpToDate = s.revision, true
 		return s.checked(chk)
 	}
-	chk.Commits = fakeCommits(s.o.Now())
+	if chk.Target == stableRevision {
+		// main에서 stable로 돌아오면 이전 버전을 덮어쓴다. 새 커밋은 없고 가짜 커밋 다섯 개가 빠진다.
+		chk.Dropped = len(fakeCommits(s.o.Now()))
+	} else {
+		chk.Commits = fakeCommits(s.o.Now())
+	}
 	if err := s.stage(config.UpgradeStagePlan); err != nil {
 		return err
 	}
@@ -281,7 +298,7 @@ func (s *Service) check(data []byte) error {
 			targetRevision+"의 설치기가 업그레이드 계획을 만들지 못했습니다(로그 참고)",
 			"$ go build -trimpath -o bin/maru-install .\ninternal/setup/plan.go:12:2: undefined: fakeSymbol\n")
 	}
-	chk.Plan = s.plan()
+	chk.Plan = s.plan(chk.Target)
 	if s.o.Scenario == ScenarioManual {
 		chk.Manual = append(chk.Manual, config.UpgradeReason{ID: config.UpgradeReasonDirty, Command: config.UpgradeCommandInstall,
 			Text: config.LocalizedText{
@@ -349,10 +366,14 @@ func fakeCommits(now time.Time) []config.UpgradeCommit {
 	return out
 }
 
-// plan은 대상 설치기가 낸 것 같은 업그레이드 계획이다.
-func (s *Service) plan() *config.UpgradePlan {
+// plan은 대상 설치기가 낸 것 같은 업그레이드 계획이다. stable로 돌아오는 대상은 지금과 같은 버전이다.
+func (s *Service) plan(target string) *config.UpgradePlan {
+	version := nextVersion()
+	if target == stableRevision {
+		version = config.Version
+	}
 	p := &config.UpgradePlan{
-		Format: config.UpgradePlanFormat, Version: nextVersion(), Revision: targetRevision, Installed: s.record(), Web: true,
+		Format: config.UpgradePlanFormat, Version: version, Revision: target, Installed: s.record(), Web: true,
 		Manual: []config.UpgradeReason{},
 		Questions: []config.UpgradeQuestion{
 			{
@@ -428,6 +449,10 @@ func (s *Service) apply(data []byte) error {
 		return err
 	}
 	s.revision = req.Target
+	if chk.Switch {
+		s.branch = chk.Channel
+	}
+	s.status.Branch = s.branch
 	if err := s.writeRecord(chk.Plan.Version); err != nil {
 		return err
 	}
