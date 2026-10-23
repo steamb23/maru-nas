@@ -67,6 +67,7 @@ paths:
 - `--upgrade-service`(root, 다른 옵션 없음): 저장소 밖의 복사본으로 돌므로 `c.RepoDir`를 쓰지 않고 저장소·계정·PATH는 설정 파일에서만 정한다. 요청 하나를 처리한다(적용이 먼저)
   - 요청은 내용과 상관없이 먼저 읽고 지운다(`PathExists=`가 다시 실행하지 않게). maru가 쓰는 확인 요청은 `O_NOFOLLOW`·4KiB, root가 쓰는 설정 파일·적용 요청은 64KiB까지 읽는다. 설정 파일이 없으면 요청만 지우고 상태 파일을 만들지 않는다
   - 소유자 명령은 uid·gid·보조 그룹으로 강등하고 새 세션, 새 환경 변수(HOME·PATH 등, 프롬프트 끔)로 빌드 PATH에서 찾아 실행한다. root로 실행하는 것은 마지막의 `bin/maru-install --service-install --upgrade --plain --lang en <설정>`뿐이다
+  - 확인 요청의 채널(`config.UpgradeChannel*`, 정한 값만)은 원격 확인만 따른다. 채널이 있으면 `origin`의 그 브랜치를 refspec으로 이름을 정해 가져와 대상으로 삼고, 지금 브랜치와 다르면 `Switch`로 fast-forward·설치된 커밋에서 이어짐 검사 없이 덮어쓴다(로컬 채널 브랜치에 원격에 없는 커밋이 있으면 `diverged`). 적용은 `checkout -B <채널> <대상>`과 추적 설정을 한다(`.claude/docs/upgrade.md`의 "업데이트 채널"). 상태 파일의 `branch`·`detached`에 본 브랜치를 남긴다
   - 확인은 저장소 상태를 수동 재설치 사유(`config.UpgradeReason*`)로 담고, 대상 커밋의 `installer`·`backend`만 `git archive`로 소유자 임시 디렉터리에 꺼내 빌드해 `--upgrade-plan`을 실행한다(임시 디렉터리가 소유자 것이어야 `--web-upgrade` 검사가 통과한다). 적용은 마지막 확인·설치 기록·작업 트리·커밋 관계를 다시 보고 설정 값을 계획으로 다시 검사한 뒤(빌드 전) fast-forward, 서브모듈, `stepBuild`(소유자), 빌드 결과의 커밋 확인, 설치 순서다
   - 작업 실패는 상태 파일(`Error`, 로그 끝부분)에 남기고 0으로 끝낸다. 단계가 바뀔 때마다(설치 단계 전 포함) 상태 파일을 쓴다
   - 업그레이드 서비스의 동작을 바꾸면 이전 버전의 서비스가 새 버전을 올린다는 점을 생각한다. 이전 서비스가 못 하는 일이 생기면 `manualUpgrades`에 항목을 더한다
