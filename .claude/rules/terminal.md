@@ -7,7 +7,7 @@ paths:
 
 # 웹 터미널
 
-사용자 설명은 `docs/en/terminal.md`, 도우미 쪽 임시 키 연산은 `.claude/docs/helper.md`의 "임시 SSH 키".
+사용자 설명은 `docs/ko/terminal.md`, 도우미 쪽 임시 키 연산은 `.claude/docs/helper.md`의 "임시 SSH 키".
 
 ## 설계
 
@@ -26,7 +26,7 @@ paths:
 - 허용: `-terminal`(기본 끔)과 설정 앱의 덮어쓰기(`site.json`의 `server.terminal`). 꺼져 있으면 `/api/terminal`이 403 `terminal_disabled`, 끄는 순간 `Manager.CloseAll`로 열린 터미널을 닫는다. 프론트는 `capabilities.terminal`로 앱을 숨긴다
 - 보안 강화 정책(`security.terminal`)을 채우지 못한 세션은 WebSocket을 받은 뒤 `status closed reason=security_required`(+ `required`)로 닫는다. 정책을 올리면 조건을 채우지 못하는 세션의 터미널을 `CloseSession(id, ReasonSecurityRequired)`로 닫는다. 프론트는 닫힘 막대에 확인 단추를 두고 확인한 뒤 다시 연결한다(`.claude/rules/security.md`)
 - 프로토콜(`api.Terminal*Message`): 바이너리 프레임은 입출력 바이트, 텍스트 프레임은 JSON 제어 메시지(`resize`, `answer`, `cancel` / `status`, `prompt`). Origin은 coder/websocket 기본 검사(Host와 같아야 함). 30초마다 ping. 브라우저 메시지 하나는 64KiB까지라 프론트가 입력을 16KiB씩 나눈다
-- 세션 연장은 프론트의 키 입력(`useSessionKeeper`의 document capture `keydown`)으로 된다. 출력만으로는 연장하지 않는다(`docs/en/terminal.md`가 tmux를 권한다)
+- 세션 연장은 프론트의 키 입력(`useSessionKeeper`의 document capture `keydown`)으로 된다. 출력만으로는 연장하지 않는다(`docs/ko/terminal.md`가 tmux를 권한다)
 
 ## 프론트
 
