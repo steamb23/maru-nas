@@ -945,6 +945,7 @@
         "detachedDesc": "This is not a branch, so nothing can be fetched from the remote. Use “Check the local repository”.",
         "hint": "The channel is used only by remote checks. Checking the local repository uses the current checkout as it is.",
         "mainWarning": "From the next check, origin/main is used. Upgrading switches the repository to the main branch, and going back to stable later installs an older version over it.",
+        "mainWarningOnMain": "The repository is on the main branch, so remote checks use origin/main. Going back to stable later installs an older version over it.",
         "confirmMainTitle": "Switch to the development channel?",
         "confirmMainMessage": "The main branch is the development version before a release. You get new features and fixes first, but they are less tested and may cause problems, and there is no way to roll back to the previous version. Changing the channel installs nothing.",
         "confirmMain": "Switch to development",
@@ -1012,7 +1013,8 @@
       "confirmMessage": "The new version is built and installed, and everyone is signed out when it finishes. Check the commit list before you continue.",
       "confirmOverwriteTitle": "Install an older version of Maru NAS over this one?",
       "confirmSwitch": "The repository switches to the {{branch}} branch.",
-      "confirmOverwrite": "An older version is installed over the current one, and there is no way to roll back.",
+      "confirmOverwriteMessage_one": "A version older than the installed one is built and installed, and everyone is signed out when it finishes. {{count}} commit that only the installed version has is dropped, and there is no way to roll back.",
+      "confirmOverwriteMessage_other": "A version older than the installed one is built and installed, and everyone is signed out when it finishes. {{count}} commits that only the installed version has are dropped, and there is no way to roll back.",
       "applyTo": {
         "stable": "Upgrade to stable",
         "main": "Upgrade to main"

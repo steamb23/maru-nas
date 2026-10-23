@@ -3,6 +3,7 @@ import type { UpgradeInfo } from '../api/types.gen'
 import type { UpgradeCheck, UpgradeQuestion, UpgradeStatus } from '../api/upgrade.gen'
 import {
   answerError,
+  applyConfirm,
   applyStep,
   channelCards,
   channelValue,
@@ -256,5 +257,18 @@ group('update channel', () => {
     expect(isDevTarget(check({ upstream: 'origin/feature/main' }))).toBe(false)
     expect(isDevTarget(check({ upstream: 'main' }))).toBe(false)
     expect(isDevTarget(check({ mode: 'local', channel: 'main' }))).toBe(false)
+  })
+
+  it('tells whether an upgrade switches the branch or installs an older version', () => {
+    expect(applyConfirm(check())).toEqual({ overwrite: false, dropped: 0, switchTo: null })
+    expect(applyConfirm(check({ channel: 'main', switch: true }))).toEqual({ overwrite: false, dropped: 0, switchTo: 'main' })
+    // main에서 stable로 돌아가면 이전 버전을 덮어쓰고 브랜치도 바뀐다.
+    expect(applyConfirm(check({ channel: 'stable', switch: true, dropped: 2 }))).toEqual({
+      overwrite: true,
+      dropped: 2,
+      switchTo: 'stable',
+    })
+    // 채널이 지금 브랜치와 같으면 옮기지 않는다.
+    expect(applyConfirm(check({ channel: 'stable', switch: false })).switchTo).toBeNull()
   })
 })
