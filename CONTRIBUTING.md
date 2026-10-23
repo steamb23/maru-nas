@@ -9,7 +9,7 @@ Thank you for your interest in Maru NAS, a desktop-like web dashboard for openme
 - Maru NAS shows status and handles simple operations. Deep configuration stays in the OMV web UI (workbench). We do not rebuild OMV screens; we link to them.
 - Local network only. We do not add features or settings that assume exposure to the internet.
 - All OMV 8.x releases are supported. A new RPC call must exist in the OMV 8.0 sources as well.
-- `ROADMAP.md` lists planned features. Open an issue before starting one so we can agree on the design first.
+- Open an issue before starting a new feature so we can agree on the design first.
 
 ## Development setup
 

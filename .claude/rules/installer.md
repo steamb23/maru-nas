@@ -110,5 +110,5 @@ paths:
 - maru 유닛의 `RuntimeDirectoryPreserve=yes`는 `/run/maru`를 재시작 사이에도 남긴다. 디렉터리가 새로 만들어지면 컨테이너 프록시의 바인드 마운트가 이전 디렉터리를 계속 가리켜 연결이 끊기기 때문이다. 제거(`--uninstall`)는 지우므로 다시 설치한 뒤 프록시 컨테이너를 다시 만들어야 한다(`docs/ko/install.md`의 "제거")
 - 생성하는 `/etc/default/maru`의 머리 주석 `# See README.md for every option.`(`setting.go`의 `MaruEnv`)은 README가 설정 문서(`docs/en/configuration.md`)로 이어 주므로 일부러 그대로 둔다. 바꾸면 골든(bash 출력과 같은 케이스 포함)이 바뀌고 기존 설치마다 업그레이드 때 `.bak`이 한 번 생긴다. 다음에 `MaruEnv`의 내용이 어차피 바뀔 때 `docs/en/configuration.md`로 바꾼다
 - 테스트는 root·sudo·실제 systemctl을 쓰지 않는다(가짜 루트와 명령 기록). 실제 설치는 사용자가 하거나 테스트 VM에서 확인한다
-- `ROADMAP.md`의 항목(도우미 추가 기준 경로 질문 등)은 요청하기 전에 구현하지 않는다. 설정 하나와 템플릿 한 줄로 더할 수 있는 구조만 유지한다
+- `.claude/docs/roadmap.md`의 항목(도우미 추가 기준 경로 질문 등)은 요청하기 전에 구현하지 않는다. 설정 하나와 템플릿 한 줄로 더할 수 있는 구조만 유지한다
 - 새 의존성을 더하지 않는다. TUI는 huh v2(함께 오는 Bubble Tea·Lip Gloss 포함)만 쓴다

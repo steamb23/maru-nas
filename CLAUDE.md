@@ -4,7 +4,7 @@
 
 OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표시줄·아이콘이 있는 데스크톱형 웹 대시보드.
 
-영역별 상세 규칙은 `.claude/rules/`에 있고 해당 파일을 다룰 때 로드된다: `auth-omv.md`(OMV 8 동작, 인증 설계), `backend.md`, `helper.md`(권한 도우미), `terminal.md`(웹 터미널), `files.md`(파일 탐색기), `security.md`(보안 강화 모드), `frontend.md`, `frontend-shell.md`(창·작업표시줄·애니메이션), `i18n.md`, `icons.md`, `installer.md`(설치기). 작업 전 설계를 논의할 때는 해당 파일을 직접 읽는다. 설계 문서는 `.claude/docs/`(`addons.md`, `data-sources.md`, `helper.md`, `upgrade.md`)에 있다.
+영역별 상세 규칙은 `.claude/rules/`에 있고 해당 파일을 다룰 때 로드된다: `auth-omv.md`(OMV 8 동작, 인증 설계), `backend.md`, `helper.md`(권한 도우미), `terminal.md`(웹 터미널), `files.md`(파일 탐색기), `security.md`(보안 강화 모드), `frontend.md`, `frontend-shell.md`(창·작업표시줄·애니메이션), `i18n.md`, `icons.md`, `installer.md`(설치기). 작업 전 설계를 논의할 때는 해당 파일을 직접 읽는다. 설계 문서는 `.claude/docs/`(`addons.md`, `data-sources.md`, `helper.md`, `upgrade.md`)에, 나중에 개발할 기능 목록은 `.claude/docs/roadmap.md`에 있다.
 
 클라우드 세션(`CLAUDE_CODE_REMOTE=true`)에서 달라지는 규칙은 `.claude/rules/cloud.md`에 있다. SessionStart 훅(`.claude/hooks/cloud-session.sh`)이 클라우드에서만 불러오며, 문맥에 없으면 작업 전에 직접 읽는다.
 
@@ -31,7 +31,7 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 - 비밀번호, OMV 세션 ID, 토큰을 로그·파일·커밋·테스트 픽스처에 남기지 않는다
   - 예외: 보안 강화 모드의 인증 수단 기록(상태 디렉터리의 `security/<이름>.json`, `0600`)은 TOTP 비밀 키를 저장한다(TOTP는 서버가 비밀을 가져야 확인할 수 있다). 복구 코드는 해시만 둔다. 이 기록의 값도 로그·응답·커밋·테스트 픽스처에는 남기지 않는다(`.claude/rules/security.md`)
   - 예외: 패스키로 로그인(분할 키)은 브라우저 PRF로 암호화한 비밀번호 암호문을 그 브라우저의 localStorage에만 두고, 서버는 그 키의 나머지 조각(share)만 같은 기록에 둔다. share는 비밀번호도, 비밀번호에서 만든 값도 아니며 혼자서는 아무것도 풀 수 없다. share는 등록 응답과 패스키 서명을 확인한 뒤의 응답에만 담고, share·암호문·PRF 결과는 로그·커밋·테스트 픽스처에 남기지 않는다(`.claude/rules/security.md`의 "패스키로 로그인")
-- `ROADMAP.md`에 있는 기능은 사용자가 요청하기 전에 구현하지 않는다. 필요해 보이면 구현하지 말고 제안한다
+- `.claude/docs/roadmap.md`에 있는 기능은 사용자가 요청하기 전에 구현하지 않는다. 필요해 보이면 구현하지 말고 제안한다
 
 ## 아키텍처
 
