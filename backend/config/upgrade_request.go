@@ -196,7 +196,7 @@ type UpgradeCheck struct {
 	Web bool `json:"web"`
 	// Manual은 업그레이드 서비스의 사유와 계획의 사유를 합친 수동 재설치 사유다.
 	Manual []UpgradeReason `json:"manual"`
-	// Command는 수동 재설치 명령이다(Manual이 있을 때만).
+	// Command는 수동 재설치 명령이다(Manual에 명령이 있는 사유가 있을 때만). 다시 확인하면 되는 사유뿐이면 빈 값이다.
 	Command string `json:"command,omitempty"`
 }
 

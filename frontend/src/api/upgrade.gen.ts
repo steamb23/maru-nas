@@ -191,7 +191,8 @@ export interface UpgradeReason {
   setting?: string;
   text: LocalizedText;
   /**
-   * Command는 이 사유를 넘는 명령이다(UpgradeCommand* 상수).
+   * Command는 이 사유를 넘는 명령이다(UpgradeCommand* 상수). 빈 값이면 명령 없이 SSH로 저장소를 정리한 뒤 다시
+   * 확인하면 된다(업그레이드 서비스의 사유만).
    */
   command: string;
 }
@@ -514,7 +515,7 @@ export interface UpgradeCheck {
    */
   manual: UpgradeReason[];
   /**
-   * Command는 수동 재설치 명령이다(Manual이 있을 때만).
+   * Command는 수동 재설치 명령이다(Manual에 명령이 있는 사유가 있을 때만). 다시 확인하면 되는 사유뿐이면 빈 값이다.
    */
   command?: string;
 }

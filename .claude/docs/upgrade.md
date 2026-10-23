@@ -40,7 +40,7 @@
 - 채널 값은 정한 셋만 받는다(`config.ValidUpgradeChannel`). 브랜치 이름을 브라우저에서 받지 않고, 원격은 `origin`(`config.UpgradeChannelRemote`)으로 고정한다
 - 확인: `git fetch origin +refs/heads/<채널>:refs/remotes/origin/<채널>`로 채널 브랜치만 이름을 정해 가져와 대상으로 삼는다(브랜치 하나만 받은 클론도 된다). 지금 브랜치(`git symbolic-ref`)가 채널과 다르면 `Switch`다
   - `Switch`가 아니면 지금 브랜치를 따를 때와 같다(fast-forward 필요)
-  - `Switch`면 fast-forward할 필요가 없고, 대상이 설치된 커밋에서 이어지지 않아도(main → stable처럼 이전 버전) 덮어써서 설치한다. 빠지는 커밋 수(`Dropped`, `대상..설치된 커밋`)를 화면에 알린다. 그 채널 이름의 로컬 브랜치가 있는데 대상에 포함되지 않으면(원격에 없는 커밋) 잃지 않게 `diverged`로 수동 안내한다
+  - `Switch`면 fast-forward할 필요가 없고, 대상이 설치된 커밋에서 이어지지 않아도(main → stable처럼 이전 버전) 덮어써서 설치한다. 빠지는 커밋 수(`Dropped`, `대상..설치된 커밋`)를 화면에 알린다. 그 채널 이름의 로컬 브랜치가 있는데 대상에 포함되지 않으면(원격에 없는 커밋) 잃지 않게 `diverged`로 수동 안내한다. 이 사유는 SSH로 그 브랜치를 정리한 뒤 다시 확인하면 되므로 명령을 담지 않는다(아래 "수동 재설치 안내")
 - 적용(`Switch`): 확인할 때의 브랜치와 HEAD가 그대로인지, 로컬 채널 브랜치가 아직 대상에 포함되는지 다시 본 뒤 `git checkout -B <채널> <대상>`과 `git branch --set-upstream-to=origin/<채널>`을 한다. 추적 설정이 실패하면(fetch 설정에 그 브랜치가 없는 클론) `git remote set-branches --add origin <채널>` 뒤 다시 한다. 원래 브랜치는 남는다
 - 상태 파일의 `branch`·`detached`는 서비스가 마지막으로 본 브랜치다(확인할 때, 적용이 저장소를 갱신한 뒤). 화면은 이것으로 설치된 브랜치를 보이고, 저장소가 `stable`·`main`이 아니거나 아직 모르면 "지금 브랜치" 카드를 함께 보인다
 - maru는 확인한 뒤 채널이 바뀌면 그 결과로 업그레이드하지 않고(`upgrade_outdated`, 화면은 결과를 숨긴다), 최근 확인 재사용(30초)도 같은 채널일 때만 한다
@@ -69,6 +69,7 @@
   - 설치 기록이 없거나, 설치된 커밋이 저장소에 없을 때
 - 보안 강화 모드처럼 새 설정 하나(`--public-origin`)로 끝나는 변경은 입력 칸으로 처리된다. 유지자가 사용자에게 문서를 꼭 읽게 하고 싶다면 그 버전을 목록에 넣어 수동으로 돌린다
 - 안내 순서: 저장소 소유자 계정으로 SSH 접속 → `cd <저장소>` → 필요하면 `git pull` → `./install.sh` 또는 `./install.sh --reinstall`. 명령을 복사하는 단추를 둔다. 한 번 수동으로 올리면 그다음 버전부터는 다시 웹으로 업그레이드할 수 있다
+- 사유마다 넘는 명령(`UpgradeReason.Command`)이 있고, 확인의 명령(`UpgradeCheck.Command`)은 하나라도 `--reinstall`이면 `--reinstall`, 명령이 있는 사유가 있으면 `./install.sh`다. SSH로 저장소를 정리한 뒤 다시 확인하면 되는 사유(지금은 채널 전환의 `diverged`)는 명령이 없고, 그런 사유뿐이면 확인의 명령도 비어 화면은 명령 대신 "정리한 뒤 다시 확인하세요"만 보인다
 
 ## 보안
 

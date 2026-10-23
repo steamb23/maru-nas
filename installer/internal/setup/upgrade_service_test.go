@@ -440,13 +440,14 @@ func TestUpgradeServiceChannel(t *testing.T) {
 		t.Errorf("after main again: status branch %q, work tree on %s", st.Branch, branchOf())
 	}
 
-	// 로컬 stable 브랜치에 원격에 없는 커밋이 있으면 덮어쓰지 않는다.
+	// 로컬 stable 브랜치에 원격에 없는 커밋이 있으면 덮어쓰지 않는다. SSH로 정리한 뒤 다시 확인하면 되므로 명령은 없다.
 	f.git(f.work, "checkout", "-q", "stable")
 	f.write(f.work, "backend/README", "local\n")
 	f.git(f.work, "commit", "-q", "-am", "local")
 	f.git(f.work, "checkout", "-q", "main")
-	if chk := check(config.UpgradeChannelStable).Check; chk.Web || !slices.Equal(reasonIDs(chk.Manual), []string{config.UpgradeReasonDiverged}) {
-		t.Errorf("local stable commits: %+v", chk.Manual)
+	if chk := check(config.UpgradeChannelStable).Check; chk.Web || !slices.Equal(reasonIDs(chk.Manual), []string{config.UpgradeReasonDiverged}) ||
+		chk.Manual[0].Command != "" || chk.Command != "" {
+		t.Errorf("local stable commits: %+v, command %q", chk.Manual, chk.Command)
 	}
 
 	// 브랜치가 아닌 체크아웃(태그·커밋)도 채널 브랜치로 옮길 수 있다. 지금 브랜치를 따르면 추적 브랜치가 없다.

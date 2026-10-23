@@ -122,7 +122,8 @@ type UpgradeReason struct {
 	// Setting은 ID가 setting일 때 그 설정 이름이다.
 	Setting string        `json:"setting,omitempty"`
 	Text    LocalizedText `json:"text"`
-	// Command는 이 사유를 넘는 명령이다(UpgradeCommand* 상수).
+	// Command는 이 사유를 넘는 명령이다(UpgradeCommand* 상수). 빈 값이면 명령 없이 SSH로 저장소를 정리한 뒤 다시
+	// 확인하면 된다(업그레이드 서비스의 사유만).
 	Command string `json:"command"`
 }
 

@@ -176,18 +176,24 @@ func (s *upgradeService) check(mode, channel string) (*config.UpgradeCheck, erro
 	reason := func(id string, t Text) {
 		chk.Manual = append(chk.Manual, config.UpgradeReason{ID: id, Text: t.localized(), Command: config.UpgradeCommandInstall})
 	}
+	// recheck는 SSH로 저장소를 정리한 뒤 다시 확인하면 되는 사유다. 넘는 명령이 없다.
+	recheck := func(id string, t Text) {
+		chk.Manual = append(chk.Manual, config.UpgradeReason{ID: id, Text: t.localized()})
+	}
 	done := func() (*config.UpgradeCheck, error) {
 		if chk.UpToDate {
 			chk.Manual = []config.UpgradeReason{}
 		}
 		chk.CheckedAt = s.stamp()
 		chk.Web = chk.Target != "" && !chk.UpToDate && chk.Plan != nil && chk.Plan.Web && len(chk.Manual) == 0
-		if len(chk.Manual) > 0 {
-			chk.Command = config.UpgradeCommandInstall
-			for _, r := range chk.Manual {
-				if r.Command == config.UpgradeCommandReinstall {
-					chk.Command = config.UpgradeCommandReinstall
-				}
+		// 명령은 사유 중 하나라도 --reinstall이면 --reinstall, 명령이 있는 사유가 있으면 ./install.sh다. 다시 확인하면
+		// 되는 사유뿐이면 없다.
+		for _, r := range chk.Manual {
+			switch {
+			case r.Command == config.UpgradeCommandReinstall:
+				chk.Command = config.UpgradeCommandReinstall
+			case r.Command != "" && chk.Command == "":
+				chk.Command = config.UpgradeCommandInstall
 			}
 		}
 		return chk, nil
@@ -280,7 +286,7 @@ func (s *upgradeService) check(mode, channel string) (*config.UpgradeCheck, erro
 			return nil, err
 		}
 		if !ok {
-			reason(config.UpgradeReasonDiverged, L(
+			recheck(config.UpgradeReasonDiverged, L(
 				"the local "+channel+" branch has commits that are not on "+chk.Upstream+". Reconcile or delete it over SSH, then check again",
 				"로컬 "+channel+" 브랜치에 "+chk.Upstream+"에 없는 커밋이 있습니다. SSH로 정리하거나 지운 뒤 다시 확인하세요"))
 		}
