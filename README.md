@@ -133,7 +133,7 @@ What you look up while running Maru NAS after installation is on the [documentat
 
 ## Contributing
 
-How to contribute (development setup, branches and pull requests, translations, documentation) is in [CONTRIBUTING.md](CONTRIBUTING.md) (Korean: [CONTRIBUTING.ko.md](CONTRIBUTING.ko.md)). Planned features are listed in [ROADMAP.md](ROADMAP.md). Before starting one, open an issue so we can agree on the design first.
+How to contribute (development setup, branches and pull requests, translations, documentation) is in [CONTRIBUTING.md](CONTRIBUTING.md) (Korean: [CONTRIBUTING.ko.md](CONTRIBUTING.ko.md)). Before starting a new feature, open an issue so we can agree on the design first.
 
 You can run the development server against a fake OMV, without a real one. You need the same tools as in step 1 of the quick start. On a PC rather than a NAS, use the releases from [go.dev/dl](https://go.dev/dl/) and [nodejs.org](https://nodejs.org/). Vitest 5, used by the tests (`make check`), officially supports Node.js 22.12 and later.
 

@@ -133,7 +133,7 @@ git pull
 
 ## 기여하기
 
-기여 방법(개발 환경, 브랜치와 풀 리퀘스트, 번역, 문서)은 [CONTRIBUTING.md](CONTRIBUTING.md)(영어)와 [CONTRIBUTING.ko.md](CONTRIBUTING.ko.md)에 있습니다. 예정된 기능은 [ROADMAP.md](ROADMAP.md)에 있으니, 그 기능을 시작하기 전에 이슈를 열어 설계를 먼저 맞춰 주세요.
+기여 방법(개발 환경, 브랜치와 풀 리퀘스트, 번역, 문서)은 [CONTRIBUTING.md](CONTRIBUTING.md)(영어)와 [CONTRIBUTING.ko.md](CONTRIBUTING.ko.md)에 있습니다. 새 기능을 시작하기 전에 이슈를 열어 설계를 먼저 맞춰 주세요.
 
 개발 서버는 실제 OMV 없이 가짜 OMV에 연결해 띄울 수 있습니다. 필요한 도구는 빠른 시작의 1단계와 같습니다. NAS가 아닌 PC라면 [go.dev/dl](https://go.dev/dl/)과 [nodejs.org](https://nodejs.org/)의 배포본을 쓰고, 테스트(`make check`)에 쓰는 Vitest 5는 Node.js 22.12 이상을 공식 지원합니다.
 

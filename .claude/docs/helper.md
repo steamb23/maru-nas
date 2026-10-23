@@ -15,7 +15,7 @@
 - 웹 터미널의 임시 SSH 키(`ssh.authorize`)는 새 권한이 아니다. 티켓을 가진 쪽은 원래 `fs.write`로 사용자 홈의 `~/.ssh/authorized_keys`를 쓸 수 있다. 그래도 키 줄은 worker가 직접 만들고(옵션을 maru가 정할 수 없다) ed25519 공개 키만 받는다
 - OMV 관리자는 원래 OMV RPC로 root와 같은 일을 할 수 있으므로 "OMV 관리자 + 상승 그룹 + 비밀번호 재확인"은 새 권한이 아니라 더 보수적인 겹침이다
 - 2차 인증은 도우미가 직접 확인하지 않는다. maru가 인증을 마친 뒤에만 대기 티켓을 활성화한다(maru가 정상일 때 2차 인증을 건너뛸 수 없다)
-  - 보안 강화 모드(패스키·TOTP·복구 코드, `.claude/rules/security.md`)도 maru가 확인하고 도우미에 넣지 않는다. maru는 정책을 채우지 못한 세션의 상승을 도우미를 부르기 전에 막을 뿐이다. 로드맵의 패스키 로그인은 브라우저가 푼 비밀번호로 지금과 같이 `session.open`을 부르므로 도우미는 바뀌지 않는다(`ROADMAP.md`)
+  - 보안 강화 모드(패스키·TOTP·복구 코드, `.claude/rules/security.md`)도 maru가 확인하고 도우미에 넣지 않는다. maru는 정책을 채우지 못한 세션의 상승을 도우미를 부르기 전에 막을 뿐이다. 로드맵의 패스키 로그인은 브라우저가 푼 비밀번호로 지금과 같이 `session.open`을 부르므로 도우미는 바뀌지 않는다(`.claude/docs/roadmap.md`)
 
 ## 구성
 
@@ -77,7 +77,7 @@
 
 ## 파일 탐색기 연산(fs.names, fs.statmany, fs.info)
 
-1만 개가 넘는 폴더도 다루기 위해 이름을 먼저 읽고, 정보는 보이는 범위만 읽는다(`ROADMAP.md`의 파일 탐색기). 정렬·캐시·보이는 범위 계산은 maru(`internal/files`)가 한다.
+1만 개가 넘는 폴더도 다루기 위해 이름을 먼저 읽고, 정보는 보이는 범위만 읽는다(`.claude/docs/roadmap.md`의 파일 탐색기). 정렬·캐시·보이는 범위 계산은 maru(`internal/files`)가 한다.
 
 - `fs.names`(`{path}`): 이름과 종류만 읽는다. `os.Root`로 연 폴더의 `ReadDir`는 `d_type`을 알아도 항목마다 `lstatat`을 하므로(Go `os/file_unix.go`의 `newUnixDirent`) getdents(`syscall.ReadDirent`)를 직접 읽고 `linux_dirent64`를 파싱한다(`parseDirents`). `.`·`..`·`d_ino` 0은 뺀다
   - 결과 머리는 `NamesResult{count, truncated, dirModTimeNs, writable}`이고 이름 목록은 머리 뒤 본문(항목마다 종류 1바이트 `d`/`f`/`l`/`o`/`?` + 이름 + NUL, `proto.AppendName`·`ParseNames`)이다. 응답 머리(8MiB)에 넣지 않는다
