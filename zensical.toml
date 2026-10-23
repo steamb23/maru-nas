@@ -3,7 +3,7 @@
 # 배포: stable을 push하면 .github/workflows/docs.yml이 GitHub Pages에 올린다
 
 [project]
-site_name = "마루 NAS"
+site_name = "Maru NAS"
 site_description = "A suspiciously normal desktop-like dashboard for openmediavault."
 site_url = "https://steamb23.github.io/maru-nas/"
 repo_url = "https://github.com/steamb23/maru-nas"
@@ -12,29 +12,61 @@ repo_name = "steamb23/maru-nas"
 edit_uri = "edit/main/docs/"
 docs_dir = "docs"
 site_dir = "site"
+# 영어 문서(*.md)가 기본이고, 한국어 문서(*.ko.md)는 "한국어" 아래에 같은 순서로 둔다
 nav = [
-  { "소개" = "README.ko.md" },
-  { "설치와 운영" = [
-    "install.ko.md",
-    "install-options.ko.md",
-    "upgrade.ko.md",
-    "reverse-proxy.ko.md",
-    "configuration.ko.md",
+  { "Introduction" = "README.md" },
+  { "Installation and operation" = [
+    "install.md",
+    "install-options.md",
+    "upgrade.md",
+    "reverse-proxy.md",
+    "configuration.md",
   ] },
-  { "기능" = [
-    "settings-app.ko.md",
-    "files.ko.md",
-    "terminal.ko.md",
+  { "Features" = [
+    "settings-app.md",
+    "files.md",
+    "terminal.md",
   ] },
-  { "보안" = [
-    "helper.ko.md",
-    "security.ko.md",
-    "passkey-login.ko.md",
+  { "Security" = [
+    "helper.md",
+    "security.md",
+    "passkey-login.md",
+  ] },
+  { "한국어" = [
+    { "소개" = "README.ko.md" },
+    { "설치와 운영" = [
+      "install.ko.md",
+      "install-options.ko.md",
+      "upgrade.ko.md",
+      "reverse-proxy.ko.md",
+      "configuration.ko.md",
+    ] },
+    { "기능" = [
+      "settings-app.ko.md",
+      "files.ko.md",
+      "terminal.ko.md",
+    ] },
+    { "보안" = [
+      "helper.ko.md",
+      "security.ko.md",
+      "passkey-login.ko.md",
+    ] },
   ] },
 ]
 
+# 머리글의 언어 선택은 각 언어의 첫 페이지로 간다. 같은 페이지의 다른 언어는 본문 첫 줄에서 잇는다
+[[project.extra.alternate]]
+name = "English"
+link = "/maru-nas/"
+lang = "en"
+
+[[project.extra.alternate]]
+name = "한국어"
+link = "/maru-nas/README.ko/"
+lang = "ko"
+
 [project.theme]
-language = "ko"
+language = "en"
 features = [
   "content.action.edit",
   "content.code.copy",
@@ -46,19 +78,19 @@ features = [
 [[project.theme.palette]]
 media = "(prefers-color-scheme)"
 toggle.icon = "lucide/sun-moon"
-toggle.name = "밝은 화면으로"
+toggle.name = "Switch to light mode"
 
 [[project.theme.palette]]
 media = "(prefers-color-scheme: light)"
 scheme = "default"
 toggle.icon = "lucide/sun"
-toggle.name = "어두운 화면으로"
+toggle.name = "Switch to dark mode"
 
 [[project.theme.palette]]
 media = "(prefers-color-scheme: dark)"
 scheme = "slate"
 toggle.icon = "lucide/moon"
-toggle.name = "시스템 설정 따르기"
+toggle.name = "Switch to system preference"
 
 # 이 키를 두면 기본 확장 묶음 대신 아래만 쓴다(toc·tables·superfences는 항상 들어간다).
 # docs/는 GitHub에서도 읽혀야 하므로 GitHub가 그리지 못하는 문법(!!!, ===, 속성 목록)의 확장은 켜지 않는다.

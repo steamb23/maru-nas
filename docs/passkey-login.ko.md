@@ -1,5 +1,7 @@
 # 패스키로 로그인
 
+English: [Passkey sign-in](passkey-login.md)
+
 등록한 패스키로 비밀번호를 입력하지 않고 로그인합니다. 브라우저마다 따로 켜며, [보안 정책](security.ko.md#보안-정책)의 단계와 상관없이 쓸 수 있습니다.
 
 ## 조건

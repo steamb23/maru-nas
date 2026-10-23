@@ -1,5 +1,7 @@
 # 마루 NAS 문서
 
+English: [Maru NAS documentation](README.md)
+
 마루 NAS는 OpenMediaVault 8 위에 올리는 데스크톱형 웹 대시보드입니다. 처음 설치한다면 저장소 README의 [빠른 시작](https://github.com/steamb23/maru-nas/blob/main/README.ko.md#빠른-시작)부터 따라 해 주세요. 이 문서는 설치한 뒤 운영하면서 찾아보는 내용을 담습니다.
 
 ## 설치와 운영

@@ -5,6 +5,8 @@
 [![CI](https://github.com/steamb23/maru-nas/actions/workflows/ci.yml/badge.svg)](https://github.com/steamb23/maru-nas/actions/workflows/ci.yml)
 [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue)](LICENSE)
 
+English: [README.md](README.md)
+
 OpenMediaVault 8 위에 올리는 데스크톱형 웹 대시보드입니다. 창·작업표시줄·바탕화면 위젯으로 NAS 가동 현황을 확인하고, 컨테이너와 핵심 서비스를 간단히 켜고 끌 수 있습니다. 심층 설정은 OMV 기본 웹 UI에서 합니다.
 
 - 로그인은 OMV 계정으로 합니다. 설정 변경도 로그인한 사용자의 OMV 세션으로만 합니다.
