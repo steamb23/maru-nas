@@ -56,6 +56,17 @@ type SystemStatsResponse struct {
 	Tasks *TaskCounts `json:"tasks,omitempty"`
 	// Processes는 프로세스 목록이다(PID 순서). 관리자가 ?processes=1로 요청할 때만 준다(provider proc-processes).
 	Processes []Process `json:"processes,omitempty"`
+	// Power는 OMV 전원 관리의 절전 방식이다. 관리자가 ?power=1로 요청할 때만 준다(provider omv-power).
+	Power *PowerInfo `json:"power,omitempty"`
+}
+
+// PowerInfo는 OMV 전원 관리의 대기 방식이다(PowerMgmt.get, PowerMgmt.enumerateStandbyModes).
+// 전원 모달은 이 값으로 절전(System.standby)을 쓸 수 있는지 정한다.
+type PowerInfo struct {
+	// StandbyMode는 설정된 대기 방식이다(poweroff, suspend, hibernate, suspendhybrid).
+	StandbyMode string `json:"standbyMode"`
+	// StandbyModes는 이 기기가 지원하는 대기 방식이다. poweroff는 늘 들어 있다.
+	StandbyModes []string `json:"standbyModes"`
 }
 
 // TaskCounts는 프로세스와 스레드(커널 스레드 포함) 수다.

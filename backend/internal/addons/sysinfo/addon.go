@@ -10,8 +10,9 @@ import (
 // ID는 시스템 정보 애드온의 id다.
 const ID = "system-info"
 
-// Manifest는 시스템 정보 애드온의 선언이다. /proc, /sys만 읽으므로 플러그인·RPC가 필요 없다.
+// Manifest는 시스템 정보 애드온의 선언이다. 현황은 /proc, /sys만 읽으므로 플러그인이 필요 없다.
 // 성능 페이지는 누구나 보고, 프로세스 목록은 provider(proc-processes)가 관리자에게만 준다.
+// 프로필 메뉴의 전원 모달이 쓰는 전원 조작과 절전 방식 조회(power.go)도 이 애드온에 둔다(모두 관리자).
 var Manifest = api.Manifest{
 	ID:    ID,
 	Title: "apps.systemInfo",
@@ -32,6 +33,15 @@ var Manifest = api.Manifest{
 			MaxSize:     &api.GridSize{Cols: 4, Rows: 3},
 		},
 	},
+	RPC: api.RPCMethods{
+		Read:  []string{"PowerMgmt.get", "PowerMgmt.enumerateStandbyModes"},
+		Write: []string{"System.shutdown", "System.reboot", "System.standby"},
+	},
+	Actions: []api.ActionDecl{
+		{Name: "shutdown", Admin: true, Confirm: true},
+		{Name: "reboot", Admin: true, Confirm: true},
+		{Name: "standby", Admin: true, Confirm: true},
+	},
 }
 
 // New는 r(요약·누적 카운터)과 procs(프로세스 목록)를 provider로 쓰는 시스템 정보 애드온을 반환한다.
@@ -39,8 +49,8 @@ var Manifest = api.Manifest{
 func New(r *Reader, procs *Processes) addons.Addon {
 	return addons.Addon{
 		Manifest:  Manifest,
-		Providers: []addons.Provider{r, procs},
-		Fetch: func(_ context.Context, req addons.Request) (any, error) {
+		Providers: []addons.Provider{r, procs, powerProvider{}},
+		Fetch: func(ctx context.Context, req addons.Request) (any, error) {
 			res, err := r.Stats()
 			if err != nil {
 				return nil, err
@@ -54,7 +64,21 @@ func New(r *Reader, procs *Processes) addons.Addon {
 					res.Processes = list
 				}
 			}
+			// 절전 방식은 전원 모달을 열 때 브라우저가 power=1로 요청한다.
+			if req.Has(SourcePower) && req.Query.Get("power") == "1" {
+				if info, err := readPower(ctx, req.RPC); err != nil {
+					res.FailedSources = append(res.FailedSources, SourcePower)
+				} else {
+					res.Sources = append(res.Sources, SourcePower)
+					res.Power = info
+				}
+			}
 			return res, nil
+		},
+		Actions: map[string]addons.Action{
+			"shutdown": powerAction("shutdown"),
+			"reboot":   powerAction("reboot"),
+			"standby":  powerAction("standby"),
 		},
 	}
 }

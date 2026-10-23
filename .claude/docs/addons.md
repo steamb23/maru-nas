@@ -1,6 +1,6 @@
 # 애드온 구조
 
-기능(시스템 정보, 저장소, 온도, 네트워크, 컨테이너 등)을 같은 계약으로 만들기 위한 설계다. 각 기능은 창과 바탕화면 위젯 중 하나 이상의 보기로 보여 주고, 필요하면 상태를 바꾸는 조작(컨테이너, OMV 서비스)을 둔다. 항목별 데이터 출처는 [data-sources.md](data-sources.md)를 본다.
+기능(시스템 정보, 저장소, 온도, 네트워크, 컨테이너 등)을 같은 계약으로 만들기 위한 설계다. 각 기능은 창과 바탕화면 위젯 중 하나 이상의 보기로 보여 주고, 필요하면 상태를 바꾸는 조작(컨테이너, OMV 서비스, 전원)을 둔다. 항목별 데이터 출처는 [data-sources.md](data-sources.md)를 본다.
 
 데이터·조작이 없는 셸 기능("모든 앱", 바로가기, OMV 웹 UI를 새 탭으로 여는 링크 앱)은 애드온이 아니다. 링크 앱은 `windows/apps.ts`의 `kind: 'link'`이며 `.claude/rules/frontend-shell.md`의 "바로가기와 모든 앱"을 본다.
 
@@ -91,7 +91,7 @@
 내장 애드온의 현황 데이터는 브라우저가 OMV RPC를 직접 조합하지 않고 백엔드 provider가 만든다. 출처 합치기·중복 제거(온도), 세션 사이에 공유하는 캐시(SMART)가 백엔드에 있어야 하기 때문이다.
 
 - `addons.Addon.Fetch(ctx, Request)`가 응답을 만든다. 없으면 `GET /api/addons/{id}`는 404다. 시스템 정보 위젯은 애드온 계약 이전부터 있던 `/api/system`을 그대로 쓰고, 창은 `GET /api/addons/system-info`를 쓴다
-- `Request`: `Admin`, `Sources`(capability로 계산한 쓸 수 있는 provider, 우선순위 순서. `Has(name)`), `Refresh`(`?refresh=1`, 캐시를 쓰는 애드온만 본다), `Query`(조회 파라미터. 브라우저가 보낸 값이므로 애드온이 자기가 정한 이름·값만 읽고 OMV에 넘기지 않는다. 시스템 정보의 `processes=1`), `RPC`
+- `Request`: `Admin`, `Sources`(capability로 계산한 쓸 수 있는 provider, 우선순위 순서. `Has(name)`), `Refresh`(`?refresh=1`, 캐시를 쓰는 애드온만 본다), `Query`(조회 파라미터. 브라우저가 보낸 값이므로 애드온이 자기가 정한 이름·값만 읽고 OMV에 넘기지 않는다. 시스템 정보의 `processes=1`·`power=1`), `RPC`
 - `RPC`(`addons.RPCCaller`)는 서버가 요청마다 사용자 세션으로 만든다
   - **호출한 애드온 자신이** manifest `rpc.read`에 선언한 메서드만 부른다(`Registry.Classify`로 확인, 다른 애드온이 선언한 메서드는 거부). 쓰기는 부를 수 없다(조작에서만)
   - 항상 `updatelastaccess=false`로 부른다. 위젯 주기 요청이 OMV 세션을 연장하면 안 된다
@@ -215,7 +215,7 @@
 
 | id | 이름 | requires | provider (우선순위) | 위젯 / 창 갱신 |
 |---|---|---|---|---|
-| `system-info` | 시스템 정보 | 없음(프로세스 목록은 admin) | `proc`, `proc-processes`(admin) | 5초 / 1초(숨기면 2초) |
+| `system-info` | 시스템 정보 | 없음(프로세스 목록·절전 방식은 admin) | `proc`, `proc-processes`(admin), `omv-power`(admin) | 5초 / 1초(숨기면 2초) |
 | `storage` | 디스크 용량 | 없음 | `proc` | 1분 / 15초 |
 | `network` | 네트워크 | 없음 | `proc` | 5초 / 2초 |
 | `temperature` | 온도 | 없음 | `hwmon`, `omv-cputemp`(cputemp 플러그인), `omv-smart`(admin, 캐시만) | 10초 / 5초 |
@@ -271,6 +271,7 @@
 |---|---|---|---|---|---|
 | `containers` | 컨테이너 | compose 플러그인 | `omv-compose` | `start`, `stop`(확인), `restart`(확인), 관리자 | 30초 / 15초 |
 | `services` | 서비스 | admin | `omv-services` | `enable`, `disable`(확인) | 30초 / 10초 |
+| `system-info` | 시스템 정보 | 없음 | `omv-power`(admin) | `shutdown`, `reboot`, `standby`(모두 확인), 관리자. 프로필 메뉴의 전원 모달이 부른다 | 5초 / 1초(숨기면 2초) |
 
 #### 서비스 (`services`)
 
@@ -312,6 +313,8 @@
   - 검색(이름·명령줄·사용자·PID), 커널 스레드 표시(기본 숨김), 열 정렬(기본 CPU 내림차순, 값이 없는 행은 뒤)은 창 상태라 저장하지 않는다. 좁은 창에서는 상태·사용자 열을 숨긴다(컨테이너 쿼리)
 - 두 우클릭 메뉴의 설정(`cpuGraph`, `cpuKernel`, `cpuScale`)은 사용자별로 저장한다. `cpuKernel`은 저장한 적 없으면(옛 설정 파일, 옛 탭의 저장) 켜짐이다(`PUT /api/preferences/system-info`, `sysinfoPrefsStore.ts`). 창이 열려 있는 동안 불러오고, 불러오기 전이나 실패하면 기본값을 보이고 메뉴 항목을 비활성으로 둔다
 - 창 기본 크기는 사이드바·자원 목록·그래프가 나란히 넉넉하게 들어가는 960×600(실측), 최소 440×360이다(사이드바는 덮어 열고, 자원 목록은 한 줄, 세부 값은 스크롤)
+- 전원 조작(관리자, `power.go`): 프로필 메뉴의 "전원" 모달이 쓴다(`.claude/rules/frontend-shell.md`의 "작업표시줄 트레이와 프로필 메뉴"). 조작 `shutdown`·`reboot`·`standby`는 대상이 없어 빈 대상만 받고, `System.shutdown`·`reboot`·`standby`를 `{delay: 2}`로 부른다. delay가 있으면 OMV가 fork해 바로 응답하므로 204가 브라우저에 닿은 뒤 시스템이 내려간다. 조작 키(`system-info` + 빈 대상)가 같아 전원 조작은 한 번에 하나다
+  - 절전(`standby`)은 OMV 전원 관리의 대기 방식을 따르고, 지원하지 않는 방식이면 OMV가 전원을 끈다(`data-sources.md`의 "조작에 쓴 출처"). 그래서 모달을 열 때 `?power=1`(provider `omv-power`, `PowerMgmt.get`의 `standbymode`와 `PowerMgmt.enumerateStandbyModes`)로 받아 쓸 수 있는지 정한다. 읽지 못하면 `failedSources`로 알린다
 - 프로세스 종료 같은 조작은 `.claude/docs/roadmap.md`에 있다
 
 ## 내장 애드온

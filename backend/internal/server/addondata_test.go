@@ -203,8 +203,8 @@ func TestAddonDataBuiltinContainers(t *testing.T) {
 	}
 }
 
-// 시스템 정보 창의 데이터: 요약은 누구나, 프로세스 목록은 관리자에게만 준다(provider 조건).
-func TestAddonDataBuiltinSystemInfo(t *testing.T) {
+// testSysinfo는 합성 /proc·/sys를 읽는 시스템 정보 애드온이다.
+func testSysinfo() addons.Addon {
 	proc := fstest.MapFS{
 		"stat":      {Data: []byte("cpu 10 0 10 80 0\ncpu0 10 0 10 80 0\n")},
 		"meminfo":   {Data: []byte("MemTotal: 1000 kB\nMemAvailable: 500 kB\n")},
@@ -215,17 +215,23 @@ func TestAddonDataBuiltinSystemInfo(t *testing.T) {
 		"1/cmdline": {Data: []byte("/sbin/init\x00")},
 	}
 	block := fstest.MapFS{"sda/device": {Data: []byte("../../0:0:0:0"), Mode: os.ModeSymlink}}
-	e, _, _ := newDataEnv(t, sysinfo.New(
+	return sysinfo.New(
 		sysinfo.NewReaderFS(proc, block, nil),
 		sysinfo.NewProcessesFS(proc, func(string) string { return "root" }),
-	))
+	)
+}
+
+// 시스템 정보 창의 데이터: 요약은 누구나, 프로세스 목록과 절전 방식은 관리자에게만 준다(provider 조건).
+func TestAddonDataBuiltinSystemInfo(t *testing.T) {
+	e, _, _ := newDataEnv(t, testSysinfo())
 	for _, c := range []struct {
 		user    string
 		sources []string
 		procs   int
+		power   bool
 	}{
-		{"user", []string{"proc"}, 0},
-		{"admin", []string{"proc", sysinfo.SourceProcesses}, 1},
+		{"user", []string{"proc"}, 0, false},
+		{"admin", []string{"proc", sysinfo.SourceProcesses, sysinfo.SourcePower}, 1, true},
 	} {
 		b := e.browser()
 		wantStatus(t, b.login(c.user, c.user), http.StatusOK)
@@ -240,12 +246,42 @@ func TestAddonDataBuiltinSystemInfo(t *testing.T) {
 		if got.CPU.TotalTicks != 100 || len(got.CPU.Cores) != 1 || got.Disk == nil || got.Disk.WriteBytes != 16*512 {
 			t.Errorf("%s: stats %+v", c.user, got)
 		}
-		if len(got.Processes) != c.procs || !slices.Equal(got.Sources, c.sources) {
-			t.Errorf("%s: processes %+v, sources %v", c.user, got.Processes, got.Sources)
+		wantSources := c.sources[:min(len(c.sources), 2)]
+		if len(got.Processes) != c.procs || !slices.Equal(got.Sources, wantSources) || got.Power != nil {
+			t.Errorf("%s: processes %+v, sources %v, power %+v", c.user, got.Processes, got.Sources, got.Power)
 		}
 		if plain := decode[api.SystemStatsResponse](t, b.do(http.MethodGet, "/api/addons/system-info", nil)); plain.Processes != nil {
 			t.Errorf("%s: processes without query", c.user)
 		}
+		// 절전 방식은 power=1로 요청할 때만 준다(관리자만).
+		power := decode[api.SystemStatsResponse](t, b.do(http.MethodGet, "/api/addons/system-info?power=1", nil))
+		if !c.power {
+			if power.Power != nil || slices.Contains(power.Sources, sysinfo.SourcePower) {
+				t.Errorf("%s: power %+v", c.user, power.Power)
+			}
+			continue
+		}
+		if power.Power == nil || power.Power.StandbyMode != "suspend" ||
+			!slices.Equal(power.Power.StandbyModes, []string{"poweroff", "suspend"}) ||
+			!slices.Contains(power.Sources, sysinfo.SourcePower) || power.Processes != nil {
+			t.Errorf("%s: power %+v, sources %v", c.user, power.Power, power.Sources)
+		}
+	}
+}
+
+// 절전 방식을 읽지 못하면 그 출처만 실패로 알리고 나머지 값은 그대로 준다.
+func TestAddonDataSystemInfoPowerFailure(t *testing.T) {
+	e, _, _ := newDataEnv(t, testSysinfo())
+	d := omvfake.DefaultPluginData()
+	d.Missing = []string{"PowerMgmt"}
+	e.fake.SetPluginData(d)
+	b := e.browser()
+	wantStatus(t, b.login("admin", "admin"), http.StatusOK)
+	r := b.do(http.MethodGet, "/api/addons/system-info?power=1", nil)
+	wantStatus(t, r, http.StatusOK)
+	got := decode[api.SystemStatsResponse](t, r)
+	if got.Power != nil || !slices.Equal(got.FailedSources, []string{sysinfo.SourcePower}) || got.CPU.TotalTicks != 100 {
+		t.Errorf("power %+v, failed %v", got.Power, got.FailedSources)
 	}
 }
 

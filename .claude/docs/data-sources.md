@@ -57,6 +57,11 @@
   - `execBgProc`로 돌기 때문에 바로 상태 파일 이름(문자열)을 돌려준다. 끝났는지와 실패는 `Exec.isRunning`(admin)으로 확인한다. docker 명령이 0이 아닌 값으로 끝나면 `Exec.isRunning`이 예외를 던진다
   - Podman 모드에서는 같은 명령을 `DOCKER_HOST`를 바꿔 실행한다(미검증)
 
+- 시스템 종료·다시 시작·절전: `System.shutdown`·`reboot`·`standby`(admin, `{delay}`). 스키마(`rpc.system.*`)의 `delay`는 0 이상 정수이고 필수가 아니지만 PHP가 `$params['delay']`를 바로 읽으므로 늘 보낸다. 0이면 RPC 안에서 `systemctl reboot|poweroff|…`를 실행해 응답 전에 연결이 끊길 수 있고, 0보다 크면 engined가 fork해 바로 돌려준 뒤 자식이 기다렸다가 실행한다. workbench는 `{delay: 0}`을 보내고 `System.noop`으로 복귀를 기다린다
+  - `standby`는 전원 관리의 `standbymode`(`poweroff`·`suspend`(기본)·`hibernate`·`suspendhybrid`)를 따른다. `PowerManagement`의 `suspend()`·`hibernate()`·`suspendHybrid()`는 그 상태를 지원하지 않으면 `shutdown()`을 부르고, `suspendhybrid` 지원 확인은 구현되지 않아(ToDo) 늘 전원을 끈다. `System.suspend`·`hibernate`(delay 없음, 동기)도 같은 함수를 쓴다
+  - 확인: `PowerMgmt.get`(admin, `{cpufreqgovernor, powerbtn, standbymode}`), `PowerMgmt.enumerateStandbyModes`(admin, `poweroff`에 더해 `/sys/power/state`에 `mem`이 있으면 `suspend`, `disk`가 있고 `/sys/power/disk`가 꺼져 있지 않고 스왑이 있으면 `hibernate`. `suspendhybrid`는 나오지 않는다)
+  - 버전: 7.x 브랜치와 8.5.11·8.5.12의 메서드·스키마·delay 처리가 같다. 그 사이의 8.0~8.4도 같다(2026-10 확인)
+
 - OMV 서비스 상태: `Services.getStatus`(admin, `{total, data}`). 모듈의 `getStatus()`를 모은 것이며 `enabled`는 대개 설정 DB의 `enable`, `running`은 `systemctl is-active`다(compose 플러그인은 `systemctl is-enabled`)
 - OMV 서비스 켜기·끄기: 시작·정지 RPC가 따로 없다. workbench처럼 서비스 설정의 `enable`을 바꾸고 설정을 적용한다
   - 설정: `SSH.get`/`SSH.set`, `SMB.getSettings`/`setSettings`, `NFS.getSettings`/`setSettings`, `Rsyncd.getSettings`/`setSettings`(모두 admin). set 스키마는 모든 속성이 필수다. `SMB.getSettings`는 `shares`를, `Rsyncd.getSettings`는 `modules`를 빼고 주지만 `NFS.getSettings`는 `shares`를 그대로 준다(`versions`는 배열로 바꿔 줌). `SMB.setSettings`는 켤 때 호스트 이름이 15자를 넘으면 거절한다

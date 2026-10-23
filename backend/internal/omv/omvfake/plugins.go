@@ -21,6 +21,11 @@ import (
 //   - Compose.doContainerCommand (admin): docker <command> <command2> <id>를 백그라운드 작업으로 돌리고
 //     상태 파일 이름을 돌려준다. 실제 OMV처럼 파라미터를 검사하지 않는다. 작업이 끝나면(Exec.isRunning)
 //     start·restart는 실행 중, stop은 정지로 바꾼다. 없는 컨테이너나 FailContainers는 실패한다
+//   - System.shutdown·reboot·standby (admin): engined/rpc/system.inc. {delay: 0 이상 정수}(rpc.system.*)를
+//     받고 null을 돌려준다. 실제로는 아무것도 끄지 않는다(호출 기록만 남는다)
+//   - PowerMgmt.get (admin): engined/rpc/powermgmt.inc. conf.system.powermngmnt {cpufreqgovernor, powerbtn,
+//     standbymode}
+//   - PowerMgmt.enumerateStandbyModes (admin): 지원하는 대기 방식 배열. poweroff는 늘 들어 있다
 //
 // 역할이 모자라면 OMV의 validateMethodContext처럼 403 "Invalid context role."을 돌려준다.
 // 값은 모두 가짜다(모델명, 장치, 시리얼, 이미지 이름).
@@ -82,6 +87,10 @@ type PluginData struct {
 	Missing []string
 	// SharedFolders는 ShareMgmt.enumerateSharedFolders의 공유 폴더다(관리자 전용).
 	SharedFolders []SharedFolder
+	// StandbyMode는 OMV 전원 관리의 대기 방식이다(PowerMgmt.get의 standbymode).
+	StandbyMode string
+	// StandbyModes는 이 기기가 지원하는 대기 방식이다(PowerMgmt.enumerateStandbyModes).
+	StandbyModes []string
 }
 
 // SharedFolder는 공유 폴더 하나의 합성 값이다. 경로는 MountDir + RelDirPath다.
@@ -137,6 +146,8 @@ func DefaultPluginData() PluginData {
 		ServiceSettings: defaultServiceSettings(),
 		CPUTemp:         47,
 		FailContainers:  []string{"broken"},
+		StandbyMode:     "suspend",
+		StandbyModes:    []string{"poweroff", "suspend"},
 	}
 }
 
@@ -227,6 +238,31 @@ func (s *Server) handlePlugin(sess *session, service, method string, params json
 			return nil, e, true
 		}
 		return s.containerCommand(params), nil, true
+	case "System.shutdown", "System.reboot", "System.standby":
+		if e := adminOnly(); e != nil {
+			return nil, e, true
+		}
+		var p struct {
+			Delay *int `json:"delay"`
+		}
+		if json.Unmarshal(params, &p) != nil || p.Delay == nil || *p.Delay < 0 {
+			return nil, errStatus(http.StatusInternalServerError, "Invalid RPC parameters."), true
+		}
+		return nil, nil, true
+	case "PowerMgmt.get":
+		if e := adminOnly(); e != nil {
+			return nil, e, true
+		}
+		return map[string]any{"cpufreqgovernor": "", "powerbtn": "nothing", "standbymode": d.StandbyMode}, nil, true
+	case "PowerMgmt.enumerateStandbyModes":
+		if e := adminOnly(); e != nil {
+			return nil, e, true
+		}
+		modes := slices.Clone(d.StandbyModes)
+		if modes == nil {
+			modes = []string{"poweroff"}
+		}
+		return modes, nil, true
 	}
 	return nil, nil, false
 }

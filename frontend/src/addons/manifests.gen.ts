@@ -36,7 +36,34 @@ export const MANIFESTS = {
       }
     },
     "requires": {},
-    "rpc": {}
+    "rpc": {
+      "read": [
+        "PowerMgmt.get",
+        "PowerMgmt.enumerateStandbyModes"
+      ],
+      "write": [
+        "System.shutdown",
+        "System.reboot",
+        "System.standby"
+      ]
+    },
+    "actions": [
+      {
+        "name": "shutdown",
+        "admin": true,
+        "confirm": true
+      },
+      {
+        "name": "reboot",
+        "admin": true,
+        "confirm": true
+      },
+      {
+        "name": "standby",
+        "admin": true,
+        "confirm": true
+      }
+    ]
   },
   "storage": {
     "id": "storage",

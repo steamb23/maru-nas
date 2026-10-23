@@ -12,6 +12,7 @@ import (
 	"maru/backend/internal/addons"
 	"maru/backend/internal/addons/containers"
 	"maru/backend/internal/addons/services"
+	"maru/backend/internal/addons/sysinfo"
 	"maru/backend/internal/api"
 	"maru/backend/internal/omv/omvfake"
 )
@@ -217,6 +218,36 @@ func TestActionBuiltinContainers(t *testing.T) {
 	user := e.browser()
 	wantStatus(t, user.login("user", "user"), http.StatusOK)
 	wantCode(t, act(user, "containers", "start", "web"), http.StatusForbidden, api.ErrAdminRequired)
+}
+
+// 전원 조작은 관리자만, 대상 없이 부르며 delay를 붙여 System 메서드를 부른다.
+func TestActionBuiltinSystemInfoPower(t *testing.T) {
+	e, _, _ := newDataEnv(t, testSysinfo())
+	admin := e.browser()
+	wantStatus(t, admin.login("admin", "admin"), http.StatusOK)
+	systemCalls := func(method string) []string {
+		var out []string
+		for _, c := range e.fake.Calls() {
+			if c.Service == "System" && c.Method == method {
+				out = append(out, string(c.Params))
+			}
+		}
+		return out
+	}
+	for _, name := range []string{"shutdown", "reboot", "standby"} {
+		wantStatus(t, act(admin, sysinfo.ID, name, ""), http.StatusNoContent)
+		if got := systemCalls(name); !slices.Equal(got, []string{`{"delay":2}`}) {
+			t.Errorf("%s: calls %v", name, got)
+		}
+	}
+
+	wantCode(t, act(admin, sysinfo.ID, "reboot", "now"), http.StatusBadRequest, api.ErrBadRequest)
+	user := e.browser()
+	wantStatus(t, user.login("user", "user"), http.StatusOK)
+	wantCode(t, act(user, sysinfo.ID, "reboot", ""), http.StatusForbidden, api.ErrAdminRequired)
+	if got := systemCalls("reboot"); len(got) != 1 {
+		t.Errorf("rejected requests reached OMV: %v", got)
+	}
 }
 
 // 실제 내장 애드온(services)의 켜기·끄기가 가짜 OMV까지 가는 경로.
