@@ -1,7 +1,5 @@
 # Install options
 
-한국어: [설치 옵션](install-options.ko.md)
-
 These are the options of `./install.sh`. Without options, it asks for the settings and installs the first time, and upgrades with the installed settings if Maru NAS is already installed. The flow is in [Installation](install.md), and what happens during an upgrade is in [Upgrading](upgrade.md).
 
 ## Install modes

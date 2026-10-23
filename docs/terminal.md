@@ -1,7 +1,5 @@
 # Web terminal
 
-한국어: [웹 터미널](terminal.ko.md)
-
 "Terminal" in "All apps" opens, in a window, a shell on this NAS's SSH server (sshd), signed in as the account you used for the dashboard. The dashboard connects over SSH to the SSH server on the same host (`127.0.0.1`) and relays the screen, so who can get in and how is decided by OMV's SSH settings as they are.
 
 ## Turning it on

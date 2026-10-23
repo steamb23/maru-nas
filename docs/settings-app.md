@@ -1,7 +1,5 @@
 # Settings app
 
-한국어: [설정 앱](settings-app.ko.md)
-
 Open it with "Settings" in "All apps", the header (your user name) of the profile menu on the taskbar, or "Open screen settings" in the desktop's right-click menu. It covers only dashboard settings, your own account's profile, security methods and information.
 
 | Page | Contents | Who |

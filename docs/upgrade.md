@@ -1,7 +1,5 @@
 # Upgrading
 
-한국어: [업그레이드](upgrade.ko.md)
-
 ## Upgrading over SSH
 
 Run these in the repository.

@@ -1,7 +1,5 @@
 # 설치
 
-English: [Installation](install.md)
-
 처음이라면 README의 [빠른 시작](https://github.com/steamb23/maru-nas/blob/main/README.ko.md#빠른-시작)을 따라 하면 됩니다. 이 문서는 그 단계마다 더 알아 둘 것을 모았습니다. 옵션 목록은 [설치 옵션](install-options.ko.md), 설치한 뒤 바꾸는 값은 [설정](configuration.ko.md)에 있습니다.
 
 ## 요구 사항

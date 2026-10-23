@@ -1,7 +1,5 @@
 # Installation
 
-한국어: [설치](install.ko.md)
-
 If this is your first installation, following the [quick start](https://github.com/steamb23/maru-nas#quick-start) in the README is enough. This page collects what is worth knowing about each of its steps. The list of options is in [Install options](install-options.md), and the values you change after installing are in [Configuration](configuration.md).
 
 ## Requirements
