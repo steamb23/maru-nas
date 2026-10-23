@@ -17,6 +17,19 @@ func TestValidUpgradeTarget(t *testing.T) {
 	}
 }
 
+func TestValidUpgradeChannel(t *testing.T) {
+	for _, ok := range []string{UpgradeChannelCurrent, UpgradeChannelStable, UpgradeChannelMain} {
+		if !ValidUpgradeChannel(ok) {
+			t.Errorf("%q rejected", ok)
+		}
+	}
+	for _, bad := range []string{"Stable", "origin/stable", "dev", "-main", "main ", "refs/heads/main"} {
+		if ValidUpgradeChannel(bad) {
+			t.Errorf("%q accepted", bad)
+		}
+	}
+}
+
 func TestValidUpgradeSetting(t *testing.T) {
 	cases := []struct {
 		name, value string
