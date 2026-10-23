@@ -1,13 +1,14 @@
 # 문서 사이트(docs/, zensical.toml)를 GitHub Pages에 배포한다.
-# README의 설치 안내가 stable을 받으므로 사이트도 최신 릴리스(stable) 기준이다. 릴리스 절차에서 stable을 push하면 배포된다.
-# 저장소 설정: Pages의 Source는 "GitHub Actions", Environments의 github-pages는 stable에서 배포를 허용해야 한다.
+# README의 설치 안내가 stable을 받으므로 사이트는 최신 릴리스(stable) 기준이다. 릴리스 절차에서 stable을 push하면 배포된다.
+# 릴리스 사이에 문서만 먼저 올릴 때는 Actions 화면에서 main을 골라 수동으로 실행한다. 다음 stable push가 다시 릴리스 기준으로 덮어쓴다.
+# 저장소 설정: Pages의 Source는 "GitHub Actions", Environments의 github-pages는 stable과 main에서 배포를 허용해야 한다.
 # 빌드 검사는 ci.yml의 docs 잡이 main·PR에서 한다. 액션 버전은 Zensical 공식 문서의 워크플로를 따른다.
 name: Documentation
 
 on:
   push:
     branches: [stable]
-  # Actions 화면에서 다시 배포할 때. 아래 if가 stable일 때만 배포한다
+  # Actions 화면에서 다시 배포하거나(stable) main의 문서를 먼저 올릴 때(main). 아래 if가 그 밖의 브랜치는 건너뛴다
   workflow_dispatch:
 
 permissions:
@@ -22,7 +23,7 @@ concurrency:
 
 jobs:
   deploy:
-    if: github.ref == 'refs/heads/stable'
+    if: github.ref == 'refs/heads/stable' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

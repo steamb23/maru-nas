@@ -55,7 +55,7 @@ make dev-fake
 
 ## 문서
 
-`README.md`에는 소개, 빠른 시작, 문서 목록, 기여 안내만 둡니다. 사용자 문서는 `docs/`에 있고 [Zensical](https://zensical.org/)(`zensical.toml`)로 사이트를 만듭니다. README와 모든 페이지는 영어(`<이름>.md`)와 한국어(`<이름>.ko.md`)로 있습니다. 사이트(<https://steamb23.github.io/maru-nas/>)는 `stable` 브랜치에서 배포하므로, `main`에서 고친 문서는 다음 릴리스 때 사이트에 반영됩니다.
+`README.md`에는 소개, 빠른 시작, 문서 목록, 기여 안내만 둡니다. 사용자 문서는 `docs/`에 있고 [Zensical](https://zensical.org/)(`zensical.toml`)로 사이트를 만듭니다. README와 모든 페이지는 영어(`<이름>.md`)와 한국어(`<이름>.ko.md`)로 있습니다. 사이트(<https://steamb23.github.io/maru-nas/>)는 `stable` 브랜치에서 배포하므로, `main`에서 고친 문서는 다음 릴리스 때 사이트에 반영됩니다. 유지자가 Documentation 워크플로를 수동으로 실행해 `main`을 먼저 올릴 때도 있습니다.
 
 - 영어 페이지와 한국어 페이지를 함께 고칩니다. 한국어를 쓰지 않는다면 영어 페이지만 고치고 풀 리퀘스트에 그렇다고 적어 주세요. 병합하기 전에 유지자가 한국어 페이지를 고칩니다.
 - 사이트를 빌드하지 않아도 GitHub에서 읽혀야 합니다. GitHub가 그리는 마크다운만 씁니다. GitHub 알림(`> [!NOTE]`, `> [!TIP]`, `> [!WARNING]`)은 되고, Zensical 전용 문법(`!!!` 알림, `===` 탭, 속성 목록)은 쓰지 않습니다.

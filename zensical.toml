@@ -1,6 +1,6 @@
 # 마루 NAS 문서 사이트(Zensical). 문서 원본은 docs/이고 GitHub에서도 그대로 읽힌다.
 # 미리보기: zensical serve, 검사: zensical build --strict (CONTRIBUTING.md의 "Documentation")
-# 배포: stable을 push하면 .github/workflows/docs.yml이 GitHub Pages에 올린다
+# 배포: stable을 push하면 .github/workflows/docs.yml이 GitHub Pages에 올린다(main은 Actions 화면에서 수동으로)
 
 [project]
 site_name = "Maru NAS"
