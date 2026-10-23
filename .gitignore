@@ -16,7 +16,6 @@ node_modules/
 
 # 문서 사이트(zensical build의 결과물과 캐시, 미리보기용 가상 환경)
 /site/
-/site-ko/
 /.cache/
 /.venv/
 

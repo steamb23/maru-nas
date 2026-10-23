@@ -1,4 +1,4 @@
-# 문서 사이트(docs/, 영어 zensical.toml과 한국어 zensical.ko.toml)를 GitHub Pages에 배포한다.
+# 문서 사이트(영어 docs/en/·zensical.toml, 한국어 docs/ko/·zensical.ko.toml)를 GitHub Pages에 배포한다.
 # README의 설치 안내가 stable을 받으므로 사이트는 최신 릴리스(stable) 기준이다. 릴리스 절차에서 stable을 push하면 배포된다.
 # 릴리스 사이에 문서만 먼저 올릴 때는 Actions 화면에서 main을 골라 수동으로 실행한다. 다음 stable push가 다시 릴리스 기준으로 덮어쓴다.
 # 저장소 설정: Pages의 Source는 "GitHub Actions", Environments의 github-pages는 stable과 main에서 배포를 허용해야 한다.
@@ -41,12 +41,14 @@ jobs:
       - name: Install Zensical
         run: pip install zensical==0.0.71
 
-      # 한국어 사이트(site-ko/)는 영어 사이트의 ko/ 아래로 옮겨 함께 올린다(zensical.toml의 머리 주석)
+      # 영어(site/en/)와 한국어(site/ko/) 사이트를 빌드하고, 첫 주소에는 브라우저 언어로 둘 중 하나를 고르는 페이지를,
+      # 없는 주소에는 영어 사이트의 404 페이지를 둔다(zensical.toml의 머리 주석)
       - name: Build docs
         run: |
           zensical build --strict --clean
           zensical build --strict --clean -f zensical.ko.toml
-          mv site-ko site/ko
+          cp docs/index.html site/index.html
+          cp site/en/404.html site/404.html
 
       - uses: actions/upload-pages-artifact@v5
         with:

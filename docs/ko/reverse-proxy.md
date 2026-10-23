@@ -68,7 +68,7 @@ dash.example.lan {
 }
 ```
 
-OMV와 같은 주소의 경로 접두사 아래에 두는 경우입니다. `https://nas.example.lan/`은 Caddy를 거쳐 OMV 웹 UI로, `https://nas.example.lan/desk/`는 대시보드로 연결됩니다. 기존 `http://nas.example.lan/`도 그대로 OMV 웹 UI입니다. 이때 [OMV 워크벤치 주소](configuration.ko.md#omv-워크벤치-열기)는 `/`로 둘 수 있습니다.
+OMV와 같은 주소의 경로 접두사 아래에 두는 경우입니다. `https://nas.example.lan/`은 Caddy를 거쳐 OMV 웹 UI로, `https://nas.example.lan/desk/`는 대시보드로 연결됩니다. 기존 `http://nas.example.lan/`도 그대로 OMV 웹 UI입니다. 이때 [OMV 워크벤치 주소](configuration.md#omv-워크벤치-열기)는 `/`로 둘 수 있습니다.
 
 ```caddyfile
 {

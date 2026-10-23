@@ -21,7 +21,7 @@ sudo apt install git make nodejs npm
 sudo apt install -t trixie-backports golang-go
 ```
 
-Debian's Node.js is 20.19. It builds the project and passes the tests, but Vitest 5 (the test runner) officially supports only 22.12 and later, so prefer the release from [nodejs.org](https://nodejs.org/) if you can. On other systems, install Go from [go.dev/dl](https://go.dev/dl/) and Node.js from nodejs.org. More about the tools (for example Go 1.24 from the default Debian repository) is in [docs/install.md](docs/install.md#build-tools).
+Debian's Node.js is 20.19. It builds the project and passes the tests, but Vitest 5 (the test runner) officially supports only 22.12 and later, so prefer the release from [nodejs.org](https://nodejs.org/) if you can. On other systems, install Go from [go.dev/dl](https://go.dev/dl/) and Node.js from nodejs.org. More about the tools (for example Go 1.24 from the default Debian repository) is in [docs/en/install.md](docs/en/install.md#build-tools).
 
 Then get the code and start the development server:
 
@@ -55,15 +55,15 @@ Useful commands (run from the repository root):
 
 ## Documentation
 
-`README.md` keeps only the introduction, the quick start, the documentation index and pointers for contributors. User documentation lives in `docs/` and is built into a site with [Zensical](https://zensical.org/). The README and every page come in English (`<name>.md`) and Korean (`<name>.ko.md`). Each language is a separate site with its own navigation and search: `zensical.toml` builds the English pages, and `zensical.ko.toml` builds the Korean pages, which are published under `ko/`. The site at <https://steamb23.github.io/maru-nas/> is published from the `stable` branch, so a documentation change in `main` shows up there with the next release, unless the maintainer publishes `main` earlier by running the Documentation workflow manually.
+`README.md` keeps only the introduction, the quick start, the documentation index and pointers for contributors. User documentation lives in `docs/` and is built into a site with [Zensical](https://zensical.org/). The README comes in English (`README.md`) and Korean (`README.ko.md`), and the pages in `docs/en/` and `docs/ko/`, with the same file names in both folders. Each language is a separate site with its own navigation and search: `zensical.toml` builds `docs/en/` into `en/`, and `zensical.ko.toml` builds `docs/ko/` into `ko/`. The site root (`docs/index.html`) opens one of them depending on the browser language. The site at <https://steamb23.github.io/maru-nas/> is published from the `stable` branch, so a documentation change in `main` shows up there with the next release, unless the maintainer publishes `main` earlier by running the Documentation workflow manually.
 
 - Change the English and the Korean page together. If you do not write Korean, change only the English page and say so in the pull request; the maintainer updates the Korean page before merging.
 - Pages must stay readable on GitHub without building the site. Use only Markdown that GitHub renders: GitHub alerts (`> [!NOTE]`, `> [!TIP]`, `> [!WARNING]`) are fine, Zensical-only syntax (`!!!` admonitions, `===` tabs, attribute lists) is not.
 - Indent nested lists, and code blocks inside lists, by four spaces. GitHub accepts two, but the site's Markdown engine needs four.
 - Do not put `|` in a table cell, even inside code.
-- Link pages with relative `.md` paths and their heading anchors, English pages to English pages (`configuration.md#opening-the-omv-workbench`) and Korean pages to Korean pages (`configuration.ko.md#omv-워크벤치-열기`). Link files outside `docs/` with absolute GitHub URLs. Do not repeat the same heading within a page, or its anchor will differ between GitHub and the site.
+- Link pages with relative `.md` paths and their heading anchors, within the same language folder (`configuration.md#opening-the-omv-workbench` in `docs/en/`, `configuration.md#omv-워크벤치-열기` in `docs/ko/`). Link files outside `docs/` with absolute GitHub URLs. Do not repeat the same heading within a page, or its anchor will differ between GitHub and the site.
 - User pages describe what users do, the conditions and limits, and the risks. Internal details belong in the design notes under `.claude/`.
-- If you add or change an installer option or a flag, update the tables in `docs/install-options.md` (a test checks it) and `docs/configuration.md`, in both languages.
+- If you add or change an installer option or a flag, update the tables in `install-options.md` (a test checks it) and `configuration.md`, in both `docs/en/` and `docs/ko/`.
 - If you add a page, add it to the navigation of both `zensical.toml` and `zensical.ko.toml`.
 
 To preview and check the site, install the pinned Zensical version with pipx or in a virtual environment (Debian and Ubuntu refuse a system-wide `pip install`):
@@ -83,7 +83,7 @@ python3 -m venv .venv
 - Work on a branch from `main` named `<type>/<short-description>`, lowercase with hyphens. Types: `feat` (new feature or app), `fix` (bug fix), `docs`, `i18n` (translations), `chore` (build, CI, cleanup), `refactor` (no behavior change).
 - Fork the repository and open a pull request against `main`. One change per pull request.
 - Pull requests are rebased onto `main` without merge commits. Force-pushing your own pull request branch is fine.
-- CI runs `make check` and `make build`, and builds the documentation with `zensical build --strict`, on every pull request. All must pass. Run `make check` locally before pushing, and the documentation build too if you changed `docs/` or `zensical.toml`.
+- CI runs `make check` and `make build`, and builds both documentation sites with `zensical build --strict`, on every pull request. All must pass. Run `make check` locally before pushing, and the documentation builds too if you changed `docs/`, `zensical.toml` or `zensical.ko.toml`.
 - `main` is the development branch. Releases are tagged `v<version>` and the `stable` branch always points at the latest release.
 
 ## Commit messages and language

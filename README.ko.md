@@ -19,11 +19,11 @@ OpenMediaVault 8 위에 올리는 데스크톱형 웹 대시보드입니다. 창
 
 - **현황 창과 위젯**: 시스템 정보, 저장소, 네트워크, 온도, 디스크 건강(SMART)을 창이나 바탕화면 위젯으로 봅니다.
 - **간단한 조작**: 컨테이너(compose 플러그인)를 시작·중지·재시작하고, 핵심 서비스를 켜고 끕니다.
-- **[파일 탐색기](docs/files.ko.md)**: 홈 폴더와 공유 폴더를 사용자마다의 권한으로 둘러보고, 올리고, 내려받고, 휴지통으로 지웁니다.
-- **[웹 터미널](docs/terminal.ko.md)**: 로그인한 계정으로 이 NAS의 SSH 셸을 창 안에 엽니다.
-- **[보안 강화 모드](docs/security.ko.md)**: 민감한 기능 앞에서 비밀번호 재확인이나 패스키·인증 앱으로 한 번 더 확인합니다. [패스키로 로그인](docs/passkey-login.ko.md)도 됩니다.
-- **[대시보드에서 업그레이드](docs/upgrade.ko.md#대시보드에서-업그레이드)**: SSH 없이 설정 앱에서 새 버전으로 올립니다.
-- **[OMV 워크벤치 연결](docs/configuration.ko.md#omv-워크벤치-열기)**: 심층 설정이 필요하면 OMV 웹 UI를 새 탭으로 엽니다.
+- **[파일 탐색기](docs/ko/files.md)**: 홈 폴더와 공유 폴더를 사용자마다의 권한으로 둘러보고, 올리고, 내려받고, 휴지통으로 지웁니다.
+- **[웹 터미널](docs/ko/terminal.md)**: 로그인한 계정으로 이 NAS의 SSH 셸을 창 안에 엽니다.
+- **[보안 강화 모드](docs/ko/security.md)**: 민감한 기능 앞에서 비밀번호 재확인이나 패스키·인증 앱으로 한 번 더 확인합니다. [패스키로 로그인](docs/ko/passkey-login.md)도 됩니다.
+- **[대시보드에서 업그레이드](docs/ko/upgrade.md#대시보드에서-업그레이드)**: SSH 없이 설정 앱에서 새 버전으로 올립니다.
+- **[OMV 워크벤치 연결](docs/ko/configuration.md#omv-워크벤치-열기)**: 심층 설정이 필요하면 OMV 웹 UI를 새 탭으로 엽니다.
 
 ## 빠른 시작
 
@@ -31,8 +31,8 @@ OpenMediaVault 8 위에 올리는 데스크톱형 웹 대시보드입니다. 창
 
 필요한 것:
 
-- OpenMediaVault 8.0 이상([버전별 차이](docs/install.ko.md#omv-버전))
-- SSH로 접속한 일반 사용자(sudo 그룹). OMV 설치 이미지가 만든 사용자가 그렇습니다([계정과 SSH](docs/install.ko.md#계정과-ssh))
+- OpenMediaVault 8.0 이상([버전별 차이](docs/ko/install.md#omv-버전))
+- SSH로 접속한 일반 사용자(sudo 그룹). OMV 설치 이미지가 만든 사용자가 그렇습니다([계정과 SSH](docs/ko/install.md#계정과-ssh))
 - 빌드하는 동안 인터넷 접속(github.com, registry.npmjs.org, proxy.golang.org)과 약 1.1GB의 여유 공간
 
 ### 1. 빌드 도구 설치
@@ -43,7 +43,7 @@ sudo apt install git make nodejs npm
 sudo apt install -t trixie-backports golang-go
 ```
 
-마지막 줄은 OMV가 기본으로 켜 둔 Debian backports에서 Go 1.27을 받습니다. `go version`이 1.27 이상, `node --version`이 20.19 이상이면 됩니다. 기본 저장소의 Go 1.24를 쓰는 경우는 [빌드 도구](docs/install.ko.md#빌드-도구)를 봐 주세요.
+마지막 줄은 OMV가 기본으로 켜 둔 Debian backports에서 Go 1.27을 받습니다. `go version`이 1.27 이상, `node --version`이 20.19 이상이면 됩니다. 기본 저장소의 Go 1.24를 쓰는 경우는 [빌드 도구](docs/ko/install.md#빌드-도구)를 봐 주세요.
 
 ### 2. 받아서 설치
 
@@ -99,12 +99,12 @@ Caddy는 443번 포트만 쓰고 OMV 설정은 바꾸지 않습니다. `https://
 
 브라우저에서 `https://<주소>/desk/`를 열고 OMV 계정으로 로그인합니다.
 
-- `tls internal`은 Caddy가 직접 만든 인증서라 처음에는 브라우저가 경고합니다. 경고를 없애거나 패스키를 쓰려면 Caddy의 루트 인증서를 기기에 등록합니다([리버스 프록시](docs/reverse-proxy.ko.md#caddy-예시-omv-기본-포트를-유지하는-경우)).
-- 서브도메인, Docker의 Caddy, 다른 프록시로 구성하는 방법도 [리버스 프록시](docs/reverse-proxy.ko.md)에 있습니다.
+- `tls internal`은 Caddy가 직접 만든 인증서라 처음에는 브라우저가 경고합니다. 경고를 없애거나 패스키를 쓰려면 Caddy의 루트 인증서를 기기에 등록합니다([리버스 프록시](docs/ko/reverse-proxy.md#caddy-예시-omv-기본-포트를-유지하는-경우)).
+- 서브도메인, Docker의 Caddy, 다른 프록시로 구성하는 방법도 [리버스 프록시](docs/ko/reverse-proxy.md)에 있습니다.
 
 ### 업그레이드와 제거
 
-저장소에서 실행하면 설치된 설정으로 업그레이드합니다. 관리자는 설정 앱의 "업데이트" 페이지에서 대시보드로 업그레이드할 수도 있습니다([업그레이드](docs/upgrade.ko.md)).
+저장소에서 실행하면 설치된 설정으로 업그레이드합니다. 관리자는 설정 앱의 "업데이트" 페이지에서 대시보드로 업그레이드할 수도 있습니다([업그레이드](docs/ko/upgrade.md)).
 
 ```sh
 git pull
@@ -115,21 +115,21 @@ git pull
 
 ## 문서
 
-설치한 뒤 운영하면서 찾아보는 내용은 [문서 사이트](https://steamb23.github.io/maru-nas/ko/)에 있습니다. 사이트는 보통 최신 릴리스(`stable`) 기준이지만, 릴리스 사이에는 개발 중인 `main`의 문서가 먼저 올라가 있을 수 있습니다. 같은 문서를 저장소의 [docs/](docs/README.ko.md)에서 GitHub로도 읽을 수 있습니다.
+설치한 뒤 운영하면서 찾아보는 내용은 [문서 사이트](https://steamb23.github.io/maru-nas/ko/)에 있습니다. 사이트는 보통 최신 릴리스(`stable`) 기준이지만, 릴리스 사이에는 개발 중인 `main`의 문서가 먼저 올라가 있을 수 있습니다. 같은 문서를 저장소의 [docs/ko/](docs/ko/README.md)에서 GitHub로도 읽을 수 있습니다.
 
 | 문서 | 내용 |
 |---|---|
-| [설치](docs/install.ko.md) | 요구 사항과 OMV 버전별 차이, 빌드 도구, 설치 스크립트, 다시 설치, 자동화, 제거 |
-| [설치 옵션](docs/install-options.ko.md) | `install.sh`의 모든 옵션 |
-| [업그레이드](docs/upgrade.ko.md) | SSH로 업그레이드, 대시보드에서 업그레이드 |
-| [리버스 프록시](docs/reverse-proxy.ko.md) | 수신 방식, 프록시 요구 사항, Caddy 설치와 예시 |
-| [설정](docs/configuration.ko.md) | `/etc/default/maru`의 모든 항목, 웹에서 바꾸는 값, 백업, OMV 워크벤치 열기 |
-| [설정 앱](docs/settings-app.ko.md) | 설정 앱의 페이지와 권한 |
-| [파일 탐색기](docs/files.ko.md) | 보이는 폴더와 권한, 올리기·내려받기, 휴지통, 옮기기와 복사 |
-| [웹 터미널](docs/terminal.ko.md) | 켜기, 인증, SSH 설정과 보안 |
-| [권한 도우미](docs/helper.ko.md) | 사용자 권한·root 권한이 필요한 일을 맡는 서비스와 그 보안 설계 |
-| [보안 강화 모드](docs/security.ko.md) | 비밀번호 재확인과 2차 인증(패스키, 인증 앱, 복구 코드), 복구 |
-| [패스키로 로그인](docs/passkey-login.ko.md) | 비밀번호 없이 패스키로 로그인하기와 그 한계 |
+| [설치](docs/ko/install.md) | 요구 사항과 OMV 버전별 차이, 빌드 도구, 설치 스크립트, 다시 설치, 자동화, 제거 |
+| [설치 옵션](docs/ko/install-options.md) | `install.sh`의 모든 옵션 |
+| [업그레이드](docs/ko/upgrade.md) | SSH로 업그레이드, 대시보드에서 업그레이드 |
+| [리버스 프록시](docs/ko/reverse-proxy.md) | 수신 방식, 프록시 요구 사항, Caddy 설치와 예시 |
+| [설정](docs/ko/configuration.md) | `/etc/default/maru`의 모든 항목, 웹에서 바꾸는 값, 백업, OMV 워크벤치 열기 |
+| [설정 앱](docs/ko/settings-app.md) | 설정 앱의 페이지와 권한 |
+| [파일 탐색기](docs/ko/files.md) | 보이는 폴더와 권한, 올리기·내려받기, 휴지통, 옮기기와 복사 |
+| [웹 터미널](docs/ko/terminal.md) | 켜기, 인증, SSH 설정과 보안 |
+| [권한 도우미](docs/ko/helper.md) | 사용자 권한·root 권한이 필요한 일을 맡는 서비스와 그 보안 설계 |
+| [보안 강화 모드](docs/ko/security.md) | 비밀번호 재확인과 2차 인증(패스키, 인증 앱, 복구 코드), 복구 |
+| [패스키로 로그인](docs/ko/passkey-login.md) | 비밀번호 없이 패스키로 로그인하기와 그 한계 |
 
 ## 기여하기
 

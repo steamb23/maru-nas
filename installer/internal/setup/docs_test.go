@@ -6,10 +6,10 @@ import (
 	"testing"
 )
 
-// docs/install-options.md와 한국어 docs/install-options.ko.md의 옵션 표(| `--...` 로 시작하는 줄)에 레지스트리의
+// docs/en/install-options.md와 한국어 docs/ko/install-options.md의 옵션 표(| `--...` 로 시작하는 줄)에 레지스트리의
 // 모든 설정 옵션과 설치기 옵션이 있어야 한다. 설정을 더하면 두 표를 함께 고친다.
 func TestDocsListEveryOption(t *testing.T) {
-	for _, doc := range []string{"docs/install-options.md", "docs/install-options.ko.md"} {
+	for _, doc := range []string{"docs/en/install-options.md", "docs/ko/install-options.md"} {
 		t.Run(doc, func(t *testing.T) { checkDocsOptionTable(t, doc) })
 	}
 }

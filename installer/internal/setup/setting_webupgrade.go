@@ -60,12 +60,12 @@ var settingWebUpgrade = &Setting{
 ./install.sh over SSH. A root service (maru-upgrade) runs git and the build as the owner of this repository and
 then installs the new version as root. Upgrading needs root elevation (the password again).
 As with ./install.sh, whoever can change this repository can get code run as root through an upgrade.
-See docs/upgrade.md.`,
+See docs/en/upgrade.md.`,
 			`허용하면 관리자가 SSH로 git pull과 ./install.sh를 실행하는 대신 설정 앱(업데이트 페이지)에서 마루 NAS를 업그레이드할 수
 있습니다. root로 도는 서비스(maru-upgrade)가 이 저장소의 소유자 계정으로 git과 빌드를 실행한 뒤 새 버전을 root로
 설치합니다. 업그레이드에는 root 권한 상승(비밀번호 재입력)이 필요합니다.
 ./install.sh와 마찬가지로 이 저장소를 바꿀 수 있는 계정은 업그레이드를 통해 root로 코드를 실행할 수 있습니다.
-docs/upgrade.ko.md를 참고하세요.`),
+docs/ko/upgrade.md를 참고하세요.`),
 	},
 	Validate: func(c *Context, v string) error {
 		switch v {

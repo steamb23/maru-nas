@@ -1,6 +1,6 @@
 # 설치
 
-처음이라면 README의 [빠른 시작](https://github.com/steamb23/maru-nas/blob/main/README.ko.md#빠른-시작)을 따라 하면 됩니다. 이 문서는 그 단계마다 더 알아 둘 것을 모았습니다. 옵션 목록은 [설치 옵션](install-options.ko.md), 설치한 뒤 바꾸는 값은 [설정](configuration.ko.md)에 있습니다.
+처음이라면 README의 [빠른 시작](https://github.com/steamb23/maru-nas/blob/main/README.ko.md#빠른-시작)을 따라 하면 됩니다. 이 문서는 그 단계마다 더 알아 둘 것을 모았습니다. 옵션 목록은 [설치 옵션](install-options.md), 설치한 뒤 바꾸는 값은 [설정](configuration.md)에 있습니다.
 
 ## 요구 사항
 
@@ -18,7 +18,7 @@ OpenMediaVault 8의 모든 버전(8.0 이상)에서 동작합니다. 버전에 �
 설치는 sudo를 쓸 수 있는 일반 사용자 계정으로 합니다. OMV 설치 이미지가 만든 일반 사용자는 sudo 그룹에 들어 있습니다.
 
 - OMV는 root와 `_ssh` 그룹 사용자에게만 SSH 접속을 허용합니다. 그 계정으로 SSH에 접속하려면 OMV 웹 UI의 사용자 편집 화면에서 `_ssh` 그룹을 더해 주세요.
-- root 계정만 있는 환경이라면 root로 실행해도 됩니다(sudo 없이 이어서 설치합니다). 다만 root가 소유한 저장소로는 [대시보드에서 업그레이드](upgrade.ko.md#대시보드에서-업그레이드)를 켤 수 없습니다.
+- root 계정만 있는 환경이라면 root로 실행해도 됩니다(sudo 없이 이어서 설치합니다). 다만 root가 소유한 저장소로는 [대시보드에서 업그레이드](upgrade.md#대시보드에서-업그레이드)를 켤 수 없습니다.
 
 ### 빌드 도구
 
@@ -66,22 +66,22 @@ cd maru-nas
 2. **빌드**: 실행한 계정으로 빌드합니다. 처음 클론한 상태라면 아이콘 서브모듈과 npm 의존성부터 받습니다.
 3. **설치**: sudo 비밀번호를 한 번 묻고 root로 설치합니다. root 계정이라면 묻지 않고 이어서 진행합니다.
 
-이미 설치되어 있으면 설정을 묻지 않고 설치된 설정으로 업그레이드합니다([업그레이드](upgrade.ko.md)).
+이미 설치되어 있으면 설정을 묻지 않고 설치된 설정으로 업그레이드합니다([업그레이드](upgrade.md)).
 
 - 터미널에서 실행하면 화살표 키로 고르고 값을 입력하는 화면(TUI)으로 묻고, 잘못된 값은 입력하는 동안 바로 알려 줍니다. `--plain`을 주거나 `TERM=dumb`이면 한 줄씩 묻습니다.
 - 표준 입력이 터미널이 아니면(파이프, 자동화 등) 묻지 않고, 빠진 설정 옵션의 목록을 알린 뒤 멈춥니다([자동화](#자동화)).
 - 안내 문구는 로캘에 따라 영어나 한국어로 나오며, `--lang`으로 고를 수도 있습니다.
-- 끝나면 리버스 프록시에 넣을 주소를 알려 줍니다. 리버스 프록시는 설치 스크립트가 설정하지 않습니다([리버스 프록시](reverse-proxy.ko.md)).
+- 끝나면 리버스 프록시에 넣을 주소를 알려 줍니다. 리버스 프록시는 설치 스크립트가 설정하지 않습니다([리버스 프록시](reverse-proxy.md)).
 
 ### 설치되는 것
 
 | 경로 | 내용 |
 |---|---|
 | `/usr/local/bin/maru` | 대시보드 실행 파일. 서비스 사용자(기본값 `maru`, 없으면 시스템 사용자로 만듦)로 실행합니다 |
-| `/etc/default/maru`, `/etc/systemd/system/maru.service` | [설정](configuration.ko.md) 파일과 systemd 유닛 |
+| `/etc/default/maru`, `/etc/systemd/system/maru.service` | [설정](configuration.md) 파일과 systemd 유닛 |
 | `/var/lib/maru` | 대시보드 자신의 상태: 사용자 설정(위젯 배치, 바로가기, 화면 설정), 관리자의 전역 설정, 올린 배경 이미지, 보안 강화 모드의 인증 수단 |
-| `/usr/local/bin/maru-helper`, `/etc/default/maru-helper`, `maru-helper.socket`·`.service` | [권한 도우미](helper.ko.md)(기본으로 설치) |
-| `/usr/local/lib/maru/maru-install`, `/etc/default/maru-upgrade`, `maru-upgrade.service`·`.path` | [대시보드에서 업그레이드](upgrade.ko.md#대시보드에서-업그레이드)를 허용했을 때 |
+| `/usr/local/bin/maru-helper`, `/etc/default/maru-helper`, `maru-helper.socket`·`.service` | [권한 도우미](helper.md)(기본으로 설치) |
+| `/usr/local/lib/maru/maru-install`, `/etc/default/maru-upgrade`, `maru-upgrade.service`·`.path` | [대시보드에서 업그레이드](upgrade.md#대시보드에서-업그레이드)를 허용했을 때 |
 | `/var/lib/maru-upgrade` | 설치한 버전·커밋 기록과 업그레이드 상태 |
 
 권한 도우미나 대시보드에서 업그레이드를 설치하지 않기로 하면 이전에 설치한 것을 지웁니다.
