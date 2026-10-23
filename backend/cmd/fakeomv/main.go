@@ -21,6 +21,9 @@
 // 서비스(internal/upgrade/upgradefake)도 띄운다. maru가 그 상태 디렉터리에 남긴 확인 요청과 가짜 도우미가 쓴
 // 적용 요청을 처리해 가짜 루트의 상태 파일에 쓴다. FAKEUPGRADE_SCENARIO로 시나리오(web, manual, latest, check-fail,
 // apply-fail, disabled)를, FAKEUPGRADE_STEP으로 단계 사이 지연(기본 1.5s)을 고른다.
+//
+// MARU_DEV_NOTICES가 있으면 maru의 개발용 알림 출처가 읽는 가짜 알림 파일을 그 경로에 쓴다(notices.go).
+// FAKENOTICES로 시나리오(sample, none, many, rotate)를, FAKENOTICES_STEP으로 rotate 주기(기본 30s)를 고른다.
 package main
 
 import (
@@ -113,6 +116,13 @@ func main() {
 		}
 		defer u.Close()
 		log.Printf("fake upgrade service under %s (scenario %s)", root, cmp.Or(os.Getenv("FAKEUPGRADE_SCENARIO"), upgradefake.ScenarioWeb))
+	}
+	if path := os.Getenv("MARU_DEV_NOTICES"); path != "" {
+		scenario := cmp.Or(os.Getenv("FAKENOTICES"), noticesSample)
+		if err := startNotices(path, scenario, envDuration("FAKENOTICES_STEP", 30*time.Second)); err != nil {
+			log.Fatalf("fake notices: %v", err)
+		}
+		log.Printf("fake notices at %s (scenario %s)", path, scenario)
 	}
 	mux := http.NewServeMux()
 	mux.Handle("/rpc.php", srv)

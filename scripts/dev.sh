@@ -98,6 +98,9 @@ if [[ $fake == 1 ]]; then
   # 파일 탐색기는 가짜 도우미의 가짜 디스크(helper-root/srv 아래 폴더)를 데이터 디스크로 본다. 가짜 OMV가 그 아래에
   # 합성 파일과 공유 폴더를 만들고, FAKEFILES_LARGE=<n>이면 큰 폴더도 만든다.
   export MARU_DEV_FILES_SRV="${MARU_DEV_FILES_SRV:-$MARU_STATE_DIR/helper-root/srv}"
+  # 알림은 가짜 OMV 프로세스가 이 파일에 쓴 가짜 알림을 maru가 읽는다. 시나리오는 FAKENOTICES(sample, none, many,
+  # rotate), rotate 주기는 FAKENOTICES_STEP(기본 30s)이다.
+  export MARU_DEV_NOTICES="${MARU_DEV_NOTICES:-$MARU_STATE_DIR/dev-notices.json}"
 fi
 
 # 이미 떠 있는 서버가 있으면 시작하지 않는다. 일부만 떠서 다른 서버(예: 실제 OMV에 연결된

@@ -27,6 +27,7 @@ import (
 	"maru/backend/internal/addons/storage"
 	"maru/backend/internal/api"
 	"maru/backend/internal/helper/client"
+	"maru/backend/internal/notify"
 	"maru/backend/internal/omv"
 	"maru/backend/internal/prefs"
 	"maru/backend/internal/security"
@@ -160,6 +161,14 @@ func main() {
 		mounts = devDisks{}
 	}
 
+	// 운영 알림 출처는 아직 없다(.claude/docs/roadmap.md의 "알림"). 개발 서버만 가짜 알림 파일을 읽는다.
+	notices := notify.New()
+	if path := os.Getenv(envDevNotices); path != "" {
+		log.Printf("notifications: dev fixture %s (%s)", path, envDevNotices)
+		notices = notify.New(devNotices{path: path, admin: true}, devNotices{path: path})
+		notices.TTL = 2 * time.Second
+	}
+
 	var helper server.Helper
 	if *helperSocket != "" {
 		hc := client.New(*helperSocket)
@@ -200,6 +209,7 @@ func main() {
 			Mounts:          mounts,
 			FilesSrvDir:     filesSrv,
 			Upgrade:         upgrades,
+			Notify:          notices,
 			Security:        store,
 			RP:              rp,
 			Hostname:        hostname,
