@@ -22,6 +22,7 @@ import {
   APPLY_STAGES,
   type Answers,
   answerError,
+  applyConfirm,
   applyStep,
   type Channel,
   type ChannelCard,
@@ -161,15 +162,17 @@ export function UpdatePage({ active }: WindowViewProps) {
   }
 
   const onApply = async (check: UpgradeCheck, settings: Record<string, string>) => {
-    const overwrite = (check.dropped ?? 0) > 0
-    const extra = overwrite
-      ? t('settings.update.confirmOverwrite')
-      : check.switch && check.channel
-        ? t('settings.update.confirmSwitch', { branch: check.channel })
-        : ''
+    const { overwrite, dropped, switchTo } = applyConfirm(check)
+    // 이전 버전으로 덮어쓰면 새 버전·커밋 목록 대신 빠지는 커밋을 알린다. 브랜치를 옮기면 두 경우 모두 알린다.
+    const message = [
+      overwrite ? t('settings.update.confirmOverwriteMessage', { count: dropped }) : t('settings.update.confirmMessage'),
+      switchTo ? t('settings.update.confirmSwitch', { branch: switchTo }) : '',
+    ]
+      .filter((s) => s !== '')
+      .join(' ')
     const ok = await dialogs.confirm({
       title: t(overwrite ? 'settings.update.confirmOverwriteTitle' : 'settings.update.confirmTitle'),
-      message: extra ? `${t('settings.update.confirmMessage')} ${extra}` : t('settings.update.confirmMessage'),
+      message,
       confirmLabel: applyLabel(t, check),
     })
     if (!ok || !check.target) return
@@ -245,10 +248,8 @@ export function UpdatePage({ active }: WindowViewProps) {
 
 // applyLabel은 업그레이드 단추의 문구다. 채널을 바꾸면 그 브랜치를, 이전 버전을 덮어쓰면 그렇다고 적는다.
 function applyLabel(t: TFunction, check: UpgradeCheck): string {
-  if (check.switch && (check.channel === 'stable' || check.channel === 'main')) {
-    const overwrite = (check.dropped ?? 0) > 0
-    return t(`settings.update.${overwrite ? 'overwriteTo' : 'applyTo'}.${check.channel}`)
-  }
+  const { overwrite, switchTo } = applyConfirm(check)
+  if (switchTo) return t(`settings.update.${overwrite ? 'overwriteTo' : 'applyTo'}.${switchTo}`)
   return t('settings.update.apply')
 }
 
@@ -338,7 +339,14 @@ function ChannelSection({
         ))}
       </div>
       {selected === 'main' ? (
-        <p className="update-warn">{t('settings.update.channel.mainWarning')}</p>
+        <p className="update-warn">
+          {t(
+            // 이미 main 브랜치면 업그레이드해도 브랜치가 바뀌지 않는다.
+            branch.kind === 'branch' && branch.name === 'main'
+              ? 'settings.update.channel.mainWarningOnMain'
+              : 'settings.update.channel.mainWarning',
+          )}
+        </p>
       ) : (
         <p className="settings-hint">{t('settings.update.channel.hint')}</p>
       )}

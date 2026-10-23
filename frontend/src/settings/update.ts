@@ -213,3 +213,18 @@ export function isDevTarget(check: UpgradeCheck): boolean {
   const up = check.upstream ?? ''
   return up.slice(up.indexOf('/') + 1) === 'main' && up.includes('/')
 }
+
+// ApplyConfirm은 업그레이드 단추와 확인 대화상자의 문구를 고르는 값이다.
+export interface ApplyConfirm {
+  // overwrite는 이전 버전으로 덮어쓰는지다(지금 설치에만 있는 커밋 dropped개가 빠진다).
+  overwrite: boolean
+  dropped: number
+  // switchTo는 업그레이드하면 저장소가 옮겨 가는 채널 브랜치다. 옮기지 않으면 null이다.
+  switchTo: 'stable' | 'main' | null
+}
+
+export function applyConfirm(check: UpgradeCheck): ApplyConfirm {
+  const dropped = check.dropped ?? 0
+  const switchTo = check.switch && (check.channel === 'stable' || check.channel === 'main') ? check.channel : null
+  return { overwrite: dropped > 0, dropped, switchTo }
+}

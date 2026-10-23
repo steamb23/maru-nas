@@ -945,6 +945,7 @@
         "detachedDesc": "브랜치가 아니라서 원격에서 가져올 수 없습니다. 로컬 저장소만 확인을 쓰세요.",
         "hint": "채널은 원격 확인에만 씁니다. 로컬 저장소만 확인은 지금 체크아웃을 그대로 봅니다.",
         "mainWarning": "다음 확인부터 origin/main을 봅니다. 업그레이드하면 저장소가 main 브랜치로 바뀌고, 나중에 stable로 돌아갈 때는 이전 버전으로 덮어써서 설치합니다.",
+        "mainWarningOnMain": "저장소가 main 브랜치에 있어 원격 확인은 origin/main을 봅니다. 나중에 stable로 돌아갈 때는 이전 버전으로 덮어써서 설치합니다.",
         "confirmMainTitle": "개발 채널로 바꿀까요?",
         "confirmMainMessage": "main 브랜치는 릴리스하기 전의 개발 버전입니다. 새 기능과 수정을 먼저 받지만 검증이 덜 되어 문제가 생길 수 있고, 이전 버전으로 되돌리는 기능은 없습니다. 채널을 바꾸기만 해서는 아무것도 설치하지 않습니다.",
         "confirmMain": "개발 채널로 바꾸기",
@@ -1012,7 +1013,8 @@
       "confirmMessage": "새 버전을 빌드해 설치하고, 끝나면 모든 사용자가 로그아웃됩니다. 진행하기 전에 커밋 목록을 확인하세요.",
       "confirmOverwriteTitle": "마루 NAS를 이전 버전으로 덮어쓸까요?",
       "confirmSwitch": "저장소는 {{branch}} 브랜치로 바뀝니다.",
-      "confirmOverwrite": "지금 설치보다 이전 버전으로 덮어쓰며, 되돌리는 기능은 없습니다.",
+      "confirmOverwriteMessage_one": "지금 설치보다 이전 버전을 빌드해 설치하고, 끝나면 모든 사용자가 로그아웃됩니다. 지금 설치에만 있는 커밋 {{count}}개가 빠지며, 되돌리는 기능은 없습니다.",
+      "confirmOverwriteMessage_other": "지금 설치보다 이전 버전을 빌드해 설치하고, 끝나면 모든 사용자가 로그아웃됩니다. 지금 설치에만 있는 커밋 {{count}}개가 빠지며, 되돌리는 기능은 없습니다.",
       "applyTo": {
         "stable": "stable로 업그레이드",
         "main": "main으로 업그레이드"
