@@ -997,6 +997,8 @@
       "manualHow": "Sign in over SSH as the repository owner and run:",
       "manualHowUser": "Sign in over SSH as the repository owner ({{user}}) and run:",
       "manualPull": "If the repository doesn't have the new version yet, run git pull first. After one manual upgrade, later versions can be upgraded here again.",
+      "manualRecheck": "Sign in over SSH as the repository owner, sort out the problem above, and check again. After that, you can upgrade here.",
+      "manualRecheckUser": "Sign in over SSH as the repository owner ({{user}}), sort out the problem above, and check again. After that, you can upgrade here.",
       "questions": "New settings",
       "questionsDesc": "These settings must be set before upgrading. Other settings stay as they are.",
       "reasonNew": "new setting",

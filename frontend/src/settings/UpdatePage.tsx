@@ -603,11 +603,20 @@ function ManualSection({ info, check }: { info: UpgradeInfo; check: UpgradeCheck
           </li>
         ))}
       </ul>
-      <p className="settings-section-desc update-follow">
-        {info.user ? t('settings.update.manualHowUser', { user: info.user }) : t('settings.update.manualHow')}
-      </p>
-      <CommandBlock text={manualCommands(info.repo, check.command)} />
-      <p className="settings-hint">{t('settings.update.manualPull')}</p>
+      {check.command ? (
+        <>
+          <p className="settings-section-desc update-follow">
+            {info.user ? t('settings.update.manualHowUser', { user: info.user }) : t('settings.update.manualHow')}
+          </p>
+          <CommandBlock text={manualCommands(info.repo, check.command)} />
+          <p className="settings-hint">{t('settings.update.manualPull')}</p>
+        </>
+      ) : (
+        // 명령이 없으면 SSH로 저장소를 정리한 뒤 다시 확인하면 되는 사유뿐이다(로컬 채널 브랜치 정리 등).
+        <p className="settings-section-desc update-follow">
+          {info.user ? t('settings.update.manualRecheckUser', { user: info.user }) : t('settings.update.manualRecheck')}
+        </p>
+      )}
     </SettingsSection>
   )
 }
