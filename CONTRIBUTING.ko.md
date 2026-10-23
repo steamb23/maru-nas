@@ -21,7 +21,7 @@ sudo apt install git make nodejs npm
 sudo apt install -t trixie-backports golang-go
 ```
 
-Debian의 Node.js는 20.19입니다. 빌드도 되고 테스트도 통과하지만 테스트 도구 Vitest 5는 22.12 이상만 공식 지원하므로, 할 수 있다면 [nodejs.org](https://nodejs.org/)의 배포본을 권합니다. 다른 시스템에서는 Go를 [go.dev/dl](https://go.dev/dl/)에서, Node.js를 nodejs.org에서 설치합니다. 도구에 대한 더 자세한 내용(기본 Debian 저장소의 Go 1.24 등)은 [docs/install.md](docs/install.md#빌드-도구)에 있습니다.
+Debian의 Node.js는 20.19입니다. 빌드도 되고 테스트도 통과하지만 테스트 도구 Vitest 5는 22.12 이상만 공식 지원하므로, 할 수 있다면 [nodejs.org](https://nodejs.org/)의 배포본을 권합니다. 다른 시스템에서는 Go를 [go.dev/dl](https://go.dev/dl/)에서, Node.js를 nodejs.org에서 설치합니다. 도구에 대한 더 자세한 내용(기본 Debian 저장소의 Go 1.24 등)은 [docs/install.ko.md](docs/install.ko.md#빌드-도구)에 있습니다.
 
 그다음 코드를 받아 개발 서버를 띄웁니다.
 
@@ -55,14 +55,15 @@ make dev-fake
 
 ## 문서
 
-`README.md`에는 소개, 빠른 시작, 문서 목록, 기여 안내만 둡니다. 사용자 문서는 `docs/`에 있고 [Zensical](https://zensical.org/)(`zensical.toml`)로 사이트를 만듭니다. 지금은 한국어로 쓰며 영어 번역은 나중에 합니다. 사이트(<https://steamb23.github.io/maru-nas/>)는 `stable` 브랜치에서 배포하므로, `main`에서 고친 문서는 다음 릴리스 때 사이트에 반영됩니다.
+`README.md`에는 소개, 빠른 시작, 문서 목록, 기여 안내만 둡니다. 사용자 문서는 `docs/`에 있고 [Zensical](https://zensical.org/)(`zensical.toml`)로 사이트를 만듭니다. README와 모든 페이지는 영어(`<이름>.md`)와 한국어(`<이름>.ko.md`)로 있습니다. 사이트(<https://steamb23.github.io/maru-nas/>)는 `stable` 브랜치에서 배포하므로, `main`에서 고친 문서는 다음 릴리스 때 사이트에 반영됩니다.
 
+- 영어 페이지와 한국어 페이지를 함께 고칩니다. 한국어를 쓰지 않는다면 영어 페이지만 고치고 풀 리퀘스트에 그렇다고 적어 주세요. 병합하기 전에 유지자가 한국어 페이지를 고칩니다.
 - 사이트를 빌드하지 않아도 GitHub에서 읽혀야 합니다. GitHub가 그리는 마크다운만 씁니다. GitHub 알림(`> [!NOTE]`, `> [!TIP]`, `> [!WARNING]`)은 되고, Zensical 전용 문법(`!!!` 알림, `===` 탭, 속성 목록)은 쓰지 않습니다.
 - 중첩 목록과 목록 안 코드 블록은 4칸 들여씁니다. GitHub는 2칸도 받지만 사이트의 마크다운 엔진은 4칸이 필요합니다.
 - 표 칸 안에는 코드 안이라도 `|`를 넣지 않습니다.
-- 페이지 사이는 상대 경로 `.md`와 제목 앵커로 겁니다(`configuration.md#omv-워크벤치-열기`). `docs/` 밖의 파일은 GitHub 절대 주소로 겁니다. 한 페이지 안에 같은 제목을 두 번 쓰면 GitHub와 사이트의 앵커가 달라지므로 쓰지 않습니다.
+- 페이지 사이는 상대 경로 `.md`와 제목 앵커로 겁니다. 영어 페이지는 영어 페이지로(`configuration.md#opening-the-omv-workbench`), 한국어 페이지는 한국어 페이지로(`configuration.ko.md#omv-워크벤치-열기`) 겁니다. `docs/` 밖의 파일은 GitHub 절대 주소로 겁니다. 한 페이지 안에 같은 제목을 두 번 쓰면 GitHub와 사이트의 앵커가 달라지므로 쓰지 않습니다.
 - 사용자 문서에는 사용자가 할 일과 조건, 한도, 위험을 씁니다. 내부 구현은 `.claude/`의 설계 문서에 둡니다.
-- 설치기 옵션이나 플래그를 더하거나 바꾸면 `docs/install-options.md`(테스트가 검사합니다)와 `docs/configuration.md`의 표도 고칩니다.
+- 설치기 옵션이나 플래그를 더하거나 바꾸면 `docs/install-options.md`(테스트가 검사합니다)와 `docs/configuration.md`의 표를 두 언어 모두 고칩니다.
 
 사이트를 미리 보고 검사하려면 고정한 Zensical 버전을 pipx나 가상 환경에 설치합니다(Debian과 Ubuntu는 시스템 전체 `pip install`을 거부합니다).
 

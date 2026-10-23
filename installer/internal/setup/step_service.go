@@ -59,7 +59,7 @@ func stepNextSteps(c *Context) error {
 		return nil
 	}
 	c.Print(c.L("Next: point your reverse proxy (HTTPS) at maru. See docs/reverse-proxy.md.",
-		"다음 단계: 리버스 프록시(HTTPS)가 maru를 가리키게 설정하세요. docs/reverse-proxy.md를 참고하세요."))
+		"다음 단계: 리버스 프록시(HTTPS)가 maru를 가리키게 설정하세요. docs/reverse-proxy.ko.md를 참고하세요."))
 	listen := c.Values.Get(nameListen)
 	if path, ok := strings.CutPrefix(listen, config.UnixPrefix); ok {
 		c.Print("  - Caddy:  reverse_proxy unix/" + path)

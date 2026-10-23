@@ -46,7 +46,7 @@ elif command -v go >/dev/null 2>&1; then
       "설치기(installer/)를 빌드하지 못했습니다. 위의 메시지를 확인하세요."
 elif [[ ! -x $installer ]]; then
   die "'go' not found in PATH and $installer does not exist. Install Go (docs/install.md), or copy bin/ built elsewhere with 'make build'." \
-    "PATH에서 'go'를 찾을 수 없고 $installer 도 없습니다. Go를 설치하거나(docs/install.md), 다른 곳에서 'make build'로 빌드한 bin/을 가져오세요."
+    "PATH에서 'go'를 찾을 수 없고 $installer 도 없습니다. Go를 설치하거나(docs/install.ko.md), 다른 곳에서 'make build'로 빌드한 bin/을 가져오세요."
 fi
 
 exec "$installer" "$@"

@@ -148,7 +148,7 @@ make dev-fake
 `http://<호스트>:5173/`에 접속해 가짜 계정 `admin`(비밀번호 `admin`)으로 로그인합니다. 다른 가짜 계정과 자주 쓰는 명령은 CONTRIBUTING에 있습니다.
 
 - 풀 리퀘스트는 `main`을 대상으로 올립니다. `main`은 개발 중인 코드이고 `stable`은 최신 릴리스를 가리킵니다.
-- 문서는 `docs/`를 고치고 [Zensical](https://zensical.org/)로 미리 볼 수 있습니다(CONTRIBUTING의 "Documentation").
+- 문서는 `docs/`를 고치고 [Zensical](https://zensical.org/)로 미리 볼 수 있습니다(CONTRIBUTING.ko.md의 "문서").
 
 ## 라이선스
 
