@@ -415,6 +415,61 @@ func TestResultsLimitDeletesOutput(t *testing.T) {
 	}
 }
 
+func TestDismissThrough(t *testing.T) {
+	e := newEnv(t)
+	// ids는 먼저 끝난 것이 앞이다. 결과 알림에는 최신 maxNotices개만 보인다.
+	var ids []string
+	for range maxNotices + 2 {
+		id, err := e.m.Start(context.Background(), KindAptUpdate, StartRequest{Owner: "admin"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		e.r.steps <- step{out: "x\n", pos: 2, outcome: outcome(api.JobSucceeded, "")}
+		e.waitFinish(t)
+		ids = append(ids, id)
+	}
+	newest := len(ids) - 1
+	if err := e.m.Dismiss("admin", NoticeID(ids[2])); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := e.m.DismissThrough("bob", NoticeID(ids[newest-1])); !errors.Is(err, ErrNotFound) {
+		t.Errorf("other user's err = %v", err)
+	}
+	for _, id := range []string{"apt-updates", "job-x", NoticeID("20260101-000000-00000000")} {
+		if err := e.m.DismissThrough("admin", id); !errors.Is(err, ErrNotFound) {
+			t.Errorf("DismissThrough(%q) err = %v", id, err)
+		}
+	}
+
+	// 기준보다 나중에 끝난 결과만 남고, 보이지 않던 오래된 결과도 지워진다.
+	if err := e.m.DismissThrough("admin", NoticeID(ids[newest-1])); err != nil {
+		t.Fatal(err)
+	}
+	if n := e.m.NoticesFor("admin"); len(n) != 1 || n[0].ID != NoticeID(ids[newest]) {
+		t.Errorf("notices = %+v", n)
+	}
+	for _, r := range e.m.Jobs("admin").Recent {
+		if r.Dismissed != (r.ID != ids[newest]) {
+			t.Errorf("result %s dismissed = %v", r.ID, r.Dismissed)
+		}
+	}
+	// 이미 지운 기준으로 다시 불러도 성공한다.
+	if err := e.m.DismissThrough("admin", NoticeID(ids[newest-1])); err != nil {
+		t.Errorf("second DismissThrough err = %v", err)
+	}
+
+	if err := e.m.DismissThrough("admin", NoticeID(ids[newest])); err != nil {
+		t.Fatal(err)
+	}
+	if n := e.m.NoticesFor("admin"); len(n) != 0 {
+		t.Errorf("notices after dismissing all = %+v", n)
+	}
+	if last := e.m.Jobs("admin").Last; last == nil || last.ID != ids[newest] || !last.Dismissed {
+		t.Errorf("last = %+v", last)
+	}
+}
+
 func TestOutputCap(t *testing.T) {
 	e := newEnv(t)
 	id, _ := e.m.Start(context.Background(), KindAptUpgrade, StartRequest{Owner: "admin"})

@@ -332,6 +332,7 @@ func New(cfg Config) http.Handler {
 	mux.HandleFunc("PUT /api/preferences/files", h.requireSession(h.setFilesPrefs))
 	mux.HandleFunc("PUT /api/preferences/notifications", h.requireSession(h.setNotificationPrefs))
 	mux.HandleFunc("GET /api/notifications", h.requireSession(h.notifications))
+	mux.HandleFunc("DELETE /api/notifications", h.requireSession(h.dismissNotices))
 	mux.HandleFunc("DELETE /api/notifications/{id}", h.requireSession(h.dismissNotice))
 	mux.HandleFunc("GET /api/jobs", h.requireAdmin(h.jobsList))
 	mux.HandleFunc("GET /api/jobs/{id}", h.requireAdmin(h.jobGet))

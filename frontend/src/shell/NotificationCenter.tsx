@@ -99,6 +99,8 @@ export function NotificationCenter({ onAction }: { onAction: (action: NoticeActi
   }
 
   const empty = notices.length === 0 && events.length === 0 && shownTasks.length === 0
+  // "모두 지우기"는 지울 수 있는 알림(클라이언트 알림, 작업 결과)이 있을 때만 보인다.
+  const clearable = events.length > 0 || notices.some((n) => n.dismissible)
 
   return (
     <section
@@ -113,8 +115,8 @@ export function NotificationCenter({ onAction }: { onAction: (action: NoticeActi
     >
       <header className="notification-center-header">
         <h2 id={titleId}>{t('notifications.title')}</h2>
-        {events.length > 0 && (
-          <button type="button" className="notification-clear" onClick={() => useNotificationStore.getState().clearEvents()}>
+        {clearable && (
+          <button type="button" className="notification-clear" onClick={() => useNotificationStore.getState().clearAll()}>
             <IconImage name="edit-clear-all-symbolic" size={16} />
             {t('notifications.clearAll')}
           </button>

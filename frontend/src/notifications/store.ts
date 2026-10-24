@@ -63,7 +63,9 @@ export interface NotificationActions {
   dismissEvent: (key: number) => void
   // dismissNotice는 지울 수 있는 서버 알림(작업 결과)을 바로 숨기고 서버에서 지운다. 실패하면 되돌린다.
   dismissNotice: (id: string) => void
-  clearEvents: () => void
+  // clearAll은 알림 센터의 "모두 지우기"다. 클라이언트 알림과 지울 수 있는 서버 알림(작업 결과)을 지운다.
+  // 상태를 알리는 서버 알림(업데이트, 재부팅 권장)은 남는다. 서버에서 지우지 못하면 작업 결과를 되돌린다.
+  clearAll: () => void
   // dismissToast는 사용자가 닫은 토스트를 내리고 그 알림을 읽음으로 둔다.
   dismissToast: (key: string) => void
   // expireToast는 시간이 지난 토스트를 내린다. 알림은 읽지 않은 채로 남는다.
@@ -77,6 +79,8 @@ export interface NotificationApi {
   saveSeen: (seen: SeenMap) => Promise<void>
   // dismiss는 서버 알림 하나를 지운다(없으면 아무것도 보내지 않는다).
   dismiss?: (id: string) => Promise<void>
+  // dismissThrough는 작업 결과 알림 through와 그보다 먼저 끝난 결과를 모두 지운다(없으면 아무것도 보내지 않는다).
+  dismissThrough?: (through: string) => Promise<void>
   now: () => number
 }
 
@@ -215,8 +219,29 @@ export function createNotificationStore(api: NotificationApi) {
         })
       },
 
-      clearEvents: () =>
-        set({ events: [], toasts: get().toasts.filter((t) => t.ref.kind !== 'client') }),
+      clearAll: () => {
+        const { notices, toasts } = get()
+        const removed = api.dismissThrough ? notices.filter((n) => n.dismissible) : []
+        const ids = new Set(removed.map((n) => n.id))
+        set({
+          events: [],
+          notices: notices.filter((n) => !ids.has(n.id)),
+          toasts: toasts.filter((t) => t.ref.kind === 'server' && !ids.has(t.ref.id)),
+        })
+        const through = newestNotice(removed)
+        if (!through || !api.dismissThrough) return
+        // 서버는 through와 그보다 먼저 끝난 결과를 지운다. 화면에 오지 않은 오래된 결과도 함께 지워져
+        // 다음 응답에 다시 나오지 않고, 이 탭이 아직 받지 못한 더 최근 결과는 남는다.
+        for (const id of ids) dismissing.add(id)
+        const generation = dismissing
+        api.dismissThrough(through.id).catch(() => {
+          // 로그아웃했으면(clear) 되돌리지 않는다.
+          if (generation !== dismissing || !get().enabled) return
+          for (const id of ids) dismissing.delete(id)
+          const shown = new Set(get().notices.map((n) => n.id))
+          set({ notices: [...get().notices, ...removed.filter((n) => !shown.has(n.id))] })
+        })
+      },
 
       dismissToast: (key) => {
         const toast = get().toasts.find((t) => t.key === key)
@@ -250,8 +275,17 @@ export function createNotificationStore(api: NotificationApi) {
   })
 }
 
+// newestNotice는 가장 최근에 생긴 알림이다(since가 가장 늦은 것). 작업 결과의 since는 끝난 시각(UTC RFC 3339)이라
+// 문자열로 비교한다. 단독 지우기를 되돌리면 목록 끝에 붙으므로 목록 순서를 믿지 않는다.
+function newestNotice(notices: readonly Notice[]): Notice | undefined {
+  let newest: Notice | undefined
+  for (const n of notices) if (!newest || (n.since ?? '') > (newest.since ?? '')) newest = n
+  return newest
+}
+
 export const useNotificationStore = createNotificationStore({
   saveSeen: (seen) => client.saveNotificationPrefs(seen),
   dismiss: (id) => client.dismissNotice(id),
+  dismissThrough: (through) => client.dismissNotices(through),
   now: () => Date.now(),
 })

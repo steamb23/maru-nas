@@ -28,9 +28,16 @@ function setup() {
         dismisses.push({ id, resolve, reject: () => reject(new Error('dismiss failed')) })
       }),
   )
-  const store = createNotificationStore({ saveSeen, dismiss, now: () => 1000 })
+  const clears: { through: string; resolve: () => void; reject: () => void }[] = []
+  const dismissThrough = vi.fn(
+    (through: string) =>
+      new Promise<void>((resolve, reject) => {
+        clears.push({ through, resolve, reject: () => reject(new Error('dismiss failed')) })
+      }),
+  )
+  const store = createNotificationStore({ saveSeen, dismiss, dismissThrough, now: () => 1000 })
   store.getState().enable()
-  return { store, saves, saveSeen, dismisses, dismiss }
+  return { store, saves, saveSeen, dismisses, dismiss, clears, dismissThrough }
 }
 
 const flush = () => new Promise((r) => setTimeout(r, 0))
@@ -132,7 +139,7 @@ describe('클라이언트 알림', () => {
     store.getState().dismissEvent(1)
     expect(store.getState().events.map((e) => e.key)).toEqual([2])
     expect(store.getState().toasts.map((t) => t.ref)).toEqual([{ kind: 'client', key: 2 }])
-    store.getState().clearEvents()
+    store.getState().clearAll()
     expect(store.getState().events).toEqual([])
     expect(store.getState().toasts).toEqual([])
   })
@@ -232,6 +239,45 @@ describe('작업 결과 알림', () => {
     dismisses[0].reject()
     await flush()
     expect(store.getState().notices.map((n) => n.id)).toEqual(['job-1'])
+  })
+
+  it('모두 지우기는 작업 결과를 숨기고 가장 최근 결과까지 서버에서 지운다', async () => {
+    const { store, clears, dismissThrough } = setup()
+    const older = { ...result('job-1'), since: '2026-10-24T10:00:00Z' }
+    const newer = { ...result('job-2'), since: '2026-10-24T10:05:00Z' }
+    // 단독 지우기를 되돌린 알림처럼 최근 것이 목록 끝에 있어도 가장 최근 것을 기준으로 보낸다.
+    store.getState().received(resp([notice('a'), older, newer]))
+    store.getState().push({ code: 'filesDone', level: 'success' })
+    store.getState().clearAll()
+    expect(dismissThrough).toHaveBeenCalledWith('job-2')
+    expect(store.getState().notices.map((n) => n.id)).toEqual(['a'])
+    expect(store.getState().events).toEqual([])
+    expect(store.getState().toasts).toEqual([])
+    store.getState().received(resp([notice('a'), older, newer]))
+    expect(store.getState().notices.map((n) => n.id)).toEqual(['a'])
+    clears[0].resolve()
+    await flush()
+    store.getState().received(resp([notice('a')]))
+    expect(store.getState().notices.map((n) => n.id)).toEqual(['a'])
+  })
+
+  it('모두 지우기가 실패하면 작업 결과를 되돌린다', async () => {
+    const { store, clears } = setup()
+    store.getState().received(resp([notice('a'), result('job-1'), result('job-2')]))
+    store.getState().clearAll()
+    clears[0].reject()
+    await flush()
+    expect(store.getState().notices.map((n) => n.id).sort()).toEqual(['a', 'job-1', 'job-2'])
+  })
+
+  it('작업 결과가 없으면 모두 지우기는 서버에 보내지 않는다', () => {
+    const { store, dismissThrough } = setup()
+    store.getState().received(resp([notice('a')]))
+    store.getState().push({ code: 'filesDone', level: 'success' })
+    store.getState().clearAll()
+    expect(dismissThrough).not.toHaveBeenCalled()
+    expect(store.getState().notices.map((n) => n.id)).toEqual(['a'])
+    expect(store.getState().events).toEqual([])
   })
 
   it('지울 수 없는 알림은 지우지 않는다', () => {

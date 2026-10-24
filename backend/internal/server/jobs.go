@@ -128,3 +128,22 @@ func (h *handler) dismissNotice(w http.ResponseWriter, r *http.Request, s auth.S
 		w.WriteHeader(http.StatusNoContent)
 	}
 }
+
+// dismissNotices는 알림 센터의 "모두 지우기"다(DELETE /api/notifications?through=job-…). through는 화면에 보이는
+// 가장 최근 작업 결과 알림이고, 그 알림과 그보다 먼저 끝난 이 사용자의 작업 결과를 모두 지운다. 출처 알림은 지울 수 없다.
+func (h *handler) dismissNotices(w http.ResponseWriter, r *http.Request, s auth.Session) {
+	through := r.URL.Query().Get("through")
+	if through == "" {
+		writeError(w, http.StatusBadRequest, api.ErrBadRequest, "through is required")
+		return
+	}
+	switch err := h.Jobs.DismissThrough(s.Username, through); {
+	case errors.Is(err, jobs.ErrNotFound):
+		writeError(w, http.StatusNotFound, api.ErrNotFound, "notice cannot be dismissed")
+	case err != nil:
+		log.Printf("notifications: dismiss all: %v", err)
+		writeError(w, http.StatusInternalServerError, "", "failed to dismiss notices")
+	default:
+		w.WriteHeader(http.StatusNoContent)
+	}
+}

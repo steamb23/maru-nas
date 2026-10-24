@@ -615,6 +615,12 @@ export async function dismissNotice(id: string): Promise<void> {
   await request('DELETE', `/notifications/${encodeURIComponent(id)}`)
 }
 
+// dismissNotices는 알림 센터의 "모두 지우기"다. 작업 결과 알림 through(화면에 보이는 가장 최근 것)와 그보다 먼저 끝난
+// 이 사용자의 작업 결과를 모두 지운다.
+export async function dismissNotices(through: string): Promise<void> {
+  await request('DELETE', `/notifications?through=${encodeURIComponent(through)}`)
+}
+
 function isPackageUpdate(v: unknown): v is PackageUpdate {
   return (
     isObj(v) &&

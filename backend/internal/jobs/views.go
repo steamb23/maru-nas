@@ -246,3 +246,35 @@ func (m *Manager) Dismiss(user, noticeID string) error {
 	}
 	return m.store.SaveResults(user, rs)
 }
+
+// DismissThrough는 user의 결과 알림 noticeID와 그보다 먼저 끝난 결과를 모두 지운다(알림 센터의 "모두 지우기").
+// 화면에 보이지 않던 오래된 결과(maxNotices개 밖)도 지워 다음 응답에 다시 나오지 않게 하고, noticeID보다 나중에
+// 끝난 결과는 사용자가 아직 받지 못했을 수 있으므로 남긴다. noticeID가 이미 지운 알림이어도 그 아래를 지운다.
+func (m *Manager) DismissThrough(user, noticeID string) error {
+	id, ok := strings.CutPrefix(noticeID, "job-")
+	if !ok || !ValidID(id) {
+		return ErrNotFound
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	rs := m.resultsLocked(user)
+	// 결과는 최신이 앞이다(addResultLocked).
+	i := slices.IndexFunc(rs, func(r Result) bool { return r.ID == id })
+	if i < 0 {
+		return ErrNotFound
+	}
+	changed := false
+	for j := i; j < len(rs); j++ {
+		if rs[j].Dismissed {
+			continue
+		}
+		rs[j].Dismissed, changed = true, true
+		if m.last != nil && m.last.ID == rs[j].ID {
+			m.last.Dismissed = true
+		}
+	}
+	if !changed {
+		return nil
+	}
+	return m.store.SaveResults(user, rs)
+}

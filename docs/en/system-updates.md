@@ -24,7 +24,7 @@
 - The "Task" tab shows the output of the running task (what apt prints) as it arrives. The tab shows the most recent task, and you can reopen a finished task with "View output" on its result notification.
 - While a task is running and the window is visible (not minimized, and the browser tab isn't hidden), your session doesn't expire.
 - When the window is closed, the running task appears under "Background tasks" at the top of the notification center.
-- Result notifications (succeeded, failed, result unknown) are only shown to the administrator who started the task, and you can dismiss them once you've read them. A task that finished while you were signed out shows up as a notification the next time you sign in. Each user keeps the 10 most recent results for 30 days.
+- Result notifications (succeeded, failed, result unknown) are only shown to the administrator who started the task, and you can dismiss them once you've read them. "Clear all" in the notification center dismisses every result notification at once and keeps notices about the current state, such as "Updates available". A task that finished while you were signed out shows up as a notification the next time you sign in. Each user keeps the 10 most recent results for 30 days.
 - When a package that needs a restart (such as a kernel) is installed, a "Restart required" notice appears. "Restart…" on the notice or in the window opens the power dialog.
 
 ## Limitations

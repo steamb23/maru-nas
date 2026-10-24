@@ -144,6 +144,51 @@ func TestJobsCheckEndToEnd(t *testing.T) {
 	}
 }
 
+func TestDismissAllNotices(t *testing.T) {
+	store := jobs.NewMemoryStore()
+	// 결과는 최신이 앞이다.
+	ids := []string{"20261024-100200-00000002", "20261024-100100-00000001", "20261024-100000-00000000"}
+	var rs []jobs.Result
+	for i, id := range ids {
+		end := time.Now().Add(-time.Duration(i) * time.Minute)
+		rs = append(rs, jobs.Result{ID: id, Kind: jobs.KindAptUpdate, Owner: "admin", State: api.JobSucceeded, StartedAt: end, EndedAt: end})
+	}
+	if err := store.SaveResults("admin", rs); err != nil {
+		t.Fatal(err)
+	}
+	e, _ := jobsEnv(t, store)
+	b := e.browser()
+	wantStatus(t, b.login("admin", "admin"), http.StatusOK)
+	jobNotices := func() []string {
+		var out []string
+		for _, n := range decode[api.NotificationsResponse](t, b.do(http.MethodGet, "/api/notifications", nil)).Notices {
+			if n.Job != nil {
+				out = append(out, n.ID)
+			}
+		}
+		return out
+	}
+	if got := jobNotices(); len(got) != len(ids) {
+		t.Fatalf("job notices = %v", got)
+	}
+
+	wantCode(t, b.do(http.MethodDelete, "/api/notifications", nil), http.StatusBadRequest, api.ErrBadRequest)
+	wantCode(t, b.do(http.MethodDelete, "/api/notifications?through=apt-updates", nil), http.StatusNotFound, api.ErrNotFound)
+	other := e.browser()
+	wantStatus(t, other.login("user", "user"), http.StatusOK)
+	wantCode(t, other.do(http.MethodDelete, "/api/notifications?through="+jobs.NoticeID(ids[0]), nil), http.StatusNotFound, api.ErrNotFound)
+
+	// 기준과 그보다 먼저 끝난 결과를 지우고, 나중에 끝난 결과는 남긴다.
+	wantStatus(t, b.do(http.MethodDelete, "/api/notifications?through="+jobs.NoticeID(ids[1]), nil), http.StatusNoContent)
+	if got := jobNotices(); !slices.Equal(got, []string{jobs.NoticeID(ids[0])}) {
+		t.Errorf("job notices after dismissing through %s = %v", ids[1], got)
+	}
+	wantStatus(t, b.do(http.MethodDelete, "/api/notifications?through="+jobs.NoticeID(ids[0]), nil), http.StatusNoContent)
+	if got := jobNotices(); len(got) != 0 {
+		t.Errorf("job notices after dismissing all = %v", got)
+	}
+}
+
 func TestJobsUpgradeFailures(t *testing.T) {
 	cases := map[string]struct{ fail, code string }{
 		"apt":          {omvfake.AptExecFailedMessage, api.JobCodeAptFailed},
