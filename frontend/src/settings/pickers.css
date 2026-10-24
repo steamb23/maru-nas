@@ -51,14 +51,34 @@
   cursor: default;
 }
 
+/* 장면(.theme-preview-scene)을 한 칸에 겹쳐 그린다. 자동은 라이트·다크 장면 둘이다. */
 .theme-preview {
+  --pv-height: 72px;
+  display: grid;
+  height: var(--pv-height);
+  overflow: hidden;
+  border-radius: 6px;
+}
+
+/* 창은 위·왼쪽 여백만큼 들어가 오른쪽 아래에 붙는다. */
+.theme-preview-scene {
+  grid-area: 1 / 1;
   display: flex;
   align-items: flex-end;
   justify-content: flex-end;
-  height: 72px;
   padding: 10px 0 0 14px;
-  overflow: hidden;
-  border-radius: 6px;
+  background: var(--pv-bg);
+}
+
+/* 자동: 라이트 위에 겹친 다크 장면은 가운데를 지나는 45° 사선의 오른쪽 아래만 남긴다.
+   배경·창·라인이 한 장면이라 사선이 끊기지 않고, 칸이 넓어져도 각도는 그대로다. */
+.theme-preview-light + .theme-preview-dark {
+  clip-path: polygon(
+    calc(50% + var(--pv-height) / 2) 0,
+    100% 0,
+    100% 100%,
+    calc(50% - var(--pv-height) / 2) 100%
+  );
 }
 
 /* 미리보기 색은 실제 토큰이 아니라 각 테마의 모습을 고정해 그린다. */
@@ -67,7 +87,6 @@
   --pv-window: #ffffff;
   --pv-bar: #e1e6ee;
   --pv-line: #d3d8df;
-  background: var(--pv-bg);
 }
 
 .theme-preview-dark {
@@ -75,14 +94,6 @@
   --pv-window: #23262b;
   --pv-bar: #353a42;
   --pv-line: #454b55;
-  background: var(--pv-bg);
-}
-
-.theme-preview-auto {
-  --pv-window: #ffffff;
-  --pv-bar: #e1e6ee;
-  --pv-line: #d3d8df;
-  background: linear-gradient(135deg, #c9d6e8 50%, #2a3243 50%);
 }
 
 .theme-preview-window {
@@ -96,18 +107,10 @@
   box-shadow: 0 2px 8px rgb(0 0 0 / 0.2);
 }
 
-.theme-preview-auto .theme-preview-window {
-  background: linear-gradient(135deg, #ffffff 50%, #23262b 50%);
-}
-
 .theme-preview-bar {
   height: 12px;
   border-radius: 6px 0 0;
   background: var(--pv-bar);
-}
-
-.theme-preview-auto .theme-preview-bar {
-  background: linear-gradient(135deg, #e1e6ee 50%, #353a42 50%);
 }
 
 .theme-preview-line {
@@ -116,10 +119,6 @@
   margin-left: 10px;
   border-radius: 3px;
   background: var(--pv-line);
-}
-
-.theme-preview-auto .theme-preview-line {
-  background: #9aa3ad;
 }
 
 .theme-preview-line.short {

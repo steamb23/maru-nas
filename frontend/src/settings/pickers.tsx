@@ -8,6 +8,11 @@ import { DEFAULT_PRESET, WALLPAPER_PRESETS, findPreset } from '../appearance/wal
 import { IconImage } from '../icons/IconImage'
 import { ACCEPTED_IMAGE_TYPES } from './imageUpload'
 
+// previewScenes는 테마 미리보기에 겹쳐 그릴 장면이다. 자동은 라이트 위에 다크를 겹쳐 사선으로 나눈다(pickers.css).
+function previewScenes(mode: ThemeMode): readonly ThemeMode[] {
+  return mode === 'auto' ? ['light', 'dark'] : [mode]
+}
+
 export function ThemePicker({
   value,
   onChange,
@@ -33,12 +38,16 @@ export function ThemePicker({
             disabled={disabled}
             onChange={() => onChange(mode)}
           />
-          <span className={`theme-preview theme-preview-${mode}`} aria-hidden="true">
-            <span className="theme-preview-window">
-              <span className="theme-preview-bar" />
-              <span className="theme-preview-line" />
-              <span className="theme-preview-line short" />
-            </span>
+          <span className="theme-preview" aria-hidden="true">
+            {previewScenes(mode).map((scene) => (
+              <span key={scene} className={`theme-preview-scene theme-preview-${scene}`}>
+                <span className="theme-preview-window">
+                  <span className="theme-preview-bar" />
+                  <span className="theme-preview-line" />
+                  <span className="theme-preview-line short" />
+                </span>
+              </span>
+            ))}
           </span>
           <span className="theme-option-name">{t(`settings.screen.modes.${mode}`)}</span>
         </label>
