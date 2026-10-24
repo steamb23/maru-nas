@@ -91,7 +91,8 @@ export function PackagesWindow({ active }: WindowViewProps) {
   const busy = current !== null || starting
 
   const output = useJobOutput(job, active, jobsData.refresh)
-  useKeepAlive(current !== null)
+  // 창이 보일 때만 세션을 유지한다. 보이지 않으면 작업 목록도 받지 않아 끝난 작업을 진행 중으로 오해하기 때문이다.
+  useKeepAlive(active && current !== null)
 
   const confirmOpen = ctl.state.confirm?.action === 'upgrade'
 

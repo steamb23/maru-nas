@@ -2,7 +2,7 @@
 
 애드온(창·위젯·조작)의 각 항목을 어디서 가져올지 정리한 문서다. 애드온 구조는 [addons.md](addons.md)를 본다.
 
-- 조사 기준일: 2026-10-14, OMV 8.5.11 ("synchrony")
+- 조사 기준일: 2026-10-14, OMV 8.5.11 ("synchrony"). APT 업데이트·재부팅 권장 행은 2026-10-24
 - 설치된 플러그인의 RPC 이름·역할은 NAS의 `/usr/share/openmediavault/engined/rpc/*.inc`에서 확인했다
 - 설치되지 않은 플러그인은 각 저장소 HEAD의 `engined/rpc/*.inc`와 synchrony apt 인덱스에서 확인했다. 실제 배포 버전과 메서드가 조금 다를 수 있으므로, 구현 전에 설치 후 소스를 다시 확인한다
 - 역할 표기: **모두**는 `OMV_ROLE_EVERYONE`(로그인한 모든 사용자), **admin**은 `OMV_ROLE_ADMINISTRATOR`

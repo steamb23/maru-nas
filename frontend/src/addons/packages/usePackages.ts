@@ -13,7 +13,7 @@ export const PACKAGES_POLL_INTERVAL_MS = 30_000
 const JOBS_RUNNING_INTERVAL_MS = 3_000
 const JOBS_IDLE_INTERVAL_MS = 30_000
 const OUTPUT_INTERVAL_MS = 1_000
-// 작업이 진행 중이고 창이 열려 있는 동안 세션 활동을 알리는 간격(세션 유지기가 60초에 한 번 연장한다).
+// 작업이 진행 중이고 창이 보이는 동안 세션 활동을 알리는 간격(세션 유지기가 60초에 한 번 연장한다).
 // 감시자가 이 세션으로 출력을 읽으므로 지켜보는 동안 세션이 끝나지 않게 한다(OMV 워크벤치의 작업 창과 같다).
 const ACTIVITY_MS = 30_000
 
@@ -142,7 +142,7 @@ export function useJobOutput(job: Job | null, active: boolean, onEnded: () => vo
   return { output: buffer?.jobId === jobId ? buffer : null, waiting: jobRunning && waiting }
 }
 
-// useKeepAlive는 running인 동안 세션 활동을 알린다(창이 열려 있는 동안만, 보이지 않아도).
+// useKeepAlive는 running인 동안 세션 활동을 알린다. 창이 보이는 동안만 켠다(부르는 쪽이 active를 함께 넘긴다).
 export function useKeepAlive(running: boolean) {
   useEffect(() => {
     if (!running) return
