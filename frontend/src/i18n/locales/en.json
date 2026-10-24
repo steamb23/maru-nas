@@ -1530,7 +1530,7 @@
       },
       "dirty": {
         "title": "OMV has unapplied configuration changes",
-        "body": "Apply the pending changes in the OMV Workbench first, then try again.",
+        "body": "Apply the pending changes in the OMV Workbench first, then try again. Updating the OMV packages can leave such changes behind.",
         "action": "Open Workbench"
       },
       "busy": {

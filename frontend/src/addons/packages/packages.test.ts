@@ -61,6 +61,15 @@ describe('시스템 업데이트', () => {
     expect(pickJob({ recent: [] }, null)).toBeNull()
   })
 
+  it('pickJob은 다른 관리자가 시작해 막 끝난 작업(last)도 고른다', () => {
+    const mine = job({ id: 'mine', state: 'succeeded', endedAt: '2026-10-24T10:00:00Z' })
+    const other = job({ id: 'other', state: 'failed', mine: false, endedAt: '2026-10-24T11:00:00Z' })
+    expect(pickJob({ recent: [mine], last: other }, null)).toBe(other)
+    expect(pickJob({ recent: [mine], last: other }, 'mine')).toBe(mine)
+    // last가 이 사용자의 최근 결과와 같으면 하나로 본다.
+    expect(pickJob({ recent: [mine], last: mine }, null)).toBe(mine)
+  })
+
   it('작업 머리말과 이유를 종류·결과·코드로 고른다', () => {
     expect(jobHeading(job({ kind: 'apt-update' }))).toBe('packages.job.update.running')
     expect(jobHeading(job({ state: 'failed' }))).toBe('packages.job.upgrade.failed')

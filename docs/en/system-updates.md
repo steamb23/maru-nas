@@ -14,7 +14,7 @@
 - "Install all" installs every available update (`apt-get dist-upgrade`, the same as "Install updates" in the OMV Workbench). You can't pick individual packages.
 - Services restart during the installation, so SMB/CIFS and NFS shares, Docker containers, and the OMV Workbench may drop for a moment. Install when the NAS is lightly used.
 - If another package task (automatic security updates and so on) is using apt or dpkg, the installation doesn't start. Try again in a moment.
-- If OMV has unapplied apt configuration changes, the update check doesn't start. Apply the pending changes in the OMV Workbench first.
+- If OMV has unapplied apt configuration changes, the update check doesn't start. Apply the pending changes in the OMV Workbench first. Updating the openmediavault package can leave configuration changes pending, so the first update check after "Install all" may be blocked for this reason.
 - From OMV 8.5.10, OMV stops the installation if it would remove the openmediavault package. In that case, check the repository settings in the OMV Workbench.
 - Only one check or installation runs at a time. If a task started by another administrator is running, you can start yours after it finishes.
 

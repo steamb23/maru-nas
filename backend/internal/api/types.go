@@ -857,6 +857,9 @@ type JobsResponse struct {
 	Current *Job `json:"current,omitempty"`
 	// Recent는 이 사용자가 시작한 작업의 결과다(최신 순).
 	Recent []Job `json:"recent"`
+	// Last는 마지막으로 끝난 작업이다(누가 시작했든, 서버 메모리에만). 다른 관리자가 시작한 작업이 끝난 뒤에도
+	// 그 결과를 보이는 데 쓴다. 다시 시작하면 없다.
+	Last *Job `json:"last,omitempty"`
 }
 
 // JobOutput은 GET /api/jobs/{id}/output?from=N의 응답이다.

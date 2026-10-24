@@ -217,6 +217,10 @@ func TestRunToSuccess(t *testing.T) {
 	if r.ID != id || r.State != api.JobSucceeded || !r.Mine || r.Count == nil || *r.Count != 1 || r.Items[0] != "openmediavault" || r.EndedAt == "" {
 		t.Errorf("result = %+v", r)
 	}
+	// 마지막으로 끝난 작업은 시작하지 않은 관리자의 목록에도 last로 온다.
+	if j := e.m.Jobs("bob"); j.Last == nil || j.Last.ID != id || j.Last.Mine || len(j.Recent) != 0 {
+		t.Errorf("bob jobs = %+v", j)
+	}
 	// 끝난 직후에는 시작하지 않은 관리자도 출력을 읽는다.
 	out, err = e.m.Output(id, "bob", 25)
 	if err != nil || out.Text != "Setting up openmediavault (8.5.12-1) ...\n" || out.State != api.JobSucceeded {
@@ -302,6 +306,10 @@ func TestResume(t *testing.T) {
 	waitFor(t, func() bool { r.mu.Lock(); defer r.mu.Unlock(); return len(r.watched) == 1 })
 	if r.watched[0].Prefer != "" || string(r.watched[0].Handle) != `{"pos":3}` {
 		t.Errorf("watched = %+v", r.watched[0])
+	}
+	// 다시 시작한 직후에도 저장한 출력의 마지막 줄이 보인다.
+	if j := m.Tasks("admin"); len(j) != 1 || j[0].LastLine != "abc" {
+		t.Errorf("tasks after resume = %+v", j)
 	}
 	r.steps <- step{out: "def", pos: 6, outcome: outcome(api.JobSucceeded, "")}
 	<-finished

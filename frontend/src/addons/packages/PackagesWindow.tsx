@@ -64,10 +64,14 @@ export function PackagesWindow({ active }: WindowViewProps) {
   const shownTab: Tab = tab ?? (current ? 'job' : 'list')
   const job = pickJob(jobs, nav.jobId)
 
-  // 진행 중이던 작업이 끝나면 업데이트 목록을 다시 받는다(apt 후크가 목록을 이미 새로 만들었다).
+  // 진행 중이던 작업이 끝나면 업데이트 목록을 다시 받는다(apt 후크가 목록을 이미 새로 만들었다). 진행 중이라 작업
+  // 보기를 보이고 있었다면 결과를 보이도록 작업 보기에 머문다(사용자가 고른 탭은 그대로).
   const [lastCurrent, setLastCurrent] = useState<string | null>(null)
   if ((current?.id ?? null) !== lastCurrent) {
-    if (lastCurrent && !current) refresh()
+    if (lastCurrent && !current) {
+      refresh()
+      if (tab === null) setTab('job')
+    }
     setLastCurrent(current?.id ?? null)
   }
 

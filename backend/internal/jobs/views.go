@@ -65,6 +65,10 @@ func (m *Manager) Jobs(user string) api.JobsResponse {
 		j := m.active.view(user)
 		res.Current = &j
 	}
+	if m.last != nil {
+		j := m.last.view(user)
+		res.Last = &j
+	}
 	for _, r := range m.resultsLocked(user) {
 		res.Recent = append(res.Recent, r.view(user))
 	}

@@ -650,7 +650,7 @@ export async function fetchJobs(signal?: AbortSignal): Promise<JobsResponse> {
   if (!isObj(data) || !Array.isArray(data.recent) || !isOptional(data.current, isJob)) {
     throw new Error('/jobs: unexpected response shape')
   }
-  return { current: data.current, recent: data.recent.filter(isJob) }
+  return { current: data.current, recent: data.recent.filter(isJob), last: isJob(data.last) ? data.last : undefined }
 }
 
 function isJobOutput(v: unknown): v is JobOutput {

@@ -21,11 +21,17 @@ export type JobKind = Job['kind']
 export type JobCode = NonNullable<Job['code']>
 
 // pickJob은 작업 보기에 그릴 작업이다. 진행 중인 작업이 먼저이고, 아니면 열어 달라고 한 작업(알림의 출력 보기),
-// 그것도 없으면 이 사용자의 가장 최근 결과다.
+// 그것도 없으면 가장 최근에 끝난 작업이다. 끝난 작업은 이 사용자의 결과와 마지막으로 끝난 작업(last, 다른 관리자가
+// 시작했을 수 있다)에서 고른다.
 export function pickJob(jobs: JobsResponse | null, requested: string | null): Job | null {
   if (!jobs) return null
   if (jobs.current) return jobs.current
-  return jobs.recent.find((j) => j.id === requested) ?? jobs.recent[0] ?? null
+  const { last } = jobs
+  const pool = last ? [last, ...jobs.recent.filter((j) => j.id !== last.id)] : jobs.recent
+  const asked = pool.find((j) => j.id === requested)
+  if (asked) return asked
+  // RFC 3339 UTC 시각이라 문자열 비교가 시각 순서다.
+  return pool.reduce<Job | null>((a, j) => (!a || (j.endedAt ?? '') > (a.endedAt ?? '') ? j : a), null)
 }
 
 // JOB_HEADINGS는 작업 보기 머리말이다(진행 중이면 종류, 끝났으면 종류와 결과).

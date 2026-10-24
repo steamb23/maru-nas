@@ -162,6 +162,13 @@ func (m *Manager) Resume() {
 
 	m.mu.Lock()
 	a := &activeJob{m: m, rec: *rec, saved: m.now()}
+	// 알림 센터의 마지막 출력 한 줄을 저장한 출력의 끝에서 채운다(다음 출력을 받기 전에도 보이게).
+	if size := rec.Output.End - rec.Output.Start; size > 0 {
+		off := max(0, size-lastLineTail)
+		if tail, err := m.store.ReadOutput(rec.ID, off, int(size-off)); err == nil {
+			a.lastLine = lastLine(tail)
+		}
+	}
 	m.active = a
 	r := m.runnerLocked(rec.Runner)
 	switch {
@@ -436,8 +443,11 @@ func (a *activeJob) Output(chunk []byte, handle json.RawMessage) {
 	}
 }
 
-// maxLastLine은 lastLine의 바이트 상한이다.
-const maxLastLine = 200
+// maxLastLine은 lastLine의 바이트 상한이다. lastLineTail은 다시 시작할 때 마지막 줄을 찾으려고 읽는 출력 끝의 길이다.
+const (
+	maxLastLine  = 200
+	lastLineTail = 1024
+)
 
 // lastLine은 chunk의 마지막 빈 줄이 아닌 줄이다(상한을 넘으면 앞부분만, UTF-8 경계에서 자른다).
 func lastLine(chunk []byte) string {

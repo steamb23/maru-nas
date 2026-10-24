@@ -62,7 +62,7 @@ paths:
 - **저장**(`prefs.FileStore`의 `jobs.Store`, 상태 디렉터리가 없으면 `jobs.MemoryStore`): `jobs/current.json`(진행 기록, 세션 ID 없음, 시작·10초마다·종료 때 씀), `jobs/results/<사용자>.json`(최근 10개·30일), `jobs/output/<id>.log`(조각마다 덧붙이고 fsync하지 않음, 4MiB를 넘으면 뒤 2MiB만 남김). 자체 `version: 1`이고 `users/*.json`은 건드리지 않는다. 디렉터리는 쓸 때만 만든다
   - 다시 시작하면(`Resume`) 출력 파일을 기록의 길이로 자르고 기록한 자리부터 이어 받는다. 부트 id가 바뀌었으면 `job_reboot`, 모르는 Runner면 `job_lost`, 결과를 저장한 뒤 멈췄으면 결과를 믿는다. `main.go`가 종료할 때 `Close`로 진행 기록을 남긴다
 - **결과 알림**: 끝나면 시작한 사용자의 결과로 남기고 `notify.Center.Invalidate`로 APT·재부팅 알림을 다시 읽게 한다. 결과 알림(`jobSucceeded`·`jobFailed`·`jobUnknown`, id `job-<작업 id>`, `dismissible`, `job`)은 지우지 않은 최신 5개이고 `notify.Check`로 검사한다. 요약(`count`, `items`)은 확인이면 찾은 업데이트, 설치면 시작할 때 목록에서 사라진 패키지다
-- **API**(`requireAdmin`): `GET /api/jobs`(진행 중인 작업은 누가 시작했든, 결과는 이 사용자의 것), `GET /api/jobs/{id}`, `GET /api/jobs/{id}/output?from=N`(논리 위치, 64KiB, UTF-8 경계, `more`면 바로 다시). 진행 중인 작업과 마지막으로 끝난 작업의 출력은 어느 관리자나, 그 밖의 결과는 시작한 사용자만 읽는다
+- **API**(`requireAdmin`): `GET /api/jobs`(진행 중인 작업은 누가 시작했든, 결과는 이 사용자의 것, `last`는 마지막으로 끝난 작업이라 다른 관리자가 시작한 작업의 결과도 창이 보인다), `GET /api/jobs/{id}`, `GET /api/jobs/{id}/output?from=N`(논리 위치, 64KiB, UTF-8 경계, `more`면 바로 다시). 진행 중인 작업과 마지막으로 끝난 작업의 출력은 어느 관리자나, 그 밖의 결과는 시작한 사용자만 읽는다
 - 서버 테스트는 `envOptions{jobs}`와 `Config.JobInterval`(5ms)을 쓴다. 가짜 OMV는 `Exec.getOutput`을 실제 의미대로(오류 먼저·실패 작업은 지우지 않음) 흉내 내고 `SetAptConfig`·`SetGlitch`·`DropBg`로 상황을 만든다. 개발 서버는 `FAKEAPT_SCENARIO`(success, slow, fail, core-removal, locked, dirty)이고 가짜 작업은 폴링마다 출력 조각 하나씩 나아간다(maru가 1초마다 읽으므로 조각 수가 곧 초)
 
 ## 파일 탐색기
