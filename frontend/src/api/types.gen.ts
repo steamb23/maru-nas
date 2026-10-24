@@ -4,440 +4,8 @@
 import type * as config from './upgrade.gen'
 
 //////////
-// source: types.go
-/*
-Package api는 HTTP API가 주고받는 JSON 형태를 정의한다.
-이 패키지에서 tygo로 TypeScript 타입을 생성한다(tygo.yaml 참고).
-*/
+// source: addondata.go
 
-/**
- * HealthResponse는 GET /api/health의 응답이다.
- */
-export interface HealthResponse {
-  status: string;
-}
-/**
- * SystemResponse는 GET /api/system의 응답이다.
- */
-export interface SystemResponse {
-  cpu: CPUInfo;
-  memory: MemoryInfo;
-  uptimeSeconds: number /* float64 */;
-}
-/**
- * CPUInfo는 전체 코어를 합산한 CPU 사용률이다.
- */
-export interface CPUInfo {
-  /**
-   * UsagePercent는 두 /proc/stat 샘플 사이에서 측정한 0~100 값이다.
-   */
-  usagePercent: number /* float64 */;
-}
-/**
- * MemoryInfo는 바이트 단위 RAM 수치다. Used = Total - Available.
- */
-export interface MemoryInfo {
-  totalBytes: number /* uint64 */;
-  usedBytes: number /* uint64 */;
-  availableBytes: number /* uint64 */;
-}
-/**
- * SystemStatsResponse는 GET /api/addons/system-info의 응답이다(시스템 정보 창).
- * 사용률·속도는 누적 카운터로 주고, 프론트가 같은 백엔드의 두 응답 차이로 계산한다.
- * 그래서 창과 다른 세션의 요청이 서로의 측정 구간에 영향을 주지 않는다(/api/system과 다른 점).
- */
-export interface SystemStatsResponse extends AddonSources {
-  /**
-   * SampledAtMs는 값을 읽은 시각이다. 백엔드 프로세스 시작 기준의 단조 시각(밀리초)이며,
-   * 같은 백엔드의 두 응답 차이를 구하는 데만 쓴다(벽시계 시각이 아니다).
-   */
-  sampledAtMs: number /* int64 */;
-  cpu: CPUCounters;
-  memory: MemoryInfo;
-  /**
-   * MemoryDetail은 메모리 구성과 스왑이다(성능 페이지의 메모리 구성 막대).
-   */
-  memoryDetail: MemoryDetail;
-  uptimeSeconds: number /* float64 */;
-  /**
-   * Load는 부하 평균이다. 읽지 못하면 없다.
-   */
-  load?: LoadAverage;
-  /**
-   * Network는 물리 인터페이스의 누적 바이트 합계다. 읽지 못하면 없다.
-   */
-  network?: NetTotals;
-  /**
-   * Disk는 물리 디스크의 누적 바이트 합계다. 읽지 못하면 없다.
-   */
-  disk?: DiskTotals;
-  /**
-   * Tasks는 프로세스·스레드 수다. 읽지 못하면 없다. 수만 담으므로 누구에게나 준다.
-   */
-  tasks?: TaskCounts;
-  /**
-   * Processes는 프로세스 목록이다(PID 순서). 관리자가 ?processes=1로 요청할 때만 준다(provider proc-processes).
-   */
-  processes?: Process[];
-  /**
-   * Power는 OMV 전원 관리의 절전 방식이다. 관리자가 ?power=1로 요청할 때만 준다(provider omv-power).
-   */
-  power?: PowerInfo;
-}
-/**
- * PowerInfo는 OMV 전원 관리의 대기 방식이다(PowerMgmt.get, PowerMgmt.enumerateStandbyModes).
- * 전원 모달은 이 값으로 절전(System.standby)을 쓸 수 있는지 정한다.
- */
-export interface PowerInfo {
-  /**
-   * StandbyMode는 설정된 대기 방식이다(poweroff, suspend, hibernate, suspendhybrid).
-   */
-  standbyMode: string;
-  /**
-   * StandbyModes는 이 기기가 지원하는 대기 방식이다. poweroff는 늘 들어 있다.
-   */
-  standbyModes: string[];
-}
-/**
- * TaskCounts는 프로세스와 스레드(커널 스레드 포함) 수다.
- */
-export interface TaskCounts {
-  /**
-   * Processes는 /proc의 PID 디렉터리 수다.
-   */
-  processes: number /* int */;
-  /**
-   * Threads는 /proc/loadavg의 스케줄링 단위 수다.
-   */
-  threads: number /* int */;
-}
-/**
- * CPUCounters는 /proc/stat의 누적 CPU 시간이다. 단위는 clock tick(USER_HZ)이다.
- */
-export interface CPUCounters {
-  /**
-   * TotalTicks는 모든 코어를 합한 시간이다(guest 제외). Process.CPUTicks와 단위가 같다.
-   */
-  totalTicks: number /* uint64 */;
-  /**
-   * IdleTicks는 idle + iowait다.
-   */
-  idleTicks: number /* uint64 */;
-  /**
-   * KernelTicks는 커널 시간(system + irq + softirq)이다. steal은 넣지 않는다.
-   */
-  kernelTicks: number /* uint64 */;
-  /**
-   * Cores는 켜져 있는 코어별 값이다(cpuN 순서). 꺼진 코어는 빠지므로 ID로 맞춘다.
-   */
-  cores: CoreTicks[];
-}
-/**
- * CoreTicks는 코어 하나의 누적 CPU 시간이다.
- */
-export interface CoreTicks {
-  /**
-   * ID는 cpuN의 N이다.
-   */
-  id: number /* int */;
-  totalTicks: number /* uint64 */;
-  idleTicks: number /* uint64 */;
-  kernelTicks: number /* uint64 */;
-}
-/**
- * MemoryDetail은 RAM 구성(htop 방식)과 스왑이다. 단위는 바이트다.
- * Apps + Shared + Compressed + Buffers + Cache + Free = MemoryInfo.TotalBytes.
- */
-export interface MemoryDetail {
-  /**
-   * AppsBytes는 나머지 항목을 뺀 메모리다. 프로세스와 회수할 수 없는 커널 메모리다.
-   */
-  appsBytes: number /* uint64 */;
-  /**
-   * SharedBytes는 공유 메모리(Shmem, tmpfs 포함)다.
-   */
-  sharedBytes: number /* uint64 */;
-  /**
-   * CompressedBytes는 zswap 풀과 zram 장치가 쓰는 메모리다.
-   */
-  compressedBytes: number /* uint64 */;
-  /**
-   * BuffersBytes는 블록 장치 버퍼(Buffers)다.
-   */
-  buffersBytes: number /* uint64 */;
-  /**
-   * CacheBytes는 페이지 캐시와 회수할 수 있는 slab(Cached + SReclaimable - Shmem)이다.
-   */
-  cacheBytes: number /* uint64 */;
-  /**
-   * FreeBytes는 쓰지 않는 메모리(MemFree)다.
-   */
-  freeBytes: number /* uint64 */;
-  swapTotalBytes: number /* uint64 */;
-  swapUsedBytes: number /* uint64 */;
-}
-/**
- * LoadAverage는 /proc/loadavg의 부하 평균이다.
- */
-export interface LoadAverage {
-  /**
-   * One, Five, Fifteen은 1·5·15분 부하 평균이다.
-   */
-  one: number /* float64 */;
-  five: number /* float64 */;
-  fifteen: number /* float64 */;
-  /**
-   * Running은 지금 실행할 수 있는 스케줄링 단위(스레드) 수다.
-   */
-  running: number /* int */;
-}
-/**
- * NetTotals는 물리 네트워크 인터페이스의 누적 바이트 합계다.
- */
-export interface NetTotals {
-  rxBytes: number /* uint64 */;
-  txBytes: number /* uint64 */;
-}
-/**
- * DiskTotals는 물리 디스크의 누적 바이트 합계다. 파티션·RAID·LVM 장치는 빼서 이중으로 세지 않는다.
- */
-export interface DiskTotals {
-  readBytes: number /* uint64 */;
-  writeBytes: number /* uint64 */;
-}
-/**
- * Process는 프로세스 하나다.
- */
-export interface Process {
-  pid: number /* int */;
-  /**
-   * StartTicks는 부팅 후 시작 시각(clock tick)이다. PID가 다시 쓰였는지 구분하는 데 쓴다.
-   */
-  startTicks: number /* uint64 */;
-  /**
-   * Name은 커널이 아는 이름(comm)이다. 15바이트로 잘려 있을 수 있다.
-   */
-  name: string;
-  /**
-   * Command는 명령줄이다(인자를 공백으로 이음, 길면 잘림). 커널 스레드와 좀비는 없다.
-   */
-  command?: string;
-  /**
-   * User는 실제 사용자 이름이다. 이름을 모르면 uid 숫자다.
-   */
-  user: string;
-  /**
-   * State는 커널 상태 글자다(R, S, D, Z, T, I 등).
-   */
-  state: string;
-  /**
-   * CPUTicks는 누적 CPU 시간(utime + stime, clock tick)이다.
-   */
-  cpuTicks: number /* uint64 */;
-  /**
-   * RSSBytes는 실제 메모리 사용량(VmRSS)이다.
-   */
-  rssBytes: number /* uint64 */;
-  threads: number /* int */;
-  /**
-   * Kernel은 커널 스레드인지다.
-   */
-  kernel?: boolean;
-}
-/**
- * Manifest는 애드온 하나의 선언이다. 백엔드 정적 목록(internal/addons/builtin)이 원본이며,
- * 프론트 목록(frontend/src/addons/manifests.gen.ts)은 여기서 생성한다.
- */
-export interface Manifest {
-  /**
-   * ID는 고유 이름이다. 창·위젯 종류 식별자와 같다. 소문자, 숫자, '-'만 쓴다.
-   */
-  id: string;
-  /**
-   * Title은 창 제목·위젯 이름의 번역 키다(프론트 en.json의 키).
-   */
-  title: string;
-  /**
-   * Icon은 freedesktop 아이콘 이름이다. 프론트 리졸버가 해석한다.
-   */
-  icon: string;
-  views: AddonViews;
-  requires: Requirements;
-  rpc: RPCMethods;
-  /**
-   * Actions는 상태를 바꾸는 조작이다(POST /api/addons/{id}/actions/{name}). 구현은 addons.Addon.Actions에 있다.
-   */
-  actions?: ActionDecl[];
-}
-/**
- * ActionDecl은 애드온이 제공하는 조작 하나의 선언이다.
- */
-export interface ActionDecl {
-  /**
-   * Name은 조작 이름이다(start, stop 등). 소문자, 숫자, '-'만 쓴다.
-   */
-  name: string;
-  /**
-   * Admin은 OMV 관리자만 실행할 수 있는지다. 애드온의 requires.admin과 따로 정한다
-   * (목록은 누구나 보고 조작은 관리자만 하는 경우).
-   */
-  admin?: boolean;
-  /**
-   * Confirm은 실행 전에 사용자 확인을 받아야 하는지다(정지, 끄기 등).
-   */
-  confirm?: boolean;
-}
-/**
- * AddonViews는 애드온의 보기 목록이다. 하나 이상 있어야 한다.
- */
-export interface AddonViews {
-  window?: WindowView;
-  widget?: WidgetView;
-}
-/**
- * WindowView는 창 보기의 크기(픽셀)다.
- */
-export interface WindowView {
-  defaultSize: Size;
-  /**
-   * MinSize는 크기 조절로 줄일 수 있는 최소 크기다. 없으면 프론트의 공통 하한을 쓴다.
-   */
-  minSize?: Size;
-}
-/**
- * Size는 픽셀 단위 크기다.
- */
-export interface Size {
-  width: number /* int */;
-  height: number /* int */;
-}
-/**
- * WidgetView는 바탕화면 위젯 보기의 크기(그리드 칸)다.
- */
-export interface WidgetView {
-  defaultSize: GridSize;
-  /**
-   * MinSize, MaxSize는 크기 조절 범위다. 없으면 기본 크기로 고정된다.
-   */
-  minSize?: GridSize;
-  maxSize?: GridSize;
-}
-/**
- * GridSize는 바탕화면 위젯 그리드의 칸 단위 크기다.
- */
-export interface GridSize {
-  cols: number /* int */;
-  rows: number /* int */;
-}
-/**
- * Requirements는 애드온이나 provider를 쓰는 데 필요한 조건이다.
- */
-export interface Requirements {
-  /**
-   * Plugins는 필요한 OMV 플러그인 패키지 이름이다(예: openmediavault-compose).
-   */
-  plugins?: string[];
-  /**
-   * Admin은 OMV 관리자만 쓸 수 있는지다.
-   */
-  admin?: boolean;
-}
-/**
- * RPCMethods는 애드온이 호출하는 OMV RPC 메서드(Service.method)다.
- * 백엔드의 OMV RPC 중계는 등록된 애드온이 선언한 메서드만 통과시킨다.
- */
-export interface RPCMethods {
-  read?: string[];
-  /**
-   * Write는 상태를 바꾸는 메서드다. 애드온의 조작(Actions)만 부를 수 있고 /api/rpc 중계는 거부한다.
-   * 쓰기 허용 여부는 addons.WritesEnabled가 정한다.
-   */
-  write?: string[];
-}
-/**
- * capability를 쓸 수 없는 이유. AddonCapability.Reason에 들어간다.
- */
-export const ReasonPluginMissing = "plugin_missing";
-/**
- * capability를 쓸 수 없는 이유. AddonCapability.Reason에 들어간다.
- */
-export const ReasonAdminRequired = "admin_required";
-/**
- * CapabilitiesResponse는 GET /api/capabilities의 응답이다. 플러그인 설치 상태와
- * 로그인한 사용자의 역할로 계산한다.
- */
-export interface CapabilitiesResponse {
-  /**
-   * Addons는 등록된 모든 애드온의 capability다(등록 순서).
-   */
-  addons: AddonCapability[];
-  /**
-   * Plugins는 설치된 것으로 감지한, 대시보드가 아는 OMV 플러그인 패키지 이름이다(정렬).
-   */
-  plugins: string[];
-  /**
-   * WorkbenchURL은 브라우저에서 OMV 웹 UI(workbench)를 열 주소다(-workbench-url). 비어 있으면
-   * 설정하지 않은 것이다. http(s) URL이거나 대시보드 문서 기준의 경로 참조(/, ../)이며 해석은 프론트엔드가 한다.
-   */
-  workbenchUrl?: string;
-  /**
-   * Helper는 권한 도우미를 설정했는지다(-helper-socket). 이 세션이 쓸 수 있는지는 GET /api/helper로 안다.
-   */
-  helper: boolean;
-  /**
-   * Terminal은 웹 터미널을 쓸 수 있는지다(-terminal, 설정에서 덮어쓴 값). 실제로 들어갈 수 있는지는 sshd가 정한다.
-   */
-  terminal: boolean;
-}
-/**
- * AddonCapability는 애드온 하나를 이 사용자가 쓸 수 있는지다.
- */
-export interface AddonCapability {
-  id: string;
-  available: boolean;
-  /**
-   * Reason은 쓸 수 없는 이유다. Available이면 없다.
-   */
-  reason?: 'plugin_missing' | 'admin_required';
-  /**
-   * Sources는 쓸 수 있는 provider 이름이다(우선순위 순서).
-   */
-  sources: string[];
-}
-/**
- * RPCRequest는 POST /api/rpc의 요청 본문이다. 백엔드는 등록된 애드온이 선언한
- * 메서드만 OMV rpc.php로 중계하고, 성공하면 OMV 응답의 response 값을 그대로 돌려준다.
- */
-export interface RPCRequest {
-  service: string;
-  method: string;
-  /**
-   * Params는 OMV RPC 파라미터다. 없으면 빈 객체로 보낸다.
-   */
-  params?: { [key: string]: unknown };
-}
-/**
- * ActionRequest는 POST /api/addons/{id}/actions/{action}의 요청 본문이다. 성공하면 204다.
- */
-export interface ActionRequest {
-  /**
-   * Target은 조작 대상이다(컨테이너 이름, 서비스 이름 등). 형식은 애드온이 검사한다.
-   */
-  target: string;
-}
-/**
- * AddonSources는 애드온 데이터 응답(GET /api/addons/{id})에 공통으로 담는 출처 정보다.
- */
-export interface AddonSources {
-  /**
-   * Sources는 이번 응답에 값을 보탠 provider 이름이다(우선순위 순서).
-   */
-  sources: string[];
-  /**
-   * FailedSources는 쓸 수 있었지만 이번에 실패한 provider 이름이다. 나머지 출처의 값은 그대로 담는다.
-   */
-  failedSources?: string[];
-}
 /**
  * StorageResponse는 GET /api/addons/storage의 응답이다.
  */
@@ -762,822 +330,208 @@ export interface SmartDisk {
    */
   monitored: boolean;
 }
+
+//////////
+// source: addons.go
+
 /**
- * Preferences는 GET /api/preferences의 응답이며 로그인한 사용자의 대시보드 설정이다.
- * 백엔드 상태 디렉터리에 사용자별로 저장되어 로그아웃해도 남는다.
+ * Manifest는 애드온 하나의 선언이다. 백엔드 정적 목록(internal/addons/builtin)이 원본이며,
+ * 프론트 목록(frontend/src/addons/manifests.gen.ts)은 여기서 생성한다.
  */
-export interface Preferences {
+export interface Manifest {
   /**
-   * Widgets는 바탕화면 위젯 배치다. 한 번도 저장하지 않았으면 없다(프론트가 기본 배치를 쓴다).
-   */
-  widgets?: WidgetPlacement[];
-  /**
-   * Shortcuts는 바탕화면 바로가기 목록이며 순서대로 놓인다. 한 번도 저장하지 않았으면 없고
-   * (프론트가 기본 목록을 쓴다), 모두 지웠으면 빈 목록이다.
-   */
-  shortcuts?: Shortcut[];
-  /**
-   * Drawer는 "모든 앱" 화면 설정이다. 한 번도 저장하지 않았으면 없다(프론트가 기본값을 쓴다).
-   */
-  drawer?: DrawerPrefs;
-  /**
-   * SystemInfo는 시스템 정보 창의 보기 설정이다. 한 번도 저장하지 않았으면 없다(프론트가 기본값을 쓴다).
-   */
-  systemInfo?: SystemInfoPrefs;
-  /**
-   * Files는 파일 탐색기의 보기 설정이다. 한 번도 저장하지 않았으면 없다(프론트가 기본값을 쓴다).
-   */
-  files?: FilesPrefs;
-  /**
-   * Appearance는 화면 설정(테마, 바탕화면 등)이다. 없거나 비어 있는 값은 관리자가 정한 기본 화면을 따른다.
-   */
-  appearance?: AppearancePrefs;
-  /**
-   * Notifications는 알림 읽음 상태다. 한 번도 저장하지 않았으면 없다.
-   */
-  notifications?: NotificationPrefs;
-  /**
-   * WallpaperImage는 이 사용자가 올린 바탕화면 이미지의 정보다. 올리지 않았으면 없다.
-   * 설정 파일에 저장하지 않고 응답할 때 이미지 저장소에서 붙인다.
-   */
-  wallpaperImage?: ImageInfo;
-  /**
-   * AvatarImage는 이 사용자의 프로필 사진 정보다. 없으면 기본 아바타를 그린다. WallpaperImage처럼 응답할 때만 붙인다.
-   */
-  avatarImage?: ImageInfo;
-}
-/**
- * ThemeAuto는 브라우저(OS)의 밝은·어두운 모드 설정을 따른다.
- */
-export const ThemeAuto = "auto";
-/**
- * 테마. AppearancePrefs.Theme, SiteDefaults.Theme에 들어간다.
- */
-export const ThemeLight = "light";
-/**
- * 테마. AppearancePrefs.Theme, SiteDefaults.Theme에 들어간다.
- */
-export const ThemeDark = "dark";
-/**
- * TaskbarAlignCenter는 "모든 앱" 버튼과 창 버튼을 작업표시줄 가운데에 둔다(Windows 11처럼).
- */
-export const TaskbarAlignCenter = "center";
-/**
- * TaskbarAlignLeft는 "모든 앱" 버튼과 창 버튼을 작업표시줄 왼쪽 끝부터 둔다.
- */
-export const TaskbarAlignLeft = "left";
-/**
- * WallpaperPreset은 프론트에 들어 있는 배경(그라데이션·단색)이다.
- */
-export const WallpaperPreset = "preset";
-/**
- * WallpaperImage는 올린 이미지다. 어느 이미지인지는 배경을 쓰는 자리가 정한다
- * (사용자 바탕화면, 로그인 배경, 기본 바탕화면).
- */
-export const WallpaperImage = "image";
-/**
- * Wallpaper는 바탕화면·로그인 화면 배경 하나다. 다른 출처(파일 탐색기에서 고른 파일 등)는 Kind를 더해 담는다.
- */
-export interface Wallpaper {
-  kind: 'preset' | 'image';
-  /**
-   * Preset은 Kind가 preset일 때 프론트 프리셋 id다. 백엔드는 형식만 검사하고, 모르는 id는 프론트가 기본 배경으로 그린다.
-   */
-  preset?: string;
-}
-/**
- * AppearancePrefs는 사용자 화면 설정이다. 설정 전체를 한 번에 바꾼다. 비어 있는 값은 관리자가 정한 기본 화면
- * (SiteDefaults)을, 그것도 없으면 대시보드 기본값을 따른다.
- */
-export interface AppearancePrefs {
-  /**
-   * Theme은 Theme* 중 하나다. 비어 있으면 기본 화면을 따른다.
-   */
-  theme?: 'auto' | 'light' | 'dark';
-  /**
-   * Wallpaper는 바탕화면이다. 없으면 기본 화면을 따른다. image는 이 사용자가 올린 이미지다.
-   */
-  wallpaper?: Wallpaper;
-  /**
-   * Animations는 창·메뉴 애니메이션을 켤지다. 없으면 켠다.
-   */
-  animations?: boolean;
-  /**
-   * TaskbarAlign은 TaskbarAlign* 중 하나다. 비어 있으면 가운데다(관리자 기본값은 없다).
-   */
-  taskbarAlign?: 'center' | 'left';
-  /**
-   * WidgetsLocked는 바탕화면 위젯을 옮기거나 크기를 바꾸거나 메뉴로 추가·제거하지 못하게 할지다.
-   * 눌러서 창을 여는 것은 막지 않는다. 프론트만 지키는 편의 설정이라 위젯 배치 저장은 막지 않는다.
-   * 관리자 기본값은 없다.
-   */
-  widgetsLocked?: boolean;
-}
-/**
- * ImageInfo는 저장된 배경 이미지의 정보다.
- */
-export interface ImageInfo {
-  /**
-   * Rev는 이미지가 바뀔 때마다 달라지는 값이다. 이미지 주소에 붙여(?v=) 브라우저가 이전 이미지를 쓰지 않게 한다.
-   */
-  rev: string;
-}
-/**
- * SiteSettings는 모든 사용자에게 적용하는 전역 설정이며 관리자만 바꾼다. 상태 디렉터리의 site.json에 저장한다.
- * 부분마다 전체를 한 번에 바꾸고, 없는 부분은 기본값이다.
- */
-export interface SiteSettings {
-  login?: SiteLogin;
-  defaults?: SiteDefaults;
-  server?: ServerOverrides;
-  /**
-   * Security는 보안 강화 모드의 기능별 단계다. 없으면 모두 꺼짐이다.
-   */
-  security?: SecurityPolicy;
-  /**
-   * Files는 파일 탐색기의 전역 설정과 공유 폴더 스냅숏이다. 없으면 스냅숏이 없고 디스크 보기는 꺼짐이다.
-   */
-  files?: SiteFiles;
-  /**
-   * Upgrade는 대시보드에서 업그레이드의 설정이다. 없으면 업데이트 채널을 고르지 않은 것이다(지금 브랜치를 따른다).
-   */
-  upgrade?: SiteUpgrade;
-}
-/**
- * SiteUpgrade는 대시보드에서 업그레이드의 전역 설정이다(.claude/docs/upgrade.md의 "업데이트 채널").
- */
-export interface SiteUpgrade {
-  /**
-   * Channel은 원격 확인이 따라갈 업데이트 채널이다(config.UpgradeChannel*). 빈 값이면 지금 브랜치의 추적 브랜치다.
-   */
-  channel?: '' | 'stable' | 'main';
-}
-/**
- * SiteLogin은 로그인 화면 설정이다. 저장한 적 없으면 대시보드 기본 배경에 대기 연출을 켠다.
- */
-export interface SiteLogin {
-  /**
-   * Background는 로그인 화면 배경이다. 없으면 대시보드 기본 배경이다. image는 관리자가 올린 로그인 배경 이미지다.
-   */
-  background?: Wallpaper;
-  /**
-   * EasterEgg는 로그인 화면에서 오래 기다리면 나오는 연출을 켤지다.
-   */
-  easterEgg: boolean;
-}
-/**
- * SiteDefaults는 화면 설정을 정하지 않은 사용자에게 적용하는 기본 화면이다.
- */
-export interface SiteDefaults {
-  /**
-   * Theme은 Theme* 중 하나다. 비어 있으면 auto다.
-   */
-  theme?: 'auto' | 'light' | 'dark';
-  /**
-   * Wallpaper는 기본 바탕화면이다. 없으면 대시보드 기본 배경이다. image는 관리자가 올린 기본 바탕화면 이미지다.
-   */
-  wallpaper?: Wallpaper;
-}
-/**
- * ServerOverrides는 재시작 없이 바꿀 수 있는 가동 설정을 웹에서 덮어쓴 값이다. 없는 값은 플래그·환경 변수
- * (/etc/default/maru) 값을 따른다.
- */
-export interface ServerOverrides {
-  /**
-   * WorkbenchURL은 -workbench-url을 덮어쓴다. 빈 문자열이면 OMV 워크벤치 앱을 끈다.
-   */
-  workbenchUrl?: string;
-  /**
-   * SmartRefreshAt은 -smart-refresh-at(HH:MM)을 덮어쓴다.
-   */
-  smartRefreshAt?: string;
-  /**
-   * Terminal은 -terminal을 덮어쓴다. "true" 또는 "false"다.
-   */
-  terminal?: string;
-}
-/**
- * AppearanceRequest는 PUT /api/preferences/appearance의 요청 본문이다. 화면 설정 전체를 바꾼다.
- */
-export interface AppearanceRequest {
-  appearance?: AppearancePrefs;
-}
-/**
- * DrawerSortRecommended는 대시보드가 정한 순서다(비슷한 기능의 앱끼리 모인다).
- */
-export const DrawerSortRecommended = "recommended";
-/**
- * DrawerSortName은 화면 언어의 이름순이다.
- */
-export const DrawerSortName = "name";
-/**
- * DrawerPrefs는 "모든 앱" 화면 설정이다. 설정 전체를 한 번에 바꾼다.
- */
-export interface DrawerPrefs {
-  /**
-   * Sort는 앱 정렬 방식이다(DrawerSort*). 프론트는 모르는 값이면 추천순을 쓴다.
-   */
-  sort: string;
-}
-/**
- * DrawerRequest는 PUT /api/preferences/drawer의 요청 본문이다.
- */
-export interface DrawerRequest {
-  drawer?: DrawerPrefs;
-}
-/**
- * CPUScaleMachine은 전체 CPU 대비 0~100%다(작업 관리자 방식).
- */
-export const CPUScaleMachine = "machine";
-/**
- * CPUScaleCore는 코어 하나를 100%로 본다(top 방식, 코어 수 × 100%까지).
- */
-export const CPUScaleCore = "core";
-/**
- * CPUGraphOverall은 전체 사용률 그래프 하나다.
- */
-export const CPUGraphOverall = "overall";
-/**
- * CPUGraphCores는 코어마다 작은 그래프다.
- */
-export const CPUGraphCores = "cores";
-/**
- * SystemInfoPrefs는 시스템 정보 창의 보기 설정이다. 설정 전체를 한 번에 바꾼다.
- */
-export interface SystemInfoPrefs {
-  /**
-   * CPUScale은 CPUScale* 중 하나다. 프론트는 모르는 값이면 machine을 쓴다.
-   */
-  cpuScale: string;
-  /**
-   * CPUGraph는 CPUGraph* 중 하나다. 프론트는 모르는 값이면 overall을 쓴다.
-   */
-  cpuGraph: string;
-  /**
-   * CPUKernel은 CPU 그래프에 커널 시간을 겹쳐 보일지다. 없으면 보인다.
-   */
-  cpuKernel?: boolean;
-}
-/**
- * SystemInfoRequest는 PUT /api/preferences/system-info의 요청 본문이다.
- */
-export interface SystemInfoRequest {
-  systemInfo?: SystemInfoPrefs;
-}
-/**
- * FilesViewList는 자세히 목록(이름·수정한 날짜·크기·종류 열)이다.
- */
-export const FilesViewList = "list";
-/**
- * FilesViewGrid는 아이콘 보기(종류 아이콘과 이름의 칸)다.
- */
-export const FilesViewGrid = "grid";
-/**
- * FilesPrefs는 파일 탐색기의 보기 설정이다. 새로 여는 탐색기 창이 이 보기로 시작한다.
- */
-export interface FilesPrefs {
-  /**
-   * View는 FilesView* 중 하나다. 프론트는 모르는 값이면 list를 쓴다.
-   */
-  view: string;
-  /**
-   * HiddenShares는 사이드바에서 숨긴 공유 폴더의 OMV uuid다(FilesShare.UUID). 사이드바 표시만 바꾸며 접근과는
-   * 관계없다(숨긴 공유 폴더도 보이는 폴더에 남는다). 스냅숏에 없는 uuid는 무시한다.
-   */
-  hiddenShares?: string[];
-}
-/**
- * MaxHiddenShares는 숨긴 공유 폴더 수의 상한이다.
- */
-export const MaxHiddenShares = 512;
-/**
- * MaxHiddenShareBytes는 항목 하나(uuid)의 바이트 상한이다.
- */
-export const MaxHiddenShareBytes = 64;
-/**
- * FilesPrefsRequest는 PUT /api/preferences/files의 요청 본문이다.
- */
-export interface FilesPrefsRequest {
-  files?: FilesPrefs;
-}
-/**
- * 알림 수준. Notice.Level에 들어간다.
- */
-export const NoticeInfo = "info";
-/**
- * 알림 수준. Notice.Level에 들어간다.
- */
-export const NoticeSuccess = "success";
-/**
- * 알림 수준. Notice.Level에 들어간다.
- */
-export const NoticeWarning = "warning";
-/**
- * 알림 수준. Notice.Level에 들어간다.
- */
-export const NoticeError = "error";
-/**
- * NoticeSample은 개발 서버의 가짜 알림(MARU_DEV_NOTICES)과 테스트에만 쓰는 코드다. 운영 알림 출처는 쓰지 않는다.
- */
-export const NoticeSample = "sample";
-/**
- * NoticeAptUpdates는 설치할 수 있는 APT 업데이트가 있다는 알림이다(Count: 패키지 수, Items: 패키지 이름).
- */
-export const NoticeAptUpdates = "aptUpdates";
-/**
- * NoticeRebootRequired는 업데이트를 마치려면 다시 시작해야 한다는 알림이다(Items: 요청한 패키지 이름).
- */
-export const NoticeRebootRequired = "rebootRequired";
-/**
- * NoticeJobSucceeded·Failed·Unknown은 서버 백그라운드 작업의 결과다(Job에 작업, 지울 수 있음). 시작한 사용자에게만 보인다.
- */
-export const NoticeJobSucceeded = "jobSucceeded";
-/**
- * 서버 알림 코드. Notice.Code에 들어가며 프론트가 코드로 문구를 고른다.
- */
-export const NoticeJobFailed = "jobFailed";
-/**
- * 서버 알림 코드. Notice.Code에 들어가며 프론트가 코드로 문구를 고른다.
- */
-export const NoticeJobUnknown = "jobUnknown";
-/**
- * NoticeActionApp은 대시보드 앱을 연다. 앱이 설정이면 Page의 페이지로 연다.
- */
-export const NoticeActionApp = "app";
-/**
- * NoticeActionWorkbench는 OMV 워크벤치의 Route 화면을 워크벤치 탭으로 연다.
- */
-export const NoticeActionWorkbench = "workbench";
-/**
- * NoticeActionPower는 전원 대화상자를 연다.
- */
-export const NoticeActionPower = "power";
-/**
- * NoticeAction은 알림을 눌렀을 때 할 일이다.
- */
-export interface NoticeAction {
-  kind: 'app' | 'workbench' | 'power';
-  /**
-   * App은 Kind가 app일 때 프론트 앱 id다. 프론트가 모르는 id면 동작을 보이지 않는다.
-   */
-  app?: string;
-  /**
-   * Page는 App이 설정일 때 열 페이지 id다.
-   */
-  page?: string;
-  /**
-   * Route는 Kind가 workbench일 때 OMV 워크벤치 라우트다(앞 슬래시 없이, 예: system/updatemgmt/updates).
-   */
-  route?: string;
-}
-/**
- * Notice는 서버가 알리는 상태 하나다(업데이트가 있음 등). 조건이 풀리면 목록에서 빠지며 사용자가 지울 수 없다.
- * 예외로 작업 결과 알림(Dismissible)은 사용자가 지운다. 문구는 보내지 않고 Code와 값(Count, Items)만 보낸다.
- */
-export interface Notice {
-  /**
-   * ID는 알림의 고정 이름이다. 읽음 상태(NotificationPrefs.Seen)의 키다.
+   * ID는 고유 이름이다. 창·위젯 종류 식별자와 같다. 소문자, 숫자, '-'만 쓴다.
    */
   id: string;
-  code: 'sample' | 'aptUpdates' | 'rebootRequired' | 'jobSucceeded' | 'jobFailed' | 'jobUnknown';
   /**
-   * Level은 Notice* 수준 중 하나다.
+   * Title은 창 제목·위젯 이름의 번역 키다(프론트 en.json의 키).
    */
-  level: 'info' | 'success' | 'warning' | 'error';
+  title: string;
   /**
-   * Revision은 내용이 바뀔 때만 달라지는 값이다(내용 해시). 바뀌면 다시 읽지 않은 알림이 된다.
+   * Icon은 freedesktop 아이콘 이름이다. 프론트 리졸버가 해석한다.
    */
-  revision: string;
+  icon: string;
+  views: AddonViews;
+  requires: Requirements;
+  rpc: RPCMethods;
   /**
-   * Since는 조건이 생긴 시각(RFC 3339)이다. 출처가 모르면 없다.
+   * Actions는 상태를 바꾸는 조작이다(POST /api/addons/{id}/actions/{name}). 구현은 addons.Addon.Actions에 있다.
    */
-  since?: string;
-  /**
-   * Count는 개수(업데이트할 패키지 수 등)다. 문구의 복수형에 쓴다.
-   */
-  count?: number /* int */;
-  /**
-   * Items는 이름 목록(패키지 이름 등)이다. 앞쪽 일부만 담는다.
-   */
-  items?: string[];
-  action?: NoticeAction;
-  /**
-   * Dismissible이면 사용자가 지울 수 있다(DELETE /api/notifications/{id}). 작업 결과 알림만 그렇다.
-   */
-  dismissible?: boolean;
-  /**
-   * Job은 작업 결과 알림의 작업이다. 프론트가 그 작업의 출력을 연다.
-   */
-  job?: NoticeJob;
+  actions?: ActionDecl[];
 }
 /**
- * NoticeJob은 작업 결과 알림이 가리키는 작업이다.
+ * ActionDecl은 애드온이 제공하는 조작 하나의 선언이다.
  */
-export interface NoticeJob {
-  id: string;
-  kind: 'apt-update' | 'apt-upgrade';
-  state: 'running' | 'succeeded' | 'failed' | 'unknown';
-  code?: 'apt_failed' | 'apt_core_removal' | 'job_failed' | 'job_lost' | 'job_reboot' | 'job_timeout';
+export interface ActionDecl {
+  /**
+   * Name은 조작 이름이다(start, stop 등). 소문자, 숫자, '-'만 쓴다.
+   */
+  name: string;
+  /**
+   * Admin은 OMV 관리자만 실행할 수 있는지다. 애드온의 requires.admin과 따로 정한다
+   * (목록은 누구나 보고 조작은 관리자만 하는 경우).
+   */
+  admin?: boolean;
+  /**
+   * Confirm은 실행 전에 사용자 확인을 받아야 하는지다(정지, 끄기 등).
+   */
+  confirm?: boolean;
 }
 /**
- * NotificationsResponse는 GET /api/notifications의 응답이다.
+ * AddonViews는 애드온의 보기 목록이다. 하나 이상 있어야 한다.
  */
-export interface NotificationsResponse {
-  /**
-   * Notices는 이 사용자가 볼 수 있는 서버 알림이다(관리자 전용 알림은 관리자에게만).
-   */
-  notices: Notice[];
-  /**
-   * Seen은 이 사용자가 읽은 알림의 id → Revision이다. 지금 Notices에 있는 id만 담는다.
-   */
-  seen: { [key: string]: string};
-  /**
-   * Tasks는 진행 중인 서버 백그라운드 작업이다(관리자에게만, 아니면 빈 목록).
-   */
-  tasks: Job[];
+export interface AddonViews {
+  window?: WindowView;
+  widget?: WidgetView;
 }
 /**
- * JobAptUpdate는 패키지 목록을 다시 받는 작업이다(OMV Apt.update, apt-get update).
+ * WindowView는 창 보기의 크기(픽셀)다.
  */
-export const JobAptUpdate = "apt-update";
-/**
- * JobAptUpgrade는 모든 업데이트를 설치하는 작업이다(OMV Apt.upgrade, apt-get dist-upgrade).
- */
-export const JobAptUpgrade = "apt-upgrade";
-/**
- * 작업 상태. Job.State에 들어간다.
- */
-export const JobRunning = "running";
-/**
- * 작업 상태. Job.State에 들어간다.
- */
-export const JobSucceeded = "succeeded";
-/**
- * 작업 상태. Job.State에 들어간다.
- */
-export const JobFailed = "failed";
-/**
- * JobUnknown은 작업이 어떻게 끝났는지 알 수 없다는 뜻이다(Code에 이유).
- */
-export const JobUnknown = "unknown";
-/**
- * JobCodeAptFailed는 apt가 오류로 끝났다는 뜻이다(출력에 이유가 있다).
- */
-export const JobCodeAptFailed = "apt_failed";
-/**
- * JobCodeAptCoreRemoval은 openmediavault 패키지를 지우게 되어 OMV가 설치를 멈췄다는 뜻이다(OMV 8.5.10부터).
- */
-export const JobCodeAptCoreRemoval = "apt_core_removal";
-/**
- * JobCodeFailed는 그 밖의 이유로 작업이 실패했다는 뜻이다.
- */
-export const JobCodeFailed = "job_failed";
-/**
- * JobCodeLost는 결과를 읽지 못했다는 뜻이다(다른 곳에서 먼저 읽음, 상태 파일이 사라짐).
- */
-export const JobCodeLost = "job_lost";
-/**
- * JobCodeReboot는 작업 중에 시스템이 다시 시작되었다는 뜻이다.
- */
-export const JobCodeReboot = "job_reboot";
-/**
- * JobCodeTimeout은 작업이 시간 상한을 넘었다는 뜻이다.
- */
-export const JobCodeTimeout = "job_timeout";
-/**
- * Job은 서버 백그라운드 작업 하나다(진행 중이거나 끝난 결과).
- */
-export interface Job {
-  id: string;
-  kind: 'apt-update' | 'apt-upgrade';
-  state: 'running' | 'succeeded' | 'failed' | 'unknown';
-  code?: 'apt_failed' | 'apt_core_removal' | 'job_failed' | 'job_lost' | 'job_reboot' | 'job_timeout';
+export interface WindowView {
+  defaultSize: Size;
   /**
-   * Owner는 작업을 시작한 사용자다. Mine은 그 사용자가 이 세션의 사용자인지다.
+   * MinSize는 크기 조절로 줄일 수 있는 최소 크기다. 없으면 프론트의 공통 하한을 쓴다.
    */
-  owner: string;
-  mine: boolean;
-  /**
-   * StartedAt·EndedAt은 RFC 3339다. 진행 중이면 EndedAt이 없다.
-   */
-  startedAt: string;
-  endedAt?: string;
-  /**
-   * Waiting이면 OMV에서는 작업이 계속 돌지만 대시보드가 출력을 읽을 관리자 세션이 없어 기다리는 중이다.
-   */
-  waiting?: boolean;
-  /**
-   * LastLine은 진행 중 작업의 마지막 출력 한 줄이다(알림 센터의 백그라운드 작업). 끝난 작업은 없다.
-   */
-  lastLine?: string;
-  /**
-   * OutputEnd는 지금까지 받은 출력의 끝 위치다(JobOutput.Next와 같은 단위).
-   */
-  outputEnd: number /* int64 */;
-  /**
-   * OutputIncomplete면 출력 일부가 없다(앞부분을 상한 때문에 버렸거나 끝부분을 읽지 못했다).
-   */
-  outputIncomplete?: boolean;
-  /**
-   * Count·Items는 끝난 작업의 요약이다(확인: 찾은 업데이트, 설치: 업데이트한 패키지).
-   */
-  count?: number /* int */;
-  items?: string[];
-  /**
-   * Dismissed면 사용자가 결과 알림을 지웠다.
-   */
-  dismissed?: boolean;
+  minSize?: Size;
 }
 /**
- * JobsResponse는 GET /api/jobs의 응답이다.
+ * Size는 픽셀 단위 크기다.
  */
-export interface JobsResponse {
-  /**
-   * Current는 진행 중인 작업이다(누가 시작했든). 없으면 빠진다.
-   */
-  current?: Job;
-  /**
-   * Recent는 이 사용자가 시작한 작업의 결과다(최신 순).
-   */
-  recent: Job[];
-  /**
-   * Last는 마지막으로 끝난 작업이다(누가 시작했든, 서버 메모리에만). 다른 관리자가 시작한 작업이 끝난 뒤에도
-   * 그 결과를 보이는 데 쓴다. 다시 시작하면 없다.
-   */
-  last?: Job;
+export interface Size {
+  width: number /* int */;
+  height: number /* int */;
 }
 /**
- * JobOutput은 GET /api/jobs/{id}/output?from=N의 응답이다.
+ * WidgetView는 바탕화면 위젯 보기의 크기(그리드 칸)다.
  */
-export interface JobOutput {
+export interface WidgetView {
+  defaultSize: GridSize;
   /**
-   * From은 Text가 시작하는 위치다. 요청한 위치보다 크면 그 사이는 상한 때문에 버린 출력이다.
+   * MinSize, MaxSize는 크기 조절 범위다. 없으면 기본 크기로 고정된다.
    */
-  from: number /* int64 */;
-  /**
-   * Next는 다음 요청의 from이다.
-   */
-  next: number /* int64 */;
-  text: string;
-  /**
-   * More면 이미 받은 출력이 더 있다(바로 다시 요청한다).
-   */
-  more: boolean;
-  state: 'running' | 'succeeded' | 'failed' | 'unknown';
-  waiting?: boolean;
+  minSize?: GridSize;
+  maxSize?: GridSize;
 }
 /**
- * NotificationPrefs는 사용자의 알림 읽음 상태다.
+ * GridSize는 바탕화면 위젯 그리드의 칸 단위 크기다.
  */
-export interface NotificationPrefs {
-  /**
-   * Seen은 읽은 서버 알림의 id → 읽을 때의 Revision이다. 프론트는 지금 목록에 있는 id만 보낸다.
-   */
-  seen: { [key: string]: string};
-}
-/**
- * NotificationPrefsRequest는 PUT /api/preferences/notifications의 요청 본문이다.
- */
-export interface NotificationPrefsRequest {
-  notifications?: NotificationPrefs;
-}
-/**
- * Shortcut은 바탕화면 바로가기 하나다. 지금은 앱만 가리킨다. 폴더나 OMV 페이지를 가리키는
- * 바로가기가 생기면 필드를 더한다(저장 파일 형식을 바꾸지 않고 늘릴 수 있게 객체로 둔다).
- */
-export interface Shortcut {
-  /**
-   * App은 프론트 앱 id다(창 보기가 있는 애드온 또는 준비 중 앱). 백엔드는 형식만 검사한다.
-   */
-  app: string;
-}
-/**
- * ShortcutsRequest는 PUT /api/preferences/shortcuts의 요청 본문이다. 바로가기 목록 전체를 바꾼다.
- */
-export interface ShortcutsRequest {
-  shortcuts: Shortcut[];
-}
-/**
- * WidgetPlacement는 바탕화면 위젯 하나의 자리다. 그리드는 오른쪽 위를 기준으로 하므로
- * 화면 크기가 달라도 위젯끼리 겹치는지는 이 값만으로 정해진다.
- */
-export interface WidgetPlacement {
-  /**
-   * Addon은 위젯 보기가 있는 애드온 id다. 애드온마다 위젯은 하나다.
-   */
-  addon: string;
-  /**
-   * Right는 그리드 오른쪽 끝에서 위젯 오른쪽 끝까지의 칸 수다.
-   */
-  right: number /* int */;
-  /**
-   * Top은 그리드 위쪽 끝에서 위젯 위쪽 끝까지의 칸 수다.
-   */
-  top: number /* int */;
+export interface GridSize {
   cols: number /* int */;
   rows: number /* int */;
 }
 /**
- * WidgetsRequest는 PUT /api/preferences/widgets의 요청 본문이다. 위젯 배치 전체를 바꾼다.
+ * Requirements는 애드온이나 provider를 쓰는 데 필요한 조건이다.
  */
-export interface WidgetsRequest {
-  widgets: WidgetPlacement[];
+export interface Requirements {
+  /**
+   * Plugins는 필요한 OMV 플러그인 패키지 이름이다(예: openmediavault-compose).
+   */
+  plugins?: string[];
+  /**
+   * Admin은 OMV 관리자만 쓸 수 있는지다.
+   */
+  admin?: boolean;
 }
 /**
- * SiteInfo는 GET /api/site의 응답이다. 로그인 화면이 로그인 전에 받으므로 인증 없이 준다.
- * 화면 꾸밈에 쓰는 전역 설정만 담고 가동 설정(주소 등)은 넣지 않는다.
+ * RPCMethods는 애드온이 호출하는 OMV RPC 메서드(Service.method)다.
+ * 백엔드의 OMV RPC 중계는 등록된 애드온이 선언한 메서드만 통과시킨다.
  */
-export interface SiteInfo {
+export interface RPCMethods {
+  read?: string[];
   /**
-   * LoginBackground는 로그인 화면 배경이다. 없으면 대시보드 기본 배경이다.
+   * Write는 상태를 바꾸는 메서드다. 애드온의 조작(Actions)만 부를 수 있고 /api/rpc 중계는 거부한다.
+   * 쓰기 허용 여부는 addons.WritesEnabled가 정한다.
    */
-  loginBackground?: Wallpaper;
-  /**
-   * LoginEasterEgg는 로그인 화면의 대기 연출을 켤지다.
-   */
-  loginEasterEgg: boolean;
-  /**
-   * DefaultTheme, DefaultWallpaper는 화면 설정을 정하지 않은 사용자에게 적용하는 기본 화면이다.
-   */
-  defaultTheme?: 'auto' | 'light' | 'dark';
-  defaultWallpaper?: Wallpaper;
-  images: SiteImages;
+  write?: string[];
 }
 /**
- * SiteImages는 관리자가 올린 전역 배경 이미지의 정보다. 올리지 않은 이미지는 없다.
+ * capability를 쓸 수 없는 이유. AddonCapability.Reason에 들어간다.
  */
-export interface SiteImages {
-  loginBackground?: ImageInfo;
-  defaultWallpaper?: ImageInfo;
+export const ReasonPluginMissing = "plugin_missing";
+/**
+ * capability를 쓸 수 없는 이유. AddonCapability.Reason에 들어간다.
+ */
+export const ReasonAdminRequired = "admin_required";
+/**
+ * CapabilitiesResponse는 GET /api/capabilities의 응답이다. 플러그인 설치 상태와
+ * 로그인한 사용자의 역할로 계산한다.
+ */
+export interface CapabilitiesResponse {
+  /**
+   * Addons는 등록된 모든 애드온의 capability다(등록 순서).
+   */
+  addons: AddonCapability[];
+  /**
+   * Plugins는 설치된 것으로 감지한, 대시보드가 아는 OMV 플러그인 패키지 이름이다(정렬).
+   */
+  plugins: string[];
+  /**
+   * WorkbenchURL은 브라우저에서 OMV 웹 UI(workbench)를 열 주소다(-workbench-url). 비어 있으면
+   * 설정하지 않은 것이다. http(s) URL이거나 대시보드 문서 기준의 경로 참조(/, ../)이며 해석은 프론트엔드가 한다.
+   */
+  workbenchUrl?: string;
+  /**
+   * Helper는 권한 도우미를 설정했는지다(-helper-socket). 이 세션이 쓸 수 있는지는 GET /api/helper로 안다.
+   */
+  helper: boolean;
+  /**
+   * Terminal은 웹 터미널을 쓸 수 있는지다(-terminal, 설정에서 덮어쓴 값). 실제로 들어갈 수 있는지는 sshd가 정한다.
+   */
+  terminal: boolean;
 }
 /**
- * SiteLoginRequest는 PUT /api/site/login의 요청 본문이다. 로그인 화면 설정 전체를 바꾼다.
+ * AddonCapability는 애드온 하나를 이 사용자가 쓸 수 있는지다.
  */
-export interface SiteLoginRequest {
-  login?: SiteLogin;
+export interface AddonCapability {
+  id: string;
+  available: boolean;
+  /**
+   * Reason은 쓸 수 없는 이유다. Available이면 없다.
+   */
+  reason?: 'plugin_missing' | 'admin_required';
+  /**
+   * Sources는 쓸 수 있는 provider 이름이다(우선순위 순서).
+   */
+  sources: string[];
 }
 /**
- * SiteDefaultsRequest는 PUT /api/site/defaults의 요청 본문이다. 기본 화면 전체를 바꾼다.
+ * RPCRequest는 POST /api/rpc의 요청 본문이다. 백엔드는 등록된 애드온이 선언한
+ * 메서드만 OMV rpc.php로 중계하고, 성공하면 OMV 응답의 response 값을 그대로 돌려준다.
  */
-export interface SiteDefaultsRequest {
-  defaults?: SiteDefaults;
+export interface RPCRequest {
+  service: string;
+  method: string;
+  /**
+   * Params는 OMV RPC 파라미터다. 없으면 빈 객체로 보낸다.
+   */
+  params?: { [key: string]: unknown };
 }
 /**
- * ServerSettingsRequest는 PUT /api/site/server의 요청 본문이다. 덮어쓰기 값 전체를 바꾼다(없는 값은 덮어쓰지 않음).
+ * ActionRequest는 POST /api/addons/{id}/actions/{action}의 요청 본문이다. 성공하면 204다.
  */
-export interface ServerSettingsRequest {
-  server?: ServerOverrides;
+export interface ActionRequest {
+  /**
+   * Target은 조작 대상이다(컨테이너 이름, 서비스 이름 등). 형식은 애드온이 검사한다.
+   */
+  target: string;
 }
 /**
- * ServerSettings는 GET /api/site/server의 응답이다(관리자).
+ * AddonSources는 애드온 데이터 응답(GET /api/addons/{id})에 공통으로 담는 출처 정보다.
  */
-export interface ServerSettings {
-  workbenchUrl: OverridableSetting;
-  smartRefreshAt: OverridableSetting;
+export interface AddonSources {
   /**
-   * Terminal은 웹 터미널 허용 여부("true" 또는 "false")다.
+   * Sources는 이번 응답에 값을 보탠 provider 이름이다(우선순위 순서).
    */
-  terminal: OverridableSetting;
+  sources: string[];
   /**
-   * Runtime은 시작할 때 정해진 가동 설정 전체다(플래그 순서). 바꾸려면 /etc/default/maru를 고치고 다시 시작한다.
+   * FailedSources는 쓸 수 있었지만 이번에 실패한 provider 이름이다. 나머지 출처의 값은 그대로 담는다.
    */
-  runtime: RuntimeSetting[];
+  failedSources?: string[];
 }
-/**
- * OverridableSetting은 웹에서 덮어쓸 수 있는 가동 설정 하나다.
- */
-export interface OverridableSetting {
-  /**
-   * Value는 지금 쓰는 값이다.
-   */
-  value: string;
-  /**
-   * Base는 플래그·환경 변수(없으면 기본값)로 정한 값이다. 덮어쓰기를 지우면 이 값으로 돌아간다.
-   */
-  base: string;
-  /**
-   * Overridden은 웹에서 덮어썼는지다.
-   */
-  overridden: boolean;
-}
-/**
- * 가동 설정 값의 출처. RuntimeSetting.Source에 들어간다.
- */
-export const RuntimeSourceDefault = "default";
-/**
- * 가동 설정 값의 출처. RuntimeSetting.Source에 들어간다.
- */
-export const RuntimeSourceEnv = "env";
-/**
- * 가동 설정 값의 출처. RuntimeSetting.Source에 들어간다.
- */
-export const RuntimeSourceFlag = "flag";
-/**
- * RuntimeSourceSystemd는 systemd가 넘긴 값이다(StateDirectory=의 STATE_DIRECTORY).
- */
-export const RuntimeSourceSystemd = "systemd";
-/**
- * RuntimeSetting은 시작할 때 정해진 가동 설정 하나다.
- */
-export interface RuntimeSetting {
-  /**
-   * Flag는 명령줄 플래그 이름이다(listen, omv-url 등).
-   */
-  flag: string;
-  /**
-   * Env는 같은 값을 정하는 환경 변수 이름이다.
-   */
-  env: string;
-  value: string;
-  source: 'default' | 'env' | 'flag' | 'systemd';
-}
-/**
- * ProfileReadOnlySystem은 OMV 시스템 계정이다(OMV 기본 admin 계정 등). OMV 사용자 관리 목록에도 없다.
- */
-export const ProfileReadOnlySystem = "system";
-/**
- * ProfileReadOnlyLocked는 OMV에서 이 사용자의 계정 수정을 막았다는 뜻이다(disallowusermod).
- */
-export const ProfileReadOnlyLocked = "locked";
-/**
- * ProfileResponse는 GET /api/profile의 응답이며 로그인한 사용자 자신의 OMV 계정 정보다.
- * SSH 공개 키, uid, 홈 디렉터리 등은 넘기지 않는다.
- */
-export interface ProfileResponse {
-  username: string;
-  email?: string;
-  /**
-   * Tags는 계정 태그다. OMV 사용자 편집 화면의 "Tags"이며, 실제로는 Linux 계정의 설명 칸(GECOS)에
-   * 쉼표로 이어 저장된다. 백엔드가 나누고 잇는다.
-   */
-  tags?: string[];
-  /**
-   * Groups는 속한 그룹이다. OMV가 관리자에게만 알려 주므로 일반 사용자는 없다.
-   */
-  groups?: string[];
-  /**
-   * SystemAccount는 OMV 사용자 관리 목록에 없는 시스템 계정인지다. 관리자만 알 수 있다.
-   */
-  systemAccount?: boolean;
-  /**
-   * ReadOnlyReason이 있으면 전자 우편·태그를 바꿀 수 없다.
-   */
-  readOnlyReason?: 'system' | 'locked';
-}
-/**
- * ProfileRequest는 PUT /api/profile의 요청 본문이다. 사용자가 자기 계정에서 바꿀 수 있는 전자 우편과 태그를
- * 바꾼다(OMV UserMgmt.setUserByContext와 같은 범위). 없는 값은 그대로 둔다. 비밀번호·그룹 등은 OMV에서 바꾼다.
- */
-export interface ProfileRequest {
-  /**
-   * Email이 빈 문자열이면 전자 우편을 지운다.
-   */
-  email?: string;
-  tags?: string[];
-}
-/**
- * ProfileSaveResponse는 PUT /api/profile의 응답이다.
- */
-export interface ProfileSaveResponse {
-  /**
-   * Applied는 OMV 적용까지 끝났는지다. 일반 사용자는 적용 권한이 없어 false이며, OMV에 적용 대기가 남는다
-   * (관리자가 OMV 웹 UI에서 적용한다). 바꿀 것이 없었으면 true다.
-   */
-  applied: boolean;
-}
-/**
- * AboutResponse는 GET /api/about의 응답이다. 설정 앱의 정보 페이지가 보여 준다.
- */
-export interface AboutResponse {
-  /**
-   * Version은 마루 NAS 버전이다.
-   */
-  version: string;
-  /**
-   * Revision은 빌드한 git 커밋(전체 해시)이다. go run이나 저장소 밖 빌드에는 없다.
-   */
-  revision?: string;
-  /**
-   * RevisionTime은 그 커밋의 시각(RFC 3339)이다.
-   */
-  revisionTime?: string;
-  /**
-   * Modified는 커밋하지 않은 변경이 있는 작업 트리에서 빌드했는지다.
-   */
-  modified?: boolean;
-  /**
-   * GoVersion은 빌드한 Go 버전이다.
-   */
-  goVersion: string;
-  /**
-   * OMVVersion은 설치된 openmediavault 패키지 버전이다(예: 8.0.0-1). 관리자에게만 주며, 읽지 못하면 없다.
-   */
-  omvVersion?: string;
-  /**
-   * OMVVersionName은 OMV 릴리스 코드명이다(예: Synchrony). 관리자에게만 주며, 읽지 못하면 없다.
-   */
-  omvVersionName?: string;
-}
+
+//////////
+// source: auth.go
+
 /**
  * LoginRequest는 POST /api/login의 요청 본문이다.
  */
@@ -1667,6 +621,10 @@ export interface ChallengeInfo {
    */
   redirectUrl?: string;
 }
+
+//////////
+// source: errors.go
+
 /**
  * 오류 코드. ErrorResponse.Code에 들어간다.
  */
@@ -1913,624 +871,10 @@ export interface ErrorResponse {
    */
   required?: 'password' | 'twoFactor';
 }
-/**
- * HelperDisabled는 도우미를 설정하지 않았다는 뜻이다(-helper-socket이 비어 있음).
- */
-export const HelperDisabled = "disabled";
-/**
- * HelperUnavailable은 설정했지만 지금 도우미에 연결할 수 없다는 뜻이다.
- */
-export const HelperUnavailable = "unavailable";
-/**
- * HelperNone은 이 세션에 도우미 티켓이 없다는 뜻이다(로그인할 때 발급받지 못함, 시스템 계정 등).
- */
-export const HelperNone = "none";
-/**
- * HelperReauth는 티켓이 도우미에서 사라졌다는 뜻이다(도우미 재시작 등). 다시 로그인하면 된다.
- */
-export const HelperReauth = "reauth";
-/**
- * HelperActive는 이 세션이 도우미를 쓸 수 있다는 뜻이다.
- */
-export const HelperActive = "active";
-/**
- * HelperStatus는 GET /api/helper, POST·DELETE /api/helper/elevation의 응답이다.
- */
-export interface HelperStatus {
-  state: 'disabled' | 'unavailable' | 'none' | 'reauth' | 'active';
-  /**
-   * CanElevate는 이 사용자가 root 권한으로 상승할 수 있는지다(도우미가 그룹으로 판단).
-   */
-  canElevate: boolean;
-  /**
-   * ElevatedSeconds는 상승이 끝날 때까지 남은 초다. 상승하지 않았으면 0이다.
-   */
-  elevatedSeconds: number /* int */;
-}
-/**
- * HelperGroup은 그룹 하나다.
- */
-export interface HelperGroup {
-  id: number /* int */;
-  name: string;
-}
-/**
- * HelperIdentity는 도우미 worker가 실제로 가진 권한이다.
- */
-export interface HelperIdentity {
-  uid: number /* int */;
-  gid: number /* int */;
-  user: string;
-  groups: HelperGroup[];
-}
-/**
- * HelperIdentityResponse는 GET /api/helper/identity의 응답이다.
- */
-export interface HelperIdentityResponse {
-  /**
-   * User는 이 세션의 사용자 권한으로 실행한 worker의 권한이다.
-   */
-  user: HelperIdentity;
-  /**
-   * Root는 상승 중일 때 root 범위 worker의 권한이다.
-   */
-  root?: HelperIdentity;
-}
-/**
- * ElevationRequest는 POST /api/helper/elevation의 본문이다. 비밀번호는 도우미가 직접 확인한다.
- */
-export interface ElevationRequest {
-  password: string;
-}
-/**
- * TerminalClientMessage는 브라우저가 보내는 제어 메시지다.
- *   - resize: 창 크기(Cols, Rows)가 바뀌었다
- *   - answer: 마지막 prompt의 답(Answers, 질문 수와 같다)
- *   - cancel: 마지막 prompt를 취소한다(접속을 그만둔다)
- */
-export interface TerminalClientMessage {
-  type: 'resize' | 'answer' | 'cancel';
-  cols?: number /* int */;
-  rows?: number /* int */;
-  answers?: string[];
-}
-/**
- * TerminalServerMessage는 서버가 보내는 제어 메시지다.
- *   - status: 접속 상태(State). closed면 Reason과 ExitCode·힌트가 붙는다
- *   - prompt: sshd가 묻는 질문. 답은 answer로 보낸다
- */
-export interface TerminalServerMessage {
-  type: 'status' | 'prompt';
-  state?: 'connecting' | 'connected' | 'closed';
-  /**
-   * Reason은 닫힌 이유다. exit(셸이 끝남, ExitCode), 세션·설정 이유(session_ended, disabled,
-   * connection_lost, security_required), 접속 실패(ssh_unavailable, ssh_host_key, ssh_auth_failed, ssh_failed,
-   * canceled, too_many_windows, busy, rate_limited) 중 하나다.
-   */
-  reason?: 'exit' | 'session_ended' | 'disabled' | 'connection_lost' | 'security_required' | 'ssh_unavailable' | 'ssh_host_key' | 'ssh_auth_failed' | 'ssh_failed' | 'canceled' | 'too_many_windows' | 'busy' | 'rate_limited';
-  exitCode?: number /* int */;
-  /**
-   * KeyCode는 도우미 임시 키를 쓰지 못한 이유(도우미 오류 코드, 또는 sshd가 키를 받지 않았으면
-   * key_rejected)다. ssh_auth_failed의 힌트다.
-   */
-  keyCode?: string;
-  /**
-   * NotAllowedGroups는 사용자가 sshd의 AllowGroups 중 어느 그룹에도 없을 때 그 그룹 목록이다.
-   */
-  notAllowedGroups?: string[];
-  /**
-   * RetryAfterSeconds는 rate_limited일 때 다시 시도할 수 있을 때까지의 초다.
-   */
-  retryAfterSeconds?: number /* int */;
-  /**
-   * Required는 security_required일 때 거쳐야 하는 단계다. 정책이 바뀌어 열린 터미널이 닫혔을 때는 없다.
-   */
-  required?: 'password' | 'twoFactor';
-  /**
-   * Kind는 prompt의 종류다. password면 질문 문구를 프론트가 현지화하고, keyboard-interactive면
-   * sshd(PAM)가 준 Instruction과 Prompts의 문구를 그대로 보여 준다.
-   */
-  kind?: 'password' | 'keyboard-interactive';
-  instruction?: string;
-  prompts?: TerminalPrompt[];
-}
-/**
- * TerminalPrompt는 질문 하나다. Echo가 false면 입력을 화면에 보이지 않는다(비밀번호).
- */
-export interface TerminalPrompt {
-  text: string;
-  echo: boolean;
-}
-/**
- * 기능별 단계. SecurityPolicy의 값이다.
- */
-export const SecurityOff = "off";
-/**
- * 기능별 단계. SecurityPolicy의 값이다.
- */
-export const SecurityPassword = "password";
-/**
- * 기능별 단계. SecurityPolicy의 값이다.
- */
-export const SecurityTwoFactor = "twoFactor";
-/**
- * 파일 탐색기 정책의 적용 범위(SecurityPolicy.FilesScope)
- */
-export const FilesScopeAll = "all";
-/**
- * 기능별 단계. SecurityPolicy의 값이다.
- */
-export const FilesScopeWrites = "writes";
-/**
- * AssuranceLogin은 로그인만 한 세션이다. 로그인할 때 넣은 비밀번호는 재확인으로 치지 않는다.
- */
-export const AssuranceLogin = "login";
-/**
- * 세션의 보증 수준. SessionInfo.Assurance, SecurityStatus.Assurance에 들어간다.
- */
-export const AssurancePassword = "password";
-/**
- * 세션의 보증 수준. SessionInfo.Assurance, SecurityStatus.Assurance에 들어간다.
- */
-export const AssuranceTwoFactor = "twoFactor";
-/**
- * 확인 수단. SecurityVerifyRequest.Method, StepUpInfo.Methods에 들어간다.
- */
-export const FactorPassword = "password";
-/**
- * 확인 수단. SecurityVerifyRequest.Method, StepUpInfo.Methods에 들어간다.
- */
-export const FactorTOTP = "totp";
-/**
- * 확인 수단. SecurityVerifyRequest.Method, StepUpInfo.Methods에 들어간다.
- */
-export const FactorRecovery = "recovery";
-/**
- * 확인 수단. SecurityVerifyRequest.Method, StepUpInfo.Methods에 들어간다.
- */
-export const FactorPasskey = "passkey";
-/**
- * SecurityPolicy는 보안 강화 모드의 기능별 단계(Security*)다. 관리자 전역 설정(site.json)이며 빈 값은 off다.
- */
-export interface SecurityPolicy {
-  terminal?: 'off' | 'password' | 'twoFactor';
-  elevation?: 'off' | 'password' | 'twoFactor';
-  /**
-   * Files는 파일 탐색기다. 기본으로 목록·내려받기 같은 읽기까지 모두 막는다(빼앗은 세션이 내려받기만 해도 정보가 샌다).
-   */
-  files?: 'off' | 'password' | 'twoFactor';
-  /**
-   * FilesScope는 Files를 어디에 적용하는지다. writes면 쓰기·삭제(올리기, 폴더 만들기, 이름 바꾸기·옮기기, 삭제,
-   * 휴지통 연산)에만 적용하고 목록·내려받기는 연다. 없으면 all이다.
-   */
-  filesScope?: 'all' | 'writes';
-  /**
-   * PasskeyLoginDays는 패스키로 로그인 등록의 만료 기간(일)이다. 없으면 PasskeyLoginDaysDefault다. 바꾸려면
-   * 비밀번호를 다시 확인한 세션이어야 한다. 줄이면 기존 등록에도 바로 적용되고, 늘리면 새 등록부터 적용된다.
-   */
-  passkeyLoginDays?: 7 | 30 | 90 | 180 | 365;
-}
-/**
- * PasskeyLoginDaysDefault는 패스키로 로그인 등록의 기본 만료 기간(일)이다.
- */
-export const PasskeyLoginDaysDefault = 30;
-/**
- * SecurityPolicyRequest는 PUT /api/site/security의 본문이다. 정책 전체를 바꾼다. 바꾸는 기능마다 이전·새 단계 중
- * 높은 쪽을 이 세션이 거쳤어야 한다(아니면 403 security_required).
- */
-export interface SecurityPolicyRequest {
-  security?: SecurityPolicy;
-}
-/**
- * SecurityPolicyResponse는 GET /api/site/security의 응답이다(관리자).
- */
-export interface SecurityPolicyResponse {
-  /**
-   * Policy는 지금 정책이다. 모든 값이 채워져 있다.
-   */
-  policy: SecurityPolicy;
-  /**
-   * AutoLogoutMinutes는 OMV 자동 로그아웃 시간(분)이다. 0이면 꺼져 있어 강화 상태가 로그아웃할 때까지 남는다.
-   * 모르면 없다.
-   */
-  autoLogoutMinutes?: number /* int */;
-  /**
-   * PasskeyRPID는 패스키의 RP ID(공개 주소의 호스트 이름)다. 공개 주소를 설정하지 않아 패스키를 쓸 수 없으면 없다.
-   */
-  passkeyRpId?: string;
-}
-/**
- * PasskeyInfo는 등록한 패스키 하나다.
- */
-export interface PasskeyInfo {
-  id: string;
-  name: string;
-  /**
-   * Created, LastUsed는 RFC 3339 시각이다. 쓴 적이 없으면 LastUsed가 없다.
-   */
-  created: string;
-  lastUsed?: string;
-  /**
-   * BackupEligible은 동기화 저장소(iCloud 키체인, 비밀번호 관리자)의 패스키라는 뜻이다(등록할 때의 BE 플래그).
-   */
-  backupEligible?: boolean;
-}
-/**
- * PasskeyLoginInfo는 패스키로 로그인 등록 하나(브라우저 하나와 패스키 하나의 짝)다. 키 조각은 넣지 않는다.
- */
-export interface PasskeyLoginInfo {
-  id: string;
-  /**
-   * Passkey는 이 등록에 쓰는 패스키의 ID(PasskeyInfo.ID)다.
-   */
-  passkey: string;
-  /**
-   * Created, ExpiresAt, LastUsed는 RFC 3339 시각이다. ExpiresAt은 지금 만료 기간을 적용한 값이다. 쓴 적이 없으면
-   * LastUsed가 없다.
-   */
-  created: string;
-  expiresAt: string;
-  lastUsed?: string;
-}
-/**
- * TOTPInfo는 등록한 인증 앱(TOTP)이다.
- */
-export interface TOTPInfo {
-  created: string;
-}
-/**
- * SecurityStatus는 GET /api/security와 확인·관리 요청의 응답이며, 로그인한 사용자 자신의 보안 상태다.
- */
-export interface SecurityStatus {
-  assurance: 'login' | 'password' | 'twoFactor';
-  /**
-   * ManageSeconds는 인증 수단을 바꿀 수 있는 관리 창이 닫히기까지 남은 초다. 닫혀 있으면 0이다.
-   */
-  manageSeconds: number /* int */;
-  /**
-   * PasskeysAvailable은 이 서버에서 패스키를 쓸 수 있는지다(공개 주소 설정). 브라우저 지원은 프론트가 따로 본다.
-   */
-  passkeysAvailable: boolean;
-  passkeys: PasskeyInfo[];
-  totp?: TOTPInfo;
-  /**
-   * RecoveryCodes는 남은 복구 코드 수다.
-   */
-  recoveryCodes: number /* int */;
-  /**
-   * Methods는 지금 확인에 쓸 수 있는 2차 수단이다(Factor*, password 제외).
-   */
-  methods: Array<'passkey' | 'totp' | 'recovery'>;
-  policy: SecurityPolicy;
-  /**
-   * PasskeyLogins는 만료되지 않은 패스키로 로그인 등록이다.
-   */
-  passkeyLogins: PasskeyLoginInfo[];
-}
-/**
- * SecurityVerifyRequest는 POST /api/security/verify의 본문이다. 맞으면 이 세션의 보증 수준을 올린다
- * (password는 password, 나머지는 twoFactor).
- */
-export interface SecurityVerifyRequest {
-  method: 'password' | 'totp' | 'recovery' | 'passkey';
-  password?: string;
-  /**
-   * Code는 TOTP 코드 또는 복구 코드다.
-   */
-  code?: string;
-  passkey?: PasskeyAssertion;
-}
-/**
- * SecurityManageRequest는 POST /api/security/manage의 본문이다. 비밀번호와(등록한 수단이 있으면) 그 수단을 다시
- * 확인하면 이 세션에 관리 창이 잠깐 열린다. 세션을 빼앗은 쪽이 자기 수단을 등록하지 못하게 한다.
- */
-export interface SecurityManageRequest {
-  password: string;
-  /**
-   * Factor는 등록한 2차 수단의 확인이다. 수단이 없으면 비운다.
-   */
-  factor?: SecurityVerifyRequest;
-  /**
-   * DeviceCode는 등록한 수단 대신 받는 기기 추가 코드다(POST /api/security/device-code). Factor와 함께 보내지
-   * 않는다. 맞으면 관리 창을 열되 보증 수준은 password까지만 올린다.
-   */
-  deviceCode?: string;
-}
-/**
- * DeviceCodeResponse는 POST /api/security/device-code의 응답이다. 수단이 있는 기기가 만들어, 그 패스키가 없는
- * 새 기기의 관리 확인(SecurityManageRequest.DeviceCode)에 입력하게 한다. 사용자마다 하나이고 다시 만들면 이전
- * 코드는 쓸 수 없다.
- */
-export interface DeviceCodeResponse {
-  /**
-   * Code는 한 번만 쓸 수 있는 코드(XXXX-XXXX)다. 이 응답에만 담긴다.
-   */
-  code: string;
-  /**
-   * ExpiresInSeconds는 코드를 쓸 수 있는 남은 초다.
-   */
-  expiresInSeconds: number /* int */;
-}
-/**
- * PasskeyAssert는 확인(로그인 단계, 세션 중 확인, 관리 확인)이다.
- */
-export const PasskeyAssert = "assert";
-/**
- * PasskeyRegister는 새 패스키 등록이다(관리 창 필요).
- */
-export const PasskeyRegister = "register";
-/**
- * PasskeyChallengeRequest는 POST /api/security/passkeys/challenge의 본문이다.
- */
-export interface PasskeyChallengeRequest {
-  purpose: 'assert' | 'register';
-}
-/**
- * PasskeyOptions는 navigator.credentials.get()·create()에 넘길 값이다. 이진 값은 base64url(패딩 없음)이다.
- */
-export interface PasskeyOptions {
-  challenge: string;
-  rpId: string;
-  /**
-   * TimeoutMs는 브라우저에 주는 제한 시간이다.
-   */
-  timeoutMs: number /* int */;
-  /**
-   * Credentials는 확인에서는 쓸 수 있는 자격 증명(allowCredentials), 등록에서는 이미 등록한 자격 증명
-   * (excludeCredentials)이다.
-   */
-  credentials: PasskeyDescriptor[];
-  /**
-   * 아래는 등록에만 있다.
-   */
-  rpName?: string;
-  user?: PasskeyUser;
-  algorithms?: number /* int */[];
-}
-/**
- * PasskeyDescriptor는 자격 증명 하나를 가리킨다.
- */
-export interface PasskeyDescriptor {
-  id: string;
-  transports?: string[];
-}
-/**
- * PasskeyUser는 등록할 때 인증기에 넣는 사용자 정보다. ID는 무작위 핸들이다(사용자 이름을 넣지 않는다).
- */
-export interface PasskeyUser {
-  id: string;
-  name: string;
-  displayName: string;
-}
-/**
- * PasskeyAssertion은 navigator.credentials.get()의 결과다. 이진 값은 base64url이다.
- */
-export interface PasskeyAssertion {
-  id: string;
-  clientDataJSON: string;
-  authenticatorData: string;
-  signature: string;
-  userHandle?: string;
-}
-/**
- * PasskeyRegistration은 navigator.credentials.create()의 결과다. PublicKey는 getPublicKey()의 SPKI DER이며,
- * 브라우저가 알고리즘을 모르면 비어 있다(등록하지 않는다).
- */
-export interface PasskeyRegistration {
-  id: string;
-  clientDataJSON: string;
-  authenticatorData: string;
-  publicKey: string;
-  publicKeyAlgorithm: number /* int */;
-  transports?: string[];
-}
-/**
- * PasskeyRegisterRequest는 POST /api/security/passkeys의 본문이다(관리 창 필요). 등록 값이 맞으면 바로 저장하지
- * 않고, 응답(PasskeyOptions)으로 그 패스키 하나만 허용하는 확인 challenge를 준다. 그 확인을
- * POST /api/security/passkeys/confirm으로 보내 통과해야 저장한다.
- */
-export interface PasskeyRegisterRequest {
-  name: string;
-  credential?: PasskeyRegistration;
-}
-/**
- * PasskeyConfirmRequest는 POST /api/security/passkeys/confirm의 본문이다(관리 창 필요). 등록 직후 새 패스키로 한
- * 확인이며, 통과하면 패스키를 저장하고 SecurityChangeResponse를 준다.
- */
-export interface PasskeyConfirmRequest {
-  passkey?: PasskeyAssertion;
-}
-/**
- * PasskeyLoginEnrollRequest는 POST /api/security/passkey-logins의 본문이다. 비밀번호와 그 패스키(PRF를 함께 요청한
- * 확인)를 확인하면 이 브라우저의 패스키로 로그인을 켠다. 암호문은 브라우저에만 두므로 보내지 않는다.
- */
-export interface PasskeyLoginEnrollRequest {
-  password: string;
-  passkey?: PasskeyAssertion;
-  /**
-   * Replace는 이 브라우저가 전에 쓰던 등록 ID다. 있으면 함께 지운다(다시 켤 때).
-   */
-  replace?: string;
-}
-/**
- * PasskeyLoginEnrollResponse는 POST /api/security/passkey-logins의 응답이다. Share는 서버 쪽 키 조각(base64url)이며
- * 브라우저가 PRF 결과와 함께 키를 만드는 데만 쓴다(저장하지 않는다).
- */
-export interface PasskeyLoginEnrollResponse {
-  id: string;
-  share: string;
-  /**
-   * ExpiresAt은 RFC 3339 만료 시각이다.
-   */
-  expiresAt: string;
-  status: SecurityStatus;
-}
-/**
- * PasskeyLoginOptionsRequest는 POST /api/login/passkey/options의 본문이다(인증 없음). 브라우저 항목의 사용자 이름과
- * 등록 ID를 보내면 그 패스키 하나만 허용하는 확인 옵션(PasskeyOptions)을 준다.
- */
-export interface PasskeyLoginOptionsRequest {
-  username: string;
-  enrollment: string;
-}
-/**
- * PasskeyLoginRequest는 POST /api/login/passkey의 본문이다(인증 없음). 확인이 맞으면 PasskeyLoginUnlockResponse를 준다.
- */
-export interface PasskeyLoginRequest {
-  passkey?: PasskeyAssertion;
-}
-/**
- * PasskeyLoginUnlockResponse는 POST /api/login/passkey의 응답이다. Share로 키를 만들어 비밀번호를 풀고(안 되면
- * NextShare로 푼다) POST /api/login/passkey/finish로 보낸다. 둘 다 base64url 키 조각이다.
- */
-export interface PasskeyLoginUnlockResponse {
-  share: string;
-  /**
-   * NextShare는 회전을 기다리는 다음 키 조각이다. 브라우저는 풀어 낸 비밀번호를 이것으로 다시 암호화해 항목을 바꾼다.
-   * 확정(finish의 Rotated)할 때까지 같은 값을 준다.
-   */
-  nextShare: string;
-}
-/**
- * PasskeyLoginFinishRequest는 POST /api/login/passkey/finish의 본문이다. 풀어 낸 비밀번호로 로그인하며 응답은
- * LoginResponse다. 풀지 못했으면 Discard로 그 등록을 지운다(204).
- */
-export interface PasskeyLoginFinishRequest {
-  password?: string;
-  /**
-   * Rotated는 브라우저가 항목을 NextShare용으로 바꿔 저장했다는 뜻이다. OMV가 비밀번호를 받으면 NextShare를 Share로
-   * 확정한다.
-   */
-  rotated?: boolean;
-  discard?: boolean;
-}
-/**
- * TOTPSetupResponse는 POST /api/security/totp/setup의 응답이다. 비밀 키는 확인(POST /api/security/totp)할 때까지
- * 이 세션의 메모리에만 있다.
- */
-export interface TOTPSetupResponse {
-  secret: string;
-  /**
-   * URI는 인증 앱에 넣는 otpauth:// 주소다(QR 코드의 내용).
-   */
-  uri: string;
-}
-/**
- * TOTPConfirmRequest는 POST /api/security/totp의 본문이다. 인증 앱이 보여 주는 코드로 설정을 마친다.
- */
-export interface TOTPConfirmRequest {
-  code: string;
-}
-/**
- * SecurityChangeResponse는 수단을 등록·삭제하거나 복구 코드를 다시 만든 뒤의 응답이다.
- */
-export interface SecurityChangeResponse {
-  status: SecurityStatus;
-  /**
-   * RecoveryCodes는 새로 만든 복구 코드다. 첫 수단을 등록했거나 다시 만들었을 때만 있고, 다시 볼 수 없다.
-   */
-  recoveryCodes?: string[];
-}
-/**
- * SecurityUserInfo는 GET /api/security/users(관리자)의 한 줄이며, 인증 수단 기록이 있는 사용자다.
- */
-export interface SecurityUserInfo {
-  username: string;
-  passkeys: number /* int */;
-  totp: boolean;
-  recoveryCodes: number /* int */;
-  /**
-   * Unreadable은 기록을 읽을 수 없다는 뜻이다(손상된 파일). 초기화하면 지운다.
-   */
-  unreadable?: boolean;
-}
-/**
- * UpgradeNotEnabled: 설치기가 대시보드에서 업그레이드를 켜지 않았다(/etc/default/maru-upgrade가 없다).
- */
-export const UpgradeNotEnabled = "not-enabled";
-/**
- * UpgradeNoHelper: 권한 도우미를 설정하지 않았다(-helper-socket). 업그레이드는 도우미의 root 연산으로 요청한다.
- */
-export const UpgradeNoHelper = "no-helper";
-/**
- * UpgradeStateDir: 상태 디렉터리가 없거나 설치한 위치(/var/lib/maru)가 아니다. 업그레이드 서비스의 경로 유닛은
- * 그 안의 확인 요청만 지켜본다.
- */
-export const UpgradeStateDir = "state-dir";
-/**
- * UpgradeInfo는 GET /api/upgrade(관리자)의 응답이다. 설정 앱의 업데이트 페이지가 보여 준다.
- * Status는 업그레이드 서비스가 쓴 상태 파일 그대로이고 형식은 backend/config(upgrade_request.go)에 있다.
- */
-export interface UpgradeInfo {
-  /**
-   * Enabled는 대시보드에서 업그레이드를 쓸 수 있다는 뜻이다. 아니면 DisabledReason에 이유가 있다.
-   */
-  enabled: boolean;
-  disabledReason?: 'not-enabled' | 'no-helper' | 'state-dir';
-  /**
-   * Repo, User는 업그레이드할 저장소와 저장소 소유자(빌드 계정)다. 수동 재설치 안내에 쓴다. 모르면 없다.
-   */
-  repo?: string;
-  user?: string;
-  /**
-   * Pending은 확인 요청을 업그레이드 서비스가 아직 가져가지 않았다는 뜻이다. PendingStalled는 1분 넘게 남아 있다는
-   * 뜻이다(경로 유닛 maru-upgrade.path가 돌지 않는다).
-   */
-  pending: boolean;
-  pendingStalled: boolean;
-  /**
-   * Interrupted는 상태 파일이 확인·업그레이드 중인 채로 업그레이드 서비스의 시간 상한(2시간)보다 오래 바뀌지 않았다는
-   * 뜻이다. 서비스가 중단됐으므로 다시 확인할 수 있다.
-   */
-  interrupted: boolean;
-  /**
-   * Version, Revision은 지금 실행 중인 maru의 버전과 커밋이다(Revision은 모르면 없다).
-   */
-  version: string;
-  revision?: string;
-  /**
-   * Installed는 설치기가 남긴 설치 기록이다(/var/lib/maru-upgrade/installed.json). 없거나 읽을 수 없으면 null이다.
-   * 실행 파일에 커밋이 없을 때(go run) 화면이 이 기록의 커밋을 보인다.
-   */
-  installed?: config.InstallRecord;
-  /**
-   * Status는 업그레이드 서비스의 상태 파일이다. 없거나 읽을 수 없으면 null이다.
-   */
-  status?: config.UpgradeStatus;
-  /**
-   * Channel은 관리자가 고른 업데이트 채널이다(site.json). 빈 값이면 지금 브랜치의 추적 브랜치를 따른다.
-   */
-  channel: '' | 'stable' | 'main';
-}
-/**
- * StartUpgradeCheckRequest는 POST /api/upgrade/check의 본문이다.
- */
-export interface StartUpgradeCheckRequest {
-  /**
-   * Mode는 확인 방식이다. remote는 git fetch 뒤 업데이트 채널(고르지 않았으면 추적 브랜치), local은 지금
-   * 체크아웃(HEAD)을 대상으로 삼는다. 채널은 site.json의 값을 쓴다.
-   */
-  mode: 'remote' | 'local';
-}
-/**
- * SetUpgradeChannelRequest는 PUT /api/upgrade/channel의 본문이다. 원격 확인이 따라갈 업데이트 채널을 site.json에 둔다.
- */
-export interface SetUpgradeChannelRequest {
-  channel: '' | 'stable' | 'main';
-}
-/**
- * StartUpgradeRequest는 POST /api/upgrade/apply의 본문이다. root 권한 상승이 필요하다.
- */
-export interface StartUpgradeRequest {
-  /**
-   * Target은 확인이 정한 대상 커밋(40자리 16진수)이다.
-   */
-  target: string;
-  /**
-   * Settings는 업그레이드 계획이 물은 설정의 이름과 값이다(confirm은 yes/no).
-   */
-  settings: { [key: string]: string};
-}
+
+//////////
+// source: files.go
+
 /**
  * SiteFiles는 파일 탐색기의 전역 설정이다(site.json).
  */
@@ -3026,4 +1370,1712 @@ export interface FilesSettings {
 export interface FilesSettingsRequest {
   showDisks?: boolean;
   followPrivileges?: boolean;
+}
+
+//////////
+// source: helper.go
+
+/**
+ * HelperDisabled는 도우미를 설정하지 않았다는 뜻이다(-helper-socket이 비어 있음).
+ */
+export const HelperDisabled = "disabled";
+/**
+ * HelperUnavailable은 설정했지만 지금 도우미에 연결할 수 없다는 뜻이다.
+ */
+export const HelperUnavailable = "unavailable";
+/**
+ * HelperNone은 이 세션에 도우미 티켓이 없다는 뜻이다(로그인할 때 발급받지 못함, 시스템 계정 등).
+ */
+export const HelperNone = "none";
+/**
+ * HelperReauth는 티켓이 도우미에서 사라졌다는 뜻이다(도우미 재시작 등). 다시 로그인하면 된다.
+ */
+export const HelperReauth = "reauth";
+/**
+ * HelperActive는 이 세션이 도우미를 쓸 수 있다는 뜻이다.
+ */
+export const HelperActive = "active";
+/**
+ * HelperStatus는 GET /api/helper, POST·DELETE /api/helper/elevation의 응답이다.
+ */
+export interface HelperStatus {
+  state: 'disabled' | 'unavailable' | 'none' | 'reauth' | 'active';
+  /**
+   * CanElevate는 이 사용자가 root 권한으로 상승할 수 있는지다(도우미가 그룹으로 판단).
+   */
+  canElevate: boolean;
+  /**
+   * ElevatedSeconds는 상승이 끝날 때까지 남은 초다. 상승하지 않았으면 0이다.
+   */
+  elevatedSeconds: number /* int */;
+}
+/**
+ * HelperGroup은 그룹 하나다.
+ */
+export interface HelperGroup {
+  id: number /* int */;
+  name: string;
+}
+/**
+ * HelperIdentity는 도우미 worker가 실제로 가진 권한이다.
+ */
+export interface HelperIdentity {
+  uid: number /* int */;
+  gid: number /* int */;
+  user: string;
+  groups: HelperGroup[];
+}
+/**
+ * HelperIdentityResponse는 GET /api/helper/identity의 응답이다.
+ */
+export interface HelperIdentityResponse {
+  /**
+   * User는 이 세션의 사용자 권한으로 실행한 worker의 권한이다.
+   */
+  user: HelperIdentity;
+  /**
+   * Root는 상승 중일 때 root 범위 worker의 권한이다.
+   */
+  root?: HelperIdentity;
+}
+/**
+ * ElevationRequest는 POST /api/helper/elevation의 본문이다. 비밀번호는 도우미가 직접 확인한다.
+ */
+export interface ElevationRequest {
+  password: string;
+}
+
+//////////
+// source: jobs.go
+
+/**
+ * JobAptUpdate는 패키지 목록을 다시 받는 작업이다(OMV Apt.update, apt-get update).
+ */
+export const JobAptUpdate = "apt-update";
+/**
+ * JobAptUpgrade는 모든 업데이트를 설치하는 작업이다(OMV Apt.upgrade, apt-get dist-upgrade).
+ */
+export const JobAptUpgrade = "apt-upgrade";
+/**
+ * 작업 상태. Job.State에 들어간다.
+ */
+export const JobRunning = "running";
+/**
+ * 작업 상태. Job.State에 들어간다.
+ */
+export const JobSucceeded = "succeeded";
+/**
+ * 작업 상태. Job.State에 들어간다.
+ */
+export const JobFailed = "failed";
+/**
+ * JobUnknown은 작업이 어떻게 끝났는지 알 수 없다는 뜻이다(Code에 이유).
+ */
+export const JobUnknown = "unknown";
+/**
+ * JobCodeAptFailed는 apt가 오류로 끝났다는 뜻이다(출력에 이유가 있다).
+ */
+export const JobCodeAptFailed = "apt_failed";
+/**
+ * JobCodeAptCoreRemoval은 openmediavault 패키지를 지우게 되어 OMV가 설치를 멈췄다는 뜻이다(OMV 8.5.10부터).
+ */
+export const JobCodeAptCoreRemoval = "apt_core_removal";
+/**
+ * JobCodeFailed는 그 밖의 이유로 작업이 실패했다는 뜻이다.
+ */
+export const JobCodeFailed = "job_failed";
+/**
+ * JobCodeLost는 결과를 읽지 못했다는 뜻이다(다른 곳에서 먼저 읽음, 상태 파일이 사라짐).
+ */
+export const JobCodeLost = "job_lost";
+/**
+ * JobCodeReboot는 작업 중에 시스템이 다시 시작되었다는 뜻이다.
+ */
+export const JobCodeReboot = "job_reboot";
+/**
+ * JobCodeTimeout은 작업이 시간 상한을 넘었다는 뜻이다.
+ */
+export const JobCodeTimeout = "job_timeout";
+/**
+ * Job은 서버 백그라운드 작업 하나다(진행 중이거나 끝난 결과).
+ */
+export interface Job {
+  id: string;
+  kind: 'apt-update' | 'apt-upgrade';
+  state: 'running' | 'succeeded' | 'failed' | 'unknown';
+  code?: 'apt_failed' | 'apt_core_removal' | 'job_failed' | 'job_lost' | 'job_reboot' | 'job_timeout';
+  /**
+   * Owner는 작업을 시작한 사용자다. Mine은 그 사용자가 이 세션의 사용자인지다.
+   */
+  owner: string;
+  mine: boolean;
+  /**
+   * StartedAt·EndedAt은 RFC 3339다. 진행 중이면 EndedAt이 없다.
+   */
+  startedAt: string;
+  endedAt?: string;
+  /**
+   * Waiting이면 OMV에서는 작업이 계속 돌지만 대시보드가 출력을 읽을 관리자 세션이 없어 기다리는 중이다.
+   */
+  waiting?: boolean;
+  /**
+   * LastLine은 진행 중 작업의 마지막 출력 한 줄이다(알림 센터의 백그라운드 작업). 끝난 작업은 없다.
+   */
+  lastLine?: string;
+  /**
+   * OutputEnd는 지금까지 받은 출력의 끝 위치다(JobOutput.Next와 같은 단위).
+   */
+  outputEnd: number /* int64 */;
+  /**
+   * OutputIncomplete면 출력 일부가 없다(앞부분을 상한 때문에 버렸거나 끝부분을 읽지 못했다).
+   */
+  outputIncomplete?: boolean;
+  /**
+   * Count·Items는 끝난 작업의 요약이다(확인: 찾은 업데이트, 설치: 업데이트한 패키지).
+   */
+  count?: number /* int */;
+  items?: string[];
+  /**
+   * Dismissed면 사용자가 결과 알림을 지웠다.
+   */
+  dismissed?: boolean;
+}
+/**
+ * JobsResponse는 GET /api/jobs의 응답이다.
+ */
+export interface JobsResponse {
+  /**
+   * Current는 진행 중인 작업이다(누가 시작했든). 없으면 빠진다.
+   */
+  current?: Job;
+  /**
+   * Recent는 이 사용자가 시작한 작업의 결과다(최신 순).
+   */
+  recent: Job[];
+  /**
+   * Last는 마지막으로 끝난 작업이다(누가 시작했든, 서버 메모리에만). 다른 관리자가 시작한 작업이 끝난 뒤에도
+   * 그 결과를 보이는 데 쓴다. 다시 시작하면 없다.
+   */
+  last?: Job;
+}
+/**
+ * JobOutput은 GET /api/jobs/{id}/output?from=N의 응답이다.
+ */
+export interface JobOutput {
+  /**
+   * From은 Text가 시작하는 위치다. 요청한 위치보다 크면 그 사이는 상한 때문에 버린 출력이다.
+   */
+  from: number /* int64 */;
+  /**
+   * Next는 다음 요청의 from이다.
+   */
+  next: number /* int64 */;
+  text: string;
+  /**
+   * More면 이미 받은 출력이 더 있다(바로 다시 요청한다).
+   */
+  more: boolean;
+  state: 'running' | 'succeeded' | 'failed' | 'unknown';
+  waiting?: boolean;
+}
+
+//////////
+// source: notifications.go
+
+/**
+ * 알림 수준. Notice.Level에 들어간다.
+ */
+export const NoticeInfo = "info";
+/**
+ * 알림 수준. Notice.Level에 들어간다.
+ */
+export const NoticeSuccess = "success";
+/**
+ * 알림 수준. Notice.Level에 들어간다.
+ */
+export const NoticeWarning = "warning";
+/**
+ * 알림 수준. Notice.Level에 들어간다.
+ */
+export const NoticeError = "error";
+/**
+ * NoticeSample은 개발 서버의 가짜 알림(MARU_DEV_NOTICES)과 테스트에만 쓰는 코드다. 운영 알림 출처는 쓰지 않는다.
+ */
+export const NoticeSample = "sample";
+/**
+ * NoticeAptUpdates는 설치할 수 있는 APT 업데이트가 있다는 알림이다(Count: 패키지 수, Items: 패키지 이름).
+ */
+export const NoticeAptUpdates = "aptUpdates";
+/**
+ * NoticeRebootRequired는 업데이트를 마치려면 다시 시작해야 한다는 알림이다(Items: 요청한 패키지 이름).
+ */
+export const NoticeRebootRequired = "rebootRequired";
+/**
+ * NoticeJobSucceeded·Failed·Unknown은 서버 백그라운드 작업의 결과다(Job에 작업, 지울 수 있음). 시작한 사용자에게만 보인다.
+ */
+export const NoticeJobSucceeded = "jobSucceeded";
+/**
+ * 서버 알림 코드. Notice.Code에 들어가며 프론트가 코드로 문구를 고른다.
+ */
+export const NoticeJobFailed = "jobFailed";
+/**
+ * 서버 알림 코드. Notice.Code에 들어가며 프론트가 코드로 문구를 고른다.
+ */
+export const NoticeJobUnknown = "jobUnknown";
+/**
+ * NoticeActionApp은 대시보드 앱을 연다. 앱이 설정이면 Page의 페이지로 연다.
+ */
+export const NoticeActionApp = "app";
+/**
+ * NoticeActionWorkbench는 OMV 워크벤치의 Route 화면을 워크벤치 탭으로 연다.
+ */
+export const NoticeActionWorkbench = "workbench";
+/**
+ * NoticeActionPower는 전원 대화상자를 연다.
+ */
+export const NoticeActionPower = "power";
+/**
+ * NoticeAction은 알림을 눌렀을 때 할 일이다.
+ */
+export interface NoticeAction {
+  kind: 'app' | 'workbench' | 'power';
+  /**
+   * App은 Kind가 app일 때 프론트 앱 id다. 프론트가 모르는 id면 동작을 보이지 않는다.
+   */
+  app?: string;
+  /**
+   * Page는 App이 설정일 때 열 페이지 id다.
+   */
+  page?: string;
+  /**
+   * Route는 Kind가 workbench일 때 OMV 워크벤치 라우트다(앞 슬래시 없이, 예: system/updatemgmt/updates).
+   */
+  route?: string;
+}
+/**
+ * Notice는 서버가 알리는 상태 하나다(업데이트가 있음 등). 조건이 풀리면 목록에서 빠지며 사용자가 지울 수 없다.
+ * 예외로 작업 결과 알림(Dismissible)은 사용자가 지운다. 문구는 보내지 않고 Code와 값(Count, Items)만 보낸다.
+ */
+export interface Notice {
+  /**
+   * ID는 알림의 고정 이름이다. 읽음 상태(NotificationPrefs.Seen)의 키다.
+   */
+  id: string;
+  code: 'sample' | 'aptUpdates' | 'rebootRequired' | 'jobSucceeded' | 'jobFailed' | 'jobUnknown';
+  /**
+   * Level은 Notice* 수준 중 하나다.
+   */
+  level: 'info' | 'success' | 'warning' | 'error';
+  /**
+   * Revision은 내용이 바뀔 때만 달라지는 값이다(내용 해시). 바뀌면 다시 읽지 않은 알림이 된다.
+   */
+  revision: string;
+  /**
+   * Since는 조건이 생긴 시각(RFC 3339)이다. 출처가 모르면 없다.
+   */
+  since?: string;
+  /**
+   * Count는 개수(업데이트할 패키지 수 등)다. 문구의 복수형에 쓴다.
+   */
+  count?: number /* int */;
+  /**
+   * Items는 이름 목록(패키지 이름 등)이다. 앞쪽 일부만 담는다.
+   */
+  items?: string[];
+  action?: NoticeAction;
+  /**
+   * Dismissible이면 사용자가 지울 수 있다(DELETE /api/notifications/{id}). 작업 결과 알림만 그렇다.
+   */
+  dismissible?: boolean;
+  /**
+   * Job은 작업 결과 알림의 작업이다. 프론트가 그 작업의 출력을 연다.
+   */
+  job?: NoticeJob;
+}
+/**
+ * NoticeJob은 작업 결과 알림이 가리키는 작업이다.
+ */
+export interface NoticeJob {
+  id: string;
+  kind: 'apt-update' | 'apt-upgrade';
+  state: 'running' | 'succeeded' | 'failed' | 'unknown';
+  code?: 'apt_failed' | 'apt_core_removal' | 'job_failed' | 'job_lost' | 'job_reboot' | 'job_timeout';
+}
+/**
+ * NotificationsResponse는 GET /api/notifications의 응답이다.
+ */
+export interface NotificationsResponse {
+  /**
+   * Notices는 이 사용자가 볼 수 있는 서버 알림이다(관리자 전용 알림은 관리자에게만).
+   */
+  notices: Notice[];
+  /**
+   * Seen은 이 사용자가 읽은 알림의 id → Revision이다. 지금 Notices에 있는 id만 담는다.
+   */
+  seen: { [key: string]: string};
+  /**
+   * Tasks는 진행 중인 서버 백그라운드 작업이다(관리자에게만, 아니면 빈 목록).
+   */
+  tasks: Job[];
+}
+/**
+ * NotificationPrefs는 사용자의 알림 읽음 상태다.
+ */
+export interface NotificationPrefs {
+  /**
+   * Seen은 읽은 서버 알림의 id → 읽을 때의 Revision이다. 프론트는 지금 목록에 있는 id만 보낸다.
+   */
+  seen: { [key: string]: string};
+}
+/**
+ * NotificationPrefsRequest는 PUT /api/preferences/notifications의 요청 본문이다.
+ */
+export interface NotificationPrefsRequest {
+  notifications?: NotificationPrefs;
+}
+
+//////////
+// source: preferences.go
+
+/**
+ * Preferences는 GET /api/preferences의 응답이며 로그인한 사용자의 대시보드 설정이다.
+ * 백엔드 상태 디렉터리에 사용자별로 저장되어 로그아웃해도 남는다.
+ */
+export interface Preferences {
+  /**
+   * Widgets는 바탕화면 위젯 배치다. 한 번도 저장하지 않았으면 없다(프론트가 기본 배치를 쓴다).
+   */
+  widgets?: WidgetPlacement[];
+  /**
+   * Shortcuts는 바탕화면 바로가기 목록이며 순서대로 놓인다. 한 번도 저장하지 않았으면 없고
+   * (프론트가 기본 목록을 쓴다), 모두 지웠으면 빈 목록이다.
+   */
+  shortcuts?: Shortcut[];
+  /**
+   * Drawer는 "모든 앱" 화면 설정이다. 한 번도 저장하지 않았으면 없다(프론트가 기본값을 쓴다).
+   */
+  drawer?: DrawerPrefs;
+  /**
+   * SystemInfo는 시스템 정보 창의 보기 설정이다. 한 번도 저장하지 않았으면 없다(프론트가 기본값을 쓴다).
+   */
+  systemInfo?: SystemInfoPrefs;
+  /**
+   * Files는 파일 탐색기의 보기 설정이다. 한 번도 저장하지 않았으면 없다(프론트가 기본값을 쓴다).
+   */
+  files?: FilesPrefs;
+  /**
+   * Appearance는 화면 설정(테마, 바탕화면 등)이다. 없거나 비어 있는 값은 관리자가 정한 기본 화면을 따른다.
+   */
+  appearance?: AppearancePrefs;
+  /**
+   * Notifications는 알림 읽음 상태다. 한 번도 저장하지 않았으면 없다.
+   */
+  notifications?: NotificationPrefs;
+  /**
+   * WallpaperImage는 이 사용자가 올린 바탕화면 이미지의 정보다. 올리지 않았으면 없다.
+   * 설정 파일에 저장하지 않고 응답할 때 이미지 저장소에서 붙인다.
+   */
+  wallpaperImage?: ImageInfo;
+  /**
+   * AvatarImage는 이 사용자의 프로필 사진 정보다. 없으면 기본 아바타를 그린다. WallpaperImage처럼 응답할 때만 붙인다.
+   */
+  avatarImage?: ImageInfo;
+}
+/**
+ * ThemeAuto는 브라우저(OS)의 밝은·어두운 모드 설정을 따른다.
+ */
+export const ThemeAuto = "auto";
+/**
+ * 테마. AppearancePrefs.Theme, SiteDefaults.Theme에 들어간다.
+ */
+export const ThemeLight = "light";
+/**
+ * 테마. AppearancePrefs.Theme, SiteDefaults.Theme에 들어간다.
+ */
+export const ThemeDark = "dark";
+/**
+ * TaskbarAlignCenter는 "모든 앱" 버튼과 창 버튼을 작업표시줄 가운데에 둔다(Windows 11처럼).
+ */
+export const TaskbarAlignCenter = "center";
+/**
+ * TaskbarAlignLeft는 "모든 앱" 버튼과 창 버튼을 작업표시줄 왼쪽 끝부터 둔다.
+ */
+export const TaskbarAlignLeft = "left";
+/**
+ * WallpaperPreset은 프론트에 들어 있는 배경(그라데이션·단색)이다.
+ */
+export const WallpaperPreset = "preset";
+/**
+ * WallpaperImage는 올린 이미지다. 어느 이미지인지는 배경을 쓰는 자리가 정한다
+ * (사용자 바탕화면, 로그인 배경, 기본 바탕화면).
+ */
+export const WallpaperImage = "image";
+/**
+ * Wallpaper는 바탕화면·로그인 화면 배경 하나다. 다른 출처(파일 탐색기에서 고른 파일 등)는 Kind를 더해 담는다.
+ */
+export interface Wallpaper {
+  kind: 'preset' | 'image';
+  /**
+   * Preset은 Kind가 preset일 때 프론트 프리셋 id다. 백엔드는 형식만 검사하고, 모르는 id는 프론트가 기본 배경으로 그린다.
+   */
+  preset?: string;
+}
+/**
+ * AppearancePrefs는 사용자 화면 설정이다. 설정 전체를 한 번에 바꾼다. 비어 있는 값은 관리자가 정한 기본 화면
+ * (SiteDefaults)을, 그것도 없으면 대시보드 기본값을 따른다.
+ */
+export interface AppearancePrefs {
+  /**
+   * Theme은 Theme* 중 하나다. 비어 있으면 기본 화면을 따른다.
+   */
+  theme?: 'auto' | 'light' | 'dark';
+  /**
+   * Wallpaper는 바탕화면이다. 없으면 기본 화면을 따른다. image는 이 사용자가 올린 이미지다.
+   */
+  wallpaper?: Wallpaper;
+  /**
+   * Animations는 창·메뉴 애니메이션을 켤지다. 없으면 켠다.
+   */
+  animations?: boolean;
+  /**
+   * TaskbarAlign은 TaskbarAlign* 중 하나다. 비어 있으면 가운데다(관리자 기본값은 없다).
+   */
+  taskbarAlign?: 'center' | 'left';
+  /**
+   * WidgetsLocked는 바탕화면 위젯을 옮기거나 크기를 바꾸거나 메뉴로 추가·제거하지 못하게 할지다.
+   * 눌러서 창을 여는 것은 막지 않는다. 프론트만 지키는 편의 설정이라 위젯 배치 저장은 막지 않는다.
+   * 관리자 기본값은 없다.
+   */
+  widgetsLocked?: boolean;
+}
+/**
+ * ImageInfo는 저장된 배경 이미지의 정보다.
+ */
+export interface ImageInfo {
+  /**
+   * Rev는 이미지가 바뀔 때마다 달라지는 값이다. 이미지 주소에 붙여(?v=) 브라우저가 이전 이미지를 쓰지 않게 한다.
+   */
+  rev: string;
+}
+/**
+ * AppearanceRequest는 PUT /api/preferences/appearance의 요청 본문이다. 화면 설정 전체를 바꾼다.
+ */
+export interface AppearanceRequest {
+  appearance?: AppearancePrefs;
+}
+/**
+ * DrawerSortRecommended는 대시보드가 정한 순서다(비슷한 기능의 앱끼리 모인다).
+ */
+export const DrawerSortRecommended = "recommended";
+/**
+ * DrawerSortName은 화면 언어의 이름순이다.
+ */
+export const DrawerSortName = "name";
+/**
+ * DrawerPrefs는 "모든 앱" 화면 설정이다. 설정 전체를 한 번에 바꾼다.
+ */
+export interface DrawerPrefs {
+  /**
+   * Sort는 앱 정렬 방식이다(DrawerSort*). 프론트는 모르는 값이면 추천순을 쓴다.
+   */
+  sort: string;
+}
+/**
+ * DrawerRequest는 PUT /api/preferences/drawer의 요청 본문이다.
+ */
+export interface DrawerRequest {
+  drawer?: DrawerPrefs;
+}
+/**
+ * CPUScaleMachine은 전체 CPU 대비 0~100%다(작업 관리자 방식).
+ */
+export const CPUScaleMachine = "machine";
+/**
+ * CPUScaleCore는 코어 하나를 100%로 본다(top 방식, 코어 수 × 100%까지).
+ */
+export const CPUScaleCore = "core";
+/**
+ * CPUGraphOverall은 전체 사용률 그래프 하나다.
+ */
+export const CPUGraphOverall = "overall";
+/**
+ * CPUGraphCores는 코어마다 작은 그래프다.
+ */
+export const CPUGraphCores = "cores";
+/**
+ * SystemInfoPrefs는 시스템 정보 창의 보기 설정이다. 설정 전체를 한 번에 바꾼다.
+ */
+export interface SystemInfoPrefs {
+  /**
+   * CPUScale은 CPUScale* 중 하나다. 프론트는 모르는 값이면 machine을 쓴다.
+   */
+  cpuScale: string;
+  /**
+   * CPUGraph는 CPUGraph* 중 하나다. 프론트는 모르는 값이면 overall을 쓴다.
+   */
+  cpuGraph: string;
+  /**
+   * CPUKernel은 CPU 그래프에 커널 시간을 겹쳐 보일지다. 없으면 보인다.
+   */
+  cpuKernel?: boolean;
+}
+/**
+ * SystemInfoRequest는 PUT /api/preferences/system-info의 요청 본문이다.
+ */
+export interface SystemInfoRequest {
+  systemInfo?: SystemInfoPrefs;
+}
+/**
+ * FilesViewList는 자세히 목록(이름·수정한 날짜·크기·종류 열)이다.
+ */
+export const FilesViewList = "list";
+/**
+ * FilesViewGrid는 아이콘 보기(종류 아이콘과 이름의 칸)다.
+ */
+export const FilesViewGrid = "grid";
+/**
+ * FilesPrefs는 파일 탐색기의 보기 설정이다. 새로 여는 탐색기 창이 이 보기로 시작한다.
+ */
+export interface FilesPrefs {
+  /**
+   * View는 FilesView* 중 하나다. 프론트는 모르는 값이면 list를 쓴다.
+   */
+  view: string;
+  /**
+   * HiddenShares는 사이드바에서 숨긴 공유 폴더의 OMV uuid다(FilesShare.UUID). 사이드바 표시만 바꾸며 접근과는
+   * 관계없다(숨긴 공유 폴더도 보이는 폴더에 남는다). 스냅숏에 없는 uuid는 무시한다.
+   */
+  hiddenShares?: string[];
+}
+/**
+ * MaxHiddenShares는 숨긴 공유 폴더 수의 상한이다.
+ */
+export const MaxHiddenShares = 512;
+/**
+ * MaxHiddenShareBytes는 항목 하나(uuid)의 바이트 상한이다.
+ */
+export const MaxHiddenShareBytes = 64;
+/**
+ * FilesPrefsRequest는 PUT /api/preferences/files의 요청 본문이다.
+ */
+export interface FilesPrefsRequest {
+  files?: FilesPrefs;
+}
+/**
+ * Shortcut은 바탕화면 바로가기 하나다. 지금은 앱만 가리킨다. 폴더나 OMV 페이지를 가리키는
+ * 바로가기가 생기면 필드를 더한다(저장 파일 형식을 바꾸지 않고 늘릴 수 있게 객체로 둔다).
+ */
+export interface Shortcut {
+  /**
+   * App은 프론트 앱 id다(창 보기가 있는 애드온 또는 준비 중 앱). 백엔드는 형식만 검사한다.
+   */
+  app: string;
+}
+/**
+ * ShortcutsRequest는 PUT /api/preferences/shortcuts의 요청 본문이다. 바로가기 목록 전체를 바꾼다.
+ */
+export interface ShortcutsRequest {
+  shortcuts: Shortcut[];
+}
+/**
+ * WidgetPlacement는 바탕화면 위젯 하나의 자리다. 그리드는 오른쪽 위를 기준으로 하므로
+ * 화면 크기가 달라도 위젯끼리 겹치는지는 이 값만으로 정해진다.
+ */
+export interface WidgetPlacement {
+  /**
+   * Addon은 위젯 보기가 있는 애드온 id다. 애드온마다 위젯은 하나다.
+   */
+  addon: string;
+  /**
+   * Right는 그리드 오른쪽 끝에서 위젯 오른쪽 끝까지의 칸 수다.
+   */
+  right: number /* int */;
+  /**
+   * Top은 그리드 위쪽 끝에서 위젯 위쪽 끝까지의 칸 수다.
+   */
+  top: number /* int */;
+  cols: number /* int */;
+  rows: number /* int */;
+}
+/**
+ * WidgetsRequest는 PUT /api/preferences/widgets의 요청 본문이다. 위젯 배치 전체를 바꾼다.
+ */
+export interface WidgetsRequest {
+  widgets: WidgetPlacement[];
+}
+
+//////////
+// source: profile.go
+
+/**
+ * ProfileReadOnlySystem은 OMV 시스템 계정이다(OMV 기본 admin 계정 등). OMV 사용자 관리 목록에도 없다.
+ */
+export const ProfileReadOnlySystem = "system";
+/**
+ * ProfileReadOnlyLocked는 OMV에서 이 사용자의 계정 수정을 막았다는 뜻이다(disallowusermod).
+ */
+export const ProfileReadOnlyLocked = "locked";
+/**
+ * ProfileResponse는 GET /api/profile의 응답이며 로그인한 사용자 자신의 OMV 계정 정보다.
+ * SSH 공개 키, uid, 홈 디렉터리 등은 넘기지 않는다.
+ */
+export interface ProfileResponse {
+  username: string;
+  email?: string;
+  /**
+   * Tags는 계정 태그다. OMV 사용자 편집 화면의 "Tags"이며, 실제로는 Linux 계정의 설명 칸(GECOS)에
+   * 쉼표로 이어 저장된다. 백엔드가 나누고 잇는다.
+   */
+  tags?: string[];
+  /**
+   * Groups는 속한 그룹이다. OMV가 관리자에게만 알려 주므로 일반 사용자는 없다.
+   */
+  groups?: string[];
+  /**
+   * SystemAccount는 OMV 사용자 관리 목록에 없는 시스템 계정인지다. 관리자만 알 수 있다.
+   */
+  systemAccount?: boolean;
+  /**
+   * ReadOnlyReason이 있으면 전자 우편·태그를 바꿀 수 없다.
+   */
+  readOnlyReason?: 'system' | 'locked';
+}
+/**
+ * ProfileRequest는 PUT /api/profile의 요청 본문이다. 사용자가 자기 계정에서 바꿀 수 있는 전자 우편과 태그를
+ * 바꾼다(OMV UserMgmt.setUserByContext와 같은 범위). 없는 값은 그대로 둔다. 비밀번호·그룹 등은 OMV에서 바꾼다.
+ */
+export interface ProfileRequest {
+  /**
+   * Email이 빈 문자열이면 전자 우편을 지운다.
+   */
+  email?: string;
+  tags?: string[];
+}
+/**
+ * ProfileSaveResponse는 PUT /api/profile의 응답이다.
+ */
+export interface ProfileSaveResponse {
+  /**
+   * Applied는 OMV 적용까지 끝났는지다. 일반 사용자는 적용 권한이 없어 false이며, OMV에 적용 대기가 남는다
+   * (관리자가 OMV 웹 UI에서 적용한다). 바꿀 것이 없었으면 true다.
+   */
+  applied: boolean;
+}
+
+//////////
+// source: security.go
+
+/**
+ * 기능별 단계. SecurityPolicy의 값이다.
+ */
+export const SecurityOff = "off";
+/**
+ * 기능별 단계. SecurityPolicy의 값이다.
+ */
+export const SecurityPassword = "password";
+/**
+ * 기능별 단계. SecurityPolicy의 값이다.
+ */
+export const SecurityTwoFactor = "twoFactor";
+/**
+ * 파일 탐색기 정책의 적용 범위(SecurityPolicy.FilesScope)
+ */
+export const FilesScopeAll = "all";
+/**
+ * 기능별 단계. SecurityPolicy의 값이다.
+ */
+export const FilesScopeWrites = "writes";
+/**
+ * AssuranceLogin은 로그인만 한 세션이다. 로그인할 때 넣은 비밀번호는 재확인으로 치지 않는다.
+ */
+export const AssuranceLogin = "login";
+/**
+ * 세션의 보증 수준. SessionInfo.Assurance, SecurityStatus.Assurance에 들어간다.
+ */
+export const AssurancePassword = "password";
+/**
+ * 세션의 보증 수준. SessionInfo.Assurance, SecurityStatus.Assurance에 들어간다.
+ */
+export const AssuranceTwoFactor = "twoFactor";
+/**
+ * 확인 수단. SecurityVerifyRequest.Method, StepUpInfo.Methods에 들어간다.
+ */
+export const FactorPassword = "password";
+/**
+ * 확인 수단. SecurityVerifyRequest.Method, StepUpInfo.Methods에 들어간다.
+ */
+export const FactorTOTP = "totp";
+/**
+ * 확인 수단. SecurityVerifyRequest.Method, StepUpInfo.Methods에 들어간다.
+ */
+export const FactorRecovery = "recovery";
+/**
+ * 확인 수단. SecurityVerifyRequest.Method, StepUpInfo.Methods에 들어간다.
+ */
+export const FactorPasskey = "passkey";
+/**
+ * SecurityPolicy는 보안 강화 모드의 기능별 단계(Security*)다. 관리자 전역 설정(site.json)이며 빈 값은 off다.
+ */
+export interface SecurityPolicy {
+  terminal?: 'off' | 'password' | 'twoFactor';
+  elevation?: 'off' | 'password' | 'twoFactor';
+  /**
+   * Files는 파일 탐색기다. 기본으로 목록·내려받기 같은 읽기까지 모두 막는다(빼앗은 세션이 내려받기만 해도 정보가 샌다).
+   */
+  files?: 'off' | 'password' | 'twoFactor';
+  /**
+   * FilesScope는 Files를 어디에 적용하는지다. writes면 쓰기·삭제(올리기, 폴더 만들기, 이름 바꾸기·옮기기, 삭제,
+   * 휴지통 연산)에만 적용하고 목록·내려받기는 연다. 없으면 all이다.
+   */
+  filesScope?: 'all' | 'writes';
+  /**
+   * PasskeyLoginDays는 패스키로 로그인 등록의 만료 기간(일)이다. 없으면 PasskeyLoginDaysDefault다. 바꾸려면
+   * 비밀번호를 다시 확인한 세션이어야 한다. 줄이면 기존 등록에도 바로 적용되고, 늘리면 새 등록부터 적용된다.
+   */
+  passkeyLoginDays?: 7 | 30 | 90 | 180 | 365;
+}
+/**
+ * PasskeyLoginDaysDefault는 패스키로 로그인 등록의 기본 만료 기간(일)이다.
+ */
+export const PasskeyLoginDaysDefault = 30;
+/**
+ * SecurityPolicyRequest는 PUT /api/site/security의 본문이다. 정책 전체를 바꾼다. 바꾸는 기능마다 이전·새 단계 중
+ * 높은 쪽을 이 세션이 거쳤어야 한다(아니면 403 security_required).
+ */
+export interface SecurityPolicyRequest {
+  security?: SecurityPolicy;
+}
+/**
+ * SecurityPolicyResponse는 GET /api/site/security의 응답이다(관리자).
+ */
+export interface SecurityPolicyResponse {
+  /**
+   * Policy는 지금 정책이다. 모든 값이 채워져 있다.
+   */
+  policy: SecurityPolicy;
+  /**
+   * AutoLogoutMinutes는 OMV 자동 로그아웃 시간(분)이다. 0이면 꺼져 있어 강화 상태가 로그아웃할 때까지 남는다.
+   * 모르면 없다.
+   */
+  autoLogoutMinutes?: number /* int */;
+  /**
+   * PasskeyRPID는 패스키의 RP ID(공개 주소의 호스트 이름)다. 공개 주소를 설정하지 않아 패스키를 쓸 수 없으면 없다.
+   */
+  passkeyRpId?: string;
+}
+/**
+ * PasskeyInfo는 등록한 패스키 하나다.
+ */
+export interface PasskeyInfo {
+  id: string;
+  name: string;
+  /**
+   * Created, LastUsed는 RFC 3339 시각이다. 쓴 적이 없으면 LastUsed가 없다.
+   */
+  created: string;
+  lastUsed?: string;
+  /**
+   * BackupEligible은 동기화 저장소(iCloud 키체인, 비밀번호 관리자)의 패스키라는 뜻이다(등록할 때의 BE 플래그).
+   */
+  backupEligible?: boolean;
+}
+/**
+ * PasskeyLoginInfo는 패스키로 로그인 등록 하나(브라우저 하나와 패스키 하나의 짝)다. 키 조각은 넣지 않는다.
+ */
+export interface PasskeyLoginInfo {
+  id: string;
+  /**
+   * Passkey는 이 등록에 쓰는 패스키의 ID(PasskeyInfo.ID)다.
+   */
+  passkey: string;
+  /**
+   * Created, ExpiresAt, LastUsed는 RFC 3339 시각이다. ExpiresAt은 지금 만료 기간을 적용한 값이다. 쓴 적이 없으면
+   * LastUsed가 없다.
+   */
+  created: string;
+  expiresAt: string;
+  lastUsed?: string;
+}
+/**
+ * TOTPInfo는 등록한 인증 앱(TOTP)이다.
+ */
+export interface TOTPInfo {
+  created: string;
+}
+/**
+ * SecurityStatus는 GET /api/security와 확인·관리 요청의 응답이며, 로그인한 사용자 자신의 보안 상태다.
+ */
+export interface SecurityStatus {
+  assurance: 'login' | 'password' | 'twoFactor';
+  /**
+   * ManageSeconds는 인증 수단을 바꿀 수 있는 관리 창이 닫히기까지 남은 초다. 닫혀 있으면 0이다.
+   */
+  manageSeconds: number /* int */;
+  /**
+   * PasskeysAvailable은 이 서버에서 패스키를 쓸 수 있는지다(공개 주소 설정). 브라우저 지원은 프론트가 따로 본다.
+   */
+  passkeysAvailable: boolean;
+  passkeys: PasskeyInfo[];
+  totp?: TOTPInfo;
+  /**
+   * RecoveryCodes는 남은 복구 코드 수다.
+   */
+  recoveryCodes: number /* int */;
+  /**
+   * Methods는 지금 확인에 쓸 수 있는 2차 수단이다(Factor*, password 제외).
+   */
+  methods: Array<'passkey' | 'totp' | 'recovery'>;
+  policy: SecurityPolicy;
+  /**
+   * PasskeyLogins는 만료되지 않은 패스키로 로그인 등록이다.
+   */
+  passkeyLogins: PasskeyLoginInfo[];
+}
+/**
+ * SecurityVerifyRequest는 POST /api/security/verify의 본문이다. 맞으면 이 세션의 보증 수준을 올린다
+ * (password는 password, 나머지는 twoFactor).
+ */
+export interface SecurityVerifyRequest {
+  method: 'password' | 'totp' | 'recovery' | 'passkey';
+  password?: string;
+  /**
+   * Code는 TOTP 코드 또는 복구 코드다.
+   */
+  code?: string;
+  passkey?: PasskeyAssertion;
+}
+/**
+ * SecurityManageRequest는 POST /api/security/manage의 본문이다. 비밀번호와(등록한 수단이 있으면) 그 수단을 다시
+ * 확인하면 이 세션에 관리 창이 잠깐 열린다. 세션을 빼앗은 쪽이 자기 수단을 등록하지 못하게 한다.
+ */
+export interface SecurityManageRequest {
+  password: string;
+  /**
+   * Factor는 등록한 2차 수단의 확인이다. 수단이 없으면 비운다.
+   */
+  factor?: SecurityVerifyRequest;
+  /**
+   * DeviceCode는 등록한 수단 대신 받는 기기 추가 코드다(POST /api/security/device-code). Factor와 함께 보내지
+   * 않는다. 맞으면 관리 창을 열되 보증 수준은 password까지만 올린다.
+   */
+  deviceCode?: string;
+}
+/**
+ * DeviceCodeResponse는 POST /api/security/device-code의 응답이다. 수단이 있는 기기가 만들어, 그 패스키가 없는
+ * 새 기기의 관리 확인(SecurityManageRequest.DeviceCode)에 입력하게 한다. 사용자마다 하나이고 다시 만들면 이전
+ * 코드는 쓸 수 없다.
+ */
+export interface DeviceCodeResponse {
+  /**
+   * Code는 한 번만 쓸 수 있는 코드(XXXX-XXXX)다. 이 응답에만 담긴다.
+   */
+  code: string;
+  /**
+   * ExpiresInSeconds는 코드를 쓸 수 있는 남은 초다.
+   */
+  expiresInSeconds: number /* int */;
+}
+/**
+ * PasskeyAssert는 확인(로그인 단계, 세션 중 확인, 관리 확인)이다.
+ */
+export const PasskeyAssert = "assert";
+/**
+ * PasskeyRegister는 새 패스키 등록이다(관리 창 필요).
+ */
+export const PasskeyRegister = "register";
+/**
+ * PasskeyChallengeRequest는 POST /api/security/passkeys/challenge의 본문이다.
+ */
+export interface PasskeyChallengeRequest {
+  purpose: 'assert' | 'register';
+}
+/**
+ * PasskeyOptions는 navigator.credentials.get()·create()에 넘길 값이다. 이진 값은 base64url(패딩 없음)이다.
+ */
+export interface PasskeyOptions {
+  challenge: string;
+  rpId: string;
+  /**
+   * TimeoutMs는 브라우저에 주는 제한 시간이다.
+   */
+  timeoutMs: number /* int */;
+  /**
+   * Credentials는 확인에서는 쓸 수 있는 자격 증명(allowCredentials), 등록에서는 이미 등록한 자격 증명
+   * (excludeCredentials)이다.
+   */
+  credentials: PasskeyDescriptor[];
+  /**
+   * 아래는 등록에만 있다.
+   */
+  rpName?: string;
+  user?: PasskeyUser;
+  algorithms?: number /* int */[];
+}
+/**
+ * PasskeyDescriptor는 자격 증명 하나를 가리킨다.
+ */
+export interface PasskeyDescriptor {
+  id: string;
+  transports?: string[];
+}
+/**
+ * PasskeyUser는 등록할 때 인증기에 넣는 사용자 정보다. ID는 무작위 핸들이다(사용자 이름을 넣지 않는다).
+ */
+export interface PasskeyUser {
+  id: string;
+  name: string;
+  displayName: string;
+}
+/**
+ * PasskeyAssertion은 navigator.credentials.get()의 결과다. 이진 값은 base64url이다.
+ */
+export interface PasskeyAssertion {
+  id: string;
+  clientDataJSON: string;
+  authenticatorData: string;
+  signature: string;
+  userHandle?: string;
+}
+/**
+ * PasskeyRegistration은 navigator.credentials.create()의 결과다. PublicKey는 getPublicKey()의 SPKI DER이며,
+ * 브라우저가 알고리즘을 모르면 비어 있다(등록하지 않는다).
+ */
+export interface PasskeyRegistration {
+  id: string;
+  clientDataJSON: string;
+  authenticatorData: string;
+  publicKey: string;
+  publicKeyAlgorithm: number /* int */;
+  transports?: string[];
+}
+/**
+ * PasskeyRegisterRequest는 POST /api/security/passkeys의 본문이다(관리 창 필요). 등록 값이 맞으면 바로 저장하지
+ * 않고, 응답(PasskeyOptions)으로 그 패스키 하나만 허용하는 확인 challenge를 준다. 그 확인을
+ * POST /api/security/passkeys/confirm으로 보내 통과해야 저장한다.
+ */
+export interface PasskeyRegisterRequest {
+  name: string;
+  credential?: PasskeyRegistration;
+}
+/**
+ * PasskeyConfirmRequest는 POST /api/security/passkeys/confirm의 본문이다(관리 창 필요). 등록 직후 새 패스키로 한
+ * 확인이며, 통과하면 패스키를 저장하고 SecurityChangeResponse를 준다.
+ */
+export interface PasskeyConfirmRequest {
+  passkey?: PasskeyAssertion;
+}
+/**
+ * PasskeyLoginEnrollRequest는 POST /api/security/passkey-logins의 본문이다. 비밀번호와 그 패스키(PRF를 함께 요청한
+ * 확인)를 확인하면 이 브라우저의 패스키로 로그인을 켠다. 암호문은 브라우저에만 두므로 보내지 않는다.
+ */
+export interface PasskeyLoginEnrollRequest {
+  password: string;
+  passkey?: PasskeyAssertion;
+  /**
+   * Replace는 이 브라우저가 전에 쓰던 등록 ID다. 있으면 함께 지운다(다시 켤 때).
+   */
+  replace?: string;
+}
+/**
+ * PasskeyLoginEnrollResponse는 POST /api/security/passkey-logins의 응답이다. Share는 서버 쪽 키 조각(base64url)이며
+ * 브라우저가 PRF 결과와 함께 키를 만드는 데만 쓴다(저장하지 않는다).
+ */
+export interface PasskeyLoginEnrollResponse {
+  id: string;
+  share: string;
+  /**
+   * ExpiresAt은 RFC 3339 만료 시각이다.
+   */
+  expiresAt: string;
+  status: SecurityStatus;
+}
+/**
+ * PasskeyLoginOptionsRequest는 POST /api/login/passkey/options의 본문이다(인증 없음). 브라우저 항목의 사용자 이름과
+ * 등록 ID를 보내면 그 패스키 하나만 허용하는 확인 옵션(PasskeyOptions)을 준다.
+ */
+export interface PasskeyLoginOptionsRequest {
+  username: string;
+  enrollment: string;
+}
+/**
+ * PasskeyLoginRequest는 POST /api/login/passkey의 본문이다(인증 없음). 확인이 맞으면 PasskeyLoginUnlockResponse를 준다.
+ */
+export interface PasskeyLoginRequest {
+  passkey?: PasskeyAssertion;
+}
+/**
+ * PasskeyLoginUnlockResponse는 POST /api/login/passkey의 응답이다. Share로 키를 만들어 비밀번호를 풀고(안 되면
+ * NextShare로 푼다) POST /api/login/passkey/finish로 보낸다. 둘 다 base64url 키 조각이다.
+ */
+export interface PasskeyLoginUnlockResponse {
+  share: string;
+  /**
+   * NextShare는 회전을 기다리는 다음 키 조각이다. 브라우저는 풀어 낸 비밀번호를 이것으로 다시 암호화해 항목을 바꾼다.
+   * 확정(finish의 Rotated)할 때까지 같은 값을 준다.
+   */
+  nextShare: string;
+}
+/**
+ * PasskeyLoginFinishRequest는 POST /api/login/passkey/finish의 본문이다. 풀어 낸 비밀번호로 로그인하며 응답은
+ * LoginResponse다. 풀지 못했으면 Discard로 그 등록을 지운다(204).
+ */
+export interface PasskeyLoginFinishRequest {
+  password?: string;
+  /**
+   * Rotated는 브라우저가 항목을 NextShare용으로 바꿔 저장했다는 뜻이다. OMV가 비밀번호를 받으면 NextShare를 Share로
+   * 확정한다.
+   */
+  rotated?: boolean;
+  discard?: boolean;
+}
+/**
+ * TOTPSetupResponse는 POST /api/security/totp/setup의 응답이다. 비밀 키는 확인(POST /api/security/totp)할 때까지
+ * 이 세션의 메모리에만 있다.
+ */
+export interface TOTPSetupResponse {
+  secret: string;
+  /**
+   * URI는 인증 앱에 넣는 otpauth:// 주소다(QR 코드의 내용).
+   */
+  uri: string;
+}
+/**
+ * TOTPConfirmRequest는 POST /api/security/totp의 본문이다. 인증 앱이 보여 주는 코드로 설정을 마친다.
+ */
+export interface TOTPConfirmRequest {
+  code: string;
+}
+/**
+ * SecurityChangeResponse는 수단을 등록·삭제하거나 복구 코드를 다시 만든 뒤의 응답이다.
+ */
+export interface SecurityChangeResponse {
+  status: SecurityStatus;
+  /**
+   * RecoveryCodes는 새로 만든 복구 코드다. 첫 수단을 등록했거나 다시 만들었을 때만 있고, 다시 볼 수 없다.
+   */
+  recoveryCodes?: string[];
+}
+/**
+ * SecurityUserInfo는 GET /api/security/users(관리자)의 한 줄이며, 인증 수단 기록이 있는 사용자다.
+ */
+export interface SecurityUserInfo {
+  username: string;
+  passkeys: number /* int */;
+  totp: boolean;
+  recoveryCodes: number /* int */;
+  /**
+   * Unreadable은 기록을 읽을 수 없다는 뜻이다(손상된 파일). 초기화하면 지운다.
+   */
+  unreadable?: boolean;
+}
+
+//////////
+// source: site.go
+
+/**
+ * SiteSettings는 모든 사용자에게 적용하는 전역 설정이며 관리자만 바꾼다. 상태 디렉터리의 site.json에 저장한다.
+ * 부분마다 전체를 한 번에 바꾸고, 없는 부분은 기본값이다.
+ */
+export interface SiteSettings {
+  login?: SiteLogin;
+  defaults?: SiteDefaults;
+  server?: ServerOverrides;
+  /**
+   * Security는 보안 강화 모드의 기능별 단계다. 없으면 모두 꺼짐이다.
+   */
+  security?: SecurityPolicy;
+  /**
+   * Files는 파일 탐색기의 전역 설정과 공유 폴더 스냅숏이다. 없으면 스냅숏이 없고 디스크 보기는 꺼짐이다.
+   */
+  files?: SiteFiles;
+  /**
+   * Upgrade는 대시보드에서 업그레이드의 설정이다. 없으면 업데이트 채널을 고르지 않은 것이다(지금 브랜치를 따른다).
+   */
+  upgrade?: SiteUpgrade;
+}
+/**
+ * SiteUpgrade는 대시보드에서 업그레이드의 전역 설정이다(.claude/docs/upgrade.md의 "업데이트 채널").
+ */
+export interface SiteUpgrade {
+  /**
+   * Channel은 원격 확인이 따라갈 업데이트 채널이다(config.UpgradeChannel*). 빈 값이면 지금 브랜치의 추적 브랜치다.
+   */
+  channel?: '' | 'stable' | 'main';
+}
+/**
+ * SiteLogin은 로그인 화면 설정이다. 저장한 적 없으면 대시보드 기본 배경에 대기 연출을 켠다.
+ */
+export interface SiteLogin {
+  /**
+   * Background는 로그인 화면 배경이다. 없으면 대시보드 기본 배경이다. image는 관리자가 올린 로그인 배경 이미지다.
+   */
+  background?: Wallpaper;
+  /**
+   * EasterEgg는 로그인 화면에서 오래 기다리면 나오는 연출을 켤지다.
+   */
+  easterEgg: boolean;
+}
+/**
+ * SiteDefaults는 화면 설정을 정하지 않은 사용자에게 적용하는 기본 화면이다.
+ */
+export interface SiteDefaults {
+  /**
+   * Theme은 Theme* 중 하나다. 비어 있으면 auto다.
+   */
+  theme?: 'auto' | 'light' | 'dark';
+  /**
+   * Wallpaper는 기본 바탕화면이다. 없으면 대시보드 기본 배경이다. image는 관리자가 올린 기본 바탕화면 이미지다.
+   */
+  wallpaper?: Wallpaper;
+}
+/**
+ * ServerOverrides는 재시작 없이 바꿀 수 있는 가동 설정을 웹에서 덮어쓴 값이다. 없는 값은 플래그·환경 변수
+ * (/etc/default/maru) 값을 따른다.
+ */
+export interface ServerOverrides {
+  /**
+   * WorkbenchURL은 -workbench-url을 덮어쓴다. 빈 문자열이면 OMV 워크벤치 앱을 끈다.
+   */
+  workbenchUrl?: string;
+  /**
+   * SmartRefreshAt은 -smart-refresh-at(HH:MM)을 덮어쓴다.
+   */
+  smartRefreshAt?: string;
+  /**
+   * Terminal은 -terminal을 덮어쓴다. "true" 또는 "false"다.
+   */
+  terminal?: string;
+}
+/**
+ * SiteInfo는 GET /api/site의 응답이다. 로그인 화면이 로그인 전에 받으므로 인증 없이 준다.
+ * 화면 꾸밈에 쓰는 전역 설정만 담고 가동 설정(주소 등)은 넣지 않는다.
+ */
+export interface SiteInfo {
+  /**
+   * LoginBackground는 로그인 화면 배경이다. 없으면 대시보드 기본 배경이다.
+   */
+  loginBackground?: Wallpaper;
+  /**
+   * LoginEasterEgg는 로그인 화면의 대기 연출을 켤지다.
+   */
+  loginEasterEgg: boolean;
+  /**
+   * DefaultTheme, DefaultWallpaper는 화면 설정을 정하지 않은 사용자에게 적용하는 기본 화면이다.
+   */
+  defaultTheme?: 'auto' | 'light' | 'dark';
+  defaultWallpaper?: Wallpaper;
+  images: SiteImages;
+}
+/**
+ * SiteImages는 관리자가 올린 전역 배경 이미지의 정보다. 올리지 않은 이미지는 없다.
+ */
+export interface SiteImages {
+  loginBackground?: ImageInfo;
+  defaultWallpaper?: ImageInfo;
+}
+/**
+ * SiteLoginRequest는 PUT /api/site/login의 요청 본문이다. 로그인 화면 설정 전체를 바꾼다.
+ */
+export interface SiteLoginRequest {
+  login?: SiteLogin;
+}
+/**
+ * SiteDefaultsRequest는 PUT /api/site/defaults의 요청 본문이다. 기본 화면 전체를 바꾼다.
+ */
+export interface SiteDefaultsRequest {
+  defaults?: SiteDefaults;
+}
+/**
+ * ServerSettingsRequest는 PUT /api/site/server의 요청 본문이다. 덮어쓰기 값 전체를 바꾼다(없는 값은 덮어쓰지 않음).
+ */
+export interface ServerSettingsRequest {
+  server?: ServerOverrides;
+}
+/**
+ * ServerSettings는 GET /api/site/server의 응답이다(관리자).
+ */
+export interface ServerSettings {
+  workbenchUrl: OverridableSetting;
+  smartRefreshAt: OverridableSetting;
+  /**
+   * Terminal은 웹 터미널 허용 여부("true" 또는 "false")다.
+   */
+  terminal: OverridableSetting;
+  /**
+   * Runtime은 시작할 때 정해진 가동 설정 전체다(플래그 순서). 바꾸려면 /etc/default/maru를 고치고 다시 시작한다.
+   */
+  runtime: RuntimeSetting[];
+}
+/**
+ * OverridableSetting은 웹에서 덮어쓸 수 있는 가동 설정 하나다.
+ */
+export interface OverridableSetting {
+  /**
+   * Value는 지금 쓰는 값이다.
+   */
+  value: string;
+  /**
+   * Base는 플래그·환경 변수(없으면 기본값)로 정한 값이다. 덮어쓰기를 지우면 이 값으로 돌아간다.
+   */
+  base: string;
+  /**
+   * Overridden은 웹에서 덮어썼는지다.
+   */
+  overridden: boolean;
+}
+/**
+ * 가동 설정 값의 출처. RuntimeSetting.Source에 들어간다.
+ */
+export const RuntimeSourceDefault = "default";
+/**
+ * 가동 설정 값의 출처. RuntimeSetting.Source에 들어간다.
+ */
+export const RuntimeSourceEnv = "env";
+/**
+ * 가동 설정 값의 출처. RuntimeSetting.Source에 들어간다.
+ */
+export const RuntimeSourceFlag = "flag";
+/**
+ * RuntimeSourceSystemd는 systemd가 넘긴 값이다(StateDirectory=의 STATE_DIRECTORY).
+ */
+export const RuntimeSourceSystemd = "systemd";
+/**
+ * RuntimeSetting은 시작할 때 정해진 가동 설정 하나다.
+ */
+export interface RuntimeSetting {
+  /**
+   * Flag는 명령줄 플래그 이름이다(listen, omv-url 등).
+   */
+  flag: string;
+  /**
+   * Env는 같은 값을 정하는 환경 변수 이름이다.
+   */
+  env: string;
+  value: string;
+  source: 'default' | 'env' | 'flag' | 'systemd';
+}
+
+//////////
+// source: system.go
+
+/**
+ * HealthResponse는 GET /api/health의 응답이다.
+ */
+export interface HealthResponse {
+  status: string;
+}
+/**
+ * SystemResponse는 GET /api/system의 응답이다.
+ */
+export interface SystemResponse {
+  cpu: CPUInfo;
+  memory: MemoryInfo;
+  uptimeSeconds: number /* float64 */;
+}
+/**
+ * CPUInfo는 전체 코어를 합산한 CPU 사용률이다.
+ */
+export interface CPUInfo {
+  /**
+   * UsagePercent는 두 /proc/stat 샘플 사이에서 측정한 0~100 값이다.
+   */
+  usagePercent: number /* float64 */;
+}
+/**
+ * MemoryInfo는 바이트 단위 RAM 수치다. Used = Total - Available.
+ */
+export interface MemoryInfo {
+  totalBytes: number /* uint64 */;
+  usedBytes: number /* uint64 */;
+  availableBytes: number /* uint64 */;
+}
+/**
+ * SystemStatsResponse는 GET /api/addons/system-info의 응답이다(시스템 정보 창).
+ * 사용률·속도는 누적 카운터로 주고, 프론트가 같은 백엔드의 두 응답 차이로 계산한다.
+ * 그래서 창과 다른 세션의 요청이 서로의 측정 구간에 영향을 주지 않는다(/api/system과 다른 점).
+ */
+export interface SystemStatsResponse extends AddonSources {
+  /**
+   * SampledAtMs는 값을 읽은 시각이다. 백엔드 프로세스 시작 기준의 단조 시각(밀리초)이며,
+   * 같은 백엔드의 두 응답 차이를 구하는 데만 쓴다(벽시계 시각이 아니다).
+   */
+  sampledAtMs: number /* int64 */;
+  cpu: CPUCounters;
+  memory: MemoryInfo;
+  /**
+   * MemoryDetail은 메모리 구성과 스왑이다(성능 페이지의 메모리 구성 막대).
+   */
+  memoryDetail: MemoryDetail;
+  uptimeSeconds: number /* float64 */;
+  /**
+   * Load는 부하 평균이다. 읽지 못하면 없다.
+   */
+  load?: LoadAverage;
+  /**
+   * Network는 물리 인터페이스의 누적 바이트 합계다. 읽지 못하면 없다.
+   */
+  network?: NetTotals;
+  /**
+   * Disk는 물리 디스크의 누적 바이트 합계다. 읽지 못하면 없다.
+   */
+  disk?: DiskTotals;
+  /**
+   * Tasks는 프로세스·스레드 수다. 읽지 못하면 없다. 수만 담으므로 누구에게나 준다.
+   */
+  tasks?: TaskCounts;
+  /**
+   * Processes는 프로세스 목록이다(PID 순서). 관리자가 ?processes=1로 요청할 때만 준다(provider proc-processes).
+   */
+  processes?: Process[];
+  /**
+   * Power는 OMV 전원 관리의 절전 방식이다. 관리자가 ?power=1로 요청할 때만 준다(provider omv-power).
+   */
+  power?: PowerInfo;
+}
+/**
+ * PowerInfo는 OMV 전원 관리의 대기 방식이다(PowerMgmt.get, PowerMgmt.enumerateStandbyModes).
+ * 전원 모달은 이 값으로 절전(System.standby)을 쓸 수 있는지 정한다.
+ */
+export interface PowerInfo {
+  /**
+   * StandbyMode는 설정된 대기 방식이다(poweroff, suspend, hibernate, suspendhybrid).
+   */
+  standbyMode: string;
+  /**
+   * StandbyModes는 이 기기가 지원하는 대기 방식이다. poweroff는 늘 들어 있다.
+   */
+  standbyModes: string[];
+}
+/**
+ * TaskCounts는 프로세스와 스레드(커널 스레드 포함) 수다.
+ */
+export interface TaskCounts {
+  /**
+   * Processes는 /proc의 PID 디렉터리 수다.
+   */
+  processes: number /* int */;
+  /**
+   * Threads는 /proc/loadavg의 스케줄링 단위 수다.
+   */
+  threads: number /* int */;
+}
+/**
+ * CPUCounters는 /proc/stat의 누적 CPU 시간이다. 단위는 clock tick(USER_HZ)이다.
+ */
+export interface CPUCounters {
+  /**
+   * TotalTicks는 모든 코어를 합한 시간이다(guest 제외). Process.CPUTicks와 단위가 같다.
+   */
+  totalTicks: number /* uint64 */;
+  /**
+   * IdleTicks는 idle + iowait다.
+   */
+  idleTicks: number /* uint64 */;
+  /**
+   * KernelTicks는 커널 시간(system + irq + softirq)이다. steal은 넣지 않는다.
+   */
+  kernelTicks: number /* uint64 */;
+  /**
+   * Cores는 켜져 있는 코어별 값이다(cpuN 순서). 꺼진 코어는 빠지므로 ID로 맞춘다.
+   */
+  cores: CoreTicks[];
+}
+/**
+ * CoreTicks는 코어 하나의 누적 CPU 시간이다.
+ */
+export interface CoreTicks {
+  /**
+   * ID는 cpuN의 N이다.
+   */
+  id: number /* int */;
+  totalTicks: number /* uint64 */;
+  idleTicks: number /* uint64 */;
+  kernelTicks: number /* uint64 */;
+}
+/**
+ * MemoryDetail은 RAM 구성(htop 방식)과 스왑이다. 단위는 바이트다.
+ * Apps + Shared + Compressed + Buffers + Cache + Free = MemoryInfo.TotalBytes.
+ */
+export interface MemoryDetail {
+  /**
+   * AppsBytes는 나머지 항목을 뺀 메모리다. 프로세스와 회수할 수 없는 커널 메모리다.
+   */
+  appsBytes: number /* uint64 */;
+  /**
+   * SharedBytes는 공유 메모리(Shmem, tmpfs 포함)다.
+   */
+  sharedBytes: number /* uint64 */;
+  /**
+   * CompressedBytes는 zswap 풀과 zram 장치가 쓰는 메모리다.
+   */
+  compressedBytes: number /* uint64 */;
+  /**
+   * BuffersBytes는 블록 장치 버퍼(Buffers)다.
+   */
+  buffersBytes: number /* uint64 */;
+  /**
+   * CacheBytes는 페이지 캐시와 회수할 수 있는 slab(Cached + SReclaimable - Shmem)이다.
+   */
+  cacheBytes: number /* uint64 */;
+  /**
+   * FreeBytes는 쓰지 않는 메모리(MemFree)다.
+   */
+  freeBytes: number /* uint64 */;
+  swapTotalBytes: number /* uint64 */;
+  swapUsedBytes: number /* uint64 */;
+}
+/**
+ * LoadAverage는 /proc/loadavg의 부하 평균이다.
+ */
+export interface LoadAverage {
+  /**
+   * One, Five, Fifteen은 1·5·15분 부하 평균이다.
+   */
+  one: number /* float64 */;
+  five: number /* float64 */;
+  fifteen: number /* float64 */;
+  /**
+   * Running은 지금 실행할 수 있는 스케줄링 단위(스레드) 수다.
+   */
+  running: number /* int */;
+}
+/**
+ * NetTotals는 물리 네트워크 인터페이스의 누적 바이트 합계다.
+ */
+export interface NetTotals {
+  rxBytes: number /* uint64 */;
+  txBytes: number /* uint64 */;
+}
+/**
+ * DiskTotals는 물리 디스크의 누적 바이트 합계다. 파티션·RAID·LVM 장치는 빼서 이중으로 세지 않는다.
+ */
+export interface DiskTotals {
+  readBytes: number /* uint64 */;
+  writeBytes: number /* uint64 */;
+}
+/**
+ * Process는 프로세스 하나다.
+ */
+export interface Process {
+  pid: number /* int */;
+  /**
+   * StartTicks는 부팅 후 시작 시각(clock tick)이다. PID가 다시 쓰였는지 구분하는 데 쓴다.
+   */
+  startTicks: number /* uint64 */;
+  /**
+   * Name은 커널이 아는 이름(comm)이다. 15바이트로 잘려 있을 수 있다.
+   */
+  name: string;
+  /**
+   * Command는 명령줄이다(인자를 공백으로 이음, 길면 잘림). 커널 스레드와 좀비는 없다.
+   */
+  command?: string;
+  /**
+   * User는 실제 사용자 이름이다. 이름을 모르면 uid 숫자다.
+   */
+  user: string;
+  /**
+   * State는 커널 상태 글자다(R, S, D, Z, T, I 등).
+   */
+  state: string;
+  /**
+   * CPUTicks는 누적 CPU 시간(utime + stime, clock tick)이다.
+   */
+  cpuTicks: number /* uint64 */;
+  /**
+   * RSSBytes는 실제 메모리 사용량(VmRSS)이다.
+   */
+  rssBytes: number /* uint64 */;
+  threads: number /* int */;
+  /**
+   * Kernel은 커널 스레드인지다.
+   */
+  kernel?: boolean;
+}
+/**
+ * AboutResponse는 GET /api/about의 응답이다. 설정 앱의 정보 페이지가 보여 준다.
+ */
+export interface AboutResponse {
+  /**
+   * Version은 마루 NAS 버전이다.
+   */
+  version: string;
+  /**
+   * Revision은 빌드한 git 커밋(전체 해시)이다. go run이나 저장소 밖 빌드에는 없다.
+   */
+  revision?: string;
+  /**
+   * RevisionTime은 그 커밋의 시각(RFC 3339)이다.
+   */
+  revisionTime?: string;
+  /**
+   * Modified는 커밋하지 않은 변경이 있는 작업 트리에서 빌드했는지다.
+   */
+  modified?: boolean;
+  /**
+   * GoVersion은 빌드한 Go 버전이다.
+   */
+  goVersion: string;
+  /**
+   * OMVVersion은 설치된 openmediavault 패키지 버전이다(예: 8.0.0-1). 관리자에게만 주며, 읽지 못하면 없다.
+   */
+  omvVersion?: string;
+  /**
+   * OMVVersionName은 OMV 릴리스 코드명이다(예: Synchrony). 관리자에게만 주며, 읽지 못하면 없다.
+   */
+  omvVersionName?: string;
+}
+
+//////////
+// source: terminal.go
+
+/**
+ * TerminalClientMessage는 브라우저가 보내는 제어 메시지다.
+ *   - resize: 창 크기(Cols, Rows)가 바뀌었다
+ *   - answer: 마지막 prompt의 답(Answers, 질문 수와 같다)
+ *   - cancel: 마지막 prompt를 취소한다(접속을 그만둔다)
+ */
+export interface TerminalClientMessage {
+  type: 'resize' | 'answer' | 'cancel';
+  cols?: number /* int */;
+  rows?: number /* int */;
+  answers?: string[];
+}
+/**
+ * TerminalServerMessage는 서버가 보내는 제어 메시지다.
+ *   - status: 접속 상태(State). closed면 Reason과 ExitCode·힌트가 붙는다
+ *   - prompt: sshd가 묻는 질문. 답은 answer로 보낸다
+ */
+export interface TerminalServerMessage {
+  type: 'status' | 'prompt';
+  state?: 'connecting' | 'connected' | 'closed';
+  /**
+   * Reason은 닫힌 이유다. exit(셸이 끝남, ExitCode), 세션·설정 이유(session_ended, disabled,
+   * connection_lost, security_required), 접속 실패(ssh_unavailable, ssh_host_key, ssh_auth_failed, ssh_failed,
+   * canceled, too_many_windows, busy, rate_limited) 중 하나다.
+   */
+  reason?: 'exit' | 'session_ended' | 'disabled' | 'connection_lost' | 'security_required' | 'ssh_unavailable' | 'ssh_host_key' | 'ssh_auth_failed' | 'ssh_failed' | 'canceled' | 'too_many_windows' | 'busy' | 'rate_limited';
+  exitCode?: number /* int */;
+  /**
+   * KeyCode는 도우미 임시 키를 쓰지 못한 이유(도우미 오류 코드, 또는 sshd가 키를 받지 않았으면
+   * key_rejected)다. ssh_auth_failed의 힌트다.
+   */
+  keyCode?: string;
+  /**
+   * NotAllowedGroups는 사용자가 sshd의 AllowGroups 중 어느 그룹에도 없을 때 그 그룹 목록이다.
+   */
+  notAllowedGroups?: string[];
+  /**
+   * RetryAfterSeconds는 rate_limited일 때 다시 시도할 수 있을 때까지의 초다.
+   */
+  retryAfterSeconds?: number /* int */;
+  /**
+   * Required는 security_required일 때 거쳐야 하는 단계다. 정책이 바뀌어 열린 터미널이 닫혔을 때는 없다.
+   */
+  required?: 'password' | 'twoFactor';
+  /**
+   * Kind는 prompt의 종류다. password면 질문 문구를 프론트가 현지화하고, keyboard-interactive면
+   * sshd(PAM)가 준 Instruction과 Prompts의 문구를 그대로 보여 준다.
+   */
+  kind?: 'password' | 'keyboard-interactive';
+  instruction?: string;
+  prompts?: TerminalPrompt[];
+}
+/**
+ * TerminalPrompt는 질문 하나다. Echo가 false면 입력을 화면에 보이지 않는다(비밀번호).
+ */
+export interface TerminalPrompt {
+  text: string;
+  echo: boolean;
+}
+
+//////////
+// source: upgrade.go
+
+/**
+ * UpgradeNotEnabled: 설치기가 대시보드에서 업그레이드를 켜지 않았다(/etc/default/maru-upgrade가 없다).
+ */
+export const UpgradeNotEnabled = "not-enabled";
+/**
+ * UpgradeNoHelper: 권한 도우미를 설정하지 않았다(-helper-socket). 업그레이드는 도우미의 root 연산으로 요청한다.
+ */
+export const UpgradeNoHelper = "no-helper";
+/**
+ * UpgradeStateDir: 상태 디렉터리가 없거나 설치한 위치(/var/lib/maru)가 아니다. 업그레이드 서비스의 경로 유닛은
+ * 그 안의 확인 요청만 지켜본다.
+ */
+export const UpgradeStateDir = "state-dir";
+/**
+ * UpgradeInfo는 GET /api/upgrade(관리자)의 응답이다. 설정 앱의 업데이트 페이지가 보여 준다.
+ * Status는 업그레이드 서비스가 쓴 상태 파일 그대로이고 형식은 backend/config(upgrade_request.go)에 있다.
+ */
+export interface UpgradeInfo {
+  /**
+   * Enabled는 대시보드에서 업그레이드를 쓸 수 있다는 뜻이다. 아니면 DisabledReason에 이유가 있다.
+   */
+  enabled: boolean;
+  disabledReason?: 'not-enabled' | 'no-helper' | 'state-dir';
+  /**
+   * Repo, User는 업그레이드할 저장소와 저장소 소유자(빌드 계정)다. 수동 재설치 안내에 쓴다. 모르면 없다.
+   */
+  repo?: string;
+  user?: string;
+  /**
+   * Pending은 확인 요청을 업그레이드 서비스가 아직 가져가지 않았다는 뜻이다. PendingStalled는 1분 넘게 남아 있다는
+   * 뜻이다(경로 유닛 maru-upgrade.path가 돌지 않는다).
+   */
+  pending: boolean;
+  pendingStalled: boolean;
+  /**
+   * Interrupted는 상태 파일이 확인·업그레이드 중인 채로 업그레이드 서비스의 시간 상한(2시간)보다 오래 바뀌지 않았다는
+   * 뜻이다. 서비스가 중단됐으므로 다시 확인할 수 있다.
+   */
+  interrupted: boolean;
+  /**
+   * Version, Revision은 지금 실행 중인 maru의 버전과 커밋이다(Revision은 모르면 없다).
+   */
+  version: string;
+  revision?: string;
+  /**
+   * Installed는 설치기가 남긴 설치 기록이다(/var/lib/maru-upgrade/installed.json). 없거나 읽을 수 없으면 null이다.
+   * 실행 파일에 커밋이 없을 때(go run) 화면이 이 기록의 커밋을 보인다.
+   */
+  installed?: config.InstallRecord;
+  /**
+   * Status는 업그레이드 서비스의 상태 파일이다. 없거나 읽을 수 없으면 null이다.
+   */
+  status?: config.UpgradeStatus;
+  /**
+   * Channel은 관리자가 고른 업데이트 채널이다(site.json). 빈 값이면 지금 브랜치의 추적 브랜치를 따른다.
+   */
+  channel: '' | 'stable' | 'main';
+}
+/**
+ * StartUpgradeCheckRequest는 POST /api/upgrade/check의 본문이다.
+ */
+export interface StartUpgradeCheckRequest {
+  /**
+   * Mode는 확인 방식이다. remote는 git fetch 뒤 업데이트 채널(고르지 않았으면 추적 브랜치), local은 지금
+   * 체크아웃(HEAD)을 대상으로 삼는다. 채널은 site.json의 값을 쓴다.
+   */
+  mode: 'remote' | 'local';
+}
+/**
+ * SetUpgradeChannelRequest는 PUT /api/upgrade/channel의 본문이다. 원격 확인이 따라갈 업데이트 채널을 site.json에 둔다.
+ */
+export interface SetUpgradeChannelRequest {
+  channel: '' | 'stable' | 'main';
+}
+/**
+ * StartUpgradeRequest는 POST /api/upgrade/apply의 본문이다. root 권한 상승이 필요하다.
+ */
+export interface StartUpgradeRequest {
+  /**
+   * Target은 확인이 정한 대상 커밋(40자리 16진수)이다.
+   */
+  target: string;
+  /**
+   * Settings는 업그레이드 계획이 물은 설정의 이름과 값이다(confirm은 yes/no).
+   */
+  settings: { [key: string]: string};
 }
