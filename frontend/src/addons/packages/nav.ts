@@ -8,10 +8,13 @@ interface PackagesNav {
   // seq는 요청마다 늘어난다. 창이 이미 열려 있어도 다시 작업 보기로 바꾼다.
   seq: number
   showJob: (jobId: string | null) => void
+  // forget은 열어 달라던 작업을 잊는다(창에서 새 작업을 시작하면 가장 최근 작업을 보여야 하므로). 보기는 바꾸지 않는다.
+  forget: () => void
 }
 
 export const usePackagesNav = create<PackagesNav>()((set) => ({
   jobId: null,
   seq: 0,
   showJob: (jobId) => set((s) => ({ jobId, seq: s.seq + 1 })),
+  forget: () => set({ jobId: null }),
 }))

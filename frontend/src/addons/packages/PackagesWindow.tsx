@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import type { Job, PackageUpdate, PackagesResponse } from '../../api/types.gen'
 import { useLanguage } from '../../i18n'
 import { IconImage } from '../../icons/IconImage'
+import { refreshNotifications } from '../../notifications/useNotifications'
 import { openPowerDialog } from '../../power/powerDialog'
 import { Modal } from '../../shell/Modal'
 import { openWorkbenchRoute } from '../../shell/launchApp'
@@ -70,9 +71,12 @@ export function PackagesWindow({ active }: WindowViewProps) {
     setLastCurrent(current?.id ?? null)
   }
 
+  // 시작(성공·실패)하면 작업과 목록을 다시 받고, 알림도 바로 받아 알림 센터의 백그라운드 작업이 곧 보이게 한다.
   const ctl = useAddonActions('packages', () => {
+    usePackagesNav.getState().forget()
     jobsData.refresh()
     refresh()
+    refreshNotifications()
   })
   const { settle } = ctl
   useEffect(() => settle(), [jobs, settle])
