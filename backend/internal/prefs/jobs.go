@@ -46,12 +46,11 @@ type resultsDoc struct {
 func (s *FileStore) jobsDir() string { return filepath.Join(s.root, "jobs") }
 
 func (s *FileStore) jobsPath(parts ...string) (string, error) {
-	p := filepath.Join(append([]string{s.jobsDir()}, parts...)...)
-	if err := os.MkdirAll(filepath.Dir(p), 0o700); err != nil {
-		return "", err
-	}
-	return p, nil
+	return filepath.Join(append([]string{s.jobsDir()}, parts...)...), nil
 }
+
+// ensureDir는 쓰기 전에 path의 디렉터리를 만든다(읽기만 하는 요청이 디렉터리를 만들지 않게).
+func ensureDir(path string) error { return os.MkdirAll(filepath.Dir(path), 0o700) }
 
 func (s *FileStore) outputPath(id string) (string, error) {
 	if !jobs.ValidID(id) {
@@ -113,6 +112,9 @@ func (s *FileStore) SaveCurrent(r *jobs.Record) error {
 		}
 		return nil
 	}
+	if err := ensureDir(path); err != nil {
+		return err
+	}
 	return writeAtomic(path, currentDoc{Version: jobsVersion, Record: *r})
 }
 
@@ -155,6 +157,9 @@ func (s *FileStore) SaveResults(user string, rs []jobs.Result) error {
 		}
 		return nil
 	}
+	if err := ensureDir(path); err != nil {
+		return err
+	}
 	return writeAtomic(path, resultsDoc{Version: jobsVersion, Results: rs})
 }
 
@@ -165,6 +170,9 @@ func (s *FileStore) AppendOutput(id string, b []byte) error {
 	}
 	s.jobMu.Lock()
 	defer s.jobMu.Unlock()
+	if err := ensureDir(path); err != nil {
+		return err
+	}
 	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0o600)
 	if err != nil {
 		return err
