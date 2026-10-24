@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import type { Notice, NotificationsResponse } from '../api/types.gen'
+import type { Job, Notice, NotificationsResponse } from '../api/types.gen'
 import type { SeenMap } from './model'
 import { createNotificationStore } from './store'
 
@@ -12,7 +12,7 @@ const notice = (id: string, revision = 'r1', level: Notice['level'] = 'warning')
 
 const resp = (notices: Notice[], seen: SeenMap = {}): NotificationsResponse => ({ notices, seen: { ...seen }, tasks: [] })
 
-// 저장을 손으로 끝내는 가짜 API.
+// 저장·지우기를 손으로 끝내는 가짜 API.
 function setup() {
   const saves: { seen: SeenMap; resolve: () => void; reject: () => void }[] = []
   const saveSeen = vi.fn(
@@ -21,9 +21,16 @@ function setup() {
         saves.push({ seen, resolve, reject: () => reject(new Error('save failed')) })
       }),
   )
-  const store = createNotificationStore({ saveSeen, now: () => 1000 })
+  const dismisses: { id: string; resolve: () => void; reject: () => void }[] = []
+  const dismiss = vi.fn(
+    (id: string) =>
+      new Promise<void>((resolve, reject) => {
+        dismisses.push({ id, resolve, reject: () => reject(new Error('dismiss failed')) })
+      }),
+  )
+  const store = createNotificationStore({ saveSeen, dismiss, now: () => 1000 })
   store.getState().enable()
-  return { store, saves, saveSeen }
+  return { store, saves, saveSeen, dismisses, dismiss }
 }
 
 const flush = () => new Promise((r) => setTimeout(r, 0))
@@ -191,5 +198,64 @@ describe('clear', () => {
     store.getState().clear()
     store.getState().received(resp([notice('a')]))
     expect(store.getState().notices).toEqual([])
+  })
+})
+
+describe('작업 결과 알림', () => {
+  const result = (id: string): Notice => ({ ...notice(id, 'r1', 'success'), code: 'jobSucceeded', dismissible: true })
+
+  it('첫 응답에서도 읽지 않은 결과는 토스트로 띄운다', () => {
+    const { store } = setup()
+    store.getState().received(resp([notice('a'), result('job-1')]))
+    expect(store.getState().toasts.map((t) => t.ref)).toEqual([{ kind: 'server', id: 'job-1' }])
+  })
+
+  it('지우면 바로 숨기고, 끝나기 전에 받은 응답이 되살리지 않는다', async () => {
+    const { store, dismisses, dismiss } = setup()
+    store.getState().received(resp([result('job-1')]))
+    store.getState().dismissNotice('job-1')
+    expect(dismiss).toHaveBeenCalledWith('job-1')
+    expect(store.getState().notices).toEqual([])
+    expect(store.getState().toasts).toEqual([])
+    store.getState().received(resp([result('job-1')]))
+    expect(store.getState().notices).toEqual([])
+    dismisses[0].resolve()
+    await flush()
+    store.getState().received(resp([]))
+    expect(store.getState().notices).toEqual([])
+  })
+
+  it('지우기가 실패하면 되돌린다', async () => {
+    const { store, dismisses } = setup()
+    store.getState().received(resp([result('job-1')]))
+    store.getState().dismissNotice('job-1')
+    dismisses[0].reject()
+    await flush()
+    expect(store.getState().notices.map((n) => n.id)).toEqual(['job-1'])
+  })
+
+  it('지울 수 없는 알림은 지우지 않는다', () => {
+    const { store, dismiss } = setup()
+    store.getState().received(resp([notice('a')]))
+    store.getState().dismissNotice('a')
+    expect(dismiss).not.toHaveBeenCalled()
+    expect(store.getState().notices).toHaveLength(1)
+  })
+
+  it('진행 중인 작업(tasks)을 둔다', () => {
+    const { store } = setup()
+    const task: Job = {
+      id: '20261024-101500-1a2b3c4d',
+      kind: 'apt-upgrade',
+      state: 'running',
+      owner: 'admin',
+      mine: true,
+      startedAt: '2026-10-24T10:15:00Z',
+      outputEnd: 0,
+    }
+    store.getState().received({ ...resp([]), tasks: [task] })
+    expect(store.getState().tasks).toEqual([task])
+    store.getState().clear()
+    expect(store.getState().tasks).toEqual([])
   })
 })

@@ -189,6 +189,9 @@ func TestRunToSuccess(t *testing.T) {
 	e.r.steps <- step{out: "Reading package lists...\n", pos: 25}
 	e.r.steps <- step{waiting: &waiting}
 	waitFor(t, func() bool { j := e.m.Tasks("bob"); return len(j) == 1 && j[0].Waiting && !j[0].Mine })
+	if j := e.m.Tasks("bob")[0]; j.LastLine != "Reading package lists..." {
+		t.Errorf("last line = %q", j.LastLine)
+	}
 
 	// 진행 중 출력은 어느 관리자나 읽는다.
 	out, err := e.m.Output(id, "bob", 0)
@@ -427,6 +430,23 @@ func TestOutputCap(t *testing.T) {
 	}
 	if out.From%1024 != 0 {
 		t.Errorf("output not cut on a line boundary: from=%d", out.From)
+	}
+}
+
+func TestLastLine(t *testing.T) {
+	for in, want := range map[string]string{
+		"a\nb\n":     "b",
+		"a\nb  \n\n": "b",
+		"only":       "only",
+		"\n\n":       "",
+	} {
+		if got := lastLine([]byte(in)); got != want {
+			t.Errorf("lastLine(%q) = %q, want %q", in, got, want)
+		}
+	}
+	long := strings.Repeat("가", 100)
+	if got := lastLine([]byte(long)); len(got) > maxLastLine || !strings.HasPrefix(long, got) {
+		t.Errorf("long line = %d bytes", len(got))
 	}
 }
 

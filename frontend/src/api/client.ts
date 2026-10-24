@@ -49,6 +49,8 @@ import type {
   HelperStatus,
   ImageInfo,
   Job,
+  JobOutput,
+  JobsResponse,
   LoginResponse,
   Notice,
   NoticeAction,
@@ -57,6 +59,8 @@ import type {
   NotificationPrefsRequest,
   NotificationsResponse,
   OverridableSetting,
+  PackageUpdate,
+  PackagesResponse,
   PasskeyAssertion,
   PasskeyChallengeRequest,
   PasskeyConfirmRequest,
@@ -559,6 +563,7 @@ export function isJob(v: unknown): v is Job {
     isStr(v.startedAt) &&
     isOptional(v.endedAt, isStr) &&
     isOptional(v.waiting, isBool) &&
+    isOptional(v.lastLine, isStr) &&
     isNum(v.outputEnd) &&
     isOptional(v.outputIncomplete, isBool) &&
     isOptional(v.count, isNum) &&
@@ -603,6 +608,69 @@ export async function fetchNotifications(signal?: AbortSignal): Promise<Notifica
   }
   const tasks = Array.isArray(data.tasks) ? data.tasks.filter(isJob) : []
   return { notices: data.notices.filter(isNotice), seen: data.seen, tasks }
+}
+
+// dismissNotice는 사용자가 지울 수 있는 서버 알림(작업 결과) 하나를 지운다.
+export async function dismissNotice(id: string): Promise<void> {
+  await request('DELETE', `/notifications/${encodeURIComponent(id)}`)
+}
+
+function isPackageUpdate(v: unknown): v is PackageUpdate {
+  return (
+    isObj(v) &&
+    isStr(v.name) &&
+    isStr(v.version) &&
+    isOptional(v.oldVersion, isStr) &&
+    isOptional(v.repository, isStr) &&
+    isOptional(v.section, isStr) &&
+    isOptional(v.summary, isStr) &&
+    isOptional(v.filename, isStr) &&
+    isNum(v.size)
+  )
+}
+
+// isPackagesResponse는 시스템 업데이트 애드온 응답의 모양을 본다.
+export function isPackagesResponse(v: unknown): v is PackagesResponse {
+  return (
+    isObj(v) &&
+    hasAddonSources(v) &&
+    isBool(v.indexed) &&
+    isOptional(v.indexedAt, isStr) &&
+    isArrayOf(v.packages, isPackageUpdate) &&
+    isObj(v.reboot) &&
+    isBool(v.reboot.required) &&
+    isOptional(v.reboot.since, isStr) &&
+    isOptional(v.reboot.packages, (x) => isArrayOf(x, isStr))
+  )
+}
+
+// fetchJobs는 진행 중인 서버 백그라운드 작업과 이 사용자의 결과를 가져온다(관리자). 모르는 종류의 결과는 뺀다.
+export async function fetchJobs(signal?: AbortSignal): Promise<JobsResponse> {
+  const data = await getJSON('/jobs', { signal })
+  if (!isObj(data) || !Array.isArray(data.recent) || !isOptional(data.current, isJob)) {
+    throw new Error('/jobs: unexpected response shape')
+  }
+  return { current: data.current, recent: data.recent.filter(isJob) }
+}
+
+function isJobOutput(v: unknown): v is JobOutput {
+  return (
+    isObj(v) &&
+    isNum(v.from) &&
+    isNum(v.next) &&
+    isStr(v.text) &&
+    isBool(v.more) &&
+    isOneOf(v.state, JOB_STATES) &&
+    isOptional(v.waiting, isBool)
+  )
+}
+
+// fetchJobOutput은 작업 출력을 from(논리 위치)부터 가져온다. 한 번에 일부만 오면 more가 true다.
+export async function fetchJobOutput(id: string, from: number, signal?: AbortSignal): Promise<JobOutput> {
+  const path = `/jobs/${encodeURIComponent(id)}/output?from=${from}`
+  const data = await getJSON(path, { signal })
+  if (!isJobOutput(data)) throw new Error(`${path}: unexpected response shape`)
+  return data
 }
 
 // saveNotificationPrefs는 알림 읽음 상태 전체를 저장한다. 다른 설정은 바꾸지 않는다.

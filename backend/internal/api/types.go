@@ -838,6 +838,8 @@ type Job struct {
 	EndedAt   string `json:"endedAt,omitempty"`
 	// Waiting이면 OMV에서는 작업이 계속 돌지만 대시보드가 출력을 읽을 관리자 세션이 없어 기다리는 중이다.
 	Waiting bool `json:"waiting,omitempty"`
+	// LastLine은 진행 중 작업의 마지막 출력 한 줄이다(알림 센터의 백그라운드 작업). 끝난 작업은 없다.
+	LastLine string `json:"lastLine,omitempty"`
 	// OutputEnd는 지금까지 받은 출력의 끝 위치다(JobOutput.Next와 같은 단위).
 	OutputEnd int64 `json:"outputEnd"`
 	// OutputIncomplete면 출력 일부가 없다(앞부분을 상한 때문에 버렸거나 끝부분을 읽지 못했다).
@@ -851,8 +853,8 @@ type Job struct {
 
 // JobsResponse는 GET /api/jobs의 응답이다.
 type JobsResponse struct {
-	// Current는 진행 중인 작업이다(누가 시작했든). 없으면 null이다.
-	Current *Job `json:"current"`
+	// Current는 진행 중인 작업이다(누가 시작했든). 없으면 빠진다.
+	Current *Job `json:"current,omitempty"`
 	// Recent는 이 사용자가 시작한 작업의 결과다(최신 순).
 	Recent []Job `json:"recent"`
 }

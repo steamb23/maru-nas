@@ -4,8 +4,15 @@ import { createPoller } from '../addons/common/poller'
 import { usePageVisible } from '../addons/common/usePageVisible'
 import { useNotificationStore } from './store'
 
-// 서버 알림을 다시 가져오는 주기. 백엔드는 알림을 30초 보관한다.
+// 서버 알림을 다시 가져오는 주기. 백엔드는 알림을 30초 보관한다. 서버 백그라운드 작업이 진행 중이면(tasks) 결과를
+// 곧 알리도록 자주 받는다(작업 결과 알림은 보관하지 않는다).
 export const NOTIFICATIONS_POLL_INTERVAL_MS = 60_000
+export const NOTIFICATIONS_TASK_INTERVAL_MS = 10_000
+
+// pollInterval은 진행 중인 작업이 있는지에 따른 주기다.
+export function pollInterval(tasks: number): number {
+  return tasks > 0 ? NOTIFICATIONS_TASK_INTERVAL_MS : NOTIFICATIONS_POLL_INTERVAL_MS
+}
 const NOTIFICATIONS_TIMEOUT_MS = 10_000
 
 // useNotifications는 로그인한 동안 서버 알림을 가져와 저장소에 둔다. 탭이 보이지 않으면 멈추고, 다시 보이면
@@ -25,12 +32,19 @@ export function useNotifications() {
     const store = useNotificationStore.getState()
     const poller = createPoller({
       fetch: fetchNotifications,
-      intervalMs: NOTIFICATIONS_POLL_INTERVAL_MS,
+      intervalMs: () => pollInterval(useNotificationStore.getState().tasks.length),
       timeoutMs: NOTIFICATIONS_TIMEOUT_MS,
       onData: store.received,
       onError: store.failed,
     })
+    // 작업이 생기거나 끝나면 다음 요청을 새 주기로 다시 잡는다.
+    const unsubscribe = useNotificationStore.subscribe((s, prev) => {
+      if (pollInterval(s.tasks.length) !== pollInterval(prev.tasks.length)) poller.reschedule()
+    })
     poller.start()
-    return () => poller.stop()
+    return () => {
+      unsubscribe()
+      poller.stop()
+    }
   }, [visible])
 }

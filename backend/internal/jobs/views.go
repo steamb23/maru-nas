@@ -32,6 +32,7 @@ func (a *activeJob) view(user string) api.Job {
 		Mine:             a.rec.Owner == user,
 		StartedAt:        formatTime(a.rec.StartedAt),
 		Waiting:          a.waiting,
+		LastLine:         a.lastLine,
 		OutputEnd:        a.rec.Output.End,
 		OutputIncomplete: a.rec.Output.Truncated || a.rec.Output.Incomplete,
 	}

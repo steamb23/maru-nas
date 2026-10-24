@@ -400,8 +400,10 @@ type activeJob struct {
 	prefer string
 	// waiting은 출력을 읽을 관리자 세션이 없어 기다리는 중인지다(메모리에만).
 	waiting bool
-	dirty   bool
-	saved   time.Time
+	// lastLine은 마지막 출력 한 줄이다(메모리에만, 다시 시작하면 다음 출력부터 채운다).
+	lastLine string
+	dirty    bool
+	saved    time.Time
 }
 
 func (a *activeJob) Output(chunk []byte, handle json.RawMessage) {
@@ -409,6 +411,9 @@ func (a *activeJob) Output(chunk []byte, handle json.RawMessage) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if len(chunk) > 0 {
+		if line := lastLine(chunk); line != "" {
+			a.lastLine = line
+		}
 		if err := m.store.AppendOutput(a.rec.ID, chunk); err != nil {
 			log.Printf("jobs: %s: append output: %v", a.rec.ID, err)
 			a.rec.Output.Incomplete = true
@@ -429,6 +434,19 @@ func (a *activeJob) Output(chunk []byte, handle json.RawMessage) {
 	if m.now().Sub(a.saved) >= checkpointEvery {
 		m.checkpointLocked(a)
 	}
+}
+
+// maxLastLine은 lastLine의 바이트 상한이다.
+const maxLastLine = 200
+
+// lastLine은 chunk의 마지막 빈 줄이 아닌 줄이다(상한을 넘으면 앞부분만, UTF-8 경계에서 자른다).
+func lastLine(chunk []byte) string {
+	lines := strings.Split(strings.TrimRight(string(chunk), "\n"), "\n")
+	line := strings.TrimSpace(lines[len(lines)-1])
+	if len(line) > maxLastLine {
+		line = string(cutPartialRune([]byte(line[:maxLastLine])))
+	}
+	return line
 }
 
 func (a *activeJob) Waiting(w bool) {

@@ -104,7 +104,9 @@
       "open": "Open",
       "workbench": "View in OMV",
       "power": "Power…",
-      "details": "View details"
+      "details": "View details",
+      "output": "View output",
+      "updates": "View updates"
     },
     "server": {
       "sample": {
@@ -189,6 +191,11 @@
         "body_other": "Couldn't upload {{count}} files.",
         "bodyStopped": "The upload stopped partway."
       }
+    },
+    "tasks": {
+      "title": "Background tasks",
+      "open": "Open",
+      "sub": "{{owner}} · {{elapsed}} · keeps running on the server even if the window is closed"
     }
   },
   "profile": {
@@ -259,7 +266,8 @@
     "workbench": "OMV Workbench",
     "settings": "Settings",
     "terminal": "Terminal",
-    "viewer": "Preview"
+    "viewer": "Preview",
+    "packages": "System Updates"
   },
   "terminal": {
     "connecting": "Connecting to the SSH server as {{user}}…",
@@ -870,7 +878,9 @@
       "admin_required": "Only administrators can do this.",
       "plugin_missing": "The required OpenMediaVault plugin is not installed.",
       "omv_error": "Could not reach OpenMediaVault.",
-      "unknown": "The request failed."
+      "unknown": "The request failed.",
+      "job_busy": "A task is already running.",
+      "apt_locked": "Another package task is running. Try again in a moment."
     }
   },
   "sidebar": {
@@ -1471,5 +1481,117 @@
     "binary": "This file isn't text, so its contents can't be shown.",
     "truncated": "This file is large, so only the first {{size}} is shown.",
     "security": "This session needs a security check before previewing files."
+  },
+  "packages": {
+    "tabs": {
+      "label": "View",
+      "list": "Updates",
+      "job": "Task"
+    },
+    "settings": "Update settings",
+    "check": "Check for updates",
+    "install": "Install all",
+    "summary_one": "{{count}} update · {{size}} to download",
+    "summary_other": "{{count}} updates · {{size}} to download",
+    "lastChecked": "Last checked: {{time}}",
+    "listLabel": "Packages to update",
+    "columns": {
+      "package": "Package · Repository",
+      "version": "New version",
+      "size": "Size"
+    },
+    "current": "Current {{version}}",
+    "newInstall": "New install",
+    "changelog": "Changelog (OMV Workbench)",
+    "changelogLabel": "{{name}} changelog (OMV Workbench)",
+    "upToDate": {
+      "title": "All packages are up to date",
+      "body": "You'll get a notification when new updates are available."
+    },
+    "noIndex": {
+      "title": "Updates haven't been checked yet",
+      "body": "Check for updates to download the package lists from the repositories. It usually takes 10 seconds to a minute."
+    },
+    "reboot": {
+      "title": "Restart to finish applying updates",
+      "packages": "Requested by:",
+      "action": "Restart…"
+    },
+    "during": {
+      "update": "Checking for updates",
+      "upgrade": "Installing updates",
+      "other": "A task started by {{owner}} is running",
+      "view": "View task"
+    },
+    "start": {
+      "locked": {
+        "title": "Another package task is running",
+        "body": "apt or dpkg is locked, so the task couldn't start. Try again in a moment."
+      },
+      "dirty": {
+        "title": "OMV has unapplied configuration changes",
+        "body": "Apply the pending changes in the OMV Workbench first, then try again.",
+        "action": "Open Workbench"
+      },
+      "busy": {
+        "title": "A task is already running",
+        "body": "Try again after the current task finishes."
+      },
+      "failed": {
+        "title": "Couldn't start the task",
+        "body": "OMV may be unreachable. Try again in a moment."
+      }
+    },
+    "confirm": {
+      "title_one": "Install all {{count}} update?",
+      "title_other": "Install all {{count}} updates?",
+      "intro": "Like installing updates in the OMV Workbench, this installs every available update. You can't pick individual packages.",
+      "size": "The download is {{size}}, and it can take from a few minutes to tens of minutes.",
+      "services": "Services restart during the installation, so shared folders, Docker containers, and the OMV Workbench may drop for a moment.",
+      "kernel": "A kernel is included, so you may need to restart the system afterward.",
+      "background": "It keeps running on the server even if you close the window or sign out.",
+      "action": "Install all"
+    },
+    "job": {
+      "none": "No tasks have run yet.",
+      "inProgress": "In progress",
+      "update": {
+        "running": "Checking for updates",
+        "succeeded": "Update check finished",
+        "failed": "Couldn't check for updates",
+        "unknown": "Update check result unknown"
+      },
+      "upgrade": {
+        "running": "Installing updates",
+        "succeeded": "Updates installed",
+        "failed": "Couldn't install updates",
+        "unknown": "Update installation result unknown"
+      },
+      "found_one": "{{count}} update is available",
+      "found_other": "{{count}} updates are available",
+      "upgraded_one": "Updated {{count}} package",
+      "upgraded_other": "Updated {{count}} packages",
+      "started": "{{owner}} · started {{start}} · {{elapsed}}",
+      "ended": "{{owner}} · started {{start}} · finished {{end}} ({{elapsed}})",
+      "waitingTag": "Waiting",
+      "waiting": "No output arrived while no administrator was signed in. The task keeps running on the server, and the output will continue shortly.",
+      "other": "The list refreshes when the task finishes. Until then, you can't check for or install updates.",
+      "background": "It keeps running on the server even if you close the window. You'll get a notification when it finishes.",
+      "back": "Back to list",
+      "output": "Output",
+      "lines_one": "{{count}} line",
+      "lines_other": "{{count}} lines",
+      "truncated": "beginning omitted",
+      "following": "following the end",
+      "noOutput": "No output was received.",
+      "reason": {
+        "aptFailed": "apt ended with an error. Check the last lines of the output for the reason.",
+        "aptCoreRemoval": "OMV stopped the installation because it could remove the openmediavault package. Check the repository settings in the OMV Workbench.",
+        "jobFailed": "The task failed. Check the output and try again in a moment.",
+        "jobLost": "Couldn't read the result. The OMV Workbench may have read it first. Check for updates to get the current state.",
+        "jobReboot": "The system restarted while the task was running. Check for updates to get the current state.",
+        "jobTimeout": "The task didn't finish in time, so it's no longer being watched. It may still be running on the server, so check for updates again in a moment."
+      }
+    }
   }
 }

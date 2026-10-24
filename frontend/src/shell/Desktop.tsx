@@ -112,9 +112,9 @@ export function Desktop() {
     launchApp('settings', bounds)
   }
 
-  // 알림 센터·토스트의 동작(앱·설정 열기, 워크벤치, 전원 대화상자)을 실행한다.
-  const runNotice = (action: NoticeAction) =>
-    runNoticeAction(action, { openApp: (id) => launchApp(id, bounds), openSettings })
+  // 알림 센터·토스트의 동작(앱·설정 열기, 워크벤치, 전원 대화상자)을 실행한다. job은 작업 결과의 작업 id다.
+  const runNotice = (action: NoticeAction, job?: string) =>
+    runNoticeAction(action, { openApp: (id) => launchApp(id, bounds), openSettings }, job)
 
   // 로그인하거나 세션을 복원해 처음 그려질 때 내용이 커지며 나타난다.
   useLayoutEffect(() => enterDesktop(rootRef.current), [])

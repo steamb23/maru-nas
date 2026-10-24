@@ -67,6 +67,7 @@
 @import './addons/common/common.css';
 @import './addons/containers/containers.css';
 @import './addons/network/network.css';
+@import './addons/packages/packages.css';
 @import './addons/services/services.css';
 @import './addons/smart/smart.css';
 @import './addons/system-info/system-info.css';

@@ -100,12 +100,14 @@ export function revisionsOf(notices: readonly Notice[]): Map<string, string> {
 
 // noticesToToast는 새로 토스트로 띄울 서버 알림이다. 이 탭에서 처음 받은 목록(prev가 null)은 띄우지 않는다
 // (로그인할 때마다 같은 알림이 뜨지 않게). 그 뒤로는 새로 생기거나 리비전이 바뀐 읽지 않은 알림만 띄운다.
+// 예외로 작업 결과(dismissible)는 첫 목록에서도 읽지 않았으면 띄운다. 창을 닫았거나 로그아웃한 동안 끝난 작업을
+// 다음 로그인 때 알려야 하기 때문이다. 읽거나 지운 결과는 다시 뜨지 않는다.
 export function noticesToToast(
   prev: ReadonlyMap<string, string> | null,
   next: readonly Notice[],
   seen: SeenMap,
 ): Notice[] {
-  if (!prev) return []
+  if (!prev) return next.filter((n) => n.dismissible === true && isUnread(n, seen))
   return next.filter((n) => prev.get(n.id) !== n.revision && isUnread(n, seen))
 }
 

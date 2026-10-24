@@ -1,6 +1,7 @@
 // 알림의 동작(앱 열기, 워크벤치 화면 열기, 전원 대화상자)을 실행한다. 알림 센터와 토스트가 함께 쓴다.
 import type { NoticeAction } from '../api/types.gen'
 import { useCapabilitiesStore } from '../addons/capabilities'
+import { usePackagesNav } from '../addons/packages/nav'
 import { useAuthStore } from '../auth/store'
 import type { ActionContext } from '../notifications/model'
 import { openPowerDialog } from '../power/powerDialog'
@@ -17,9 +18,11 @@ export interface NoticeActionDeps {
 const isSettingsPage = (page: string): page is SettingsPageId => SETTINGS_PAGES.some((p) => p.id === page)
 
 // runNoticeAction은 action을 실행한다. 워크벤치 탭은 팝업 차단을 피하려고 누르기 처리 안에서 바로 연다.
-export function runNoticeAction(action: NoticeAction, deps: NoticeActionDeps): void {
+// job은 작업 결과 알림·백그라운드 작업의 작업 id다. 시스템 업데이트 창을 그 작업의 출력으로 연다.
+export function runNoticeAction(action: NoticeAction, deps: NoticeActionDeps, job?: string): void {
   switch (action.kind) {
     case 'app':
+      if (action.app === 'packages' && job) usePackagesNav.getState().showJob(job)
       if (action.app === 'settings' && action.page && isSettingsPage(action.page)) deps.openSettings(action.page)
       else if (action.app && isAppId(action.app)) deps.openApp(action.app)
       return

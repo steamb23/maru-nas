@@ -122,10 +122,12 @@ export function clientText(e: ClientEvent): NoticeText {
   return { title: text.title, body, params }
 }
 
-// actionLabel은 동작 단추의 문구다. 파일 작업 창처럼 결과를 자세히 보이는 앱은 "자세히 보기"다.
-export function actionLabel(action: NoticeAction): ParseKeys {
+// actionLabel은 동작 단추의 문구다. 파일 작업 창처럼 결과를 자세히 보이는 앱은 "자세히 보기", 시스템 업데이트는
+// 작업 결과면 "출력 보기", 아니면 "업데이트 보기"다.
+export function actionLabel(action: NoticeAction, job = false): ParseKeys {
   switch (action.kind) {
     case 'app':
+      if (action.app === 'packages') return job ? 'notifications.action.output' : 'notifications.action.updates'
       return action.app === 'transfers' ? 'notifications.action.details' : 'notifications.action.open'
     case 'workbench':
       return 'notifications.action.workbench'

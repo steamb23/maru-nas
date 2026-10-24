@@ -1254,6 +1254,10 @@ export interface Job {
    */
   waiting?: boolean;
   /**
+   * LastLine은 진행 중 작업의 마지막 출력 한 줄이다(알림 센터의 백그라운드 작업). 끝난 작업은 없다.
+   */
+  lastLine?: string;
+  /**
    * OutputEnd는 지금까지 받은 출력의 끝 위치다(JobOutput.Next와 같은 단위).
    */
   outputEnd: number /* int64 */;
@@ -1276,7 +1280,7 @@ export interface Job {
  */
 export interface JobsResponse {
   /**
-   * Current는 진행 중인 작업이다(누가 시작했든). 없으면 null이다.
+   * Current는 진행 중인 작업이다(누가 시작했든). 없으면 빠진다.
    */
   current?: Job;
   /**

@@ -16,7 +16,13 @@ import { animationsEnabled } from './useWindowAnimation'
 import { EASING } from './windowAnim'
 
 // onAction은 알림의 동작을 실행한다. 데스크톱 크기가 필요해 Desktop이 넘긴다.
-export function ToastLayer({ inert, onAction }: { inert: boolean; onAction: (action: NoticeAction) => void }) {
+export function ToastLayer({
+  inert,
+  onAction,
+}: {
+  inert: boolean
+  onAction: (action: NoticeAction, job?: string) => void
+}) {
   const { t } = useTranslation()
   const toasts = useNotificationStore((s) => s.toasts)
   const notices = useNotificationStore((s) => s.notices)
@@ -70,7 +76,7 @@ export function ToastLayer({ inert, onAction }: { inert: boolean; onAction: (act
                 ctx={ctx}
                 onAction={(action) => {
                   dismissToast(toast.key)
-                  onAction(action)
+                  onAction(action, item.job)
                 }}
               />
             )
@@ -109,7 +115,7 @@ function ToastCard({ toast, item, ctx, onAction }: CardProps) {
         {text.body && <span className="toast-body">{t(text.body, params)}</span>}
         {actionAvailable(action, ctx) && (
           <button type="button" className="notice-action toast-action" onClick={() => onAction(action)}>
-            {t(actionLabel(action))}
+            {t(actionLabel(action, item.job !== undefined))}
           </button>
         )}
       </div>

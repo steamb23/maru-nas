@@ -48,4 +48,7 @@ export const ADDON_VIEWS: { [K in AddonId]: AddonViews<K> } = {
     Window: lazyView(() => import('./services/ServicesWindow'), (m) => m.ServicesWindow),
     Widget: lazyView(() => import('./services/ServicesWidget'), (m) => m.ServicesWidget),
   },
+  packages: {
+    Window: lazyView(() => import('./packages/PackagesWindow'), (m) => m.PackagesWindow),
+  },
 }

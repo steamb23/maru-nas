@@ -3,13 +3,16 @@
 // 표시(점과 굵은 제목)를 남긴다. 바깥 누르기·Esc·알림 버튼으로 닫고, 바탕화면은 막지 않는다.
 import { type KeyboardEvent, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { Notice, NoticeAction } from '../api/types.gen'
+import type { Job, Notice, NoticeAction } from '../api/types.gen'
+import { formatUptime } from '../addons/common/format'
+import { elapsedSeconds, jobHeading } from '../addons/packages/packages'
 import { useLanguage } from '../i18n'
 import { IconImage } from '../icons/IconImage'
 import { type Item, ageText, buildCenter } from '../notifications/items'
 import { LEVEL_ICONS, actionLabel } from '../notifications/messages'
 import { type ActionContext, type ClientEvent, actionAvailable } from '../notifications/model'
 import { useNotificationStore } from '../notifications/store'
+import { useWindowStore } from '../windows/store'
 import { NOTIFICATION_CENTER_ID } from './NotificationButton'
 import { CENTER_CLOSE_MS, CENTER_CLOSE_TO, CENTER_OPEN_FROM, CENTER_OPEN_MS, CENTER_SHOWN } from './notificationAnim'
 import { useNoticeActionContext } from './noticeAction'
@@ -21,13 +24,20 @@ const NOW_TICK_MS = 30_000
 
 const close = () => useNotificationStore.getState().setCenterOpen(false)
 
-// onAction은 알림의 동작을 실행한다. 데스크톱 크기가 필요해 Desktop이 넘긴다.
-export function NotificationCenter({ onAction }: { onAction: (action: NoticeAction) => void }) {
+// PACKAGES_ACTION은 백그라운드 작업의 "열기"다(시스템 업데이트 창을 그 작업으로 연다).
+const PACKAGES_ACTION: NoticeAction = { kind: 'app', app: 'packages' }
+
+// onAction은 알림의 동작을 실행한다. 데스크톱 크기가 필요해 Desktop이 넘긴다. job은 작업 결과의 작업 id다.
+export function NotificationCenter({ onAction }: { onAction: (action: NoticeAction, job?: string) => void }) {
   const { t } = useTranslation()
   const open = useNotificationStore((s) => s.centerOpen)
   const notices = useNotificationStore((s) => s.notices)
   const events = useNotificationStore((s) => s.events)
   const fresh = useNotificationStore((s) => s.fresh)
+  const tasks = useNotificationStore((s) => s.tasks)
+  // 백그라운드 작업 구역은 시스템 업데이트 창이 닫혀 있을 때만 보인다(창이 열려 있으면 창이 진행을 보인다).
+  const packagesOpen = useWindowStore((s) => s.windows.some((w) => w.appId === 'packages'))
+  const shownTasks = packagesOpen ? [] : tasks
   const ctx = useNoticeActionContext()
   const titleId = useId()
   const panelRef = useRef<HTMLElement>(null)
@@ -81,10 +91,14 @@ export function NotificationCenter({ onAction }: { onAction: (action: NoticeActi
   const run = (item: Item, action: NoticeAction) => {
     useNotificationStore.getState().markRead(item.ref)
     close()
-    onAction(action)
+    onAction(action, item.job)
+  }
+  const openTask = (job: Job) => {
+    close()
+    onAction(PACKAGES_ACTION, job.id)
   }
 
-  const empty = notices.length === 0 && events.length === 0
+  const empty = notices.length === 0 && events.length === 0 && shownTasks.length === 0
 
   return (
     <section
@@ -115,7 +129,15 @@ export function NotificationCenter({ onAction }: { onAction: (action: NoticeActi
           <p className="notification-empty-hint">{t('notifications.emptyHint')}</p>
         </div>
       ) : (
-        <CenterList notices={notices} events={events} fresh={fresh} ctx={ctx} onRun={run} />
+        <CenterList
+          notices={notices}
+          events={events}
+          tasks={shownTasks}
+          fresh={fresh}
+          ctx={ctx}
+          onRun={run}
+          onOpenTask={openTask}
+        />
       )}
     </section>
   )
@@ -124,14 +146,16 @@ export function NotificationCenter({ onAction }: { onAction: (action: NoticeActi
 interface ListProps {
   notices: readonly Notice[]
   events: readonly ClientEvent[]
+  tasks: readonly Job[]
   fresh: ReadonlySet<string>
   ctx: ActionContext
   onRun: (item: Item, action: NoticeAction) => void
+  onOpenTask: (job: Job) => void
 }
 
 // CenterList는 "오늘"·"이전" 묶음이다. 센터를 열 때마다 새로 그려지므로 그때의 시각으로 시작하고,
 // 열려 있는 동안 NOW_TICK_MS마다 "3분 전" 같은 시각을 새로 고친다.
-function CenterList({ notices, events, fresh, ctx, onRun }: ListProps) {
+function CenterList({ notices, events, tasks, fresh, ctx, onRun, onOpenTask }: ListProps) {
   const { t } = useTranslation()
   const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
@@ -157,6 +181,14 @@ function CenterList({ notices, events, fresh, ctx, onRun }: ListProps) {
     )
   return (
     <div className="notification-list">
+      {tasks.length > 0 && (
+        <section className="notification-group" aria-label={t('notifications.tasks.title')}>
+          <h3 className="notification-group-title">{t('notifications.tasks.title')}</h3>
+          {tasks.map((job) => (
+            <TaskCard key={job.id} job={job} now={now} onOpen={() => onOpenTask(job)} />
+          ))}
+        </section>
+      )}
       {section(t('notifications.today'), groups.today)}
       {section(t('notifications.earlier'), groups.earlier)}
     </div>
@@ -177,8 +209,13 @@ function NoticeCard({ item, fresh, now, ctx, onAction }: CardProps) {
   const lang = useLanguage()
   const { text, action } = item
   const params = { ...text.params }
-  // 지울 수 있는 것은 클라이언트 알림뿐이다.
-  const eventKey = item.dismissible && item.ref.kind === 'client' ? item.ref.key : null
+  // 지울 수 있는 것은 클라이언트 알림과 서버의 작업 결과 알림이다.
+  const { ref } = item
+  const dismiss = !item.dismissible
+    ? null
+    : ref.kind === 'client'
+      ? () => useNotificationStore.getState().dismissEvent(ref.key)
+      : () => useNotificationStore.getState().dismissNotice(ref.id)
   return (
     <article className={`notice-card notice-level-${item.level}${fresh ? ' fresh' : ''}`}>
       <IconImage name={LEVEL_ICONS[item.level]} size={20} className="notice-icon" />
@@ -188,7 +225,7 @@ function NoticeCard({ item, fresh, now, ctx, onAction }: CardProps) {
         {actionAvailable(action, ctx) && (
           <div className="notice-actions">
             <button type="button" className="notice-action" onClick={() => onAction(action)}>
-              {t(actionLabel(action))}
+              {t(actionLabel(action, item.job !== undefined))}
             </button>
           </div>
         )}
@@ -200,17 +237,54 @@ function NoticeCard({ item, fresh, now, ctx, onAction }: CardProps) {
             {item.at !== null && ageText(item.at, now, lang)}
           </span>
         )}
-        {eventKey !== null && (
+        {dismiss && (
           <button
             type="button"
             className="notice-dismiss"
             aria-label={t('notifications.dismiss')}
             title={t('notifications.dismiss')}
-            onClick={() => useNotificationStore.getState().dismissEvent(eventKey)}
+            onClick={dismiss}
           >
             <IconImage name="window-close-symbolic" size={16} />
           </button>
         )}
+      </div>
+    </article>
+  )
+}
+
+// TaskCard는 진행 중인 서버 백그라운드 작업이다(시안 N). 관리자 세션이 없어 출력을 기다리는 중이면 점선 카드로 보인다.
+function TaskCard({ job, now, onOpen }: { job: Job; now: number; onOpen: () => void }) {
+  const { t } = useTranslation()
+  const lang = useLanguage()
+  const heading = t(jobHeading(job))
+  const sub = job.waiting
+    ? t('packages.job.waiting')
+    : t('notifications.tasks.sub', { owner: job.owner, elapsed: formatUptime(elapsedSeconds(job, now), lang, 'narrow') })
+  return (
+    <article className={job.waiting ? 'notice-card notice-task waiting' : 'notice-card notice-task'} role="status">
+      <IconImage
+        name={job.waiting ? 'dialog-information-symbolic' : 'software-update-available-symbolic'}
+        size={20}
+        className="notice-icon"
+      />
+      <div className="notice-main">
+        <h4 className="notice-title">
+          {heading}
+          {job.waiting && <span className="badge notice-task-tag">{t('packages.job.waitingTag')}</span>}
+        </h4>
+        <p className="notice-body">{sub}</p>
+        {!job.waiting && (
+          <div className="meter notice-task-meter" role="progressbar" aria-label={heading}>
+            <div className="meter-fill" />
+          </div>
+        )}
+        {job.lastLine && <p className="notice-task-line">{job.lastLine}</p>}
+        <div className="notice-actions">
+          <button type="button" className="notice-action" onClick={onOpen}>
+            {t('notifications.tasks.open')}
+          </button>
+        </div>
       </div>
     </article>
   )

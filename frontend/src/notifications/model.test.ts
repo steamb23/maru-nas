@@ -71,6 +71,12 @@ describe('noticesToToast', () => {
     const prev = revisionsOf([notice('a')])
     expect(noticesToToast(prev, [notice('a', 'r2')], { a: 'r2' })).toEqual([])
   })
+
+  it('작업 결과는 첫 목록에서도 읽지 않았으면 띄운다', () => {
+    const result = notice('job-x', 'r1', { code: 'jobSucceeded', dismissible: true })
+    const read = notice('job-y', 'r1', { code: 'jobFailed', dismissible: true })
+    expect(noticesToToast(null, [notice('a'), result, read], { 'job-y': 'r1' }).map((n) => n.id)).toEqual(['job-x'])
+  })
 })
 
 describe('목록 상한', () => {

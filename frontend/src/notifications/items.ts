@@ -12,8 +12,11 @@ export interface Item {
   action: NoticeAction | undefined
   // at은 생긴 시각(Date.now 기준 ms)이다. 서버 알림이 시각을 주지 않았으면 null이다.
   at: number | null
-  // dismissible이면 사용자가 지울 수 있다(클라이언트 알림). 서버 알림은 조건이 풀려야 사라진다.
+  // dismissible이면 사용자가 지울 수 있다(클라이언트 알림, 서버의 작업 결과 알림). 그 밖의 서버 알림은 조건이 풀려야
+  // 사라진다.
   dismissible: boolean
+  // job은 작업 결과 알림의 작업 id다. 동작이 그 작업의 출력을 연다.
+  job?: string
 }
 
 function serverItem(n: Notice): Item {
@@ -26,7 +29,8 @@ function serverItem(n: Notice): Item {
     text: serverText(n),
     action: n.action,
     at: Number.isNaN(at) ? null : at,
-    dismissible: false,
+    dismissible: n.dismissible === true,
+    job: n.job?.id,
   }
 }
 

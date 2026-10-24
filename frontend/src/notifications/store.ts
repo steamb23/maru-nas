@@ -6,7 +6,7 @@
 import { create } from 'zustand'
 import * as client from '../api/client'
 import { createSaveQueue } from '../api/saveQueue'
-import type { Notice, NotificationsResponse } from '../api/types.gen'
+import type { Job, Notice, NotificationsResponse } from '../api/types.gen'
 import {
   type ClientEvent,
   type ItemRef,
@@ -44,6 +44,8 @@ export interface NotificationData {
   // fresh는 알림 센터를 연 순간 읽지 않았던 항목(itemKey)이다. 센터를 열면 모두 읽음이 되지만,
   // 열려 있는 동안은 무엇이 새로 왔는지 보이게 남긴다. 열린 동안 들어온 항목도 더한다.
   fresh: ReadonlySet<string>
+  // tasks는 진행 중인 서버 백그라운드 작업이다(관리자에게만 온다).
+  tasks: readonly Job[]
 }
 
 export interface NotificationActions {
@@ -59,6 +61,8 @@ export interface NotificationActions {
   // markRead는 알림 하나를 읽음으로 둔다(동작을 실행했을 때 등).
   markRead: (ref: ItemRef) => void
   dismissEvent: (key: number) => void
+  // dismissNotice는 지울 수 있는 서버 알림(작업 결과)을 바로 숨기고 서버에서 지운다. 실패하면 되돌린다.
+  dismissNotice: (id: string) => void
   clearEvents: () => void
   // dismissToast는 사용자가 닫은 토스트를 내리고 그 알림을 읽음으로 둔다.
   dismissToast: (key: string) => void
@@ -71,6 +75,8 @@ export type NotificationStore = NotificationData & NotificationActions
 
 export interface NotificationApi {
   saveSeen: (seen: SeenMap) => Promise<void>
+  // dismiss는 서버 알림 하나를 지운다(없으면 아무것도 보내지 않는다).
+  dismiss?: (id: string) => Promise<void>
   now: () => number
 }
 
@@ -86,6 +92,7 @@ export const initialNotificationData: NotificationData = {
   toasts: [],
   centerOpen: false,
   fresh: EMPTY_FRESH,
+  tasks: [],
 }
 
 export function createNotificationStore(api: NotificationApi) {
@@ -98,6 +105,8 @@ export function createNotificationStore(api: NotificationApi) {
     let lastRevisions: Map<string, string> | null = null
     let eventSeq = 0
     let toastSeq = 0
+    // 지우는 중인 서버 알림 id. 지우기가 끝나기 전에 받은 응답이 다시 보이지 않게 거른다(서버가 더는 주지 않으면 뺀다).
+    let dismissing = new Set<string>()
 
     const newToast = (ref: ItemRef, level: Toast['level']): Toast => ({ key: `t${++toastSeq}`, ref, level })
 
@@ -120,11 +129,14 @@ export function createNotificationStore(api: NotificationApi) {
         saves.reset()
         overrides = {}
         lastRevisions = null
+        dismissing = new Set()
         set(initialNotificationData)
       },
 
-      received: (resp) => {
+      received: (raw) => {
         if (!get().enabled) return
+        for (const id of dismissing) if (!raw.notices.some((n) => n.id === id)) dismissing.delete(id)
+        const resp = { ...raw, notices: raw.notices.filter((n) => !dismissing.has(n.id)) }
         overrides = settleOverrides(overrides, resp.seen, resp.notices)
         const seen = mergeSeen(resp.seen, overrides)
         const news = noticesToToast(lastRevisions, resp.notices, seen)
@@ -139,7 +151,7 @@ export function createNotificationStore(api: NotificationApi) {
         } else {
           for (const n of news) toasts = pushToast(toasts, newToast({ kind: 'server', id: n.id }, n.level))
         }
-        set({ status: 'ready', notices: resp.notices, seen, toasts, fresh })
+        set({ status: 'ready', notices: resp.notices, seen, toasts, fresh, tasks: resp.tasks ?? [] })
         // 센터가 열린 동안 들어온 알림은 사용자가 보고 있으므로 읽음이다.
         if (centerOpen && news.length > 0) saveSeen(news.map((n) => n.id))
       },
@@ -184,6 +196,25 @@ export function createNotificationStore(api: NotificationApi) {
           toasts: get().toasts.filter((t) => t.ref.kind !== 'client' || t.ref.key !== key),
         }),
 
+      dismissNotice: (id) => {
+        const notice = get().notices.find((n) => n.id === id)
+        if (!notice?.dismissible || !api.dismiss) return
+        dismissing.add(id)
+        const hide = () =>
+          set({
+            notices: get().notices.filter((n) => n.id !== id),
+            toasts: get().toasts.filter((t) => t.ref.kind !== 'server' || t.ref.id !== id),
+          })
+        hide()
+        const generation = dismissing
+        api.dismiss(id).catch(() => {
+          // 로그아웃했으면(clear) 되돌리지 않는다.
+          if (generation !== dismissing || !get().enabled) return
+          dismissing.delete(id)
+          if (!get().notices.some((n) => n.id === id)) set({ notices: [...get().notices, notice] })
+        })
+      },
+
       clearEvents: () =>
         set({ events: [], toasts: get().toasts.filter((t) => t.ref.kind !== 'client') }),
 
@@ -221,5 +252,6 @@ export function createNotificationStore(api: NotificationApi) {
 
 export const useNotificationStore = createNotificationStore({
   saveSeen: (seen) => client.saveNotificationPrefs(seen),
+  dismiss: (id) => client.dismissNotice(id),
   now: () => Date.now(),
 })

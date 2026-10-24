@@ -104,7 +104,9 @@
       "open": "열기",
       "workbench": "OMV에서 보기",
       "power": "전원…",
-      "details": "자세히 보기"
+      "details": "자세히 보기",
+      "output": "출력 보기",
+      "updates": "업데이트 보기"
     },
     "server": {
       "sample": {
@@ -189,6 +191,11 @@
         "body_other": "파일 {{count}}개를 올리지 못했습니다.",
         "bodyStopped": "올리기가 중간에 멈췄습니다."
       }
+    },
+    "tasks": {
+      "title": "백그라운드 작업",
+      "open": "열기",
+      "sub": "{{owner}} · {{elapsed}}째 · 창을 닫아도 서버에서 계속 진행됩니다"
     }
   },
   "profile": {
@@ -259,7 +266,8 @@
     "workbench": "OMV 워크벤치",
     "settings": "설정",
     "terminal": "터미널",
-    "viewer": "미리보기"
+    "viewer": "미리보기",
+    "packages": "시스템 업데이트"
   },
   "terminal": {
     "connecting": "{{user}} 계정으로 SSH 서버에 접속하는 중…",
@@ -870,7 +878,9 @@
       "admin_required": "관리자만 할 수 있습니다.",
       "plugin_missing": "필요한 OpenMediaVault 플러그인이 설치되어 있지 않습니다.",
       "omv_error": "OpenMediaVault에 연결할 수 없습니다.",
-      "unknown": "요청이 실패했습니다."
+      "unknown": "요청이 실패했습니다.",
+      "job_busy": "이미 진행 중인 작업이 있습니다.",
+      "apt_locked": "다른 패키지 작업이 진행 중입니다. 잠시 뒤 다시 시도하세요."
     }
   },
   "sidebar": {
@@ -1471,5 +1481,117 @@
     "binary": "텍스트가 아닌 파일이라 내용을 보일 수 없습니다.",
     "truncated": "파일이 커서 앞의 {{size}}만 보입니다.",
     "security": "이 세션은 파일을 미리 보기 전에 보안 확인이 필요합니다."
+  },
+  "packages": {
+    "tabs": {
+      "label": "보기",
+      "list": "업데이트",
+      "job": "작업"
+    },
+    "settings": "업데이트 설정",
+    "check": "업데이트 확인",
+    "install": "모두 설치",
+    "summary_one": "업데이트 {{count}}개 · 내려받기 {{size}}",
+    "summary_other": "업데이트 {{count}}개 · 내려받기 {{size}}",
+    "lastChecked": "마지막 확인: {{time}}",
+    "listLabel": "업데이트할 패키지",
+    "columns": {
+      "package": "패키지 · 저장소",
+      "version": "새 버전",
+      "size": "크기"
+    },
+    "current": "현재 {{version}}",
+    "newInstall": "새로 설치",
+    "changelog": "변경 기록(OMV 워크벤치)",
+    "changelogLabel": "{{name}} 변경 기록(OMV 워크벤치)",
+    "upToDate": {
+      "title": "모든 패키지가 최신 상태입니다",
+      "body": "새 업데이트가 생기면 알림으로 알려 드립니다."
+    },
+    "noIndex": {
+      "title": "아직 업데이트를 확인하지 않았습니다",
+      "body": "업데이트 확인을 누르면 저장소에서 패키지 목록을 받아 옵니다. 보통 10초에서 1분쯤 걸립니다."
+    },
+    "reboot": {
+      "title": "다시 시작해야 업데이트가 모두 적용됩니다",
+      "packages": "요청한 패키지:",
+      "action": "다시 시작…"
+    },
+    "during": {
+      "update": "업데이트 목록을 확인하는 중입니다",
+      "upgrade": "업데이트를 설치하는 중입니다",
+      "other": "{{owner}} 계정이 시작한 작업이 진행 중입니다",
+      "view": "작업 보기"
+    },
+    "start": {
+      "locked": {
+        "title": "다른 패키지 작업이 진행 중입니다",
+        "body": "apt·dpkg가 잠겨 있어 시작하지 못했습니다. 잠시 뒤 다시 시도하세요."
+      },
+      "dirty": {
+        "title": "OMV에 적용하지 않은 설정 변경이 있습니다",
+        "body": "OMV 워크벤치에서 변경 사항을 먼저 적용한 뒤 다시 시도하세요.",
+        "action": "워크벤치 열기"
+      },
+      "busy": {
+        "title": "이미 진행 중인 작업이 있습니다",
+        "body": "지금 작업이 끝난 뒤에 다시 시도하세요."
+      },
+      "failed": {
+        "title": "작업을 시작하지 못했습니다",
+        "body": "OMV에 연결하지 못했을 수 있습니다. 잠시 뒤 다시 시도하세요."
+      }
+    },
+    "confirm": {
+      "title_one": "업데이트 {{count}}개를 모두 설치할까요?",
+      "title_other": "업데이트 {{count}}개를 모두 설치할까요?",
+      "intro": "OMV 워크벤치의 업데이트 설치처럼 받을 수 있는 업데이트를 모두 설치합니다. 패키지를 골라 설치할 수는 없습니다.",
+      "size": "내려받을 크기는 {{size}}이며, 몇 분에서 수십 분까지 걸릴 수 있습니다.",
+      "services": "설치하는 동안 서비스가 다시 시작되어 공유 폴더, Docker 컨테이너, OMV 워크벤치가 잠시 끊길 수 있습니다.",
+      "kernel": "커널이 들어 있어 끝난 뒤 시스템을 다시 시작해야 할 수 있습니다.",
+      "background": "창을 닫거나 로그아웃해도 서버에서 계속 진행됩니다.",
+      "action": "모두 설치"
+    },
+    "job": {
+      "none": "아직 실행한 작업이 없습니다.",
+      "inProgress": "진행 중",
+      "update": {
+        "running": "업데이트 목록 확인 중",
+        "succeeded": "업데이트 확인을 마쳤습니다",
+        "failed": "업데이트를 확인하지 못했습니다",
+        "unknown": "업데이트 확인 결과를 알 수 없습니다"
+      },
+      "upgrade": {
+        "running": "업데이트 설치 중",
+        "succeeded": "업데이트 설치를 마쳤습니다",
+        "failed": "업데이트를 설치하지 못했습니다",
+        "unknown": "업데이트 설치 결과를 알 수 없습니다"
+      },
+      "found_one": "설치할 수 있는 업데이트가 {{count}}개 있습니다",
+      "found_other": "설치할 수 있는 업데이트가 {{count}}개 있습니다",
+      "upgraded_one": "패키지 {{count}}개를 업데이트했습니다",
+      "upgraded_other": "패키지 {{count}}개를 업데이트했습니다",
+      "started": "{{owner}} · {{start}} 시작 · {{elapsed}}째",
+      "ended": "{{owner}} · {{start}} 시작 · {{end}} 끝남({{elapsed}})",
+      "waitingTag": "감시 대기",
+      "waiting": "관리자 세션이 없는 동안 출력을 받지 못했습니다. 서버에서는 계속 진행 중이며, 곧 출력을 이어서 보여 드립니다.",
+      "other": "작업이 끝나면 목록을 새로 받습니다. 그 전에는 확인이나 설치를 시작할 수 없습니다.",
+      "background": "창을 닫아도 서버에서 계속 진행됩니다. 끝나면 알림으로 알려 드립니다.",
+      "back": "목록으로",
+      "output": "출력",
+      "lines_one": "{{count}}줄",
+      "lines_other": "{{count}}줄",
+      "truncated": "앞부분 생략",
+      "following": "맨 아래를 따라가는 중",
+      "noOutput": "받은 출력이 없습니다.",
+      "reason": {
+        "aptFailed": "apt가 오류로 끝났습니다. 출력의 마지막 줄에서 이유를 확인하세요.",
+        "aptCoreRemoval": "openmediavault 패키지가 제거될 수 있어 OMV가 설치를 멈췄습니다. OMV 워크벤치에서 저장소 설정을 확인하세요.",
+        "jobFailed": "작업이 실패했습니다. 출력을 확인하고 잠시 뒤 다시 시도하세요.",
+        "jobLost": "결과를 읽지 못했습니다. OMV 워크벤치에서 먼저 결과를 읽었을 수 있습니다. 업데이트 확인으로 지금 상태를 다시 받으세요.",
+        "jobReboot": "작업하는 동안 시스템이 다시 시작되었습니다. 업데이트 확인으로 지금 상태를 다시 받으세요.",
+        "jobTimeout": "정해진 시간 안에 끝나지 않아 더 기다리지 않았습니다. 서버에서는 계속 진행 중일 수 있으니 잠시 뒤 업데이트 확인을 다시 하세요."
+      }
+    }
   }
 }

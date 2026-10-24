@@ -44,6 +44,8 @@ import accessoriesImageViewer from '@colloid/apps/scalable/eog.svg?url'
 import gnomeDiskUtility from '@colloid/apps/scalable/org.gnome.DiskUtility.svg?url'
 import preferencesSystemNetworkEthernet from '@colloid/apps/scalable/preferences-system-network-ethernet.svg?url'
 import preferencesSystemNetworkServer from '@colloid/apps/scalable/preferences-system-network-server.svg?url'
+// Colloid의 software-update-available은 update.svg를 거쳐 system-software-update.svg로 가는 링크다(links/apps/scalable).
+import softwareUpdateAvailableApp from '@colloid/apps/scalable/system-software-update.svg?url'
 import preferencesSystem from '@colloid/apps/scalable/preferences-system.svg?url'
 import preferencesVirtualizationContainer from '@colloid/apps/scalable/preferences-virtualization-container.svg?url'
 import thermalMonitor from '@colloid/apps/scalable/thermal-monitor.svg?url'
@@ -144,6 +146,7 @@ export const COLLOID_ICONS = {
   'thermal-monitor': { url: thermalMonitor, kind: 'color' },
   'preferences-virtualization-container': { url: preferencesVirtualizationContainer, kind: 'color' },
   'preferences-system-network-server': { url: preferencesSystemNetworkServer, kind: 'color' },
+  'software-update-available': { url: softwareUpdateAvailableApp, kind: 'color' },
   'org.gnome.DiskUtility': { url: gnomeDiskUtility, kind: 'color' },
   'drive-harddisk': { url: driveHarddisk, kind: 'color' },
   folder: { url: folder, kind: 'color' },

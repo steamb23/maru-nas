@@ -5,6 +5,7 @@ import (
 	"maru/backend/internal/addons"
 	"maru/backend/internal/addons/containers"
 	"maru/backend/internal/addons/network"
+	"maru/backend/internal/addons/packages"
 	"maru/backend/internal/addons/services"
 	"maru/backend/internal/addons/smart"
 	"maru/backend/internal/addons/storage"
@@ -53,6 +54,7 @@ func New(d Deps) *addons.Registry {
 		containers.New(),
 		smart.New(d.Smart),
 		services.New(),
+		packages.New(d.Apt),
 	)
 	if err != nil {
 		panic(err)

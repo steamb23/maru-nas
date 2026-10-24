@@ -331,6 +331,46 @@ export const MANIFESTS = {
       }
     ]
   },
+  "packages": {
+    "id": "packages",
+    "title": "apps.packages",
+    "icon": "software-update-available",
+    "views": {
+      "window": {
+        "defaultSize": {
+          "width": 760,
+          "height": 560
+        },
+        "minSize": {
+          "width": 420,
+          "height": 360
+        }
+      }
+    },
+    "requires": {
+      "admin": true
+    },
+    "rpc": {
+      "read": [
+        "Exec.getOutput"
+      ],
+      "write": [
+        "Apt.update",
+        "Apt.upgrade"
+      ]
+    },
+    "actions": [
+      {
+        "name": "check",
+        "admin": true
+      },
+      {
+        "name": "upgrade",
+        "admin": true,
+        "confirm": true
+      }
+    ]
+  },
 } as const satisfies Record<string, AddonManifest>
 
 export type AddonId = keyof typeof MANIFESTS

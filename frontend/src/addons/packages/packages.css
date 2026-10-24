@@ -1,0 +1,549 @@
+/* 시스템 업데이트 창(시안 C). 탭 줄과 도구 막대는 고정이고 목록·출력이 남은 높이를 채워 안에서 스크롤하는
+   앱형 창이라 .addon-window를 쓰지 않는다. */
+
+.pkg-window {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  container: pkg-window / inline-size;
+}
+
+.pkg-tabs-row {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px 0;
+}
+
+.pkg-spacer {
+  flex: 1;
+}
+
+.pkg-tabs {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 8px;
+  background: var(--hover-bg);
+}
+
+.pkg-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pkg-tab[aria-selected='true'] {
+  background: light-dark(#ffffff, #3a3f47);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.18);
+}
+
+.pkg-count {
+  min-width: 18px;
+  padding: 0 5px;
+  box-sizing: border-box;
+  border-radius: 9px;
+  background: var(--hover-bg);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+}
+
+.pkg-count.on-accent {
+  background: rgb(255 255 255 / 0.25);
+  color: inherit;
+}
+
+.pkg-spinner {
+  display: inline-block;
+  flex: none;
+  width: 12px;
+  height: 12px;
+  box-sizing: border-box;
+  border: 2px solid color-mix(in srgb, var(--text-muted) 35%, transparent);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: pkg-spin 0.8s linear infinite;
+}
+
+@keyframes pkg-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.pkg-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.pkg-link:hover {
+  background: var(--hover-bg);
+}
+
+.pkg-panel {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  padding: 12px 20px 16px;
+}
+
+.pkg-muted {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.pkg-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+.pkg-during {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 6px 6px 12px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  font-size: 13px;
+}
+
+.pkg-during-title {
+  font-weight: 600;
+}
+
+.addon-button.pkg-small {
+  padding: 4px 10px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.pkg-toolbar {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.addon-button.pkg-icon-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.pkg-meta {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* 알림 줄(시작 오류, 다시 시작 권장, 실패·결과 모름의 이유). 색은 .addon-banner와 같다. */
+.pkg-notice {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 8px 8px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.pkg-notice > .symbolic-icon {
+  flex: none;
+}
+
+.pkg-notice.warn {
+  background: light-dark(#fff4e0, #47381c);
+  color: light-dark(#8a5300, #ffd8a0);
+}
+
+.pkg-notice.error {
+  background: light-dark(#fde8e8, #4a2224);
+  color: light-dark(#b42318, #ffb4ab);
+}
+
+.pkg-notice-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  line-height: 1.45;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.pkg-notice-text > span {
+  font-size: 12px;
+}
+
+.pkg-ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pkg-notice code {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 11px;
+}
+
+.pkg-close {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  cursor: pointer;
+}
+
+.pkg-close:hover {
+  background: var(--hover-bg);
+}
+
+.pkg-empty {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 24px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.pkg-empty-title {
+  margin: 4px 0 0;
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.pkg-empty-body {
+  max-width: 360px;
+  margin: 0 0 8px;
+  font-size: 13px;
+  line-height: 1.5;
+  word-break: keep-all;
+}
+
+.pkg-ok {
+  color: light-dark(#1e7d3c, #7ad48f);
+}
+
+.pkg-list-wrap {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  transition: opacity 0.2s;
+}
+
+.pkg-list-wrap.dim {
+  opacity: 0.45;
+}
+
+.pkg-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 190px) 64px 28px;
+  align-items: center;
+  column-gap: 12px;
+  padding: 7px 4px;
+  border-bottom: 1px solid var(--window-border);
+}
+
+.pkg-head {
+  padding-top: 0;
+  padding-bottom: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.pkg-right {
+  text-align: right;
+}
+
+.pkg-list {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.pkg-list .pkg-row:last-child {
+  border-bottom: none;
+}
+
+.pkg-name-col,
+.pkg-version-col {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.pkg-version-col {
+  align-items: flex-end;
+}
+
+.pkg-name {
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pkg-sub {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.pkg-summary {
+  overflow: hidden;
+  font-size: 12px;
+  color: var(--text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pkg-version,
+.pkg-old {
+  max-width: 100%;
+  overflow: hidden;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pkg-version {
+  font-size: 12px;
+}
+
+.pkg-old {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.pkg-old.new {
+  color: light-dark(#1d58b8, #9cc2ff);
+}
+
+.pkg-size {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* 작업 보기 */
+.pkg-job-head {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 12px;
+}
+
+.pkg-job-icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+}
+
+.pkg-job-icon.run {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+}
+
+.pkg-job-icon.idle {
+  border: 1px dashed var(--window-border);
+  color: var(--text-muted);
+}
+
+.pkg-job-icon.ok {
+  background: light-dark(#e7f5ec, #1f3527);
+  color: light-dark(#1e6b35, #a8e3b8);
+}
+
+.pkg-job-icon.warn {
+  background: light-dark(#fff4e0, #47381c);
+  color: light-dark(#8a5300, #ffd8a0);
+}
+
+.pkg-job-icon.crit {
+  background: light-dark(#fde8e8, #4a2224);
+  color: light-dark(#b42318, #ffb4ab);
+}
+
+.pkg-job-title {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.pkg-job-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 700;
+  word-break: keep-all;
+}
+
+.pkg-waiting-tag {
+  font-weight: 600;
+}
+
+.pkg-busy {
+  flex: none;
+}
+
+/* 양을 모르므로 짧은 막대가 오간다(파일 작업 창의 막대와 같은 움직임). */
+.pkg-busy .meter-fill {
+  width: 30%;
+  background: var(--accent);
+  animation: pkg-busy 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes pkg-busy {
+  from {
+    translate: 0;
+  }
+
+  to {
+    translate: 233%;
+  }
+}
+
+:root[data-animations='off'] .pkg-busy .meter-fill,
+:root[data-animations='off'] .pkg-spinner {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pkg-busy .meter-fill {
+    animation: none;
+  }
+
+  .pkg-spinner {
+    animation-duration: 2.4s;
+  }
+}
+
+.pkg-waiting {
+  flex: none;
+  margin: 0;
+  padding: 8px 12px;
+  border: 1px dashed var(--window-border);
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-muted);
+  word-break: keep-all;
+}
+
+.pkg-hint {
+  flex: none;
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-muted);
+  word-break: keep-all;
+}
+
+.pkg-output-head {
+  display: flex;
+  flex: none;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.pkg-output-title {
+  font-weight: 600;
+}
+
+.pkg-output {
+  flex: 1;
+  min-height: 80px;
+  margin: 0;
+  padding: 10px 12px;
+  overflow: auto;
+  border: 1px solid var(--window-border);
+  border-radius: 8px;
+  background: light-dark(#f3f4f6, #1b1e22);
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.pkg-confirm-list {
+  margin: 10px 0 0;
+  padding-left: 20px;
+  line-height: 1.6;
+  word-break: keep-all;
+}
+
+/* 좁은 창: 행의 버전 열을 이름 아래로 옮기고, 도구 막대의 설명은 다음 줄로 보낸다. */
+@container pkg-window (max-width: 560px) {
+  .pkg-row {
+    grid-template-columns: minmax(0, 1fr) 56px 28px;
+  }
+
+  .pkg-version-col {
+    grid-column: 1;
+    grid-row: 2;
+    flex-direction: row;
+    align-items: baseline;
+    gap: 8px;
+  }
+
+  .pkg-head > :nth-child(2) {
+    display: none;
+  }
+
+  .pkg-meta {
+    flex-basis: 100%;
+    margin-left: 0;
+  }
+}
