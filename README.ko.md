@@ -7,6 +7,11 @@
 
 English: [README.md](README.md)
 
+<p>
+  <img src="docs/images/desktop.webp" alt="앱 아이콘과 시스템 정보 위젯, 작업표시줄이 있는 마루 NAS 바탕화면" width="49%">
+  <img src="docs/images/desktop-windows.webp" alt="파일 창과 설정 창을 연 마루 NAS 바탕화면, 오른쪽 위에 시스템 정보 위젯" width="49%">
+</p>
+
 OpenMediaVault 8 위에 올리는 데스크톱형 웹 대시보드입니다. 창·작업표시줄·바탕화면 위젯으로 NAS 가동 현황을 확인하고, 컨테이너와 핵심 서비스를 간단히 켜고 끌 수 있습니다. 심층 설정은 OMV 기본 웹 UI에서 합니다.
 
 - 로그인은 OMV 계정으로 합니다. 설정 변경도 로그인한 사용자의 OMV 세션으로만 합니다.

@@ -7,6 +7,11 @@
 
 한국어: [README.ko.md](README.ko.md)
 
+<p>
+  <img src="docs/images/desktop.webp" alt="The Maru NAS desktop with app icons, the System Information widget and the taskbar" width="49%">
+  <img src="docs/images/desktop-windows.webp" alt="The Maru NAS desktop with the Files and Settings windows open, and the System Information widget in the top right" width="49%">
+</p>
+
 Maru NAS is a desktop-like web dashboard that runs on OpenMediaVault 8. Windows, a taskbar and desktop widgets show how your NAS is doing, and you can start and stop containers and core services in a few clicks. Deep configuration stays in the OMV web UI.
 
 - You sign in with your OMV account. Changes are made only through the signed-in user's own OMV session.
