@@ -16,6 +16,10 @@ paths:
   - Colloid 일부 SVG(`external-link-symbolic` 등)는 루트에 `xmlns`가 없어 브라우저가 그리지 못한다. `vite.config.ts`의 `svgNamespace` 플러그인이 `?url`로 불러올 때 이름공간을 붙여 data URL로 넣으므로 서브모듈 원본을 고치지 않는다(`resolver.test.ts`가 검사)
   - `resolver.test.ts`가 출처 사이 이름 중복, README 절, 출처 폴더의 `LICENSE`·`NOTICE`를 검사한다
 - 테마별로 이름이 다른 아이콘(창 최소화 등)은 리졸버의 매핑 테이블에서 처리한다
+- Colloid에 알맞은 그림이 없으면 Colloid 파일만으로 합성 아이콘을 만들 수 있다(예: 시스템 업데이트 앱의 `software-update-available`은 App Store 모양 대신 같은 파란 타일에 `software-update-available-symbolic` 글리프를 얹었다)
+  - 파일은 `frontend/src/icons/composed/<아이콘 이름>.svg`에 두고 Colloid 출처 테이블(`sources/colloid.ts`)에 상대 경로로 import한다. 테마에 묶인 그림이므로 출처를 따로 만들지 않으며, 원본만 두는 `vendor/icons/`와 서브모듈은 고치지 않는다
+  - 원본의 그림자 층(`<image>` PNG)과 타일은 그대로 두고 그림만 바꿔 다른 앱 아이콘과 그림자를 맞춘다. 루트에 `xmlns`를 직접 둔다(`svgNamespace`는 `vendor/icons/` 아래만 고친다)
+  - 파일 첫머리 주석에 재료가 된 Colloid 파일 경로·커밋, 바꾼 내용, 라이선스(GPL-3.0)를 적는다. 서브모듈을 올리면 그 주석대로 다시 만든다
 - 브랜드 앱 아이콘(Colloid의 Discord, Steam 등과 제3자 로고)은 실제 그 앱을 가리킬 때만 쓴다. 장식이나 대표 이미지로 쓰지 않는다
 - 앱을 나타내는 아이콘(`getApp(id).icon`: "모든 앱" 타일, 바탕화면 바로가기, 작업표시줄, 제목 표시줄)은 `IconImage`에 `app`을 준다. 메뉴·위젯 머리글 등 다른 자리에서는 주지 않는다(`appRadius`가 이때만 적용된다)
 - 컬러 아이콘(폴더·앱·파일 형식, 브랜드 로고)은 `<img>`로 그대로, 단색 `-symbolic` 아이콘은 CSS `mask-image` 또는 인라인 SVG + `fill: currentColor`로 색을 입힌다(`IconImage`). `<img>`로 넣으면 색을 바꿀 수 없다

@@ -17,6 +17,7 @@
 - 형태: git submodule (shallow). 고정 커밋은 `git submodule status`로 확인한다
   - 추가 시점: `ceac6608ecd0e40025cbc2ebbd32bf0e0f4ebc6a` (2026-08-29)
 - 참조: `@colloid` alias(`colloid/src/`)로 SVG를 직접 import한다. 설치 스크립트(`install.sh`)가 만드는 색상 변형은 쓰지 않는다
+- 합성: Colloid 파일만으로 만든 합성 아이콘은 이 폴더가 아니라 `frontend/src/icons/composed/`에 둔다. 재료와 커밋은 각 파일 첫머리 주석에 있다
 
 클론 후 서브모듈 받기:
 

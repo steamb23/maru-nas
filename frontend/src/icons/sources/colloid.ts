@@ -1,6 +1,7 @@
 // Colloid 아이콘 테마(vendor/icons/colloid, GPL-3.0). 대시보드의 기본 아이콘 출처다.
 // 테이블에 import한 파일만 번들에 포함된다. 디렉터리 단위 glob을 쓰면 테마 전체가
 // 실행 파일에 들어가므로, 아이콘을 쓸 때마다 여기에 한 줄씩 추가한다.
+// Colloid 파일만으로 만든 합성 아이콘(src/icons/composed/)도 테마에 묶이므로 이 테이블에 둔다.
 
 import documentEdit from '@colloid/actions/symbolic/document-edit-symbolic.svg?url'
 import documentOpen from '@colloid/actions/symbolic/document-open-symbolic.svg?url'
@@ -44,8 +45,6 @@ import accessoriesImageViewer from '@colloid/apps/scalable/eog.svg?url'
 import gnomeDiskUtility from '@colloid/apps/scalable/org.gnome.DiskUtility.svg?url'
 import preferencesSystemNetworkEthernet from '@colloid/apps/scalable/preferences-system-network-ethernet.svg?url'
 import preferencesSystemNetworkServer from '@colloid/apps/scalable/preferences-system-network-server.svg?url'
-// Colloid의 software-update-available은 update.svg를 거쳐 system-software-update.svg로 가는 링크다(links/apps/scalable).
-import softwareUpdateAvailableApp from '@colloid/apps/scalable/system-software-update.svg?url'
 import preferencesSystem from '@colloid/apps/scalable/preferences-system.svg?url'
 import preferencesVirtualizationContainer from '@colloid/apps/scalable/preferences-virtualization-container.svg?url'
 import thermalMonitor from '@colloid/apps/scalable/thermal-monitor.svg?url'
@@ -96,6 +95,9 @@ import securityHigh from '@colloid/status/symbolic/security-high-symbolic.svg?ur
 import softwareUpdateAvailable from '@colloid/status/symbolic/software-update-available-symbolic.svg?url'
 import upload from '@colloid/status/symbolic/upload-symbolic.svg?url'
 import windowNew from '@colloid/status/symbolic/window-new-symbolic.svg?url'
+// Colloid의 software-update-available(system-software-update.svg)은 App Store 모양이라 쓰지 않고,
+// 그 파란 타일에 software-update-available-symbolic 글리프를 얹은 합성 아이콘을 쓴다(composed/).
+import softwareUpdateAvailableApp from '../composed/software-update-available.svg?url'
 import type { Icon } from '../types'
 
 export const COLLOID_ICONS = {

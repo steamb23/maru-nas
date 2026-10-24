@@ -14,6 +14,12 @@ describe('getIcon', () => {
     expect(icon.url).toMatch(/folder\.svg$|^data:image\/svg\+xml/)
   })
 
+  it('software-update-available은 Colloid 합성 아이콘으로 해석된다', () => {
+    const icon = getIcon('software-update-available')
+    expect(icon.kind).toBe('color')
+    expect(icon.url).toMatch(/software-update-available\.svg$|^data:image\/svg\+xml/)
+  })
+
   it('openmediavault는 OMV 로고 원본으로 해석된다', () => {
     const icon = getIcon('openmediavault')
     expect(icon.kind).toBe('color')
