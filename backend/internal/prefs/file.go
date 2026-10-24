@@ -23,12 +23,13 @@ type fileDoc struct {
 	api.Preferences
 }
 
-// FileStore는 상태 디렉터리에 저장하는 Store, SiteStore, ImageStore, security.Store다.
+// FileStore는 상태 디렉터리에 저장하는 Store, SiteStore, ImageStore, security.Store, jobs.Store다.
 //
 //	<dir>/users/<인코딩한 사용자 이름>.json  사용자 설정
 //	<dir>/site.json                          전역 설정(site.go)
 //	<dir>/images/...                         배경 이미지(images.go)
 //	<dir>/security/<인코딩한 사용자 이름>.json 보안 강화 모드의 수단 기록(security.go)
+//	<dir>/jobs/...                           서버 백그라운드 작업의 기록(jobs.go)
 //
 // 쓰기는 임시 파일에 쓴 뒤 rename으로 바꿔 넣으므로 중간에 멈춰도 이전 파일이나 새 파일 중 하나가 남는다.
 // 같은 디렉터리를 쓰는 프로세스는 하나라고 보고, 프로세스 안에서만 잠근다.
@@ -40,6 +41,8 @@ type FileStore struct {
 	mu    sync.Mutex
 	imgMu sync.Mutex
 	secMu sync.Mutex
+	// jobMu는 서버 백그라운드 작업의 기록(jobs.go)을 지킨다.
+	jobMu sync.Mutex
 }
 
 // NewFileStore는 dir 아래에 설정을 저장하는 FileStore를 만든다. users 디렉터리가 없으면 만든다.

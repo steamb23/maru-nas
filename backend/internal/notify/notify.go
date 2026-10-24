@@ -120,7 +120,12 @@ func (c *Center) accept(i int, got []api.Notice) []api.Notice {
 	s := c.sources[i]
 	var out []api.Notice
 	for _, n := range got {
-		if err := check(n); err != "" {
+		err := Check(n)
+		if err == "" && n.Dismissible {
+			// 지울 수 있는 알림(작업 결과)은 사용자별이다. 모든 세션이 함께 쓰는 출처는 주지 않는다.
+			err = "dismissible notice from a shared source"
+		}
+		if err != "" {
 			log.Printf("notifications: %s: dropped notice %q: %s", s.Name(), n.ID, err)
 			continue
 		}
@@ -155,7 +160,10 @@ func (c *Center) taken(i int, id string) bool {
 var levelRank = map[string]int{api.NoticeError: 0, api.NoticeWarning: 1, api.NoticeInfo: 2, api.NoticeSuccess: 3}
 
 // knownCodes는 프론트가 문구를 가진 코드다. api.Notice.Code의 tstype과 같아야 한다(테스트가 확인).
-var knownCodes = map[string]bool{api.NoticeSample: true, api.NoticeAptUpdates: true, api.NoticeRebootRequired: true}
+var knownCodes = map[string]bool{
+	api.NoticeSample: true, api.NoticeAptUpdates: true, api.NoticeRebootRequired: true,
+	api.NoticeJobSucceeded: true, api.NoticeJobFailed: true, api.NoticeJobUnknown: true,
+}
 
 var (
 	idPattern       = regexp.MustCompile(`^[a-z0-9][a-z0-9._:-]{0,63}$`)
@@ -172,8 +180,8 @@ func ValidID(s string) bool { return idPattern.MatchString(s) }
 // ValidRevision은 알림 리비전 형식이 맞는지다. 읽음 상태의 값을 검사할 때도 쓴다.
 func ValidRevision(s string) bool { return revisionPattern.MatchString(s) }
 
-// check는 알림 하나의 형식을 검사한다. 맞으면 빈 문자열, 틀리면 이유다.
-func check(n api.Notice) string {
+// Check는 알림 하나의 형식을 검사한다. 맞으면 빈 문자열, 틀리면 이유다. 출처 밖에서 만든 알림(작업 결과)도 이것으로 검사한다.
+func Check(n api.Notice) string {
 	switch {
 	case !ValidID(n.ID):
 		return "bad id"
@@ -192,6 +200,9 @@ func check(n api.Notice) string {
 	}
 	if n.Count != nil && *n.Count < 0 {
 		return "negative count"
+	}
+	if j := n.Job; j != nil && !ValidID(j.ID) {
+		return "bad job"
 	}
 	if a := n.Action; a != nil {
 		switch a.Kind {

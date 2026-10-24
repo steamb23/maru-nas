@@ -26,6 +26,7 @@ import (
 //   - PowerMgmt.get (admin): engined/rpc/powermgmt.inc. conf.system.powermngmnt {cpufreqgovernor, powerbtn,
 //     standbymode}
 //   - PowerMgmt.enumerateStandbyModes (admin): 지원하는 대기 방식 배열. poweroff는 늘 들어 있다
+//   - Apt.update·upgrade (admin): apt.go
 //
 // 역할이 모자라면 OMV의 validateMethodContext처럼 403 "Invalid context role."을 돌려준다.
 // 값은 모두 가짜다(모델명, 장치, 시리얼, 이미지 이름).
@@ -250,6 +251,12 @@ func (s *Server) handlePlugin(sess *session, service, method string, params json
 			return nil, errStatus(http.StatusInternalServerError, "Invalid RPC parameters."), true
 		}
 		return nil, nil, true
+	case "Apt.update", "Apt.upgrade":
+		if e := adminOnly(); e != nil {
+			return nil, e, true
+		}
+		res, rerr := s.aptJob(method)
+		return res, rerr, true
 	case "PowerMgmt.get":
 		if e := adminOnly(); e != nil {
 			return nil, e, true

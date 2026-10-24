@@ -121,6 +121,44 @@
       "rebootRequired": {
         "title": "Restart required",
         "body": "Restart the system to finish installing updates."
+      },
+      "jobs": {
+        "aptUpdate": {
+          "succeeded": {
+            "title": "Update check finished",
+            "body_one": "{{count}} update is available.",
+            "body_other": "{{count}} updates are available.",
+            "bodyNone": "No updates are available."
+          },
+          "failed": {
+            "title": "Couldn't check for updates"
+          },
+          "unknown": {
+            "title": "Update check result unknown"
+          }
+        },
+        "aptUpgrade": {
+          "succeeded": {
+            "title": "Updates installed",
+            "body_one": "Updated {{count}} package.",
+            "body_other": "Updated {{count}} packages.",
+            "bodyNone": "Finished installing updates."
+          },
+          "failed": {
+            "title": "Couldn't install updates"
+          },
+          "unknown": {
+            "title": "Update installation result unknown"
+          }
+        },
+        "code": {
+          "aptFailed": "apt ended with an error. Check the output for the reason.",
+          "aptCoreRemoval": "OMV stopped the installation because it would remove the openmediavault package.",
+          "jobFailed": "The task failed. Check the output for the reason.",
+          "jobLost": "Couldn't read the task result. The same task may have been opened in the OMV Workbench.",
+          "jobReboot": "The system restarted while the task was running.",
+          "jobTimeout": "The task didn't finish for too long. Check it in the OMV Workbench."
+        }
       }
     },
     "client": {

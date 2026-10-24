@@ -84,7 +84,7 @@ func TestNotificationsEmptyWithoutSources(t *testing.T) {
 	wantStatus(t, b.login("admin", "admin"), http.StatusOK)
 	rec := b.do(http.MethodGet, "/api/notifications", nil)
 	wantStatus(t, rec, http.StatusOK)
-	if body := strings.TrimSpace(rec.Body.String()); body != `{"notices":[],"seen":{}}` {
+	if body := strings.TrimSpace(rec.Body.String()); body != `{"notices":[],"seen":{},"tasks":[]}` {
 		t.Errorf("body = %s", body)
 	}
 }

@@ -89,6 +89,9 @@ func (e *Error) Error() string {
 	return fmt.Sprintf("omv rpc error (HTTP %d, code %d): %s", e.HTTPStatus, e.Code, e.Message)
 }
 
+// FromRPC는 rpc.php가 만든 JSON 오류 응답인지다. false면 nginx 오류 페이지처럼 OMV 엔진까지 가지 못한 응답이다.
+func (e *Error) FromRPC() bool { return e.rpc }
+
 // HTTPStatus는 err가 *Error면 그 HTTP 상태 코드를, 아니면 0을 반환한다.
 func HTTPStatus(err error) int {
 	if e, ok := errors.AsType[*Error](err); ok {

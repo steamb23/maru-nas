@@ -687,6 +687,10 @@ const (
 	NoticeAptUpdates = "aptUpdates"
 	// NoticeRebootRequired는 업데이트를 마치려면 다시 시작해야 한다는 알림이다(Items: 요청한 패키지 이름).
 	NoticeRebootRequired = "rebootRequired"
+	// NoticeJobSucceeded·Failed·Unknown은 서버 백그라운드 작업의 결과다(Job에 작업, 지울 수 있음). 시작한 사용자에게만 보인다.
+	NoticeJobSucceeded = "jobSucceeded"
+	NoticeJobFailed    = "jobFailed"
+	NoticeJobUnknown   = "jobUnknown"
 )
 
 // 알림 동작 종류. NoticeAction.Kind에 들어간다.
@@ -711,11 +715,11 @@ type NoticeAction struct {
 }
 
 // Notice는 서버가 알리는 상태 하나다(업데이트가 있음 등). 조건이 풀리면 목록에서 빠지며 사용자가 지울 수 없다.
-// 문구는 보내지 않고 Code와 값(Count, Items)만 보낸다.
+// 예외로 작업 결과 알림(Dismissible)은 사용자가 지운다. 문구는 보내지 않고 Code와 값(Count, Items)만 보낸다.
 type Notice struct {
 	// ID는 알림의 고정 이름이다. 읽음 상태(NotificationPrefs.Seen)의 키다.
 	ID   string `json:"id"`
-	Code string `json:"code" tstype:"'sample' | 'aptUpdates' | 'rebootRequired'"`
+	Code string `json:"code" tstype:"'sample' | 'aptUpdates' | 'rebootRequired' | 'jobSucceeded' | 'jobFailed' | 'jobUnknown'"`
 	// Level은 Notice* 수준 중 하나다.
 	Level string `json:"level" tstype:"'info' | 'success' | 'warning' | 'error'"`
 	// Revision은 내용이 바뀔 때만 달라지는 값이다(내용 해시). 바뀌면 다시 읽지 않은 알림이 된다.
@@ -727,6 +731,18 @@ type Notice struct {
 	// Items는 이름 목록(패키지 이름 등)이다. 앞쪽 일부만 담는다.
 	Items  []string      `json:"items,omitempty"`
 	Action *NoticeAction `json:"action,omitempty"`
+	// Dismissible이면 사용자가 지울 수 있다(DELETE /api/notifications/{id}). 작업 결과 알림만 그렇다.
+	Dismissible bool `json:"dismissible,omitempty"`
+	// Job은 작업 결과 알림의 작업이다. 프론트가 그 작업의 출력을 연다.
+	Job *NoticeJob `json:"job,omitempty"`
+}
+
+// NoticeJob은 작업 결과 알림이 가리키는 작업이다.
+type NoticeJob struct {
+	ID    string `json:"id"`
+	Kind  string `json:"kind" tstype:"'apt-update' | 'apt-upgrade'"`
+	State string `json:"state" tstype:"'running' | 'succeeded' | 'failed' | 'unknown'"`
+	Code  string `json:"code,omitempty" tstype:"'apt_failed' | 'apt_core_removal' | 'job_failed' | 'job_lost' | 'job_reboot' | 'job_timeout'"`
 }
 
 // NotificationsResponse는 GET /api/notifications의 응답이다.
@@ -735,6 +751,87 @@ type NotificationsResponse struct {
 	Notices []Notice `json:"notices"`
 	// Seen은 이 사용자가 읽은 알림의 id → Revision이다. 지금 Notices에 있는 id만 담는다.
 	Seen map[string]string `json:"seen"`
+	// Tasks는 진행 중인 서버 백그라운드 작업이다(관리자에게만, 아니면 빈 목록).
+	Tasks []Job `json:"tasks"`
+}
+
+// 서버 백그라운드 작업 종류. Job.Kind에 들어간다.
+const (
+	// JobAptUpdate는 패키지 목록을 다시 받는 작업이다(OMV Apt.update, apt-get update).
+	JobAptUpdate = "apt-update"
+	// JobAptUpgrade는 모든 업데이트를 설치하는 작업이다(OMV Apt.upgrade, apt-get dist-upgrade).
+	JobAptUpgrade = "apt-upgrade"
+)
+
+// 작업 상태. Job.State에 들어간다.
+const (
+	JobRunning   = "running"
+	JobSucceeded = "succeeded"
+	JobFailed    = "failed"
+	// JobUnknown은 작업이 어떻게 끝났는지 알 수 없다는 뜻이다(Code에 이유).
+	JobUnknown = "unknown"
+)
+
+// 작업 결과 코드. Job.Code에 들어간다.
+const (
+	// JobCodeAptFailed는 apt가 오류로 끝났다는 뜻이다(출력에 이유가 있다).
+	JobCodeAptFailed = "apt_failed"
+	// JobCodeAptCoreRemoval은 openmediavault 패키지를 지우게 되어 OMV가 설치를 멈췄다는 뜻이다(OMV 8.5.10부터).
+	JobCodeAptCoreRemoval = "apt_core_removal"
+	// JobCodeFailed는 그 밖의 이유로 작업이 실패했다는 뜻이다.
+	JobCodeFailed = "job_failed"
+	// JobCodeLost는 결과를 읽지 못했다는 뜻이다(다른 곳에서 먼저 읽음, 상태 파일이 사라짐).
+	JobCodeLost = "job_lost"
+	// JobCodeReboot는 작업 중에 시스템이 다시 시작되었다는 뜻이다.
+	JobCodeReboot = "job_reboot"
+	// JobCodeTimeout은 작업이 시간 상한을 넘었다는 뜻이다.
+	JobCodeTimeout = "job_timeout"
+)
+
+// Job은 서버 백그라운드 작업 하나다(진행 중이거나 끝난 결과).
+type Job struct {
+	ID    string `json:"id"`
+	Kind  string `json:"kind" tstype:"'apt-update' | 'apt-upgrade'"`
+	State string `json:"state" tstype:"'running' | 'succeeded' | 'failed' | 'unknown'"`
+	Code  string `json:"code,omitempty" tstype:"'apt_failed' | 'apt_core_removal' | 'job_failed' | 'job_lost' | 'job_reboot' | 'job_timeout'"`
+	// Owner는 작업을 시작한 사용자다. Mine은 그 사용자가 이 세션의 사용자인지다.
+	Owner string `json:"owner"`
+	Mine  bool   `json:"mine"`
+	// StartedAt·EndedAt은 RFC 3339다. 진행 중이면 EndedAt이 없다.
+	StartedAt string `json:"startedAt"`
+	EndedAt   string `json:"endedAt,omitempty"`
+	// Waiting이면 OMV에서는 작업이 계속 돌지만 대시보드가 출력을 읽을 관리자 세션이 없어 기다리는 중이다.
+	Waiting bool `json:"waiting,omitempty"`
+	// OutputEnd는 지금까지 받은 출력의 끝 위치다(JobOutput.Next와 같은 단위).
+	OutputEnd int64 `json:"outputEnd"`
+	// OutputIncomplete면 출력 일부가 없다(앞부분을 상한 때문에 버렸거나 끝부분을 읽지 못했다).
+	OutputIncomplete bool `json:"outputIncomplete,omitempty"`
+	// Count·Items는 끝난 작업의 요약이다(확인: 찾은 업데이트, 설치: 업데이트한 패키지).
+	Count *int     `json:"count,omitempty"`
+	Items []string `json:"items,omitempty"`
+	// Dismissed면 사용자가 결과 알림을 지웠다.
+	Dismissed bool `json:"dismissed,omitempty"`
+}
+
+// JobsResponse는 GET /api/jobs의 응답이다.
+type JobsResponse struct {
+	// Current는 진행 중인 작업이다(누가 시작했든). 없으면 null이다.
+	Current *Job `json:"current"`
+	// Recent는 이 사용자가 시작한 작업의 결과다(최신 순).
+	Recent []Job `json:"recent"`
+}
+
+// JobOutput은 GET /api/jobs/{id}/output?from=N의 응답이다.
+type JobOutput struct {
+	// From은 Text가 시작하는 위치다. 요청한 위치보다 크면 그 사이는 상한 때문에 버린 출력이다.
+	From int64 `json:"from"`
+	// Next는 다음 요청의 from이다.
+	Next int64  `json:"next"`
+	Text string `json:"text"`
+	// More면 이미 받은 출력이 더 있다(바로 다시 요청한다).
+	More    bool   `json:"more"`
+	State   string `json:"state" tstype:"'running' | 'succeeded' | 'failed' | 'unknown'"`
+	Waiting bool   `json:"waiting,omitempty"`
 }
 
 // NotificationPrefs는 사용자의 알림 읽음 상태다.
@@ -1072,13 +1169,17 @@ const (
 	ErrNoTrash = "no_trash"
 	// ErrShareReadOnly는 OMV 공유 폴더 권한이 읽기만 허락해 그 공유 폴더 안에 쓸 수 없다는 뜻이다(공유 폴더 권한 따르기).
 	ErrShareReadOnly = "share_read_only"
+	// ErrJobBusy는 서버 백그라운드 작업(시스템 업데이트의 확인·설치)이 이미 진행 중이라 시작하지 않았다는 뜻이다.
+	ErrJobBusy = "job_busy"
+	// ErrAptLocked는 다른 프로세스(자동 업데이트 등)가 패키지 데이터베이스를 쓰고 있어 시작하지 않았다는 뜻이다.
+	ErrAptLocked = "apt_locked"
 )
 
 // ErrorResponse는 2xx가 아닌 상태 코드와 함께 반환된다.
 type ErrorResponse struct {
 	Error string `json:"error"`
 	// Code는 화면에서 분기할 때 쓰는 오류 종류다. 없을 수 있다.
-	Code string `json:"code,omitempty" tstype:"'invalid_credentials' | 'rate_limited' | 'challenge_failed' | 'challenge_expired' | 'omv_unavailable' | 'unauthorized' | 'bad_request' | 'rpc_forbidden' | 'admin_required' | 'plugin_missing' | 'omv_error' | 'action_busy' | 'action_failed' | 'action_timeout' | 'config_dirty' | 'image_too_large' | 'unsupported_image' | 'profile_readonly' | 'helper_unavailable' | 'helper_reauth' | 'elevation_failed' | 'elevation_not_allowed' | 'elevation_required' | 'terminal_disabled' | 'security_required' | 'factor_failed' | 'manage_required' | 'passkey_unavailable' | 'passkey_uv_unsupported' | 'security_unavailable' | 'passkey_login_unknown' | 'passkey_login_expired' | 'passkey_login_stale' | 'upgrade_disabled' | 'upgrade_busy' | 'upgrade_outdated' | 'not_found' | 'permission_denied' | 'outside_roots' | 'file_exists' | 'not_dir' | 'is_dir' | 'not_regular' | 'no_space' | 'read_only' | 'helper_busy' | 'transfer_timeout' | 'listing_expired' | 'sort_pending' | 'not_empty' | 'cross_device' | 'root_folder' | 'no_trash' | 'share_read_only'"`
+	Code string `json:"code,omitempty" tstype:"'invalid_credentials' | 'rate_limited' | 'challenge_failed' | 'challenge_expired' | 'omv_unavailable' | 'unauthorized' | 'bad_request' | 'rpc_forbidden' | 'admin_required' | 'plugin_missing' | 'omv_error' | 'action_busy' | 'action_failed' | 'action_timeout' | 'config_dirty' | 'image_too_large' | 'unsupported_image' | 'profile_readonly' | 'helper_unavailable' | 'helper_reauth' | 'elevation_failed' | 'elevation_not_allowed' | 'elevation_required' | 'terminal_disabled' | 'security_required' | 'factor_failed' | 'manage_required' | 'passkey_unavailable' | 'passkey_uv_unsupported' | 'security_unavailable' | 'passkey_login_unknown' | 'passkey_login_expired' | 'passkey_login_stale' | 'upgrade_disabled' | 'upgrade_busy' | 'upgrade_outdated' | 'not_found' | 'permission_denied' | 'outside_roots' | 'file_exists' | 'not_dir' | 'is_dir' | 'not_regular' | 'no_space' | 'read_only' | 'helper_busy' | 'transfer_timeout' | 'listing_expired' | 'sort_pending' | 'not_empty' | 'cross_device' | 'root_folder' | 'no_trash' | 'share_read_only' | 'job_busy' | 'apt_locked'"`
 	// RetryAfterSeconds는 rate_limited일 때 다시 시도할 수 있기까지 남은 초다.
 	RetryAfterSeconds int `json:"retryAfterSeconds,omitempty"`
 	// Required는 security_required일 때 거쳐야 하는 단계다.

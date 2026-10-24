@@ -48,9 +48,11 @@ import type {
   HelperIdentityResponse,
   HelperStatus,
   ImageInfo,
+  Job,
   LoginResponse,
   Notice,
   NoticeAction,
+  NoticeJob,
   NotificationPrefs,
   NotificationPrefsRequest,
   NotificationsResponse,
@@ -175,6 +177,8 @@ const ERROR_CODES: readonly ErrorCode[] = [
   'root_folder',
   'no_trash',
   'share_read_only',
+  'job_busy',
+  'apt_locked',
 ]
 
 export type RequiredLevel = NonNullable<ErrorResponse['required']>
@@ -503,9 +507,65 @@ function isNotificationPrefs(v: unknown): v is NotificationPrefs {
   return isObj(v) && isSeenMap(v.seen)
 }
 
+// AllOf<T, L>는 목록 L이 유니온 T를 모두 담을 때만 true다. 백엔드가 코드를 더했는데 목록에 빠뜨리면 tsc가 잡는다
+// (빠진 코드는 응답 검사에서 걸러져 화면에 나오지 않는다).
+type AllOf<T, L extends readonly T[]> = [Exclude<T, L[number]>] extends [never] ? true : false
+
 const NOTICE_LEVELS = ['info', 'success', 'warning', 'error'] as const satisfies readonly Notice['level'][]
-const NOTICE_CODES = ['sample'] as const satisfies readonly Notice['code'][]
+const NOTICE_CODES = [
+  'sample',
+  'aptUpdates',
+  'rebootRequired',
+  'jobSucceeded',
+  'jobFailed',
+  'jobUnknown',
+] as const satisfies readonly Notice['code'][]
 const NOTICE_ACTION_KINDS = ['app', 'workbench', 'power'] as const satisfies readonly NoticeAction['kind'][]
+const JOB_KINDS = ['apt-update', 'apt-upgrade'] as const satisfies readonly Job['kind'][]
+const JOB_STATES = ['running', 'succeeded', 'failed', 'unknown'] as const satisfies readonly Job['state'][]
+const JOB_CODES = [
+  'apt_failed',
+  'apt_core_removal',
+  'job_failed',
+  'job_lost',
+  'job_reboot',
+  'job_timeout',
+] as const satisfies readonly NonNullable<Job['code']>[]
+true satisfies AllOf<Notice['code'], typeof NOTICE_CODES>
+true satisfies AllOf<Job['kind'], typeof JOB_KINDS>
+true satisfies AllOf<Job['state'], typeof JOB_STATES>
+true satisfies AllOf<NonNullable<Job['code']>, typeof JOB_CODES>
+
+function isNoticeJob(v: unknown): v is NoticeJob {
+  return (
+    isObj(v) &&
+    isStr(v.id) &&
+    isOneOf(v.kind, JOB_KINDS) &&
+    isOneOf(v.state, JOB_STATES) &&
+    isOptional(v.code, (x) => isOneOf(x, JOB_CODES))
+  )
+}
+
+// isJob은 서버 백그라운드 작업 하나의 모양을 본다. 종류·상태·코드를 모르면 false다.
+export function isJob(v: unknown): v is Job {
+  return (
+    isObj(v) &&
+    isStr(v.id) &&
+    isOneOf(v.kind, JOB_KINDS) &&
+    isOneOf(v.state, JOB_STATES) &&
+    isOptional(v.code, (x) => isOneOf(x, JOB_CODES)) &&
+    isStr(v.owner) &&
+    isBool(v.mine) &&
+    isStr(v.startedAt) &&
+    isOptional(v.endedAt, isStr) &&
+    isOptional(v.waiting, isBool) &&
+    isNum(v.outputEnd) &&
+    isOptional(v.outputIncomplete, isBool) &&
+    isOptional(v.count, isNum) &&
+    isOptional(v.items, (x) => isArrayOf(x, isStr)) &&
+    isOptional(v.dismissed, isBool)
+  )
+}
 
 function isNoticeAction(v: unknown): v is NoticeAction {
   return (
@@ -528,7 +588,9 @@ export function isNotice(v: unknown): v is Notice {
     isOptional(v.since, isStr) &&
     isOptional(v.count, isNum) &&
     isOptional(v.items, (x) => isArrayOf(x, isStr)) &&
-    isOptional(v.action, isNoticeAction)
+    isOptional(v.action, isNoticeAction) &&
+    isOptional(v.dismissible, isBool) &&
+    isOptional(v.job, isNoticeJob)
   )
 }
 
@@ -539,7 +601,8 @@ export async function fetchNotifications(signal?: AbortSignal): Promise<Notifica
   if (!isObj(data) || !Array.isArray(data.notices) || !isSeenMap(data.seen)) {
     throw new Error('/notifications: unexpected response shape')
   }
-  return { notices: data.notices.filter(isNotice), seen: data.seen }
+  const tasks = Array.isArray(data.tasks) ? data.tasks.filter(isJob) : []
+  return { notices: data.notices.filter(isNotice), seen: data.seen, tasks }
 }
 
 // saveNotificationPrefs는 알림 읽음 상태 전체를 저장한다. 다른 설정은 바꾸지 않는다.

@@ -36,6 +36,62 @@ const SERVER_TEXT: Record<Notice['code'], (n: Notice) => NoticeText> = {
     body: 'notifications.server.rebootRequired.body',
     params: {},
   }),
+  jobSucceeded: (n) => jobText(n),
+  jobFailed: (n) => jobText(n),
+  jobUnknown: (n) => jobText(n),
+}
+
+type JobKind = NonNullable<Notice['job']>['kind']
+type JobCode = NonNullable<NonNullable<Notice['job']>['code']>
+type EndState = 'succeeded' | 'failed' | 'unknown'
+
+// JOB_TITLES는 작업 종류와 결과마다의 제목이다.
+const JOB_TITLES: Record<JobKind, Record<EndState, ParseKeys>> = {
+  'apt-update': {
+    succeeded: 'notifications.server.jobs.aptUpdate.succeeded.title',
+    failed: 'notifications.server.jobs.aptUpdate.failed.title',
+    unknown: 'notifications.server.jobs.aptUpdate.unknown.title',
+  },
+  'apt-upgrade': {
+    succeeded: 'notifications.server.jobs.aptUpgrade.succeeded.title',
+    failed: 'notifications.server.jobs.aptUpgrade.failed.title',
+    unknown: 'notifications.server.jobs.aptUpgrade.unknown.title',
+  },
+}
+
+// JOB_SUMMARIES는 성공한 작업의 요약 문구다(수가 있을 때, 없을 때).
+const JOB_SUMMARIES: Record<JobKind, { count: ParseKeys; none: ParseKeys }> = {
+  'apt-update': {
+    count: 'notifications.server.jobs.aptUpdate.succeeded.body',
+    none: 'notifications.server.jobs.aptUpdate.succeeded.bodyNone',
+  },
+  'apt-upgrade': {
+    count: 'notifications.server.jobs.aptUpgrade.succeeded.body',
+    none: 'notifications.server.jobs.aptUpgrade.succeeded.bodyNone',
+  },
+}
+
+// JOB_CODE_TEXT는 실패·결과 모름의 이유다.
+export const JOB_CODE_TEXT: Record<JobCode, ParseKeys> = {
+  apt_failed: 'notifications.server.jobs.code.aptFailed',
+  apt_core_removal: 'notifications.server.jobs.code.aptCoreRemoval',
+  job_failed: 'notifications.server.jobs.code.jobFailed',
+  job_lost: 'notifications.server.jobs.code.jobLost',
+  job_reboot: 'notifications.server.jobs.code.jobReboot',
+  job_timeout: 'notifications.server.jobs.code.jobTimeout',
+}
+
+// jobText는 작업 결과 알림의 문구다. 알림 코드가 결과를, job이 종류와 이유를 정한다.
+function jobText(n: Notice): NoticeText {
+  const kind: JobKind = n.job?.kind ?? 'apt-upgrade'
+  const state: EndState = n.code === 'jobSucceeded' ? 'succeeded' : n.code === 'jobFailed' ? 'failed' : 'unknown'
+  const title = JOB_TITLES[kind][state]
+  if (state === 'succeeded') {
+    const summary = JOB_SUMMARIES[kind]
+    return n.count ? { title, body: summary.count, params: { count: n.count } } : { title, body: summary.none, params: {} }
+  }
+  const code = n.job?.code
+  return { title, body: code ? JOB_CODE_TEXT[code] : null, params: {} }
 }
 
 export function serverText(n: Notice): NoticeText {

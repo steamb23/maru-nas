@@ -30,6 +30,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -157,6 +158,10 @@ type Server struct {
 	// bg는 상태 파일 이름 → 백그라운드 작업이다(exec.go).
 	bg      map[string]*bgJob
 	bgPolls int
+	// glitches는 "서비스.메서드" → 다음 호출을 실패시킬 횟수와 방식이다(exec.go).
+	glitches map[string]glitch
+	// apt는 Apt.update·upgrade의 가짜 작업 설정이다(apt.go).
+	apt AptConfig
 }
 
 type session struct {
@@ -192,6 +197,7 @@ func New(users []User, timeout time.Duration) *Server {
 		plugin:     DefaultPluginData(),
 		bg:         make(map[string]*bgJob),
 		bgPolls:    DefaultBgPolls,
+		apt:        DefaultAptConfig(),
 	}
 	for _, u := range users {
 		s.users[u.Name] = u
@@ -311,6 +317,16 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Params:       body.Params,
 	})
 
+	switch s.takeGlitch(body.Service, body.Method) {
+	case GlitchProxy:
+		w.Header().Set("Content-Type", "text/html")
+		w.WriteHeader(http.StatusBadGateway)
+		io.WriteString(w, "<html><body><h1>502 Bad Gateway</h1></body></html>")
+		return
+	case GlitchEngine:
+		writeError(w, nil, errStatus(http.StatusInternalServerError, "Failed to connect to socket: Connection refused"))
+		return
+	}
 	result, rerr := s.handle(req, body, touch)
 	// 로그인 실패 등으로 생긴 빈 세션은 남기지 않는다(개발 서버가 오래 떠 있어도 쌓이지 않게).
 	if !req.sess.authenticated && req.sess.pending == nil {
@@ -373,6 +389,9 @@ func (s *Server) handle(req *request, body rpcBody, touch bool) (any, *rpcError)
 	}
 	if body.Service == "Exec" && body.Method == "isRunning" {
 		return s.execIsRunning(req.sess, body.Params)
+	}
+	if body.Service == "Exec" && body.Method == "getOutput" {
+		return s.execGetOutput(req.sess, body.Params)
 	}
 	if res, rerr, ok := s.handlePlugin(req.sess, body.Service, body.Method, body.Params); ok {
 		return res, rerr

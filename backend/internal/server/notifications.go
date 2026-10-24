@@ -27,7 +27,7 @@ func (h *handler) notifications(w http.ResponseWriter, r *http.Request, s auth.S
 	if p.Notifications != nil {
 		seen = p.Notifications.Seen
 	}
-	writeJSON(w, http.StatusOK, api.NotificationsResponse{Notices: notices, Seen: notify.SeenFor(seen, notices)})
+	writeJSON(w, http.StatusOK, api.NotificationsResponse{Notices: notices, Seen: notify.SeenFor(seen, notices), Tasks: []api.Job{}})
 }
 
 // setNotificationPrefs는 알림 읽음 상태 전체를 바꾼다. 다른 설정은 그대로 둔다.

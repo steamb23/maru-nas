@@ -10,7 +10,7 @@ const notice = (id: string, revision = 'r1', level: Notice['level'] = 'warning')
   revision,
 })
 
-const resp = (notices: Notice[], seen: SeenMap = {}): NotificationsResponse => ({ notices, seen: { ...seen } })
+const resp = (notices: Notice[], seen: SeenMap = {}): NotificationsResponse => ({ notices, seen: { ...seen }, tasks: [] })
 
 // 저장을 손으로 끝내는 가짜 API.
 function setup() {

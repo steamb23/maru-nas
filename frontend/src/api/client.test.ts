@@ -676,7 +676,36 @@ describe('알림', () => {
 
   it('fetchNotifications는 모르는 알림만 빼고 돌려준다', async () => {
     stubFetch(Response.json({ notices: [notice, { ...notice, id: 'new', code: 'later' }], seen: { 'sample-a': 'r1' } }))
-    await expect(fetchNotifications()).resolves.toEqual({ notices: [notice], seen: { 'sample-a': 'r1' } })
+    await expect(fetchNotifications()).resolves.toEqual({ notices: [notice], seen: { 'sample-a': 'r1' }, tasks: [] })
+  })
+
+  it('fetchNotifications는 작업 결과 알림과 진행 중 작업을 읽고 모르는 작업은 뺀다', async () => {
+    const result = {
+      id: 'job-20261024-101500-1a2b3c4d',
+      code: 'jobFailed',
+      level: 'error',
+      revision: 'r1',
+      dismissible: true,
+      job: { id: '20261024-101500-1a2b3c4d', kind: 'apt-upgrade', state: 'failed', code: 'apt_failed' },
+    }
+    const task = {
+      id: '20261024-111500-1a2b3c4d',
+      kind: 'apt-update',
+      state: 'running',
+      owner: 'admin',
+      mine: true,
+      startedAt: '2026-10-24T11:15:00Z',
+      outputEnd: 120,
+      waiting: true,
+    }
+    stubFetch(
+      Response.json({
+        notices: [result, { ...result, id: 'job-x', job: { ...result.job, kind: 'later' } }],
+        seen: {},
+        tasks: [task, { ...task, state: 'paused' }],
+      }),
+    )
+    await expect(fetchNotifications()).resolves.toEqual({ notices: [result], seen: {}, tasks: [task] })
   })
 
   it('fetchNotifications는 형식이 다르면 던진다', async () => {
