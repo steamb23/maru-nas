@@ -88,7 +88,7 @@ paths:
    - 백엔드와 같은 규칙이면 `backend/config`의 함수로 검사하고, 설치기만의 더 엄격한 규칙(사용자 이름, Unix 소켓 경로, IP만 받는 주소 등)은 설정 정의에 둔다
    - 설정 정의 안의 함수에서 다른 설정 값은 `name*` 상수로 읽는다(설정 변수를 직접 가리키면 패키지 초기화 순환이 생긴다)
 2. `settings.go`의 목록에 한 줄 더한다
-3. 백엔드 플래그도 생기면 `backend/config`에 키·기본값을 두고 `cmd/maru/main.go`의 플래그와 `runtimeEntry` 목록에서 쓴다
+3. 백엔드 플래그도 생기면 `backend/config`에 키·기본값을 두고 `cmd/maru/flags.go`의 플래그(`parseFlags`)와 `runtimeEntry` 목록(`options.runtime`)에서 쓴다
 4. `docs/ko/install-options.md`의 옵션 표(`TestDocsListEveryOption`), 백엔드 플래그면 `docs/ko/configuration.md`의 항목 표(두 문서 모두 영어 `docs/en/`도 함께), `setting_test.go`의 검사 표와 왕복 표에 더한다
 5. 환경 파일 출력이 바뀌면 골든(`testdata/golden/*/want`)도 고친다. 골든은 bash `install.sh`의 출력에서 시작했으므로 바꾼 이유를 커밋 메시지에 적는다
 
