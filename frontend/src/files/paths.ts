@@ -27,6 +27,19 @@ export function rootsOf(r: FilesRoots): Root[] {
   return out
 }
 
+// splitShares는 사이드바의 공유 폴더를 보이는 것과 사용자가 숨긴 것(uuid가 hidden에 있음)으로 나눈다. 순서는 그대로다.
+// 표시만 나누므로 숨긴 공유 폴더도 뿌리 목록(findRoot 등)에는 남겨 둔다. uuid가 없는 항목은 숨길 수 없어 언제나 보인다.
+export function splitShares(roots: readonly Root[], hidden: readonly string[]): { visible: Root[]; hidden: Root[] } {
+  const set = new Set(hidden)
+  const out = { visible: [] as Root[], hidden: [] as Root[] }
+  for (const r of roots) {
+    if (r.kind !== 'share') continue
+    if (r.uuid && set.has(r.uuid)) out.hidden.push(r)
+    else out.visible.push(r)
+  }
+  return out
+}
+
 // within은 path가 root이거나 그 아래인지다.
 export function within(path: string, root: string): boolean {
   return path === root || root === '/' || path.startsWith(`${root}/`)

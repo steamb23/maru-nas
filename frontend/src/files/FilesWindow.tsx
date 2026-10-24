@@ -29,6 +29,7 @@ import { requestStepUp } from '../security/stepUpDialog'
 import { SidebarLayout } from '../shell/SidebarLayout'
 import type { ContextMenuAction, ContextMenuItem } from '../shell/contextMenu'
 import { useContextMenuStore } from '../shell/contextMenuStore'
+import { useContextMenuTrigger } from '../shell/useContextMenuTrigger'
 import { useDialogs } from '../shell/dialogPresets'
 import { DeleteBody, DeleteTitle, FailuresBody } from './DeleteBody'
 import { dropMode } from './copyJobs'
@@ -63,6 +64,7 @@ import {
   numberedName,
   parentOf,
   rootsOf,
+  splitShares,
   volumeOf,
   within,
 } from './paths'
@@ -75,6 +77,8 @@ import { type FilesLayout, useFilesPrefsStore } from './viewPrefs'
 
 // 창이 이보다 좁으면 사이드바를 숨기고 메뉴 단추로 덮어 연다(SidebarLayout).
 const FILES_NARROW_WIDTH = 720
+// 덮어 연 사이드바를 닫는 항목. 숨긴 공유 폴더 묶음 줄은 펼치기만 하므로 닫지 않는다.
+const NAV_ITEMS = '.sidebar-nav-item:not(.files-nav-hidden-toggle)'
 // 찾기 입력을 멈춘 뒤 보기를 바꾸기까지 기다리는 시간
 const QUERY_DELAY_MS = 250
 // 날짜·크기순 준비 배너는 이 시간이 지나도 끝나지 않을 때만 보인다(작은 폴더는 깜박이지 않게).
@@ -154,6 +158,7 @@ export function FilesWindow({ active }: WindowViewProps) {
   const lang = useLanguage()
   const dialogs = useDialogs()
   const admin = useAuthStore((s) => s.user?.admin === true)
+  const username = useAuthStore((s) => s.user?.username ?? '')
   const [rootsTry, setRootsTry] = useState(0)
   const [rootsResult, setRootsState] = useState<RootsState>({ try: -1, status: 'loading' })
   const [history, setHistory] = useState<History | null>(null)
@@ -202,6 +207,11 @@ export function FilesWindow({ active }: WindowViewProps) {
   const [layoutChoice, setLayoutChoice] = useState<FilesLayout | null>(null)
   const savedLayout = useFilesPrefsStore((s) => (s.status === 'ready' ? s.layout : 'list'))
   const layout = layoutChoice ?? savedLayout
+  // 사이드바에서 숨긴 공유 폴더. 보기 모양과 달리 창마다 두지 않고 열린 모든 창에 바로 적용한다(viewPrefs.ts).
+  const prefsSettled = useFilesPrefsStore((s) => s.settled)
+  const hiddenShares = useFilesPrefsStore((s) => s.hiddenShares)
+  // hiddenOpen은 사이드바의 숨긴 공유 폴더 묶음을 펼쳤는지다(창마다, 저장하지 않음).
+  const [hiddenOpen, setHiddenOpen] = useState(false)
   const sortButton = useRef<HTMLButtonElement>(null)
   // self는 변경 알림에서 이 창을 가리킨다.
   const [self] = useState(() => Symbol('files-window'))
@@ -218,8 +228,33 @@ export function FilesWindow({ active }: WindowViewProps) {
   }
 
   useEffect(() => {
-    void useFilesPrefsStore.getState().load()
-  }, [])
+    void useFilesPrefsStore.getState().load(username)
+  }, [username])
+
+  // 사이드바 공유 폴더의 메뉴(숨기기·보이기). 공유 폴더 항목은 data-share-uuid(숨긴 항목은 data-share-hidden도),
+  // 숨긴 묶음 줄은 data-hidden-toggle로 가린다. 설정을 불러오지 못했으면 바꿀 수 없다(저장하면 저장된 값을 덮어쓴다).
+  const shareMenu = useContextMenuTrigger({
+    items: (el): ContextMenuItem[] => {
+      // 동작은 저장소 안에서 지금 값을 다시 읽으므로 메뉴를 연 때의 것을 써도 된다.
+      const prefs = useFilesPrefsStore.getState()
+      const action = (id: string, labelKey: ParseKeys, icon: IconName, onSelect: () => void): ContextMenuAction => ({
+        kind: 'action',
+        id,
+        labelKey,
+        icon,
+        disabled: prefs.status !== 'ready',
+        onSelect,
+      })
+      if (el.dataset.hiddenToggle !== undefined) {
+        return [action('show-all', 'files.nav.showAllShares', 'view-reveal-symbolic', prefs.showAllShares)]
+      }
+      const uuid = el.dataset.shareUuid
+      if (!uuid) return []
+      return el.dataset.shareHidden !== undefined
+        ? [action('show', 'files.nav.showShare', 'view-reveal-symbolic', () => prefs.showShare(uuid))]
+        : [action('hide', 'files.nav.hideShare', 'view-conceal-symbolic', () => prefs.hideShare(uuid))]
+    },
+  })
 
   // 처음 보이는 폴더. 보안 확인이 필요하면 확인 단추를 보인다.
   useEffect(() => {
@@ -230,7 +265,9 @@ export function FilesWindow({ active }: WindowViewProps) {
         setRootsState({ try: rootsTry, status: 'ready', info, roots })
         setHistory((h) => {
           if (h && findRoot(roots, current(h))) return h
-          const first = roots.find((r) => r.reachable)
+          // 사이드바에서 숨긴 공유 폴더보다 보이는 폴더로 먼저 시작한다.
+          const hidden = new Set(useFilesPrefsStore.getState().hiddenShares)
+          const first = roots.find((r) => r.reachable && !(r.uuid && hidden.has(r.uuid))) ?? roots.find((r) => r.reachable)
           return first ? startHistory(first.path) : null
         })
       },
@@ -965,28 +1002,42 @@ export function FilesWindow({ active }: WindowViewProps) {
     )
   }
 
-  const navItem = (r: Root, icon: IconName) => (
-    <button
-      key={`${r.kind}:${r.path}`}
-      type="button"
-      className="sidebar-nav-item"
-      data-drop-path={r.reachable ? r.path : undefined}
-      aria-current={!trashOpen && root === r ? 'page' : undefined}
-      aria-disabled={!r.reachable || undefined}
-      title={r.reachable ? (r.readOnly ? t('files.nav.readOnlyShare', { path: r.path }) : r.path) : t('files.nav.unreachable')}
-      onClick={() => r.reachable && navigate(r.path)}
-    >
-      <IconImage name={icon} size={16} />
-      <span>{r.name}</span>
-      {r.readOnly && (
-        <span className="files-nav-badge" aria-label={t('files.nav.readOnly')}>
-          <IconImage name="system-lock-screen-symbolic" size={12} />
-        </span>
-      )}
-    </button>
-  )
+  // navItem은 사이드바의 공유 폴더·디스크 항목이다. 공유 폴더는 메뉴로 숨기고, 숨긴 항목(hidden)은 다시 보인다.
+  const navItem = (r: Root, icon: IconName, hidden = false) => {
+    const hideable = r.kind === 'share' && !!r.uuid
+    return (
+      <button
+        key={`${r.kind}:${r.path}`}
+        type="button"
+        className={hidden ? 'sidebar-nav-item files-nav-hidden' : 'sidebar-nav-item'}
+        data-drop-path={r.reachable ? r.path : undefined}
+        data-share-uuid={hideable ? r.uuid : undefined}
+        data-share-hidden={hidden ? '' : undefined}
+        aria-current={!trashOpen && root === r ? 'page' : undefined}
+        aria-disabled={!r.reachable || undefined}
+        title={r.reachable ? (r.readOnly ? t('files.nav.readOnlyShare', { path: r.path }) : r.path) : t('files.nav.unreachable')}
+        {...(hideable ? shareMenu.handlers : {})}
+        onClick={() => {
+          // 길게 눌러 메뉴를 연 누름은 폴더를 열지 않는다.
+          if (hideable && shareMenu.openedByPress()) return
+          if (r.reachable) navigate(r.path)
+        }}
+      >
+        <IconImage name={icon} size={16} />
+        <span>{r.name}</span>
+        {r.readOnly && (
+          <span className="files-nav-badge" aria-label={t('files.nav.readOnly')}>
+            <IconImage name="system-lock-screen-symbolic" size={12} />
+          </span>
+        )}
+      </button>
+    )
+  }
   const homes = roots.filter((r) => r.kind === 'home')
   const shares = roots.filter((r) => r.kind === 'share')
+  // 사이드바에는 사용자가 숨기지 않은 공유 폴더만 보이고, 숨긴 것은 묶음 끝의 줄을 펼쳐야 보인다. 설정을 처음 불러오기
+  // 전에는 공유 폴더 묶음을 그리지 않는다(숨긴 폴더가 잠깐 보였다 사라지지 않게).
+  const split = splitShares(roots, hiddenShares)
   const disks = roots.filter((r) => r.kind === 'disk')
   const fallback = rootsState.status === 'ready' && rootsState.info.fallback
 
@@ -1006,8 +1057,24 @@ export function FilesWindow({ active }: WindowViewProps) {
           <span>{t('files.nav.home')}</span>
         </button>
       ))}
-      {shares.length > 0 && <h3 className="files-nav-group">{t('files.nav.shares')}</h3>}
-      {shares.map((r) => navItem(r, 'folder-remote-symbolic'))}
+      {prefsSettled && shares.length > 0 && <h3 className="files-nav-group">{t('files.nav.shares')}</h3>}
+      {prefsSettled && split.visible.map((r) => navItem(r, 'folder-remote-symbolic'))}
+      {prefsSettled && split.hidden.length > 0 && (
+        <button
+          type="button"
+          className="sidebar-nav-item files-nav-hidden-toggle"
+          aria-expanded={hiddenOpen}
+          data-hidden-toggle=""
+          {...shareMenu.handlers}
+          onClick={() => {
+            if (!shareMenu.openedByPress()) setHiddenOpen((o) => !o)
+          }}
+        >
+          <IconImage name="pan-end-symbolic" size={16} />
+          <span>{t('files.nav.hiddenShares', { count: split.hidden.length, total: fmt(split.hidden.length) })}</span>
+        </button>
+      )}
+      {prefsSettled && hiddenOpen && split.hidden.map((r) => navItem(r, 'folder-remote-symbolic', true))}
       {disks.length > 0 && <h3 className="files-nav-group">{t('files.nav.disks')}</h3>}
       {disks.map((r) => navItem(r, 'drive-harddisk-symbolic'))}
       {rootsState.status === 'ready' && roots.length > 0 && (
@@ -1183,7 +1250,7 @@ export function FilesWindow({ active }: WindowViewProps) {
 
   if (trashOpen) {
     return (
-      <SidebarLayout className="files" narrowWidth={FILES_NARROW_WIDTH} navLabel={t('files.nav.label')} nav={nav} header={header}>
+      <SidebarLayout className="files" narrowWidth={FILES_NARROW_WIDTH} navLabel={t('files.nav.label')} nav={nav} navItems={NAV_ITEMS} header={header}>
         {opBanner}
         <TrashView
           query={view.query}
@@ -1200,7 +1267,7 @@ export function FilesWindow({ active }: WindowViewProps) {
 
   if (search) {
     return (
-      <SidebarLayout className="files" narrowWidth={FILES_NARROW_WIDTH} navLabel={t('files.nav.label')} nav={nav} header={header}>
+      <SidebarLayout className="files" narrowWidth={FILES_NARROW_WIDTH} navLabel={t('files.nav.label')} nav={nav} navItems={NAV_ITEMS} header={header}>
         <SearchView
           search={search}
           roots={roots}
@@ -1219,7 +1286,7 @@ export function FilesWindow({ active }: WindowViewProps) {
   }
 
   return (
-    <SidebarLayout className="files" narrowWidth={FILES_NARROW_WIDTH} navLabel={t('files.nav.label')} nav={nav} header={header}>
+    <SidebarLayout className="files" narrowWidth={FILES_NARROW_WIDTH} navLabel={t('files.nav.label')} nav={nav} navItems={NAV_ITEMS} header={header}>
       <div className="files-actions">
         <button
           type="button"

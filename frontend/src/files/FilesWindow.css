@@ -484,3 +484,25 @@
   font-size: 11px;
   line-height: 18px;
 }
+
+/* 사이드바에서 숨긴 공유 폴더: 묶음 끝의 접힌 줄과, 펼쳤을 때 그 아래에 흐리게 보이는 항목 */
+.files .sidebar-nav-item.files-nav-hidden-toggle {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.files-nav-hidden-toggle .symbolic-icon {
+  transition: transform 0.15s ease;
+}
+
+.files-nav-hidden-toggle[aria-expanded='true'] .symbolic-icon {
+  transform: rotate(90deg);
+}
+
+.files .sidebar-nav-item.files-nav-hidden {
+  padding-left: 22px;
+}
+
+.files .sidebar-nav-item.files-nav-hidden > * {
+  opacity: 0.6;
+}

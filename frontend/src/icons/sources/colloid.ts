@@ -30,6 +30,7 @@ import systemReboot from '@colloid/actions/symbolic/system-reboot-symbolic.svg?u
 import systemShutdown from '@colloid/actions/symbolic/system-shutdown-symbolic.svg?url'
 import systemSuspend from '@colloid/actions/symbolic/system-suspend-symbolic.svg?url'
 import viewAppGrid from '@colloid/actions/symbolic/view-app-grid-symbolic.svg?url'
+import viewConceal from '@colloid/actions/symbolic/view-conceal-symbolic.svg?url'
 import viewReveal from '@colloid/actions/symbolic/view-reveal-symbolic.svg?url'
 import viewGrid from '@colloid/actions/symbolic/view-grid-symbolic.svg?url'
 import viewList from '@colloid/actions/symbolic/view-list-symbolic.svg?url'
@@ -141,6 +142,7 @@ export const COLLOID_ICONS = {
   'view-list-symbolic': { url: viewList, kind: 'symbolic' },
   'view-grid-symbolic': { url: viewGrid, kind: 'symbolic' },
   'view-reveal-symbolic': { url: viewReveal, kind: 'symbolic' },
+  'view-conceal-symbolic': { url: viewConceal, kind: 'symbolic' },
   'utilities-system-monitor-symbolic': { url: utilitiesSystemMonitorSymbolic, kind: 'symbolic' },
   'network-server-symbolic': { url: networkServer, kind: 'symbolic' },
   'utilities-system-monitor': { url: utilitiesSystemMonitor, kind: 'color' },

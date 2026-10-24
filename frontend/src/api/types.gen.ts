@@ -1040,7 +1040,20 @@ export interface FilesPrefs {
    * View는 FilesView* 중 하나다. 프론트는 모르는 값이면 list를 쓴다.
    */
   view: string;
+  /**
+   * HiddenShares는 사이드바에서 숨긴 공유 폴더의 OMV uuid다(FilesShare.UUID). 사이드바 표시만 바꾸며 접근과는
+   * 관계없다(숨긴 공유 폴더도 보이는 폴더에 남는다). 스냅숏에 없는 uuid는 무시한다.
+   */
+  hiddenShares?: string[];
 }
+/**
+ * MaxHiddenShares는 숨긴 공유 폴더 수의 상한이다.
+ */
+export const MaxHiddenShares = 512;
+/**
+ * MaxHiddenShareBytes는 항목 하나(uuid)의 바이트 상한이다.
+ */
+export const MaxHiddenShareBytes = 64;
 /**
  * FilesPrefsRequest는 PUT /api/preferences/files의 요청 본문이다.
  */

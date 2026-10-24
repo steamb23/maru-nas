@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { ApiError } from '../api/client'
-import type { FileItem } from '../api/types.gen'
+import type { FileItem, FilesPrefs } from '../api/types.gen'
 import {
   MAX_NAMES,
   MAX_NAMES_JSON,
@@ -31,6 +31,7 @@ import {
   numberedName,
   parentOf,
   rootsOf,
+  splitShares,
   stemLength,
   uploadNameOk,
   volumeOf,
@@ -105,6 +106,20 @@ describe('경로', () => {
     expect(findRoot(roots, '/srv/d1/other')?.name).toBe('data1')
     expect(findRoot(roots, '/kvm/x')).toBeNull()
     expect(findRoot(roots, '/srv/d10')).toBeNull()
+  })
+
+  it('사이드바의 공유 폴더를 보이는 것과 숨긴 것으로 나눈다', () => {
+    const names = (rs: readonly { name: string }[]) => rs.map((r) => r.name)
+    expect(names(splitShares(roots, []).visible)).toEqual(['미디어', 'kvm', '영화'])
+    // 스냅숏에 없는 uuid는 무시하고, 순서는 그대로다. 홈·디스크는 나누지 않는다.
+    const split = splitShares(roots, ['u3', 'gone', 'u2'])
+    expect(names(split.visible)).toEqual(['미디어'])
+    expect(names(split.hidden)).toEqual(['kvm', '영화'])
+    // uuid가 없는 항목은 숨길 수 없다.
+    const noUuid = rootsOf({ shares: [{ uuid: '', name: 's', path: '/srv/d/s', reachable: true }], disks: [], fallback: false })
+    expect(names(splitShares(noUuid, ['']).visible)).toEqual(['s'])
+    // 숨겨도 뿌리 목록에는 남는다(경로 막대, 보이는 폴더 지키기).
+    expect(findRoot(roots, '/srv/d1/media/movies/2024')?.name).toBe('영화')
   })
 
   it('경로 막대는 뿌리 이름부터 그린다', () => {
@@ -277,7 +292,7 @@ describe('보기 설정', () => {
     // 불러오기 전에는 저장하지 않는다(저장된 값을 덮어쓰지 않게).
     store.getState().set('grid')
     expect(saved).toEqual([])
-    await store.getState().load()
+    await store.getState().load('alice')
     expect(store.getState()).toMatchObject({ status: 'ready', layout: 'grid' })
     store.getState().set('grid')
     store.getState().set('list')
@@ -287,6 +302,66 @@ describe('보기 설정', () => {
     expect(toLayout(undefined)).toBe('list')
   })
 
+  it('숨긴 공유 폴더를 바꾸면 보기와 함께 저장한다', async () => {
+    const saved: FilesPrefs[] = []
+    const store = createFilesPrefsStore({
+      fetchPreferences: async () => ({ files: { view: 'grid', hiddenShares: ['u1'] } }),
+      saveFilesPrefs: async (p) => {
+        saved.push(p)
+      },
+    })
+    // 불러오기 전에는 바꾸지 않는다.
+    store.getState().hideShare('u2')
+    expect(store.getState()).toMatchObject({ settled: false, hiddenShares: [] })
+    await store.getState().load('alice')
+    expect(store.getState()).toMatchObject({ status: 'ready', settled: true, layout: 'grid', hiddenShares: ['u1'] })
+
+    const flush = async () => {
+      for (let i = 0; i < 5; i++) await Promise.resolve()
+    }
+    store.getState().hideShare('u2')
+    store.getState().hideShare('u2')
+    await flush()
+    store.getState().showShare('u1')
+    store.getState().showShare('u1')
+    await flush()
+    store.getState().set('list')
+    await flush()
+    store.getState().showAllShares()
+    store.getState().showAllShares()
+    await flush()
+    // 백엔드는 files 설정 전체를 바꾸므로 언제나 두 값을 함께 보낸다.
+    expect(saved).toEqual([
+      { view: 'grid', hiddenShares: ['u1', 'u2'] },
+      { view: 'grid', hiddenShares: ['u2'] },
+      { view: 'list', hiddenShares: ['u2'] },
+      { view: 'list', hiddenShares: [] },
+    ])
+  })
+
+  it('다른 사용자의 설정을 불러오기 전에 비운다', async () => {
+    let files: FilesPrefs = { view: 'grid', hiddenShares: ['u1'] }
+    let release = () => {}
+    const store = createFilesPrefsStore({
+      fetchPreferences: () => new Promise((resolve) => (release = () => resolve({ files }))),
+      saveFilesPrefs: async () => {},
+    })
+    const first = store.getState().load('alice')
+    release()
+    await first
+    // 같은 사용자가 다시 불러오는 동안에는 지금 값을 그대로 둔다(열린 창의 사이드바가 깜박이지 않게).
+    const again = store.getState().load('alice')
+    expect(store.getState()).toMatchObject({ status: 'loading', settled: true, hiddenShares: ['u1'] })
+    release()
+    await again
+    files = { view: 'list' }
+    const other = store.getState().load('bob')
+    expect(store.getState()).toMatchObject({ status: 'loading', settled: false, layout: 'list', hiddenShares: [] })
+    release()
+    await other
+    expect(store.getState()).toMatchObject({ status: 'ready', settled: true, hiddenShares: [] })
+  })
+
   it('불러오지 못하면 목록 보기로 둔다', async () => {
     const store = createFilesPrefsStore({
       fetchPreferences: async () => {
@@ -294,8 +369,9 @@ describe('보기 설정', () => {
       },
       saveFilesPrefs: async () => {},
     })
-    await store.getState().load()
-    expect(store.getState()).toMatchObject({ status: 'error', layout: 'list' })
+    await store.getState().load('alice')
+    // 불러오기는 마쳤으므로 사이드바는 공유 폴더를 모두 보인다.
+    expect(store.getState()).toMatchObject({ status: 'error', settled: true, layout: 'list', hiddenShares: [] })
   })
 })
 

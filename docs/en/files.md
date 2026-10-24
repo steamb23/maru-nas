@@ -10,6 +10,7 @@ Files are handled by the [privileged helper](helper.md) with the signed-in user'
 - What you can read and write follows the file system permissions (owner, mode, ACL). These are the same permissions as over SSH, and administrators also browse with their own account's permissions.
 - The details panel that opens when you click a file shows the owner, the group, the mode, whether there is an ACL, and your access. Administrators also get a link to the ACL editor in OMV.
 - Shared folders on the root file system (openmediavault-sharerootfs, for example `/kvm`) cannot be opened yet.
+- You can hide shared folders you don't use from the sidebar. Right-click a shared folder (long-press on touch) and choose "Hide from sidebar". Hidden folders appear when you expand "N hidden shared folders" at the end of the shared folder list, and choosing "Show in sidebar" the same way brings one back. The hidden list is saved per user and only affects the sidebar, so access permissions do not change.
 
 ### Following OMV shared folder privileges
 

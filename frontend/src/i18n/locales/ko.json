@@ -312,7 +312,12 @@
       "trashCount_one": "휴지통 항목 {{total}}개",
       "trashCount_other": "휴지통 항목 {{total}}개",
       "readOnly": "읽기 전용",
-      "readOnlyShare": "{{path}} (공유 폴더 권한: 읽기 전용)"
+      "readOnlyShare": "{{path}} (공유 폴더 권한: 읽기 전용)",
+      "hideShare": "사이드바에서 숨기기",
+      "showShare": "사이드바에 보이기",
+      "showAllShares": "모두 보이기",
+      "hiddenShares_one": "숨긴 공유 폴더 {{total}}개",
+      "hiddenShares_other": "숨긴 공유 폴더 {{total}}개"
     },
     "toolbar": {
       "back": "뒤로",

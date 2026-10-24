@@ -83,6 +83,7 @@ func (m *MemoryStore) SetSystemInfo(username string, sysinfo api.SystemInfoPrefs
 }
 
 func (m *MemoryStore) SetFiles(username string, files api.FilesPrefs) error {
+	files.HiddenShares = slices.Clone(files.HiddenShares)
 	m.update(username, func(p *api.Preferences) { p.Files = &files })
 	return nil
 }
@@ -124,6 +125,7 @@ func clonePrefs(p api.Preferences) api.Preferences {
 	}
 	if p.Files != nil {
 		f := *p.Files
+		f.HiddenShares = slices.Clone(f.HiddenShares)
 		p.Files = &f
 	}
 	p.Appearance = cloneAppearance(p.Appearance)

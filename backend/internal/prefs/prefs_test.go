@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"strings"
 	"testing"
@@ -368,12 +369,16 @@ func TestStoreFiles(t *testing.T) {
 			if err := s.SetDrawer("alice", api.DrawerPrefs{Sort: api.DrawerSortName}); err != nil {
 				t.Fatal(err)
 			}
-			want := api.FilesPrefs{View: api.FilesViewGrid}
+			hidden := []string{"share-a", "share-b"}
+			want := api.FilesPrefs{View: api.FilesViewGrid, HiddenShares: slices.Clone(hidden)}
 			if err := s.SetFiles("alice", want); err != nil {
 				t.Fatal(err)
 			}
+			// 넘긴 목록을 나중에 바꿔도 저장값은 그대로다.
+			want.HiddenShares[0] = "changed"
+			want.HiddenShares = hidden
 			p, err := s.Get("alice")
-			if err != nil || p.Files == nil || *p.Files != want {
+			if err != nil || p.Files == nil || !reflect.DeepEqual(*p.Files, want) {
 				t.Fatalf("after set: %+v, %v", p.Files, err)
 			}
 			if p.Drawer == nil || p.Drawer.Sort != api.DrawerSortName {
@@ -381,7 +386,8 @@ func TestStoreFiles(t *testing.T) {
 			}
 			// 돌려준 값을 바꿔도 저장값은 그대로다.
 			p.Files.View = "changed"
-			if p, _ := s.Get("alice"); *p.Files != want {
+			p.Files.HiddenShares[1] = "changed"
+			if p, _ := s.Get("alice"); !reflect.DeepEqual(*p.Files, want) {
 				t.Errorf("stored files prefs changed: %+v", *p.Files)
 			}
 			if p, _ := s.Get("bob"); p.Files != nil {

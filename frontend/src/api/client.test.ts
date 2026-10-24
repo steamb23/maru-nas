@@ -237,6 +237,8 @@ describe('preferences', () => {
     ['시스템 정보 설정', { systemInfo: { cpuScale: 'core', cpuGraph: 'cores' } }],
     ['모르는 시스템 정보 값(다른 버전)', { systemInfo: { cpuScale: 'irix', cpuGraph: 'heatmap' } }],
     ['알림 읽음 상태', { notifications: { seen: { 'sample-a': 'r1' } } }],
+    ['파일 탐색기 보기', { files: { view: 'grid' } }],
+    ['숨긴 공유 폴더', { files: { view: 'list', hiddenShares: ['u1', 'u2'] } }],
   ])('%s를 받는다', (_name, v) => {
     expect(isPreferences(v)).toBe(true)
   })
@@ -257,6 +259,8 @@ describe('preferences', () => {
     ['cpuGraph 없음', { systemInfo: { cpuScale: 'core' } }],
     ['읽음 상태 없음', { notifications: {} }],
     ['읽음 리비전이 숫자', { notifications: { seen: { a: 1 } } }],
+    ['숨긴 공유 폴더가 배열 아님', { files: { view: 'list', hiddenShares: 'u1' } }],
+    ['숨긴 공유 폴더가 숫자', { files: { view: 'list', hiddenShares: [1] } }],
   ])('%s는 거부한다', (_name, v) => {
     expect(isPreferences(v)).toBe(false)
   })

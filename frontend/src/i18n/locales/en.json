@@ -312,7 +312,12 @@
       "trashCount_one": "{{total}} item in the trash",
       "trashCount_other": "{{total}} items in the trash",
       "readOnly": "Read-only",
-      "readOnlyShare": "{{path}} (shared folder privileges: read-only)"
+      "readOnlyShare": "{{path}} (shared folder privileges: read-only)",
+      "hideShare": "Hide from sidebar",
+      "showShare": "Show in sidebar",
+      "showAllShares": "Show all",
+      "hiddenShares_one": "{{total}} hidden shared folder",
+      "hiddenShares_other": "{{total}} hidden shared folders"
     },
     "toolbar": {
       "back": "Back",

@@ -435,17 +435,39 @@ func TestSetFilesPrefs(t *testing.T) {
 		}
 	}
 
+	// 숨긴 공유 폴더는 보낸 목록 그대로 저장한다. 목록 없이 보내면 지운다(프런트는 언제나 두 값을 함께 보낸다).
+	hidden := api.FilesPrefsRequest{Files: &api.FilesPrefs{View: api.FilesViewList, HiddenShares: []string{"fa4e-1", "fa4e-2"}}}
+	wantStatus(t, b.do(http.MethodPut, "/api/preferences/files", hidden), http.StatusNoContent)
+	if got := decode[api.Preferences](t, b.do(http.MethodGet, "/api/preferences", nil)); got.Files == nil ||
+		!slices.Equal(got.Files.HiddenShares, []string{"fa4e-1", "fa4e-2"}) {
+		t.Fatalf("hidden shares = %+v", got.Files)
+	}
+
+	many := make([]string, api.MaxHiddenShares+1)
+	for i := range many {
+		many[i] = fmt.Sprintf("share-%d", i)
+	}
+	withHidden := func(h []string) api.FilesPrefsRequest {
+		return api.FilesPrefsRequest{Files: &api.FilesPrefs{View: api.FilesViewGrid, HiddenShares: h}}
+	}
 	for name, body := range map[string]any{
-		"missing":      map[string]any{},
-		"null":         map[string]any{"files": nil},
-		"missing view": map[string]any{"files": map[string]any{}},
-		"unknown view": api.FilesPrefsRequest{Files: &api.FilesPrefs{View: "columns"}},
+		"missing":          map[string]any{},
+		"null":             map[string]any{"files": nil},
+		"missing view":     map[string]any{"files": map[string]any{}},
+		"unknown view":     api.FilesPrefsRequest{Files: &api.FilesPrefs{View: "columns"}},
+		"hidden not list":  map[string]any{"files": map[string]any{"view": "list", "hiddenShares": "fa4e-1"}},
+		"hidden too many":  withHidden(many),
+		"hidden empty":     withHidden([]string{"fa4e-1", ""}),
+		"hidden too long":  withHidden([]string{strings.Repeat("a", api.MaxHiddenShareBytes+1)}),
+		"hidden duplicate": withHidden([]string{"fa4e-1", "fa4e-1"}),
 	} {
 		if rec := b.do(http.MethodPut, "/api/preferences/files", body); rec.Code != http.StatusBadRequest {
 			t.Errorf("%s: status %d (body %s)", name, rec.Code, rec.Body.String())
 		}
 	}
-	if p, _ := store.Get("admin"); p.Files == nil || p.Files.View != api.FilesViewList {
+	if p, _ := store.Get("admin"); p.Files == nil || p.Files.View != api.FilesViewList || !slices.Equal(p.Files.HiddenShares, []string{"fa4e-1", "fa4e-2"}) {
 		t.Errorf("invalid files prefs changed the saved value: %+v", p.Files)
 	}
+	// 상한까지는 받는다.
+	wantStatus(t, b.do(http.MethodPut, "/api/preferences/files", withHidden(many[:api.MaxHiddenShares])), http.StatusNoContent)
 }

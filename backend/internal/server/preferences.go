@@ -257,12 +257,31 @@ func (h *handler) setFilesPrefs(w http.ResponseWriter, r *http.Request, s auth.S
 		writeError(w, http.StatusBadRequest, api.ErrBadRequest, "unknown files view")
 		return
 	}
+	if !validHiddenShares(req.Files.HiddenShares) {
+		writeError(w, http.StatusBadRequest, api.ErrBadRequest, "invalid hidden shares")
+		return
+	}
 	if err := h.Prefs.SetFiles(s.Username, *req.Files); err != nil {
 		log.Printf("preferences: write: %v", err)
 		writeError(w, http.StatusInternalServerError, "", "failed to save preferences")
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// validHiddenShares는 숨긴 공유 폴더 목록의 모양만 본다(개수, 빈 값·길이, 중복). uuid가 스냅숏에 있는지는 보지 않는다.
+func validHiddenShares(uuids []string) bool {
+	if len(uuids) > api.MaxHiddenShares {
+		return false
+	}
+	seen := make(map[string]bool, len(uuids))
+	for _, u := range uuids {
+		if u == "" || len(u) > api.MaxHiddenShareBytes || seen[u] {
+			return false
+		}
+		seen[u] = true
+	}
+	return true
 }
 
 // avatarImage는 로그인한 사용자의 프로필 사진을 보낸다. 자기 사진만 받는다.

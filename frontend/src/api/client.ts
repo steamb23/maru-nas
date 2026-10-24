@@ -479,7 +479,7 @@ export function isSystemInfoPrefs(v: unknown): v is SystemInfoPrefs {
 
 // isFilesPrefs는 값이 문자열인지만 본다. 모르는 보기는 탐색기가 목록 보기로 다룬다(files/viewPrefs.ts).
 export function isFilesPrefs(v: unknown): v is FilesPrefs {
-  return isObj(v) && isStr(v.view)
+  return isObj(v) && isStr(v.view) && isOptional(v.hiddenShares, (x): x is string[] => isArrayOf(x, isStr))
 }
 
 const THEMES = ['auto', 'light', 'dark'] as const
