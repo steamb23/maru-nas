@@ -106,11 +106,12 @@
 상태를 바꾸는 일(컨테이너 시작·정지, 서비스 켜기·끄기)은 애드온 조작으로만 한다.
 
 - manifest `actions`: `name`(소문자·숫자·`-`), `admin`(관리자만), `confirm`(실행 전 확인). `admin`은 애드온의 `requires.admin`과 따로 정한다(컨테이너 목록은 누구나 보고 조작은 관리자만)
-- 구현 `Addon.Actions[name]`: `Timeout`(0이면 1분)과 `Run(ctx, ActionRequest{Admin, Target, RPC})`
+- 구현 `Addon.Actions[name]`: `Timeout`(0이면 1분)과 `Run(ctx, ActionRequest{Admin, Target, RPC, Jobs})`
   - `Target`은 브라우저가 보낸 값이다. OMV에 넘기기 전에 애드온이 형식과 존재를 검사하고, 잘못되면 `ErrInvalidTarget`
   - OMV 파라미터는 고정값과 검사한 대상으로 애드온이 만든다. 브라우저가 보낸 다른 값은 넘기지 않는다
   - 시작하지 않고 거절할 이유가 있으면 `*ActionError{Status, Code}`(예: 409 `config_dirty`)
   - `RPC`는 그 애드온이 선언한 읽기·쓰기를 부를 수 있다(`updatelastaccess=false`)
+  - `Jobs`(`addons.JobStarter`)는 요청한 세션으로 서버 백그라운드 작업을 시작한다(`internal/jobs`). 시작하고 바로 돌아오며 작업은 서버가 끝까지 지켜본다. 세션 ID를 애드온에 넘기지 않으려고 세션에 묶인 시작기를 준다. 거절은 `*ActionError`(409 `job_busy`·`apt_locked`·`config_dirty`)
 - OMV 백그라운드 작업: `execBgProc`·`callMethodBg`를 쓰는 메서드는 상태 파일 이름만 바로 돌려준다. `addons.WaitBg`가 `Exec.isRunning`(관리자 전용, 끝난 상태 파일을 지움)을 500ms마다 불러 끝날 때까지 기다린다. 실패는 OMV가 `Exec.isRunning`에서 예외로 알려 주므로 `ErrActionFailed`, 시간 초과는 `ErrActionTimeout`이다. 시간 초과나 백엔드 재시작 때 OMV 쪽 작업은 계속 돌고 상태 파일은 남는다
 - API: `POST /api/addons/{id}/actions/{action}`, 본문 `{target}`(4KB 이하), 성공하면 204
 
@@ -272,6 +273,7 @@
 | `containers` | 컨테이너 | compose 플러그인 | `omv-compose` | `start`, `stop`(확인), `restart`(확인), 관리자 | 30초 / 15초 |
 | `services` | 서비스 | admin | `omv-services` | `enable`, `disable`(확인) | 30초 / 10초 |
 | `system-info` | 시스템 정보 | 없음 | `omv-power`(admin) | `shutdown`, `reboot`, `standby`(모두 확인), 관리자. 프로필 메뉴의 전원 모달이 부른다 | 5초 / 1초(숨기면 2초) |
+| `packages` | 시스템 업데이트 | admin | `apt-index` | `check`, `upgrade`(확인), 관리자. 서버 백그라운드 작업을 시작한다 | 없음 / 30초(작업 목록 3초·30초, 출력 1초) |
 
 #### 서비스 (`services`)
 
@@ -285,6 +287,12 @@
   - isDirty와 set 사이에 다른 곳에서 만든 변경이 함께 배포될 수 있는 경쟁 조건은 받아들인다
   - set이 성공하고 적용이 실패하면 설정은 바뀐 채 적용 대기로 남는다(OMV workbench에 표시됨). `action_failed`로 알린다
 - 끄기 확인 문구는 서비스마다 무엇이 끊기는지 알려 준다(SSH 세션, SMB·NFS 클라이언트, rsync 백업)
+
+#### 시스템 업데이트 (`packages`)
+
+- 목록·재부팅 권장은 `internal/aptindex`가 `upgradeindex.json`과 `/run/reboot-required(.pkgs)`를 직접 읽는다(`fs.FS`, APT·재부팅 알림 출처와 함께 씀). 파일이 없으면 `indexed: false`(확인한 적 없음)이고 `Apt.enumerateUpgraded`처럼 실패시키지 않는다
+- 조작 `check`(`Apt.update`)·`upgrade`(`Apt.upgrade`, dist-upgrade 전부)는 `ActionRequest.Jobs`로 작업을 시작하고 30초 안에 돌아온다. 골라서 설치(`Apt.install`)는 하지 않는다(워크벤치와 같다). `rpc.read`의 `Exec.getOutput`은 작업 감시자(`omvjob`)가 이 애드온의 허용 목록으로 부른다. `Exec.isRunning`·`Exec.stop`은 선언하지 않는다
+- 진행·출력·결과는 `/api/jobs*`(`.claude/rules/backend.md`의 "서버 백그라운드 작업"). 창(시안 C, Design 캔버스 "시스템 업데이트 앱 시안")은 업데이트 목록과 작업 보기를 탭으로 바꾸고, 변경 기록·업데이트 설정은 워크벤치 라우트로 연다. 위젯은 두지 않는다(사용자 결정)
 
 ### 시스템 정보 (`system-info`)
 

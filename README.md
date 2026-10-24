@@ -21,6 +21,7 @@ Maru NAS is a desktop-like web dashboard that runs on OpenMediaVault 8. Windows,
 - **Simple operations**: start, stop and restart containers (compose plugin), and turn core services on and off. Administrators can also shut down, restart or put the NAS to sleep from the profile menu.
 - **[File explorer](docs/en/files.md)**: browse your home folder and shared folders with your own permissions, upload, download, and delete to the trash.
 - **[Web terminal](docs/en/terminal.md)**: open an SSH shell on this NAS in a window, as the account you signed in with.
+- **[System updates](docs/en/system-updates.md)**: check for OMV and Debian package updates and install them all. The installation runs to the end on the server even if you close the window, and you get a notification with the result.
 - **[Security hardening mode](docs/en/security.md)**: ask for the password again, or for a passkey or an authenticator app, before sensitive features. You can also [sign in with a passkey](docs/en/passkey-login.md).
 - **[Upgrading from the dashboard](docs/en/upgrade.md#upgrading-from-the-dashboard)**: upgrade to a new version from the Settings app, without SSH.
 - **[OMV Workbench link](docs/en/configuration.md#opening-the-omv-workbench)**: open the OMV web UI in a new tab when you need deep configuration.
@@ -127,6 +128,7 @@ What you look up while running Maru NAS after installation is on the [documentat
 | [Settings app](docs/en/settings-app.md) | Pages of the Settings app and who can use them |
 | [File explorer](docs/en/files.md) | Visible folders and permissions, uploading and downloading, the trash, moving and copying |
 | [Web terminal](docs/en/terminal.md) | Turning it on, authentication, SSH settings and security |
+| [System updates](docs/en/system-updates.md) | Checking for and installing all updates, task progress and result notifications, limitations |
 | [Privileged helper](docs/en/helper.md) | The service that does the work needing user or root rights, and its security design |
 | [Security hardening mode](docs/en/security.md) | Password re-check and two-step verification (passkeys, authenticator apps, recovery codes), recovery |
 | [Passkey sign-in](docs/en/passkey-login.md) | Signing in with a passkey instead of a password, and its limits |

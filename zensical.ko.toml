@@ -24,6 +24,7 @@ nav = [
     "settings-app.md",
     "files.md",
     "terminal.md",
+    "system-updates.md",
   ] },
   { "보안" = [
     "helper.md",

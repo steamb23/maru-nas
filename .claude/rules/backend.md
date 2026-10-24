@@ -38,14 +38,32 @@ paths:
 
 ## 알림
 
-화면 쪽은 `.claude/rules/frontend-shell.md`의 "알림", 나중에 붙일 출처는 `.claude/docs/roadmap.md`의 "알림".
+화면 쪽은 `.claude/rules/frontend-shell.md`의 "알림", 작업 결과 알림은 아래 "서버 백그라운드 작업".
 
 - 서버 알림은 `internal/notify`가 출처(`Source`: `Name`, `Admin`, `Collect`)를 모아 만든다. `Center`는 결과를 모든 세션이 함께 쓰도록 30초 보관하고, 지난 뒤 처음 묻는 요청에서 다시 읽는다(`addons.Detector`와 같은 지연 캐시이며 고루틴이 없다. 서버 백그라운드 작업이 아니다). 읽지 못한 출처는 직전 결과를 유지한다. 수집은 요청이 끊겨도 끝까지 하고(`context.WithoutCancel`) 출처마다 5초 제한이다
   - 출처가 준 알림은 형식을 검사해 맞지 않으면 버린다: id(`ValidID`), 리비전(`ValidRevision`), 수준, 코드(`knownCodes`, `api.Notice.Code`의 tstype과 같아야 한다. `TestCodesMatchTSType`), RFC 3339 `since`, 동작(`app`은 앱·페이지 id 형식, `workbench`는 앞 슬래시 없는 라우트, `power`는 값 없음). 다른 출처와 겹치는 id는 앞 출처의 것을 남기고, 출처마다 20개·`items` 20개까지 둔다
   - 리비전은 내용이 바뀔 때만 달라져야 한다(`Revision`: 정렬한 조각의 해시). 파일 수정 시각을 쓰지 않는다(내용이 같아도 매일 다시 쓰는 파일이 있다)
-  - 운영 출처는 아직 없다(`main.go`의 `notify.New()`). 출처를 더할 때는 문구 키(프론트 `notifications/messages.ts`)와 코드 유니온을 함께 더한다. 직접 읽는 출처는 `/proc`·`/sys`처럼 파서와 `fs.FS` 읽기를 나눈다
-- `GET /api/notifications`(`requireSession`)는 이 세션이 볼 알림(관리자 전용 출처는 관리자에게만, 서버가 거른다)과 그중 읽은 것(`seen`, 지금 알림의 id만)을 준다. `PUT /api/preferences/notifications`는 읽음 상태(id → 리비전, 128개까지, 형식 검사) 전체를 바꾼다. 프론트는 지금 목록에 있는 id만 보내므로 저장 크기가 묶인다. 빈 목록이면 `seen`은 `{}`다
-- 개발 서버: `MARU_DEV_NOTICES`(개발 전용 환경 변수, 플래그·가동 설정 목록·설치기 레지스트리에 넣지 않음)가 있으면 그 파일(`{admin: [...], everyone: [...]}`)을 읽는 출처 둘을 두고 보관 시간을 2초로 줄인다(`cmd/maru/devnotices.go`, 리비전이 비면 내용으로 채움). `make dev-fake`가 상태 디렉터리의 `dev-notices.json`으로 정하고, 가짜 OMV 프로세스가 `FAKENOTICES`(sample, none, many, rotate) 시나리오대로 쓴다. rotate는 `FAKENOTICES_STEP`(기본 30s)마다 개수를 바꿔 토스트를 확인하게 한다
+  - 운영 출처는 APT 업데이트(`aptUpdates`)와 재부팅 권장(`rebootRequired`)이다(관리자 전용, `internal/aptindex`가 `upgradeindex.json`·`/run/reboot-required(.pkgs)`를 직접 읽음, `main.go`에 등록). 출처를 더할 때는 문구 키(프론트 `notifications/messages.ts`)와 코드 유니온(프론트 `api/client.ts`의 `NOTICE_CODES`도, 빠지면 tsc가 잡는다)을 함께 더한다. 직접 읽는 출처는 `/proc`·`/sys`처럼 파서와 `fs.FS` 읽기를 나눈다
+  - 출처는 지울 수 있는 알림(`dismissible`)을 줄 수 없다(`Center.accept`가 버린다). 지울 수 있는 것은 사용자별 작업 결과뿐이고 핸들러가 합친다(아래 "서버 백그라운드 작업")
+- `GET /api/notifications`(`requireSession`)는 이 세션이 볼 알림(관리자 전용 출처는 관리자에게만, 서버가 거른다)과 이 사용자의 작업 결과 알림, 그중 읽은 것(`seen`, 지금 알림의 id만), 진행 중인 작업(`tasks`, 관리자만)을 준다. 관리자 요청은 기다리는 작업 감시자를 깨운다(`Jobs.Offer`). `DELETE /api/notifications/{id}`는 이 사용자의 작업 결과 알림만 지운다(아니면 404). `PUT /api/preferences/notifications`는 읽음 상태(id → 리비전, 128개까지, 형식 검사) 전체를 바꾼다. 프론트는 지금 목록에 있는 id만 보내므로 저장 크기가 묶인다. 빈 목록이면 `seen`은 `{}`다
+- 개발 서버: `MARU_DEV_NOTIFY_ROOT`(개발 전용 환경 변수, 플래그·가동 설정 목록·설치기 레지스트리에 넣지 않음)가 있으면 APT 목록·재부팅 파일을 그 가짜 루트에서 읽는다. `make dev-fake`가 상태 디렉터리의 `notify-root`로 정하고 가짜 OMV 프로세스가 합성 목록을 쓴다(`FAKEAPT_SCENARIO`, 아래 "서버 백그라운드 작업"). `MARU_DEV_NOTICES`(개발 전용 환경 변수, 플래그·가동 설정 목록·설치기 레지스트리에 넣지 않음)가 있으면 그 파일(`{admin: [...], everyone: [...]}`)을 읽는 출처 둘을 두고 보관 시간을 2초로 줄인다(`cmd/maru/devnotices.go`, 리비전이 비면 내용으로 채움). `make dev-fake`가 상태 디렉터리의 `dev-notices.json`으로 정하고, 가짜 OMV 프로세스가 `FAKENOTICES`(sample, none, many, rotate) 시나리오대로 쓴다. rotate는 `FAKENOTICES_STEP`(기본 30s)마다 개수를 바꿔 토스트를 확인하게 한다
+
+## 서버 백그라운드 작업
+
+시스템 업데이트 앱(`packages`)의 확인·설치처럼 브라우저 없이 서버에서 끝까지 도는 OMV 작업이다(`internal/jobs`). 브라우저가 진행하는 파일 복사·올리기는 대상이 아니다.
+
+- **한 번에 하나**: `jobs.Manager.Start`가 OMV를 부르기 전에 슬롯을 잡고(겹치면 409 `job_busy`), OMV가 거절하면 푼다. 작업 종류는 `jobs.Kinds` 표(`apt-update`, `apt-upgrade`)다
+- **실행·감시는 `jobs.Runner`**: 기록에 Runner 이름과 불투명한 handle을 두므로 나중의 상태 파일 서비스는 Runner 하나를 더하는 일이다. 지금 Runner는 `omvjob`(이름 `omv-session`)이다
+  - `Start`는 `Apt.update`·`upgrade`를 조작의 세션으로 부르고 상태 파일 이름(`^/tmp/bgstatus[A-Za-z0-9]+$`)을 handle(`{filename, pos}`)로 준다. 응답을 잃어도 다시 부르지 않는다(작업이 둘 생긴다). 잠금 문구는 `ErrLocked`(409 `apt_locked`), 적용 대기 문구는 `ErrConfigDirty`(409 `config_dirty`)
+  - `Watch`는 1초마다 `Exec.getOutput{filename, pos, length: 2MiB}`(`pendingOutput`이면 4번까지 이어 받음)를 부른다. `Exec.isRunning`은 쓰지 않는다(둘 다 끝나면 상태 파일을 지워 출력을 잃는다). `Exec.stop`은 쓰지 않는다
+  - **세션 옮겨 가기**: 상태 파일은 세션에 묶이지 않으므로 관리자 대시보드 세션 아무것으로나 읽는다(`server/jobs.go`의 `jobSessions`, 시작한 세션 먼저, 나머지는 최근 순). 호출은 `rpcCaller`(그 애드온의 허용 목록, 늘 `NoTouch`)이고 `h.expire`를 부르지 않는다. OMV 401이면 그 대시보드 세션을 지우고(OMV가 이미 파기함) 다음 세션으로, 403이면 건너뛴다. 세션이 없으면 기다리고(`waiting`), 관리자 요청(`/api/notifications`, `/api/jobs*`)이나 30초마다 다시 본다. 로그에는 사용자 이름만 남긴다
+  - **오류 판정**(OMV 예외 코드는 늘 0이라 문구로 가린다, `omvjob.classify`와 테스트): 네트워크·rpc.php 밖 응답(`omv.Error.FromRPC`)·엔진 소켓 문구는 일시 오류(물러났다 다시, 1시간 넘게 이어지면 `job_timeout`). "Failed to open file (filename=<우리 파일>"은 사라짐: 바로 전 폴링이 성공했고 업데이트 목록이 시작 뒤에 다시 만들어졌으면 출력이 불완전한 성공, 아니면 `job_lost`. openmediavault 제거 보호 문구는 `apt_core_removal`, "Failed to execute command"는 `apt_failed`, 그 밖의 500은 10초 넘게 3번 같으면 `job_failed`. 성공 폴링이 `KindSpec.MaxRun`을 넘어도 실행 중이면 `job_timeout`
+- **오류 문구의 경계**: 작업 출력(apt가 낸 내용)은 워크벤치가 보이는 것과 같은 내용이라 브라우저에 준다. OMV 예외 문구는 로그에만 남기고 코드로 바꾼다
+- **저장**(`prefs.FileStore`의 `jobs.Store`, 상태 디렉터리가 없으면 `jobs.MemoryStore`): `jobs/current.json`(진행 기록, 세션 ID 없음, 시작·10초마다·종료 때 씀), `jobs/results/<사용자>.json`(최근 10개·30일), `jobs/output/<id>.log`(조각마다 덧붙이고 fsync하지 않음, 4MiB를 넘으면 뒤 2MiB만 남김). 자체 `version: 1`이고 `users/*.json`은 건드리지 않는다. 디렉터리는 쓸 때만 만든다
+  - 다시 시작하면(`Resume`) 출력 파일을 기록의 길이로 자르고 기록한 자리부터 이어 받는다. 부트 id가 바뀌었으면 `job_reboot`, 모르는 Runner면 `job_lost`, 결과를 저장한 뒤 멈췄으면 결과를 믿는다. `main.go`가 종료할 때 `Close`로 진행 기록을 남긴다
+- **결과 알림**: 끝나면 시작한 사용자의 결과로 남기고 `notify.Center.Invalidate`로 APT·재부팅 알림을 다시 읽게 한다. 결과 알림(`jobSucceeded`·`jobFailed`·`jobUnknown`, id `job-<작업 id>`, `dismissible`, `job`)은 지우지 않은 최신 5개이고 `notify.Check`로 검사한다. 요약(`count`, `items`)은 확인이면 찾은 업데이트, 설치면 시작할 때 목록에서 사라진 패키지다
+- **API**(`requireAdmin`): `GET /api/jobs`(진행 중인 작업은 누가 시작했든, 결과는 이 사용자의 것), `GET /api/jobs/{id}`, `GET /api/jobs/{id}/output?from=N`(논리 위치, 64KiB, UTF-8 경계, `more`면 바로 다시). 진행 중인 작업과 마지막으로 끝난 작업의 출력은 어느 관리자나, 그 밖의 결과는 시작한 사용자만 읽는다
+- 서버 테스트는 `envOptions{jobs}`와 `Config.JobInterval`(5ms)을 쓴다. 가짜 OMV는 `Exec.getOutput`을 실제 의미대로(오류 먼저·실패 작업은 지우지 않음) 흉내 내고 `SetAptConfig`·`SetGlitch`·`DropBg`로 상황을 만든다. 개발 서버는 `FAKEAPT_SCENARIO`(success, slow, fail, core-removal, locked, dirty)이고 가짜 작업은 폴링마다 출력 조각 하나씩 나아간다(maru가 1초마다 읽으므로 조각 수가 곧 초)
 
 ## 파일 탐색기
 

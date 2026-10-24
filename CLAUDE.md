@@ -56,6 +56,7 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 - **권한 도우미**(`maru-helper`, `-helper-socket`, 설치기가 기본으로 설치): root로 도는 별도 실행 파일이 소켓 활성화로 maru 서비스 사용자의 연결만 받는다. 로그인할 때 비밀번호를 `unix_chkpwd`로 확인해 티켓을 주고, 연산을 그 사용자 권한으로 강등해 실행한다. root 연산은 권한 상승한 관리자 세션에서 5분 동안, 정해진 목록만 쓴다(지금은 `id`, 대시보드에서 업그레이드의 `upgrade.apply`, 파일 탐색기 디스크 휴지통의 `trash.prepare`). 상세는 `.claude/docs/helper.md`, 규칙은 `.claude/rules/helper.md`
 - **파일 탐색기**(`internal/files`, `src/files/`, 셸 앱): 홈 폴더와 공유 폴더를 도우미의 사용자 권한 연산으로 둘러보고 내려받고 올리고 하위 폴더까지 찾는다. 공유 폴더 목록은 관리자 세션이 받은 스냅숏(`site.json`)이고, 접근은 파일 시스템 권한을 따르며 관리자가 켜면 OMV 공유 폴더 권한도 따른다. 큰 폴더는 이름을 먼저 읽고 보이는 범위의 정보만 읽는다. 파일 미리보기는 따로 여는 셸 앱(`src/viewer/`)이다. 상세는 `.claude/rules/files.md`
 - **알림**(`internal/notify`, `src/notifications/`, 셸의 알림 버튼·알림 센터·토스트): 서버 알림은 백엔드 출처가 알리는 상태(로그인한 동안 60초마다 받음, 읽음 상태는 사용자별 저장), 클라이언트 알림은 이 탭에서 생긴 일(`notify()`, 탭의 메모리)이다. 규칙은 `.claude/rules/backend.md`·`.claude/rules/frontend-shell.md`의 "알림"
+- **서버 백그라운드 작업**(`internal/jobs`, 시스템 업데이트 앱 `packages`): 브라우저 없이 서버에서 끝까지 도는 OMV 작업(APT 업데이트 확인·모두 설치) 하나를 시작하고, 관리자 OMV 세션으로 `Exec.getOutput`을 읽어 끝까지 지켜본다(시작한 세션이 끊기면 다른 관리자 세션으로 옮김). 진행 기록·출력·사용자별 결과는 상태 디렉터리 `jobs/`에 두고 결과는 지울 수 있는 알림으로 알린다. 실행·감시는 `jobs.Runner`로 나눠 나중에 상태 파일 서비스로 바꿀 수 있다. 규칙은 `.claude/rules/backend.md`의 "서버 백그라운드 작업"
 - **웹 터미널**(`internal/terminal`, 기본 꺼짐): 백엔드가 루프백 sshd에 대시보드 세션 사용자로만 접속해 WebSocket(`/api/terminal`)으로 셸을 중계한다. TTY를 직접 띄우지 않으며, 누가 들어갈 수 있는지는 OMV의 SSH 설정이 정한다. 상세는 `.claude/rules/terminal.md`
 - **보안 강화 모드**(`internal/security`): 웹 터미널·root 권한 상승을 세션의 보증 수준(로그인 < 비밀번호 재확인 < 2차 인증)으로 막는다. 2차 인증(패스키·TOTP·복구 코드·OMV 2차 인증)의 확인은 maru가 하며 도우미에 넣지 않는다. 상세는 `.claude/rules/security.md`
 - **OMV RPC는 항상 백엔드가 중계한다**: 브라우저 → `/api/rpc` → 백엔드 → OMV `rpc.php`. 브라우저가 `rpc.php`를 직접 호출하지 않는다
@@ -108,7 +109,7 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 개발 서버 환경 변수와 워크트리:
 
 - 포트: `MARU_LISTEN`(백엔드), `FAKEOMV_LISTEN`(가짜 OMV), `FAKESSH_LISTEN`(가짜 sshd), `DEV_PORT`(Vite). 상태 디렉터리는 `MARU_STATE_DIR`
-- `make dev-fake` 전용: `FAKEOMV_TIMEOUT=1m`(세션 timeout, 분 단위), `FAKEOMV_VERSION=8.3`(옛 OMV 응답, `omvfake.Version`), `FAKEFILES_LARGE=60000`(파일 탐색기의 큰 폴더, 가짜 디스크의 사진/휴대폰 백업), `FAKESSH_AUTH=publickey`(가짜 sshd가 받는 인증 방법), `FAKEUPGRADE_SCENARIO=manual`(가짜 업그레이드 서비스의 시나리오: web, manual, latest, check-fail, apply-fail, disabled), `FAKEUPGRADE_STEP=20s`(가짜 업그레이드 서비스의 단계 사이 지연, 기본 1.5s), `FAKENOTICES=rotate`(가짜 알림 시나리오: sample, none, many, rotate), `FAKENOTICES_STEP=20s`(rotate의 바꾸는 주기, 기본 30s)
+- `make dev-fake` 전용: `FAKEOMV_TIMEOUT=1m`(세션 timeout, 분 단위), `FAKEOMV_VERSION=8.3`(옛 OMV 응답, `omvfake.Version`), `FAKEFILES_LARGE=60000`(파일 탐색기의 큰 폴더, 가짜 디스크의 사진/휴대폰 백업), `FAKESSH_AUTH=publickey`(가짜 sshd가 받는 인증 방법), `FAKEUPGRADE_SCENARIO=manual`(가짜 업그레이드 서비스의 시나리오: web, manual, latest, check-fail, apply-fail, disabled), `FAKEUPGRADE_STEP=20s`(가짜 업그레이드 서비스의 단계 사이 지연, 기본 1.5s), `FAKENOTICES=rotate`(가짜 알림 시나리오: sample, none, many, rotate), `FAKENOTICES_STEP=20s`(rotate의 바꾸는 주기, 기본 30s), `FAKEAPT_SCENARIO=slow`(시스템 업데이트의 가짜 Apt 시나리오: success, slow, fail, core-removal, locked, dirty)
 - 웹 터미널 허용은 설정 앱이나 `MARU_TERMINAL=true`로 켠다
 - git 워크트리에서 실행하면 주 체크아웃의 `frontend/.env.local`(워크트리에 있으면 그 값이 우선)과 `.dev-state`를 쓴다. 주 체크아웃에서 `make dev BRANCH=<브랜치>`(`make dev-fake`도 같다)로 그 브랜치가 체크아웃된 워크트리의 코드를 실행할 수 있다(실행은 부른 쪽의 `scripts/dev.sh`)
 

@@ -27,6 +27,8 @@
 | 메모리 구성·스왑 | `/proc/meminfo`(Buffers, Cached, Shmem, SReclaimable, Zswap, Swap*), zram은 `/sys/block/zram*/mm_stat` | `System.getInformation` (관리자 부분): 전체·여유·사용·사용 가능만 | - |
 | 부하 평균 | `/proc/loadavg` (1·5·15분, 실행 중/전체 스레드) | `System.getInformation` (관리자 부분): `loadAverage` | - |
 | 컨테이너 | 하지 않음 (소켓 접근은 root와 같은 권한) | 없음 | `Compose.getContainers` (모두), 상세는 admin 전용 메서드 (아래 "컨테이너 런타임") |
+| APT 업데이트 | `/var/lib/openmediavault/apt/upgradeindex.json`(0644, OMV `omv-mkaptidx`가 apt 후크(`APT::Update::Post-Invoke-Success`, `DPkg::Post-Invoke`)와 apt-daily로 다시 만든다. 내용이 같아도 매일 다시 쓴다) | `Apt.enumerateUpgraded`·`getUpgradedList` (admin, 같은 파일. 없으면 예외), `System.getInformation`의 `availablePkgUpdates` (관리자 부분, 없으면 0). 확인·설치는 `Apt.update`·`Apt.upgrade` (admin, 백그라운드 작업) | - |
+| 재부팅 권장 | `/run/reboot-required`가 있는지, 요청한 패키지는 `/run/reboot-required.pkgs` | `System.getInformation`의 `rebootRequired` (관리자 부분, 있는지만) | - |
 
 ### 주의할 응답 형태
 
