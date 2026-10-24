@@ -101,6 +101,9 @@ if [[ $fake == 1 ]]; then
   # 알림은 가짜 OMV 프로세스가 이 파일에 쓴 가짜 알림을 maru가 읽는다. 시나리오는 FAKENOTICES(sample, none, many,
   # rotate), rotate 주기는 FAKENOTICES_STEP(기본 30s)이다.
   export MARU_DEV_NOTICES="${MARU_DEV_NOTICES:-$MARU_STATE_DIR/dev-notices.json}"
+  # 시스템 업데이트 앱과 APT·재부팅 알림은 가짜 OMV 프로세스가 이 가짜 루트에 쓴 업데이트 목록(upgradeindex.json)과
+  # 재부팅 권장 파일을 읽는다. 시나리오는 FAKEAPT_SCENARIO(success, fail, core-removal, locked, dirty, slow)다.
+  export MARU_DEV_NOTIFY_ROOT="${MARU_DEV_NOTIFY_ROOT:-$MARU_STATE_DIR/notify-root}"
 fi
 
 # 이미 떠 있는 서버가 있으면 시작하지 않는다. 일부만 떠서 다른 서버(예: 실제 OMV에 연결된

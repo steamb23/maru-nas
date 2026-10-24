@@ -57,8 +57,8 @@ func fakeNotices(scenario string, since time.Time, bump int) map[string][]api.No
 		out["admin"] = []api.Notice{
 			{
 				ID: "sample-workbench", Code: api.NoticeSample, Level: api.NoticeWarning, Since: sinceText,
-				Count: count(12 + bump), Items: []string{"fake-pkg-alpha", "fake-pkg-beta", "fake-pkg-gamma"},
-				Action: &api.NoticeAction{Kind: api.NoticeActionWorkbench, Route: "system/updatemgmt/updates"},
+				Count: count(3 + bump), Items: []string{"fake-item-alpha", "fake-item-beta", "fake-item-gamma"},
+				Action: &api.NoticeAction{Kind: api.NoticeActionWorkbench, Route: "storage/disks"},
 			},
 			{
 				ID: "sample-power", Code: api.NoticeSample, Level: api.NoticeError, Since: sinceText,

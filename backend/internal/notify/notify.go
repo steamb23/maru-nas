@@ -155,7 +155,7 @@ func (c *Center) taken(i int, id string) bool {
 var levelRank = map[string]int{api.NoticeError: 0, api.NoticeWarning: 1, api.NoticeInfo: 2, api.NoticeSuccess: 3}
 
 // knownCodes는 프론트가 문구를 가진 코드다. api.Notice.Code의 tstype과 같아야 한다(테스트가 확인).
-var knownCodes = map[string]bool{api.NoticeSample: true}
+var knownCodes = map[string]bool{api.NoticeSample: true, api.NoticeAptUpdates: true, api.NoticeRebootRequired: true}
 
 var (
 	idPattern       = regexp.MustCompile(`^[a-z0-9][a-z0-9._:-]{0,63}$`)

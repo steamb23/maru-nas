@@ -683,6 +683,10 @@ const (
 const (
 	// NoticeSample은 개발 서버의 가짜 알림(MARU_DEV_NOTICES)과 테스트에만 쓰는 코드다. 운영 알림 출처는 쓰지 않는다.
 	NoticeSample = "sample"
+	// NoticeAptUpdates는 설치할 수 있는 APT 업데이트가 있다는 알림이다(Count: 패키지 수, Items: 패키지 이름).
+	NoticeAptUpdates = "aptUpdates"
+	// NoticeRebootRequired는 업데이트를 마치려면 다시 시작해야 한다는 알림이다(Items: 요청한 패키지 이름).
+	NoticeRebootRequired = "rebootRequired"
 )
 
 // 알림 동작 종류. NoticeAction.Kind에 들어간다.
@@ -711,7 +715,7 @@ type NoticeAction struct {
 type Notice struct {
 	// ID는 알림의 고정 이름이다. 읽음 상태(NotificationPrefs.Seen)의 키다.
 	ID   string `json:"id"`
-	Code string `json:"code" tstype:"'sample'"`
+	Code string `json:"code" tstype:"'sample' | 'aptUpdates' | 'rebootRequired'"`
 	// Level은 Notice* 수준 중 하나다.
 	Level string `json:"level" tstype:"'info' | 'success' | 'warning' | 'error'"`
 	// Revision은 내용이 바뀔 때만 달라지는 값이다(내용 해시). 바뀌면 다시 읽지 않은 알림이 된다.

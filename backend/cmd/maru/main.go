@@ -26,6 +26,7 @@ import (
 	"maru/backend/internal/addons/builtin"
 	"maru/backend/internal/addons/storage"
 	"maru/backend/internal/api"
+	"maru/backend/internal/aptindex"
 	"maru/backend/internal/helper/client"
 	"maru/backend/internal/notify"
 	"maru/backend/internal/omv"
@@ -161,11 +162,17 @@ func main() {
 		mounts = devDisks{}
 	}
 
-	// 운영 알림 출처는 아직 없다(.claude/docs/roadmap.md의 "알림"). 개발 서버만 가짜 알림 파일을 읽는다.
-	notices := notify.New()
+	// APT 업데이트 목록과 재부팅 권장 파일. 개발 서버는 가짜 OMV가 쓰는 가짜 루트를 읽는다.
+	apt := aptindex.NewReader()
+	if root := os.Getenv(envDevNotifyRoot); root != "" {
+		log.Printf("apt index: dev root %s (%s)", root, envDevNotifyRoot)
+		apt = aptindex.NewReaderFS(os.DirFS(root))
+	}
+	sources := []notify.Source{aptindex.UpdatesSource{Reader: apt}, aptindex.RebootSource{Reader: apt}}
+	notices := notify.New(sources...)
 	if path := os.Getenv(envDevNotices); path != "" {
 		log.Printf("notifications: dev fixture %s (%s)", path, envDevNotices)
-		notices = notify.New(devNotices{path: path, admin: true}, devNotices{path: path})
+		notices = notify.New(append(sources, devNotices{path: path, admin: true}, devNotices{path: path})...)
 		notices.TTL = 2 * time.Second
 	}
 
@@ -332,6 +339,11 @@ func runtimeSettings(explicit map[string]bool, lookup func(string) (string, bool
 // 파일 경로 앞에 붙는 가짜 루트이며, 가짜 업그레이드 서비스(cmd/fakeomv)가 그 아래에 쓴다. 운영에서 바꿀 이유가 없는
 // 경로이므로 플래그로 두지 않는다(가동 설정 목록에도 넣지 않는다).
 const envDevUpgradeRoot = "MARU_DEV_UPGRADE_ROOT"
+
+// envDevNotifyRoot는 개발 서버(make dev-fake) 전용 환경 변수다. APT 업데이트 목록(upgradeindex.json)과 재부팅 권장
+// 파일을 읽는 가짜 루트이며, 가짜 OMV 프로세스(cmd/fakeomv)가 FAKEAPT 시나리오대로 그 아래에 쓴다. 운영에서는 언제나
+// /이므로 플래그로 두지 않는다(가동 설정 목록·설치기 레지스트리에도 넣지 않는다).
+const envDevNotifyRoot = "MARU_DEV_NOTIFY_ROOT"
 
 // envDevFilesSrv는 개발 서버(make dev-fake) 전용 환경 변수다. 파일 탐색기가 데이터 디스크로 보는 디렉터리를
 // 가짜 권한 도우미의 루트(<상태 디렉터리>/helper-root/srv)로 바꾸고, 그 바로 아래 폴더를 디스크로 본다(가짜 디스크는

@@ -124,6 +124,15 @@ func main() {
 		}
 		log.Printf("fake notices at %s (scenario %s)", path, scenario)
 	}
+	if root := os.Getenv("MARU_DEV_NOTIFY_ROOT"); root != "" {
+		if err := writeAptIndex(root, fakePackages); err != nil {
+			log.Fatalf("fake apt index: %v", err)
+		}
+		if err := writeReboot(root, nil); err != nil {
+			log.Fatalf("fake apt index: %v", err)
+		}
+		log.Printf("fake apt index under %s (%d updates)", root, len(fakePackages))
+	}
 	mux := http.NewServeMux()
 	mux.Handle("/rpc.php", srv)
 	mux.HandleFunc("GET /{$}", workbenchPage)

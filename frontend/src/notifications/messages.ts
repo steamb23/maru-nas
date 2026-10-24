@@ -26,6 +26,16 @@ const SERVER_TEXT: Record<Notice['code'], (n: Notice) => NoticeText> = {
     if (n.count === undefined) return { title: 'notifications.server.sample.title', body: 'notifications.server.sample.body', params: {} }
     return { title: 'notifications.server.sample.title', body: 'notifications.server.sample.bodyCount', params: { count: n.count } }
   },
+  aptUpdates: (n): NoticeText => ({
+    title: 'notifications.server.aptUpdates.title',
+    body: 'notifications.server.aptUpdates.body',
+    params: { count: n.count ?? n.items?.length ?? 0 },
+  }),
+  rebootRequired: (): NoticeText => ({
+    title: 'notifications.server.rebootRequired.title',
+    body: 'notifications.server.rebootRequired.body',
+    params: {},
+  }),
 }
 
 export function serverText(n: Notice): NoticeText {

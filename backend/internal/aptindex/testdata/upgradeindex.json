@@ -1,0 +1,62 @@
+[
+  {
+    "abstract": "openmediavault - The open network attached storage solution",
+    "architecture": "all",
+    "breaks": "",
+    "conflicts": "",
+    "depends": "",
+    "description": "openmediavault - The open network attached storage solution",
+    "descriptionmd5": "00000000000000000000000000000000",
+    "extendeddescription": "",
+    "filename": "pool/main/o/openmediavault/openmediavault_8.5.12-1_all.deb",
+    "homepage": "https://www.openmediavault.org",
+    "installedsize": 4096000,
+    "maintainer": "Example Maintainer <maintainer@example.com>",
+    "md5sum": "00000000000000000000000000000000",
+    "multiarch": "",
+    "name": "openmediavault",
+    "oldversion": "8.5.11-1",
+    "package": "openmediavault",
+    "predepends": "",
+    "priority": "optional",
+    "repository": "openmediavault/synchrony",
+    "section": "admin",
+    "sha1": "0000000000000000000000000000000000000000",
+    "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "size": 4096000,
+    "source": "openmediavault",
+    "sourceversion": "8.5.12-1",
+    "suggests": "",
+    "summary": "openmediavault - The open network attached storage solution",
+    "uri": "https://packages.example.com/pool/main/o/openmediavault/openmediavault_8.5.12-1_all.deb",
+    "uris": ["https://packages.example.com/pool/main/o/openmediavault/openmediavault_8.5.12-1_all.deb"],
+    "version": "8.5.12-1"
+  },
+  {
+    "filename": "pool/main/l/linux-signed-amd64/linux-image-6.12.99+deb13-amd64_6.12.99-1_amd64.deb",
+    "name": "linux-image-6.12.99+deb13-amd64",
+    "oldversion": "",
+    "package": "linux-image-6.12.99+deb13-amd64",
+    "repository": "Debian-Security/trixie-security",
+    "section": "kernel",
+    "size": 104857600,
+    "summary": "Linux 6.12 for 64-bit PCs (signed)",
+    "version": "6.12.99-1"
+  },
+  {
+    "filename": "pool/main/l/libc/libc6_2.41-99_amd64.deb",
+    "name": "libc6",
+    "oldversion": "2.41-12",
+    "package": "libc6",
+    "repository": "Debian/trixie",
+    "section": "libs",
+    "size": 2867200,
+    "summary": "GNU C Library: Shared libraries",
+    "version": "2.41-99"
+  },
+  {
+    "name": "",
+    "package": "",
+    "version": "1.0"
+  }
+]

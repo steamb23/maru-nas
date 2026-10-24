@@ -112,6 +112,15 @@
         "body": "This is a fake notice from the dev server.",
         "bodyCount_one": "This is a fake notice from the dev server ({{count}} item).",
         "bodyCount_other": "This is a fake notice from the dev server ({{count}} items)."
+      },
+      "aptUpdates": {
+        "title": "Updates available",
+        "body_one": "{{count}} package can be updated.",
+        "body_other": "{{count}} packages can be updated."
+      },
+      "rebootRequired": {
+        "title": "Restart required",
+        "body": "Restart the system to finish installing updates."
       }
     },
     "client": {

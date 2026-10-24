@@ -1010,12 +1010,17 @@ export const NoticeWarning = "warning";
  */
 export const NoticeError = "error";
 /**
- * 서버 알림 코드. Notice.Code에 들어가며 프론트가 코드로 문구를 고른다.
- */
-/**
  * NoticeSample은 개발 서버의 가짜 알림(MARU_DEV_NOTICES)과 테스트에만 쓰는 코드다. 운영 알림 출처는 쓰지 않는다.
  */
 export const NoticeSample = "sample";
+/**
+ * NoticeAptUpdates는 설치할 수 있는 APT 업데이트가 있다는 알림이다(Count: 패키지 수, Items: 패키지 이름).
+ */
+export const NoticeAptUpdates = "aptUpdates";
+/**
+ * NoticeRebootRequired는 업데이트를 마치려면 다시 시작해야 한다는 알림이다(Items: 요청한 패키지 이름).
+ */
+export const NoticeRebootRequired = "rebootRequired";
 /**
  * NoticeActionApp은 대시보드 앱을 연다. 앱이 설정이면 Page의 페이지로 연다.
  */
@@ -1055,7 +1060,7 @@ export interface Notice {
    * ID는 알림의 고정 이름이다. 읽음 상태(NotificationPrefs.Seen)의 키다.
    */
   id: string;
-  code: 'sample';
+  code: 'sample' | 'aptUpdates' | 'rebootRequired';
   /**
    * Level은 Notice* 수준 중 하나다.
    */
