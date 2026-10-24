@@ -80,6 +80,7 @@ func main() {
 			log.Printf("  account %s / %s (%s)", u.Name, u.Password, role)
 		}
 	}
+	pluginData := omvfake.DefaultPluginData()
 	var helper *helperfake.Server
 	if sock := os.Getenv("FAKEHELPER_SOCKET"); sock != "" {
 		root := cmp.Or(os.Getenv("FAKEHELPER_ROOT"), filepath.Join(filepath.Dir(sock), "helper-root"))
@@ -92,9 +93,7 @@ func main() {
 		log.Printf("fake helper listening on %s (files under %s)", sock, root)
 		// 파일 탐색기: 가짜 디스크에 합성 파일을 만들고 가짜 OMV의 공유 폴더가 그 아래를 가리키게 한다.
 		seedFiles(h.Disk())
-		d := omvfake.DefaultPluginData()
-		d.SharedFolders = devShares(h.Disk())
-		srv.SetPluginData(d)
+		pluginData.SharedFolders = devShares(h.Disk())
 		for _, u := range helperfake.DefaultUsers() {
 			log.Printf("  helper account %s uid %d groups %v", u.Name, u.UID, u.Groups)
 		}
@@ -125,14 +124,18 @@ func main() {
 		log.Printf("fake notices at %s (scenario %s)", path, scenario)
 	}
 	if root := os.Getenv("MARU_DEV_NOTIFY_ROOT"); root != "" {
-		if err := writeAptIndex(root, fakePackages); err != nil {
-			log.Fatalf("fake apt index: %v", err)
+		scenario := cmp.Or(os.Getenv("FAKEAPT_SCENARIO"), aptSuccess)
+		cfg, dirty, err := startApt(root, scenario)
+		if err != nil {
+			log.Fatalf("fake apt: %v", err)
 		}
-		if err := writeReboot(root, nil); err != nil {
-			log.Fatalf("fake apt index: %v", err)
+		srv.SetAptConfig(cfg)
+		if dirty {
+			pluginData.Dirty = append(pluginData.Dirty, "apt")
 		}
-		log.Printf("fake apt index under %s (%d updates)", root, len(fakePackages))
+		log.Printf("fake apt index under %s (%d updates, scenario %s)", root, len(fakePackages), scenario)
 	}
+	srv.SetPluginData(pluginData)
 	mux := http.NewServeMux()
 	mux.Handle("/rpc.php", srv)
 	mux.HandleFunc("GET /{$}", workbenchPage)

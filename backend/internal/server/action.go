@@ -55,7 +55,7 @@ func (h *handler) addonAction(w http.ResponseWriter, r *http.Request, s auth.Ses
 	ctx, cancel := context.WithTimeout(context.WithoutCancel(r.Context()), timeout)
 	defer cancel()
 	caller := &rpcCaller{h: h, s: s, addon: id, clientIP: clientIP(r), writes: true}
-	err := act.Run(ctx, addons.ActionRequest{Admin: s.Admin, Target: req.Target, RPC: caller})
+	err := act.Run(ctx, addons.ActionRequest{Admin: s.Admin, Target: req.Target, RPC: caller, Jobs: jobStarter{h, s, caller}})
 
 	result, ae := actionOutcome(ctx, err, caller)
 	// 대상은 브라우저가 보낸 값이므로 %q로 남긴다(로그 줄 바꿈 주입 방지).

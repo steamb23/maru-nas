@@ -20,6 +20,7 @@ import (
 	"maru/backend/internal/auth"
 	helperclient "maru/backend/internal/helper/client"
 	"maru/backend/internal/helper/helperfake"
+	"maru/backend/internal/jobs"
 	"maru/backend/internal/notify"
 	"maru/backend/internal/omv"
 	"maru/backend/internal/omv/omvfake"
@@ -121,6 +122,8 @@ type envOptions struct {
 	files    bool
 	// notify는 Config.Notify다. 시계는 env의 시계로 바꾼다.
 	notify *notify.Center
+	// jobs는 Config.Jobs다. 작업 감시자는 OMV 작업 출력을 5ms마다 읽는다.
+	jobs *jobs.Manager
 }
 
 func newEnv(t *testing.T, o envOptions) *env {
@@ -238,6 +241,8 @@ func newEnv(t *testing.T, o envOptions) *env {
 		TerminalEnabled:   o.terminal && !o.terminalOff,
 		Upgrade:           upgrades,
 		Notify:            o.notify,
+		Jobs:              o.jobs,
+		JobInterval:       5 * time.Millisecond,
 		Mounts:            o.mounts,
 		FilesSrvDir:       o.filesSrv,
 		Security:          o.security,

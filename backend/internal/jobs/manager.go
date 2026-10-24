@@ -3,6 +3,7 @@ package jobs
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"log"
 	"os"
 	"slices"
@@ -239,6 +240,15 @@ func (m *Manager) snapshot() []string {
 		keys = keys[:maxBefore]
 	}
 	return keys
+}
+
+// IndexModTime은 업데이트 목록 파일의 수정 시각이다. 감시자가 사라진 작업이 끝까지 돌았는지 가늠할 때 쓴다.
+// 목록을 읽을 수 없으면(Config.Index가 수정 시각을 주지 않으면) 오류다.
+func (m *Manager) IndexModTime() (time.Time, error) {
+	if r, ok := m.index.(interface{ IndexModTime() (time.Time, error) }); ok {
+		return r.IndexModTime()
+	}
+	return time.Time{}, errors.New("jobs: index modification time is not available")
 }
 
 // Offer는 감시자에게 관리자 세션이 새로 생겼을 수 있다고 알린다(기다리는 중이면 바로 다시 본다).

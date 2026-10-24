@@ -16,6 +16,8 @@ import (
 	"maru/backend/internal/auth"
 	"maru/backend/internal/buildinfo"
 	"maru/backend/internal/files"
+	"maru/backend/internal/jobs"
+	"maru/backend/internal/jobs/omvjob"
 	"maru/backend/internal/notify"
 	"maru/backend/internal/omv"
 	"maru/backend/internal/prefs"
@@ -105,6 +107,9 @@ type Config struct {
 	Upgrade *upgrade.Manager
 	// Notify는 서버 알림을 모은다. nil이면 알림 출처가 없다.
 	Notify *notify.Center
+	// Jobs는 서버 백그라운드 작업(시스템 업데이트)이다. nil이면 메모리에만 기록한다. New가 OMV 세션 감시자를
+	// 등록하고 남은 작업을 이어 지켜본다(Resume). 서비스를 끝낼 때 부르는 쪽이 Close한다.
+	Jobs *jobs.Manager
 	// Security는 보안 강화 모드의 수단 기록 저장소다. nil이면 메모리에 둔다.
 	Security security.Store
 	// RP는 패스키의 신뢰 당사자(-public-origin)다. nil이면 패스키를 쓸 수 없다(TOTP·복구 코드만 쓴다).
@@ -116,6 +121,8 @@ type Config struct {
 	CheckInterval time.Duration
 	// FailDelay는 로그인 실패 응답 전에 기다리는 시간이다. 기본 1초, 음수면 기다리지 않는다.
 	FailDelay time.Duration
+	// JobInterval은 작업 감시자가 OMV 작업 출력을 읽는 간격이다. 0이면 1초(테스트에서 줄인다).
+	JobInterval time.Duration
 	// Now는 현재 시각이다. 테스트에서 바꿔 끼운다.
 	Now func() time.Time
 }
@@ -198,6 +205,9 @@ func New(cfg Config) http.Handler {
 		// 경로가 비어 있으면 설정 파일이 없는 것으로 읽혀 꺼짐(not-enabled)이다.
 		cfg.Upgrade = upgrade.New(upgrade.Paths{}, cfg.Now)
 	}
+	if cfg.Jobs == nil {
+		cfg.Jobs = jobs.New(jobs.Config{Now: cfg.Now})
+	}
 	h := &handler{
 		Config:          cfg,
 		actions:         newInflight(),
@@ -221,6 +231,14 @@ func New(cfg Config) http.Handler {
 	h.loadOverrides()
 	h.loadPolicy()
 	h.loadFilesSite()
+	// 작업은 관리자 OMV 세션으로 지켜본다. 상태 디렉터리에 남은 작업(재시작 전에 시작한 것)을 이어 지켜본다.
+	runner := omvjob.New(jobSessions{h}, cfg.Jobs.IndexModTime)
+	runner.Now = cfg.Now
+	if d := cfg.JobInterval; d > 0 {
+		runner.Interval, runner.Backoff, runner.WaitRetry = d, []time.Duration{d}, 100*d
+	}
+	cfg.Jobs.Register(runner)
+	cfg.Jobs.Resume()
 	if cfg.Helper != nil || cfg.Terminal != nil {
 		// 세션이 어떻게 끝나든(로그아웃, 만료, 밀려남, 2차 인증 포기) 도우미 티켓을 폐기하고
 		// 그 세션의 터미널과 파일 탐색기 목록을 닫는다.
@@ -314,6 +332,10 @@ func New(cfg Config) http.Handler {
 	mux.HandleFunc("PUT /api/preferences/files", h.requireSession(h.setFilesPrefs))
 	mux.HandleFunc("PUT /api/preferences/notifications", h.requireSession(h.setNotificationPrefs))
 	mux.HandleFunc("GET /api/notifications", h.requireSession(h.notifications))
+	mux.HandleFunc("DELETE /api/notifications/{id}", h.requireSession(h.dismissNotice))
+	mux.HandleFunc("GET /api/jobs", h.requireAdmin(h.jobsList))
+	mux.HandleFunc("GET /api/jobs/{id}", h.requireAdmin(h.jobGet))
+	mux.HandleFunc("GET /api/jobs/{id}/output", h.requireAdmin(h.jobOutput))
 	mux.HandleFunc("PUT /api/preferences/appearance", h.requireSession(h.setAppearance))
 	mux.HandleFunc("GET /api/preferences/wallpaper-image", h.requireSession(h.wallpaperImage))
 	mux.HandleFunc("PUT /api/preferences/wallpaper-image", h.requireSession(h.putWallpaperImage))

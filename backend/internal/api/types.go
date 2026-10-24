@@ -417,6 +417,42 @@ type ServicesResponse struct {
 	Services []Service `json:"services"`
 }
 
+// PackagesResponse는 GET /api/addons/packages의 응답이다(시스템 업데이트).
+type PackagesResponse struct {
+	AddonSources `tstype:",extends"`
+	// Indexed가 false면 OMV가 아직 업데이트 목록을 만들지 않았다(확인한 적 없음). 그때 Packages는 비어 있다.
+	Indexed bool `json:"indexed"`
+	// IndexedAt은 OMV가 목록을 마지막으로 다시 만든 시각(RFC 3339)이다. apt-daily가 매일 다시 만든다.
+	IndexedAt string `json:"indexedAt,omitempty"`
+	// Packages는 설치할 수 있는 업데이트다(이름순).
+	Packages []PackageUpdate `json:"packages"`
+	Reboot   RebootInfo      `json:"reboot"`
+}
+
+// PackageUpdate는 업데이트할 패키지 하나다.
+type PackageUpdate struct {
+	Name    string `json:"name"`
+	Version string `json:"version"`
+	// OldVersion은 지금 설치된 버전이다. 새로 설치되는 패키지는 없다.
+	OldVersion string `json:"oldVersion,omitempty"`
+	Repository string `json:"repository,omitempty"`
+	Section    string `json:"section,omitempty"`
+	Summary    string `json:"summary,omitempty"`
+	// Filename은 저장소 안 .deb 경로다. 워크벤치의 변경 기록 화면 주소에 쓴다.
+	Filename string `json:"filename,omitempty"`
+	// Size는 내려받을 크기(바이트)다.
+	Size int64 `json:"size"`
+}
+
+// RebootInfo는 재부팅 권장 상태다.
+type RebootInfo struct {
+	Required bool `json:"required"`
+	// Since는 권장이 생긴 시각(RFC 3339)이다.
+	Since string `json:"since,omitempty"`
+	// Packages는 재부팅을 요청한 패키지 이름이다.
+	Packages []string `json:"packages,omitempty"`
+}
+
 // Service는 OMV 서비스 하나의 상태다(Services.getStatus의 한 행).
 type Service struct {
 	// Name은 OMV 모듈 이름(ssh, samba, nfs 등)이다. 조작 대상으로 쓴다.

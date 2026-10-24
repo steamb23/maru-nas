@@ -623,6 +623,60 @@ export interface ServicesResponse extends AddonSources {
   services: Service[];
 }
 /**
+ * PackagesResponse는 GET /api/addons/packages의 응답이다(시스템 업데이트).
+ */
+export interface PackagesResponse extends AddonSources {
+  /**
+   * Indexed가 false면 OMV가 아직 업데이트 목록을 만들지 않았다(확인한 적 없음). 그때 Packages는 비어 있다.
+   */
+  indexed: boolean;
+  /**
+   * IndexedAt은 OMV가 목록을 마지막으로 다시 만든 시각(RFC 3339)이다. apt-daily가 매일 다시 만든다.
+   */
+  indexedAt?: string;
+  /**
+   * Packages는 설치할 수 있는 업데이트다(이름순).
+   */
+  packages: PackageUpdate[];
+  reboot: RebootInfo;
+}
+/**
+ * PackageUpdate는 업데이트할 패키지 하나다.
+ */
+export interface PackageUpdate {
+  name: string;
+  version: string;
+  /**
+   * OldVersion은 지금 설치된 버전이다. 새로 설치되는 패키지는 없다.
+   */
+  oldVersion?: string;
+  repository?: string;
+  section?: string;
+  summary?: string;
+  /**
+   * Filename은 저장소 안 .deb 경로다. 워크벤치의 변경 기록 화면 주소에 쓴다.
+   */
+  filename?: string;
+  /**
+   * Size는 내려받을 크기(바이트)다.
+   */
+  size: number /* int64 */;
+}
+/**
+ * RebootInfo는 재부팅 권장 상태다.
+ */
+export interface RebootInfo {
+  required: boolean;
+  /**
+   * Since는 권장이 생긴 시각(RFC 3339)이다.
+   */
+  since?: string;
+  /**
+   * Packages는 재부팅을 요청한 패키지 이름이다.
+   */
+  packages?: string[];
+}
+/**
  * Service는 OMV 서비스 하나의 상태다(Services.getStatus의 한 행).
  */
 export interface Service {

@@ -10,6 +10,7 @@ import (
 	"maru/backend/internal/addons/storage"
 	"maru/backend/internal/addons/sysinfo"
 	"maru/backend/internal/addons/temperature"
+	"maru/backend/internal/aptindex"
 )
 
 // Deps는 내장 애드온의 provider가 쓰는 입력이다.
@@ -22,6 +23,8 @@ type Deps struct {
 	Hwmon     *temperature.Hwmon
 	// Smart는 SMART 결과를 모든 세션이 함께 쓰는 캐시다. SMART·온도 애드온이 함께 쓴다.
 	Smart *smart.Cache
+	// Apt는 APT 업데이트 목록과 재부팅 권장 파일이다(시스템 업데이트, 알림 출처와 함께 쓴다).
+	Apt *aptindex.Reader
 }
 
 // HostDeps는 호스트의 /proc, /sys 등을 읽는 입력이다. 만들 때 파일을 읽지 않는다.
@@ -35,6 +38,7 @@ func HostDeps() Deps {
 		Network:   net,
 		Hwmon:     temperature.NewHwmon(),
 		Smart:     smart.NewCache(0, 0),
+		Apt:       aptindex.NewReader(),
 	}
 }
 

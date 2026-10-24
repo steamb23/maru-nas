@@ -28,6 +28,7 @@ import (
 	"maru/backend/internal/api"
 	"maru/backend/internal/aptindex"
 	"maru/backend/internal/helper/client"
+	"maru/backend/internal/jobs"
 	"maru/backend/internal/notify"
 	"maru/backend/internal/omv"
 	"maru/backend/internal/prefs"
@@ -109,9 +110,12 @@ func main() {
 		prefs.ImageStore
 		security.Store
 	}
+	// jobStore는 서버 백그라운드 작업(시스템 업데이트)의 기록이다. 상태 디렉터리가 있으면 그 안에 둔다.
+	var jobStore jobs.Store
 	if *stateDir == "" {
 		log.Printf("no state directory: preferences will not persist across restarts")
 		store = prefs.NewMemoryStore()
+		jobStore = jobs.NewMemoryStore()
 	} else {
 		fileStore, err := prefs.NewFileStore(*stateDir)
 		if err != nil {
@@ -119,6 +123,7 @@ func main() {
 		}
 		log.Printf("state directory: %s", *stateDir)
 		store = fileStore
+		jobStore = fileStore
 	}
 
 	deps := builtin.HostDeps()
@@ -175,6 +180,9 @@ func main() {
 		notices = notify.New(append(sources, devNotices{path: path, admin: true}, devNotices{path: path})...)
 		notices.TTL = 2 * time.Second
 	}
+	deps.Apt = apt
+	// 작업이 끝나면 APT·재부팅 알림이 새 목록을 바로 다시 읽게 한다.
+	jobManager := jobs.New(jobs.Config{Store: jobStore, Index: apt, OnFinish: notices.Invalidate})
 
 	var helper server.Helper
 	if *helperSocket != "" {
@@ -217,6 +225,7 @@ func main() {
 			FilesSrvDir:     filesSrv,
 			Upgrade:         upgrades,
 			Notify:          notices,
+			Jobs:            jobManager,
 			Security:        store,
 			RP:              rp,
 			Hostname:        hostname,
@@ -228,6 +237,8 @@ func main() {
 	defer stop()
 	go func() {
 		<-ctx.Done()
+		// 작업 감시를 멈추고 진행 기록을 남긴다. OMV 쪽 작업은 계속 돌고, 다시 시작하면 이어 지켜본다.
+		jobManager.Close()
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		srv.Shutdown(shutdownCtx)

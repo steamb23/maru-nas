@@ -3,12 +3,84 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"maru/backend/internal/aptindex"
+	"maru/backend/internal/omv/omvfake"
 )
+
+// 가짜 APT 시나리오. FAKEAPT_SCENARIO로 고른다. maru는 작업 출력을 1초마다 읽고 가짜 작업은 읽을 때마다 출력 조각
+// 하나씩 나아가므로, 조각 수가 곧 작업 시간(초)이다.
+const (
+	// aptSuccess는 확인·설치가 성공한다. 확인은 목록을 다시 채우고, 설치는 목록을 비우고 재부팅 권장을 남긴다.
+	aptSuccess = "success"
+	// aptSlow는 설치가 90초쯤 걸린다(창을 닫거나 로그아웃한 동안 끝나는 경우를 확인).
+	aptSlow = "slow"
+	// aptFail은 설치가 apt 오류로 끝난다.
+	aptFail = "fail"
+	// aptCoreRemoval은 설치가 openmediavault 제거 보호로 멈춘다(OMV 8.5.10부터).
+	aptCoreRemoval = "core-removal"
+	// aptLocked는 다른 프로세스가 잠금을 쥐고 있어 확인·설치를 시작하지 않는다.
+	aptLocked = "locked"
+	// aptDirty는 apt 설정이 적용 대기라 확인을 시작하지 않는다(설치는 된다).
+	aptDirty = "dirty"
+)
+
+// startApt는 가짜 루트에 처음 목록을 쓰고 시나리오의 가짜 Apt 설정을 만든다. dirty면 apt 모듈을 적용 대기로 둔다.
+func startApt(root, scenario string) (omvfake.AptConfig, bool, error) {
+	if err := writeAptIndex(root, fakePackages); err != nil {
+		return omvfake.AptConfig{}, false, err
+	}
+	if err := writeReboot(root, nil); err != nil {
+		return omvfake.AptConfig{}, false, err
+	}
+	cfg := omvfake.DefaultAptConfig()
+	// 확인은 목록을 다시 쓴다(새 업데이트를 찾은 것처럼 처음 목록으로 되돌린다).
+	cfg.Update.OnDone = func() { logErr(writeAptIndex(root, fakePackages)) }
+	// 설치는 목록을 비우고, 커널처럼 재부팅을 요청하는 패키지를 재부팅 권장 파일에 남긴다.
+	cfg.Upgrade.OnDone = func() {
+		logErr(writeAptIndex(root, nil))
+		var reboot []string
+		for _, p := range fakePackages {
+			if p.reboot {
+				reboot = append(reboot, p.name)
+			}
+		}
+		logErr(writeReboot(root, reboot))
+	}
+	dirty := false
+	switch scenario {
+	case aptSuccess:
+	case aptSlow:
+		var chunks []string
+		for i := range 90 {
+			chunks = append(chunks, fmt.Sprintf("Unpacking fake-package-%02d (1.0-%d) ...\n", i, i))
+		}
+		cfg.Upgrade.Chunks = append(chunks, cfg.Upgrade.Chunks...)
+	case aptFail:
+		cfg.Upgrade.Fail = omvfake.AptExecFailedMessage
+		cfg.Upgrade.Chunks = append(cfg.Upgrade.Chunks, "dpkg: error processing package openmediavault (--configure):\n installed openmediavault package post-installation script subprocess returned error exit status 1\n")
+	case aptCoreRemoval:
+		cfg.Upgrade.Fail = omvfake.AptCoreRemovalMessage
+		cfg.Upgrade.Chunks = nil
+	case aptLocked:
+		cfg.Locked = true
+	case aptDirty:
+		dirty = true
+	default:
+		return omvfake.AptConfig{}, false, fmt.Errorf("unknown FAKEAPT_SCENARIO %q (success, slow, fail, core-removal, locked, dirty)", scenario)
+	}
+	return cfg, dirty, nil
+}
+
+func logErr(err error) {
+	if err != nil {
+		log.Printf("fake apt: %v", err)
+	}
+}
 
 // fakePackage는 가짜 업데이트 목록의 패키지 하나다. 값은 모두 합성이다.
 type fakePackage struct {

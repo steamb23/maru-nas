@@ -68,6 +68,15 @@ type ActionRequest struct {
 	Target string
 	// RPC는 그 애드온이 선언한 읽기·쓰기 메서드를 부를 수 있다.
 	RPC RPCCaller
+	// Jobs는 요청한 세션으로 서버 백그라운드 작업을 시작한다(시스템 업데이트). 작업을 쓰지 않는 조작은 무시한다.
+	Jobs JobStarter
+}
+
+// JobStarter는 조작이 서버 백그라운드 작업(internal/jobs)을 시작하는 입구다. 서버가 요청한 세션에 묶어 만든다
+// (애드온은 세션 ID를 받지 않는다). 작업을 시작하고 바로 돌아오며, 거절은 *ActionError다(409 job_busy,
+// apt_locked, config_dirty).
+type JobStarter interface {
+	Start(ctx context.Context, kind string) (id string, err error)
 }
 
 var (
