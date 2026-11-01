@@ -1,10 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { fetchAddon, fetchJobOutput, fetchJobs, isPackagesResponse } from '../../api/client'
-import type { Job, JobsResponse, PackagesResponse } from '../../api/types.gen'
+import {
+  fetchAddon,
+  fetchJobOutput,
+  fetchJobs,
+  fetchPackageChangelog,
+  fetchPackageDetail,
+  isPackagesResponse,
+} from '../../api/client'
+import type { Job, JobsResponse, PackageChangelog, PackageDetail, PackagesResponse } from '../../api/types.gen'
 import { reportActivity } from '../../auth/activity'
 import { createPoller } from '../common/poller'
 import { DEFAULT_TIMEOUT_MS, createSharedPoll } from '../common/sharedPoll'
 import { type PolledData, usePolledData } from '../common/usePolledData'
+import { changelogProblem } from './detail'
 import { type OutputBuffer, appendOutput, emptyOutput } from './packages'
 
 // 업데이트 목록은 하루에 한 번쯤 바뀌므로(apt-daily, 확인·설치 작업) 창이 열린 동안 30초마다 본다.
@@ -150,4 +158,75 @@ export function useKeepAlive(running: boolean) {
     const timer = window.setInterval(reportActivity, ACTIVITY_MS)
     return () => window.clearInterval(timer)
   }, [running])
+}
+
+// Load는 한 번 받는 데이터의 상태다. key(요청)가 지금 것과 다르면 받는 중으로 본다(files/InfoPane과 같다).
+export type Load<T> = { key: string } & ({ status: 'loading' } | { status: 'ready'; data: T } | { status: 'error'; err: unknown })
+
+export interface Loaded<T> {
+  state: Load<T>
+  retry: () => void
+}
+
+// usePackageDescription은 패키지 하나의 설명을 모달을 연 동안 한 번 받는다. 목록에 없으면 data가 null이다.
+export function usePackageDescription(name: string, open: boolean): Loaded<PackageDetail | null> {
+  const [attempt, setAttempt] = useState(0)
+  const key = `${name}\0${attempt}`
+  const [result, setResult] = useState<Load<PackageDetail | null>>({ key: '', status: 'loading' })
+  useEffect(() => {
+    if (!open) return
+    const ctl = new AbortController()
+    fetchPackageDetail(name, ctl.signal).then(
+      (data) => setResult({ key, status: 'ready', data }),
+      (err: unknown) => {
+        if (!ctl.signal.aborted) setResult({ key, status: 'error', err })
+      },
+    )
+    return () => ctl.abort()
+  }, [name, open, key])
+  const retry = useCallback(() => setAttempt((n) => n + 1), [])
+  return { state: result.key === key ? result : { key, status: 'loading' }, retry }
+}
+
+// 같은 패키지를 다른 요청(다른 창, 방금 닫은 모달)이 가져오는 중이면 이만큼 뒤에 다시 묻는다.
+const CHANGELOG_PENDING_RETRY_MS = 2_000
+
+// usePackageChangelog은 패키지 하나의 변경 기록을 모달을 연 동안 받는다. 업데이트 작업이 진행 중이면(busy)
+// 묻지 않고, 작업이 끝나면 다시 묻는다. 백엔드는 브라우저가 끊어도 끝까지 받아 기억해 두므로, 닫았다가 다시
+// 열면 그 결과를 바로 받거나(끝났으면) 끝날 때까지 기다린다(action_busy면 조금 뒤 다시).
+export function usePackageChangelog(name: string, open: boolean, busy: boolean): Loaded<PackageChangelog> {
+  const [attempt, setAttempt] = useState(0)
+  // 작업이 끝나면 다시 묻는다.
+  const [wasBusy, setWasBusy] = useState(busy)
+  if (busy !== wasBusy) {
+    setWasBusy(busy)
+    if (!busy) setAttempt((n) => n + 1)
+  }
+  const key = `${name}\0${attempt}`
+  const [result, setResult] = useState<Load<PackageChangelog>>({ key: '', status: 'loading' })
+  useEffect(() => {
+    if (!open || busy) return
+    const ctl = new AbortController()
+    let timer = 0
+    const run = () => {
+      fetchPackageChangelog(name, ctl.signal).then(
+        (data) => setResult({ key, status: 'ready', data }),
+        (err: unknown) => {
+          if (ctl.signal.aborted) return
+          if (changelogProblem(err).kind === 'pending') {
+            timer = window.setTimeout(run, CHANGELOG_PENDING_RETRY_MS)
+            return
+          }
+          setResult({ key, status: 'error', err })
+        },
+      )
+    }
+    run()
+    return () => {
+      ctl.abort()
+      window.clearTimeout(timer)
+    }
+  }, [name, open, busy, key])
+  const retry = useCallback(() => setAttempt((n) => n + 1), [])
+  return { state: result.key === key ? result : { key, status: 'loading' }, retry }
 }

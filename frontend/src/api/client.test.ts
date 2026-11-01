@@ -10,6 +10,8 @@ import {
   fetchAddon,
   fetchCapabilities,
   fetchNotifications,
+  fetchPackageChangelog,
+  fetchPackageDetail,
   fetchPreferences,
   fetchSession,
   fetchSystem,
@@ -367,6 +369,37 @@ describe('runAddonAction', () => {
   it('실패하면 오류 코드를 담은 ApiError를 던진다', async () => {
     stubFetch(Response.json({ error: 'pending changes', code: 'config_dirty' }, { status: 409 }))
     await expect(runAddonAction('services', 'disable', 'ssh')).rejects.toMatchObject({ status: 409, code: 'config_dirty' })
+  })
+})
+
+describe('패키지 설명·변경 기록', () => {
+  const list = { sources: ['apt-index'], indexed: true, packages: [], reboot: { required: false } }
+
+  it('fetchPackageDetail은 detail로 묻고 목록에 없으면 null이다', async () => {
+    const detail = { name: 'openssl', summary: 's', description: 'd', descriptionFrom: 'installed' }
+    const fn = stubFetch(Response.json({ ...list, detail }))
+    await expect(fetchPackageDetail('openssl')).resolves.toEqual(detail)
+    expect(fn.mock.calls[0][0]).toMatch(/\/api\/addons\/packages\?detail=openssl$/)
+
+    stubFetch(Response.json(list))
+    await expect(fetchPackageDetail('gone')).resolves.toBeNull()
+    stubFetch(Response.json({ ...list, detail: { name: 'x', descriptionFrom: 'other' } }))
+    await expect(fetchPackageDetail('x')).rejects.toThrow(/unexpected response shape/)
+  })
+
+  it('fetchPackageChangelog은 changelog 조작의 결과를 검사한다', async () => {
+    const cl = { name: 'openssl', version: '2', recent: 'r', earlier: 'e', matched: true }
+    const fn = stubFetch(Response.json(cl))
+    await expect(fetchPackageChangelog('openssl')).resolves.toEqual(cl)
+    const [url, init] = fn.mock.calls[0]
+    expect(url).toMatch(/\/api\/addons\/packages\/actions\/changelog$/)
+    expect(init?.method).toBe('POST')
+    expect(JSON.parse(String(init?.body))).toEqual({ target: 'openssl' })
+
+    stubFetch(Response.json({ name: 'openssl', version: '2', matched: true }))
+    await expect(fetchPackageChangelog('openssl')).rejects.toThrow(/unexpected response shape/)
+    stubFetch(Response.json({ error: 'x', code: 'no_changelog' }, { status: 404 }))
+    await expect(fetchPackageChangelog('openssl')).rejects.toMatchObject({ status: 404, code: 'no_changelog' })
   })
 })
 
