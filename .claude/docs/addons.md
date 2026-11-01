@@ -106,14 +106,16 @@
 상태를 바꾸는 일(컨테이너 시작·정지, 서비스 켜기·끄기)은 애드온 조작으로만 한다.
 
 - manifest `actions`: `name`(소문자·숫자·`-`), `admin`(관리자만), `confirm`(실행 전 확인). `admin`은 애드온의 `requires.admin`과 따로 정한다(컨테이너 목록은 누구나 보고 조작은 관리자만)
-- 구현 `Addon.Actions[name]`: `Timeout`(0이면 1분)과 `Run(ctx, ActionRequest{Admin, Target, RPC, Jobs})`
+- 구현 `Addon.Actions[name]`: `Timeout`(0이면 1분)과 `Run(ctx, ActionRequest{Admin, Target, RPC, Jobs})` 또는 `Query` 중 하나(`validateActions`가 둘 다 있거나 둘 다 없으면 거절)
+  - `Query(ctx, ActionRequest) (any, error)`는 결과를 돌려주는 조작이다. 쓰기로 선언해야 하는 메서드(파라미터로 셸 명령을 만드는 메서드 등)를 불러 데이터를 읽을 때 쓴다(시스템 업데이트의 `changelog`). 대상 검사·`ActionError`·시간 제한·진행 중 표시는 `Run`과 같고, 성공하면 결과를 JSON 200으로 답한다. 프론트는 `runAddonQuery(id, action, target, guard)`
   - `Target`은 브라우저가 보낸 값이다. OMV에 넘기기 전에 애드온이 형식과 존재를 검사하고, 잘못되면 `ErrInvalidTarget`
   - OMV 파라미터는 고정값과 검사한 대상으로 애드온이 만든다. 브라우저가 보낸 다른 값은 넘기지 않는다
   - 시작하지 않고 거절할 이유가 있으면 `*ActionError{Status, Code}`(예: 409 `config_dirty`)
   - `RPC`는 그 애드온이 선언한 읽기·쓰기를 부를 수 있다(`updatelastaccess=false`)
-  - `Jobs`(`addons.JobStarter`)는 요청한 세션으로 서버 백그라운드 작업을 시작한다(`internal/jobs`). 시작하고 바로 돌아오며 작업은 서버가 끝까지 지켜본다. 세션 ID를 애드온에 넘기지 않으려고 세션에 묶인 시작기를 준다. 거절은 `*ActionError`(409 `job_busy`·`apt_locked`·`config_dirty`)
+  - `Jobs`(`addons.JobStarter`)는 요청한 세션으로 서버 백그라운드 작업을 시작한다(`internal/jobs`). 시작하고 바로 돌아오며 작업은 서버가 끝까지 지켜본다. 세션 ID를 애드온에 넘기지 않으려고 세션에 묶인 시작기를 준다. 거절은 `*ActionError`(409 `job_busy`·`apt_locked`·`config_dirty`). `Busy()`는 작업이 진행 중인지다(apt 잠금을 함께 쓰는 조작이 겹치지 않게 거절할 때)
 - OMV 백그라운드 작업: `execBgProc`·`callMethodBg`를 쓰는 메서드는 상태 파일 이름만 바로 돌려준다. `addons.WaitBg`가 `Exec.isRunning`(관리자 전용, 끝난 상태 파일을 지움)을 500ms마다 불러 끝날 때까지 기다린다. 실패는 OMV가 `Exec.isRunning`에서 예외로 알려 주므로 `ErrActionFailed`, 시간 초과는 `ErrActionTimeout`이다. 시간 초과나 백엔드 재시작 때 OMV 쪽 작업은 계속 돌고 상태 파일은 남는다
-- API: `POST /api/addons/{id}/actions/{action}`, 본문 `{target}`(4KB 이하), 성공하면 204
+  - 출력이 필요하면 `addons.ReadBg`가 `Exec.getOutput{filename, pos, length: 512KiB}`로 끝까지 읽고 앞에서부터 상한까지 돌려준다. OMV는 작업이 끝나고 출력을 다 읽어야 파일을 지우므로 상한을 넘은 뒤에도 끝까지 읽고 버린다. 실패하면 OMV 오류를 감싸지 않고 돌려주므로 호출한 쪽이 문구로 가리고 문구는 로그에만 남긴다
+- API: `POST /api/addons/{id}/actions/{action}`, 본문 `{target}`(4KB 이하), 성공하면 204(`Query`면 결과와 200)
 
 | 상황 | 응답 |
 |---|---|
@@ -273,7 +275,7 @@
 | `containers` | 컨테이너 | compose 플러그인 | `omv-compose` | `start`, `stop`(확인), `restart`(확인), 관리자 | 30초 / 15초 |
 | `services` | 서비스 | admin | `omv-services` | `enable`, `disable`(확인) | 30초 / 10초 |
 | `system-info` | 시스템 정보 | 없음 | `omv-power`(admin) | `shutdown`, `reboot`, `standby`(모두 확인), 관리자. 프로필 메뉴의 전원 모달이 부른다 | 5초 / 1초(숨기면 2초) |
-| `packages` | 시스템 업데이트 | admin | `apt-index` | `check`, `upgrade`(확인), 관리자. 서버 백그라운드 작업을 시작한다 | 없음 / 30초(작업 목록 3초·30초, 출력 1초) |
+| `packages` | 시스템 업데이트 | admin | `apt-index` | `check`, `upgrade`(확인), 관리자. 서버 백그라운드 작업을 시작한다. `changelog`(관리자, `Query`)는 변경 기록을 돌려준다 | 없음 / 30초(작업 목록 3초·30초, 출력 1초) |
 
 #### 서비스 (`services`)
 
@@ -292,7 +294,12 @@
 
 - 목록·재부팅 권장은 `internal/aptindex`가 `upgradeindex.json`과 `/run/reboot-required(.pkgs)`를 직접 읽는다(`fs.FS`, APT·재부팅 알림 출처와 함께 씀). 파일이 없으면 `indexed: false`(확인한 적 없음)이고 `Apt.enumerateUpgraded`처럼 실패시키지 않는다
 - 조작 `check`(`Apt.update`)·`upgrade`(`Apt.upgrade`, dist-upgrade 전부)는 `ActionRequest.Jobs`로 작업을 시작하고 30초 안에 돌아온다. 골라서 설치(`Apt.install`)는 하지 않는다(워크벤치와 같다). `rpc.read`의 `Exec.getOutput`은 작업 감시자(`omvjob`)가 이 애드온의 허용 목록으로 부른다. `Exec.isRunning`·`Exec.stop`은 선언하지 않는다
-- 진행·출력·결과는 `/api/jobs*`(`.claude/rules/backend.md`의 "서버 백그라운드 작업"). 창(시안 C, Design 캔버스 "시스템 업데이트 앱 시안")은 업데이트 목록과 작업 보기를 탭으로 바꾸고, 변경 기록·업데이트 설정은 워크벤치 라우트로 연다. 위젯은 두지 않는다(사용자 결정)
+- 진행·출력·결과는 `/api/jobs*`(`.claude/rules/backend.md`의 "서버 백그라운드 작업"). 창(시안 C, Design 캔버스 "시스템 업데이트 앱 시안")은 업데이트 목록과 작업 보기를 탭으로 바꾸고, 업데이트 설정은 워크벤치 라우트로 연다. 위젯은 두지 않는다(사용자 결정)
+- 패키지 자세히 보기(시안: artifact "패키지 설명·변경 기록 모달 시안"): 행 끝의 정보 단추가 창 범위 모달(`PackageDetail.tsx`, 656×480 고정, 본문 하나만 스크롤, 열면 닫기에 포커스)을 연다. 워크벤치의 변경 기록 라우트는 모달 단추 줄의 링크로 남긴다
+  - 설명(`GET /api/addons/packages?detail=<이름>` → `PackagesResponse.detail`): 영어 원문이며 번역하지 않는다. OMV는 apt 번역 파일을 받지 않으므로(`Acquire::Languages "none"`) Debian 공식 저장소의 `Packages`에는 한 줄 요약만 있어 `upgradeindex.json`의 `extendeddescription`이 비고, OMV·제3자 저장소만 긴 설명을 담는다. 그래서 후보 버전의 설명(`descriptionFrom: candidate`)이 없으면 `/var/lib/dpkg/status`의 설치된 버전 설명(`installed`)을 쓴다(`aptindex.InstalledDescription`). 둘 다 문단은 빈 줄, 들여쓰기는 원문 그대로 주고 화면이 다시 흐르게 한다(`detail.ts`의 `parseDescription`). dpkg 상태를 읽지 못하면 `failedSources`에 `dpkg-status`를 담고 요약만 준다
+  - 변경 기록(`changelog` 조작, `changelog.go`): `Apt.getChangeLog{filename}`(관리자, 백그라운드 작업)은 `.deb`가 apt 캐시에 없으면 `apt-get --download-only`로 받고(받은 파일은 캐시에 남아 설치 때 다시 쓴다) 변경 기록을 풀어 출력으로 준다. 파일 이름의 첫 조각을 이스케이프하지 않고 셸 명령에 넣으므로 쓰기로 선언해 `/api/rpc`가 중계하지 못하게 하고, 브라우저가 보낸 이름으로 업데이트 목록에서 찾은 파일 이름만 형식 검사(`validDebFile`) 뒤에 넘긴다. 목록에 없으면 404 `not_found`, 작업 중이면 409 `job_busy`(apt 잠금)
+  - 한 번에 하나만 가져오고(동시에 `apt-get`을 돌리면 캐시 잠금으로 실패) 성공한 원문을 파일 이름마다 8개까지 메모리에 둔다. 조작은 브라우저가 끊어도 끝까지 돌므로(시간 제한 5분) 다시 열면 바로 보인다. 같은 패키지를 가져오는 중이면 409 `action_busy`이고 화면은 2초 뒤 다시 묻는다
+  - `ReadBg`로 1MiB까지 받아 제어 문자를 지우고, 설치된 버전(없으면 `+bN`을 뗀 버전)의 머리 줄에서 `recent`(새 항목)와 `earlier`(64KiB, 항목 경계에서 자름)로 나눈다. 못 찾으면(새로 설치, 형식이 다름) 전체가 `recent`다. OMV 실패 문구는 `No changelog found.` → 404 `no_changelog`, `Package file '…` → 502 `download_failed`, 그 밖은 `action_failed`로 바꾸고 로그에만 남긴다
 
 ### 시스템 정보 (`system-info`)
 
