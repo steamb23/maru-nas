@@ -6,8 +6,18 @@
 
 - The list shows the update list that OMV keeps. OMV rebuilds it once a day and every time updates are checked or installed. "Last checked" is when OMV last rebuilt the list.
 - "Check for updates" downloads the package lists from the repositories again (`apt-get update`). It usually takes 10 seconds to a minute.
-- Changelogs for each package and update settings (pre-release updates, automatic updates and so on) are in the OMV Workbench. The links in the window only appear when the [OMV Workbench address](configuration.md#opening-the-omv-workbench) is set.
+- Update settings (pre-release updates, automatic updates and so on) are in the OMV Workbench. The link in the window only appears when the [OMV Workbench address](configuration.md#opening-the-omv-workbench) is set.
 - When updates are available, administrators see an "Updates available" notice in the notification center.
+
+## Package description and changelog
+
+- The info button at the end of each row ("Description and changelog") shows that package's description and changelog inside the window.
+- The description is shown as the original English text that comes with the package. OMV doesn't download translations of package descriptions.
+- For packages from the Debian repositories, the update list only has a one-line summary. In that case the description of the currently installed version is shown instead, with a note saying so. Packages that are newly installed only show the summary.
+- The changelog first shows the entries that are newer than the installed version. Select "Installed version and earlier" to expand the older entries.
+- The first time you view a changelog, OMV downloads that package file. Large packages such as a kernel can take a few minutes. The downloaded file is reused when the update is installed later. A changelog that has been loaded once shows up right away when you close and reopen the dialog.
+- While a check or installation is running, the changelog isn't loaded. It loads when the task finishes.
+- When the [OMV Workbench address](configuration.md#opening-the-omv-workbench) is set, "View in OMV Workbench" opens the same package's changelog in the OMV Workbench.
 
 ## Installing all updates
 
@@ -33,4 +43,6 @@
 - If you open the same task in the OMV Workbench's notification panel and watch it to the end, the dashboard can't read the result, so the result may be "unknown" or part of the output may be missing. The same happens if you stop the task in the OMV Workbench.
 - When a task fails, the last second or so of output may be missing, because OMV doesn't hand out the remaining output of a failed task.
 - Very long output keeps only the last 2–4 MiB of each task and drops the beginning.
+- A very long changelog only shows its beginning (the newest entries). The earlier entries show up to 64 KiB from the installed version. See the OMV Workbench for the whole changelog.
+- If the package has no changelog or OMV can't download the package file, the changelog can't be shown.
 - If OMV's session ends while the openmediavault package is being upgraded, you may be signed out of the dashboard too. Sign in again to keep watching the task.
