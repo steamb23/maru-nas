@@ -60,9 +60,16 @@ func newActionEnv(t *testing.T) *actionEnv {
 		Read:  []string{"Exec.isRunning"},
 		Write: []string{"UserMgmt.getUserByContext"},
 	})
-	jobs.Manifest.Actions = []api.ActionDecl{{Name: "run", Admin: true}, {Name: "slow"}}
+	jobs.Manifest.Actions = []api.ActionDecl{{Name: "run", Admin: true}, {Name: "slow"}, {Name: "read", Admin: true}}
 	jobs.Actions = map[string]addons.Action{
 		"run": {Run: run},
+		// read는 결과를 돌려주는 조작이다. 대상 ok면 대상과 작업 중 여부를, 그 밖은 run과 같은 오류를 준다.
+		"read": {Query: func(ctx context.Context, req addons.ActionRequest) (any, error) {
+			if req.Target != "ok" {
+				return nil, run(ctx, req)
+			}
+			return map[string]any{"target": req.Target, "busy": req.Jobs.Busy()}, nil
+		}},
 		"slow": {Timeout: 30 * time.Millisecond, Run: func(ctx context.Context, req addons.ActionRequest) error {
 			return addons.WaitBg(ctx, req.RPC, ae.fake.StartBg(""), time.Millisecond)
 		}},
@@ -109,6 +116,31 @@ func TestActionRuns(t *testing.T) {
 	if !strings.Contains(e.logs.String(), `action: user="admin" addon=jobs action=run target="ok" result=ok`) {
 		t.Errorf("log %q", e.logs.String())
 	}
+}
+
+func TestActionQuery(t *testing.T) {
+	e := newActionEnv(t)
+	b := e.browser()
+	wantStatus(t, b.login("admin", "admin"), http.StatusOK)
+
+	rec := act(b, "jobs", "read", "ok")
+	wantStatus(t, rec, http.StatusOK)
+	if got := strings.TrimSpace(rec.Body.String()); got != `{"busy":false,"target":"ok"}` {
+		t.Errorf("body = %s", got)
+	}
+	if rec.Header().Get("Cache-Control") != "no-store" || rec.Header().Get("Content-Type") != "application/json" {
+		t.Errorf("headers %v", rec.Header())
+	}
+	// 오류는 Run과 같이 처리한다.
+	wantCode(t, act(b, "jobs", "read", "-rf"), http.StatusBadRequest, api.ErrBadRequest)
+	wantCode(t, act(b, "jobs", "read", "dirty"), http.StatusConflict, api.ErrConfigDirty)
+	if !strings.Contains(e.logs.String(), `action: user="admin" addon=jobs action=read target="ok" result=ok`) {
+		t.Errorf("log %q", e.logs.String())
+	}
+
+	user := e.browser()
+	wantStatus(t, user.login("user", "user"), http.StatusOK)
+	wantCode(t, act(user, "jobs", "read", "ok"), http.StatusForbidden, api.ErrAdminRequired)
 }
 
 func TestActionErrors(t *testing.T) {

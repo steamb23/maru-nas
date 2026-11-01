@@ -15,7 +15,8 @@ import (
 // maxActionBodyBytes는 조작 요청 본문의 최대 크기다.
 const maxActionBodyBytes = 4 << 10
 
-// addonAction은 애드온 조작 하나를 실행한다(POST /api/addons/{id}/actions/{action}).
+// addonAction은 애드온 조작 하나를 실행한다(POST /api/addons/{id}/actions/{action}). 성공하면 Run은 204,
+// 결과를 돌려주는 Query는 그 결과를 JSON 200으로 답한다.
 //
 // capability(역할, 플러그인)와 조작의 admin 조건을 먼저 확인하고, 같은 (애드온, 대상)에 진행 중인
 // 조작이 있으면 거절한다. 조작은 브라우저 연결이 끊겨도 Timeout까지 계속 기다린다. OMV 쪽 작업은
@@ -55,7 +56,16 @@ func (h *handler) addonAction(w http.ResponseWriter, r *http.Request, s auth.Ses
 	ctx, cancel := context.WithTimeout(context.WithoutCancel(r.Context()), timeout)
 	defer cancel()
 	caller := &rpcCaller{h: h, s: s, addon: id, clientIP: clientIP(r), writes: true}
-	err := act.Run(ctx, addons.ActionRequest{Admin: s.Admin, Target: req.Target, RPC: caller, Jobs: jobStarter{h, s, caller}})
+	areq := addons.ActionRequest{Admin: s.Admin, Target: req.Target, RPC: caller, Jobs: jobStarter{h, s, caller}}
+	var (
+		out any
+		err error
+	)
+	if act.Query != nil {
+		out, err = act.Query(ctx, areq)
+	} else {
+		err = act.Run(ctx, areq)
+	}
 
 	result, ae := actionOutcome(ctx, err, caller)
 	// 대상은 브라우저가 보낸 값이므로 %q로 남긴다(로그 줄 바꿈 주입 방지).
@@ -65,6 +75,10 @@ func (h *handler) addonAction(w http.ResponseWriter, r *http.Request, s auth.Ses
 	}
 	if result == "ok" {
 		w.Header().Set("Cache-Control", "no-store")
+		if act.Query != nil {
+			writeJSON(w, http.StatusOK, out)
+			return
+		}
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}

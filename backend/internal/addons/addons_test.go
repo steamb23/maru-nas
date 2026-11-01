@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -201,6 +202,13 @@ func TestNewRegistryActions(t *testing.T) {
 	if d, act, ok := r.ActionDecl("a", "stop"); !ok || d.Name != "stop" || !d.Admin || act.Run == nil {
 		t.Errorf("ActionDecl(a, stop) = %+v %v", d, ok)
 	}
+	// 결과를 돌려주는 조작(Query)만 있어도 된다.
+	if _, err := NewRegistry(addon("a", func(a *Addon) {
+		withAction("read")(a)
+		a.Actions["read"] = Action{Query: func(context.Context, ActionRequest) (any, error) { return "x", nil }}
+	})); err != nil {
+		t.Errorf("query action: %v", err)
+	}
 	if _, _, ok := r.ActionDecl("a", "restart"); ok {
 		t.Error("ActionDecl(a, restart) found")
 	}
@@ -222,6 +230,12 @@ func TestNewRegistryActions(t *testing.T) {
 		"nil run": addon("a", func(a *Addon) {
 			withAction("start")(a)
 			a.Actions["start"] = Action{}
+		}),
+		"run and query": addon("a", func(a *Addon) {
+			withAction("start")(a)
+			act := a.Actions["start"]
+			act.Query = func(context.Context, ActionRequest) (any, error) { return nil, nil }
+			a.Actions["start"] = act
 		}),
 		"undeclared implementation": addon("a", func(a *Addon) {
 			withAction("start")(a)
@@ -279,4 +293,98 @@ func TestWaitBg(t *testing.T) {
 	if err := WaitBg(tctx, &bgCaller{running: []bool{true}}, "bgstatus123", 5*time.Millisecond); !errors.Is(err, ErrActionTimeout) {
 		t.Errorf("timeout: err=%v", err)
 	}
+}
+
+// outCaller는 Exec.getOutput을 흉내 내는 가짜 RPCCaller다. 출력은 out이고, 처음 runningPolls번은
+// 진행 중이라 그때까지 쓴 만큼(written)만 준다. err가 있으면 출력을 다 준 뒤 예외를 던진다.
+type outCaller struct {
+	out          string
+	runningPolls int
+	err          error
+	calls        int
+	lengths      []int
+}
+
+func (c *outCaller) Call(_ context.Context, service, method string, params any) (json.RawMessage, error) {
+	if service+"."+method != "Exec.getOutput" {
+		return nil, errors.New("unexpected rpc " + service + "." + method)
+	}
+	p, _ := params.(map[string]any)
+	if p["filename"] != "/tmp/bgstatus123" {
+		return nil, errors.New("unexpected params")
+	}
+	c.calls++
+	pos, _ := p["pos"].(int64)
+	length, _ := p["length"].(int)
+	c.lengths = append(c.lengths, length)
+	running := c.calls <= c.runningPolls
+	// 진행 중에는 출력의 앞 절반만 쓴 상태다.
+	written := len(c.out)
+	if running {
+		written /= 2
+	}
+	if !running && c.err != nil && int(pos) >= written {
+		return nil, c.err
+	}
+	end := min(int(pos)+length, written)
+	return json.Marshal(map[string]any{
+		"filename":      "/tmp/bgstatus123",
+		"pos":           end,
+		"output":        c.out[pos:end],
+		"pendingOutput": end < written,
+		"running":       running,
+	})
+}
+
+func TestReadBg(t *testing.T) {
+	ctx := context.Background()
+	const file = "/tmp/bgstatus123"
+
+	c := &outCaller{out: "line 1\nline 2\n", runningPolls: 2}
+	text, cut, err := ReadBg(ctx, c, file, time.Millisecond, 1<<20)
+	if err != nil || cut || text != c.out {
+		t.Errorf("done: text=%q cut=%v err=%v", text, cut, err)
+	}
+	if c.lengths[0] < 1024 {
+		t.Errorf("length = %d, OMV requires at least 1024", c.lengths[0])
+	}
+
+	// 상한을 넘으면 앞만 남기고, 상태 파일이 지워지도록 끝까지 읽는다.
+	big := strings.Repeat("x", bgOutputChunk*2+10)
+	c = &outCaller{out: big}
+	text, cut, err = ReadBg(ctx, c, file, time.Millisecond, 100)
+	if err != nil || !cut || text != big[:100] || c.calls != 3 {
+		t.Errorf("limit: len=%d cut=%v err=%v calls=%d", len(text), cut, err, c.calls)
+	}
+
+	// 작업이 실패하면 OMV 오류를 그대로 돌려준다.
+	omvErr := errors.New("omv rpc error (HTTP 500): No changelog found.")
+	c = &outCaller{out: "", err: omvErr}
+	if _, _, err := ReadBg(ctx, c, file, time.Millisecond, 100); !errors.Is(err, omvErr) {
+		t.Errorf("failed: err=%v", err)
+	}
+
+	if _, _, err := ReadBg(ctx, c, "", time.Millisecond, 100); !errors.Is(err, ErrActionFailed) {
+		t.Errorf("empty filename: err=%v", err)
+	}
+
+	tctx, cancel := context.WithTimeout(ctx, 20*time.Millisecond)
+	defer cancel()
+	if _, _, err := ReadBg(tctx, &outCaller{out: "x", runningPolls: 1 << 30}, file, 5*time.Millisecond, 100); !errors.Is(err, ErrActionTimeout) {
+		t.Errorf("timeout: err=%v", err)
+	}
+}
+
+func TestReadBgStuck(t *testing.T) {
+	// 남은 출력이 있다면서 위치가 그대로면 멈춘다.
+	c := stuckCaller{}
+	if _, _, err := ReadBg(context.Background(), c, "/tmp/bgstatus1", time.Millisecond, 100); !errors.Is(err, ErrActionFailed) {
+		t.Errorf("err = %v", err)
+	}
+}
+
+type stuckCaller struct{}
+
+func (stuckCaller) Call(context.Context, string, string, any) (json.RawMessage, error) {
+	return json.RawMessage(`{"pos":0,"output":"","pendingOutput":true,"running":true}`), nil
 }
