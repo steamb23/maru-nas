@@ -134,6 +134,42 @@ type PackagesResponse struct {
 	// Packages는 설치할 수 있는 업데이트다(이름순).
 	Packages []PackageUpdate `json:"packages"`
 	Reboot   RebootInfo      `json:"reboot"`
+	// Detail은 ?detail=<이름>으로 물은 패키지의 설명이다. 그 패키지가 목록에 없으면 없다.
+	Detail *PackageDetail `json:"detail,omitempty"`
+}
+
+// PackageDetail은 업데이트할 패키지 하나의 설명이다(영어 원문, 번역하지 않는다).
+type PackageDetail struct {
+	Name string `json:"name"`
+	// Summary는 후보 버전의 한 줄 요약이다.
+	Summary string `json:"summary,omitempty"`
+	// Description은 긴 설명이다(요약 제외). 문단은 빈 줄로 나뉘고, 문단 안의 줄바꿈과 들여쓰기는 원문
+	// 그대로다. 없으면(Debian 공식 저장소의 새 패키지 등) 빈 값이다.
+	Description string `json:"description,omitempty"`
+	// DescriptionFrom은 긴 설명의 출처다. candidate는 설치될 버전, installed는 지금 설치된 버전이다.
+	DescriptionFrom string `json:"descriptionFrom,omitempty" tstype:"'candidate' | 'installed'"`
+}
+
+// 긴 설명의 출처(PackageDetail.DescriptionFrom).
+const (
+	DescriptionCandidate = "candidate"
+	DescriptionInstalled = "installed"
+)
+
+// PackageChangelog는 패키지 하나의 변경 기록(Debian changelog 원문)이다. 시스템 업데이트 애드온의
+// changelog 조작(POST /api/addons/packages/actions/changelog)이 돌려준다.
+type PackageChangelog struct {
+	Name string `json:"name"`
+	// Version은 설치될 버전이다.
+	Version string `json:"version"`
+	// Recent는 설치된 버전보다 새 항목이다. 설치된 버전의 항목을 찾지 못하면(새로 설치, 형식이 다름) 전체다.
+	Recent string `json:"recent"`
+	// Earlier는 설치된 버전의 항목과 그보다 오래된 항목이다(앞부분만). Matched가 false면 없다.
+	Earlier string `json:"earlier,omitempty"`
+	// Matched는 설치된 버전의 항목을 찾아 Recent와 Earlier로 나눴는지다.
+	Matched bool `json:"matched"`
+	// Truncated는 상한 때문에 뒷부분을 버렸는지다.
+	Truncated bool `json:"truncated,omitempty"`
 }
 
 // PackageUpdate는 업데이트할 패키지 하나다.

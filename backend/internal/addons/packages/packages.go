@@ -1,11 +1,16 @@
 // Package packages는 시스템 업데이트 애드온이다. OMV가 만드는 APT 업데이트 목록과 재부팅 권장 파일을 직접 읽고,
 // 업데이트 확인(Apt.update)과 모두 설치(Apt.upgrade, dist-upgrade)를 서버 백그라운드 작업(internal/jobs)으로 시작한다.
 // 작업 진행·출력·결과는 /api/jobs가 준다. 골라서 설치(Apt.install)는 하지 않는다(OMV 워크벤치와 같다).
+//
+// 패키지 하나의 긴 설명은 ?detail=<이름>(업데이트 목록과 dpkg 상태를 직접 읽음), 변경 기록은 결과를 돌려주는
+// changelog 조작(Apt.getChangeLog, changelog.go)으로 준다.
 package packages
 
 import (
 	"context"
 	"errors"
+	"log"
+	"slices"
 	"time"
 
 	"maru/backend/internal/addons"
@@ -35,14 +40,19 @@ var Manifest = api.Manifest{
 	},
 	Requires: api.Requirements{Admin: true},
 	RPC: api.RPCMethods{
-		Read:  []string{"Exec.getOutput"},
-		Write: []string{"Apt.update", "Apt.upgrade"},
+		Read: []string{"Exec.getOutput"},
+		// Apt.getChangeLog는 데이터를 읽지만 파라미터로 셸 명령을 만들므로 쓰기로 선언해 조작으로만 부른다.
+		Write: []string{"Apt.update", "Apt.upgrade", "Apt.getChangeLog"},
 	},
 	Actions: []api.ActionDecl{
 		{Name: "check", Admin: true},
 		{Name: "upgrade", Admin: true, Confirm: true},
+		{Name: "changelog", Admin: true},
 	},
 }
+
+// SourceDpkg는 설치된 버전의 긴 설명을 읽는 dpkg 상태 파일이다. 읽지 못하면 응답의 failedSources에 담는다.
+const SourceDpkg = "dpkg-status"
 
 // actionTimeout은 작업을 시작하는 데 주는 시간이다. 작업 자체는 서버가 따로 끝까지 지켜본다.
 const actionTimeout = 30 * time.Second
@@ -54,15 +64,30 @@ func (provider) Requires() api.Requirements { return api.Requirements{Admin: tru
 
 // New는 시스템 업데이트 애드온을 반환한다.
 func New(r *aptindex.Reader) addons.Addon {
+	cl := newChangelogs()
 	return addons.Addon{
 		Manifest:  Manifest,
 		Providers: []addons.Provider{provider{}},
-		Fetch: func(context.Context, addons.Request) (any, error) {
-			return Read(r)
+		Fetch: func(_ context.Context, req addons.Request) (any, error) {
+			res, pkgs, err := read(r)
+			if err != nil {
+				return nil, err
+			}
+			// 설명은 시스템 업데이트 창이 행의 자세히 보기를 열 때 detail=<이름>으로 묻는다.
+			if name := req.Query.Get("detail"); name != "" {
+				d, err := Detail(r, pkgs, name)
+				if err != nil {
+					log.Printf("packages: read installed description of %q: %v", name, err)
+					res.FailedSources = append(res.FailedSources, SourceDpkg)
+				}
+				res.Detail = d
+			}
+			return res, nil
 		},
 		Actions: map[string]addons.Action{
-			"check":   {Timeout: actionTimeout, Run: start(jobs.KindAptUpdate)},
-			"upgrade": {Timeout: actionTimeout, Run: start(jobs.KindAptUpgrade)},
+			"check":     {Timeout: actionTimeout, Run: start(jobs.KindAptUpdate)},
+			"upgrade":   {Timeout: actionTimeout, Run: start(jobs.KindAptUpgrade)},
+			"changelog": {Timeout: changelogTimeout, Query: cl.query(r)},
 		},
 	}
 }
@@ -83,6 +108,13 @@ func start(kind jobs.Kind) func(context.Context, addons.ActionRequest) error {
 
 // Read는 업데이트 목록과 재부팅 권장 상태를 읽는다. 목록 파일이 없으면 Indexed가 false다.
 func Read(r *aptindex.Reader) (api.PackagesResponse, error) {
+	res, _, err := read(r)
+	return res, err
+}
+
+// read는 Read와 같고, 응답에 넣지 않는 긴 설명을 담은 목록도 함께 돌려준다.
+func read(r *aptindex.Reader) (api.PackagesResponse, []aptindex.Package, error) {
+	var pkgs []aptindex.Package
 	res := api.PackagesResponse{
 		AddonSources: api.AddonSources{Sources: []string{Source}},
 		Packages:     []api.PackageUpdate{},
@@ -91,8 +123,9 @@ func Read(r *aptindex.Reader) (api.PackagesResponse, error) {
 	switch {
 	case errors.Is(err, aptindex.ErrNoIndex):
 	case err != nil:
-		return api.PackagesResponse{}, err
+		return api.PackagesResponse{}, nil, err
 	default:
+		pkgs = idx.Packages
 		res.Indexed = true
 		res.IndexedAt = idx.ModTime.UTC().Format(time.RFC3339)
 		for _, p := range idx.Packages {
@@ -110,11 +143,38 @@ func Read(r *aptindex.Reader) (api.PackagesResponse, error) {
 	}
 	rb, err := r.Reboot()
 	if err != nil {
-		return api.PackagesResponse{}, err
+		return api.PackagesResponse{}, nil, err
 	}
 	res.Reboot = api.RebootInfo{Required: rb.Required, Packages: rb.Packages}
 	if rb.Required && !rb.Since.IsZero() {
 		res.Reboot.Since = rb.Since.UTC().Format(time.RFC3339)
 	}
-	return res, nil
+	return res, pkgs, nil
+}
+
+// Detail은 pkgs(업데이트 목록) 중 name 패키지의 설명이다. 목록에 없으면 nil이다. 긴 설명은 설치될 버전의
+// 것을 먼저 쓰고, 없으면(Debian 공식 저장소) 지금 설치된 버전의 것을 dpkg 상태에서 읽는다. dpkg 상태를
+// 읽지 못하면 요약만 담고 오류를 함께 돌려준다.
+func Detail(r *aptindex.Reader, pkgs []aptindex.Package, name string) (*api.PackageDetail, error) {
+	i := slices.IndexFunc(pkgs, func(p aptindex.Package) bool { return p.Name == name })
+	if i < 0 {
+		return nil, nil
+	}
+	p := pkgs[i]
+	d := &api.PackageDetail{Name: p.Name, Summary: p.Summary}
+	if p.Description != "" {
+		d.Description, d.DescriptionFrom = p.Description, api.DescriptionCandidate
+		return d, nil
+	}
+	if p.OldVersion == "" {
+		return d, nil
+	}
+	desc, err := r.InstalledDescription(p.Name)
+	if err != nil {
+		return d, err
+	}
+	if desc != "" {
+		d.Description, d.DescriptionFrom = desc, api.DescriptionInstalled
+	}
+	return d, nil
 }

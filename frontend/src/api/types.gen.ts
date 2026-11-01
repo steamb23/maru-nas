@@ -207,6 +207,64 @@ export interface PackagesResponse extends AddonSources {
    */
   packages: PackageUpdate[];
   reboot: RebootInfo;
+  /**
+   * Detail은 ?detail=<이름>으로 물은 패키지의 설명이다. 그 패키지가 목록에 없으면 없다.
+   */
+  detail?: PackageDetail;
+}
+/**
+ * PackageDetail은 업데이트할 패키지 하나의 설명이다(영어 원문, 번역하지 않는다).
+ */
+export interface PackageDetail {
+  name: string;
+  /**
+   * Summary는 후보 버전의 한 줄 요약이다.
+   */
+  summary?: string;
+  /**
+   * Description은 긴 설명이다(요약 제외). 문단은 빈 줄로 나뉘고, 문단 안의 줄바꿈과 들여쓰기는 원문
+   * 그대로다. 없으면(Debian 공식 저장소의 새 패키지 등) 빈 값이다.
+   */
+  description?: string;
+  /**
+   * DescriptionFrom은 긴 설명의 출처다. candidate는 설치될 버전, installed는 지금 설치된 버전이다.
+   */
+  descriptionFrom?: 'candidate' | 'installed';
+}
+/**
+ * 긴 설명의 출처(PackageDetail.DescriptionFrom).
+ */
+export const DescriptionCandidate = "candidate";
+/**
+ * 긴 설명의 출처(PackageDetail.DescriptionFrom).
+ */
+export const DescriptionInstalled = "installed";
+/**
+ * PackageChangelog는 패키지 하나의 변경 기록(Debian changelog 원문)이다. 시스템 업데이트 애드온의
+ * changelog 조작(POST /api/addons/packages/actions/changelog)이 돌려준다.
+ */
+export interface PackageChangelog {
+  name: string;
+  /**
+   * Version은 설치될 버전이다.
+   */
+  version: string;
+  /**
+   * Recent는 설치된 버전보다 새 항목이다. 설치된 버전의 항목을 찾지 못하면(새로 설치, 형식이 다름) 전체다.
+   */
+  recent: string;
+  /**
+   * Earlier는 설치된 버전의 항목과 그보다 오래된 항목이다(앞부분만). Matched가 false면 없다.
+   */
+  earlier?: string;
+  /**
+   * Matched는 설치된 버전의 항목을 찾아 Recent와 Earlier로 나눴는지다.
+   */
+  matched: boolean;
+  /**
+   * Truncated는 상한 때문에 뒷부분을 버렸는지다.
+   */
+  truncated?: boolean;
 }
 /**
  * PackageUpdate는 업데이트할 패키지 하나다.
@@ -854,6 +912,14 @@ export const ErrJobBusy = "job_busy";
  */
 export const ErrAptLocked = "apt_locked";
 /**
+ * ErrNoChangelog는 패키지 파일에 변경 기록이 없다는 뜻이다(시스템 업데이트의 변경 기록).
+ */
+export const ErrNoChangelog = "no_changelog";
+/**
+ * ErrDownloadFailed는 OMV가 패키지 파일을 내려받지 못했다는 뜻이다(시스템 업데이트의 변경 기록).
+ */
+export const ErrDownloadFailed = "download_failed";
+/**
  * ErrorResponse는 2xx가 아닌 상태 코드와 함께 반환된다.
  */
 export interface ErrorResponse {
@@ -861,7 +927,7 @@ export interface ErrorResponse {
   /**
    * Code는 화면에서 분기할 때 쓰는 오류 종류다. 없을 수 있다.
    */
-  code?: 'invalid_credentials' | 'rate_limited' | 'challenge_failed' | 'challenge_expired' | 'omv_unavailable' | 'unauthorized' | 'bad_request' | 'rpc_forbidden' | 'admin_required' | 'plugin_missing' | 'omv_error' | 'action_busy' | 'action_failed' | 'action_timeout' | 'config_dirty' | 'image_too_large' | 'unsupported_image' | 'profile_readonly' | 'helper_unavailable' | 'helper_reauth' | 'elevation_failed' | 'elevation_not_allowed' | 'elevation_required' | 'terminal_disabled' | 'security_required' | 'factor_failed' | 'manage_required' | 'passkey_unavailable' | 'passkey_uv_unsupported' | 'security_unavailable' | 'passkey_login_unknown' | 'passkey_login_expired' | 'passkey_login_stale' | 'upgrade_disabled' | 'upgrade_busy' | 'upgrade_outdated' | 'not_found' | 'permission_denied' | 'outside_roots' | 'file_exists' | 'not_dir' | 'is_dir' | 'not_regular' | 'no_space' | 'read_only' | 'helper_busy' | 'transfer_timeout' | 'listing_expired' | 'sort_pending' | 'not_empty' | 'cross_device' | 'root_folder' | 'no_trash' | 'share_read_only' | 'job_busy' | 'apt_locked';
+  code?: 'invalid_credentials' | 'rate_limited' | 'challenge_failed' | 'challenge_expired' | 'omv_unavailable' | 'unauthorized' | 'bad_request' | 'rpc_forbidden' | 'admin_required' | 'plugin_missing' | 'omv_error' | 'action_busy' | 'action_failed' | 'action_timeout' | 'config_dirty' | 'image_too_large' | 'unsupported_image' | 'profile_readonly' | 'helper_unavailable' | 'helper_reauth' | 'elevation_failed' | 'elevation_not_allowed' | 'elevation_required' | 'terminal_disabled' | 'security_required' | 'factor_failed' | 'manage_required' | 'passkey_unavailable' | 'passkey_uv_unsupported' | 'security_unavailable' | 'passkey_login_unknown' | 'passkey_login_expired' | 'passkey_login_stale' | 'upgrade_disabled' | 'upgrade_busy' | 'upgrade_outdated' | 'not_found' | 'permission_denied' | 'outside_roots' | 'file_exists' | 'not_dir' | 'is_dir' | 'not_regular' | 'no_space' | 'read_only' | 'helper_busy' | 'transfer_timeout' | 'listing_expired' | 'sort_pending' | 'not_empty' | 'cross_device' | 'root_folder' | 'no_trash' | 'share_read_only' | 'job_busy' | 'apt_locked' | 'no_changelog' | 'download_failed';
   /**
    * RetryAfterSeconds는 rate_limited일 때 다시 시도할 수 있기까지 남은 초다.
    */
