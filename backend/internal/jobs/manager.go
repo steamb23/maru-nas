@@ -187,6 +187,13 @@ func (m *Manager) Resume() {
 	}
 }
 
+// Busy는 작업이 진행 중이거나 시작을 준비하는 중인지다(Start가 ErrBusy를 돌려줄 상태).
+func (m *Manager) Busy() bool {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.reserved || m.active != nil
+}
+
 // Start는 kind 작업을 시작하고 id를 돌려준다. 이미 진행 중이면 ErrBusy다. Runner가 거절하면 그 오류다.
 func (m *Manager) Start(ctx context.Context, kind Kind, req StartRequest) (string, error) {
 	if _, ok := Kinds[kind]; !ok {

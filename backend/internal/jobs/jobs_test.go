@@ -153,9 +153,15 @@ func TestStartBusyAndRelease(t *testing.T) {
 	if _, err := e.m.Start(context.Background(), KindAptUpgrade, StartRequest{Owner: "bob"}); !errors.Is(err, ErrBusy) {
 		t.Fatalf("second start err = %v, want ErrBusy", err)
 	}
+	if !e.m.Busy() {
+		t.Error("not busy while starting")
+	}
 	close(e.r.gate)
 	if err := <-done; !errors.Is(err, ErrLocked) {
 		t.Fatalf("first start err = %v", err)
+	}
+	if e.m.Busy() {
+		t.Error("busy after refusal")
 	}
 	// 거절되면 슬롯을 푼다.
 	e.r.mu.Lock()
@@ -167,8 +173,8 @@ func TestStartBusyAndRelease(t *testing.T) {
 	if cur, _ := e.store.LoadCurrent(); cur == nil || cur.Owner != "admin" || cur.BootID != "boot-a" {
 		t.Errorf("current = %+v", cur)
 	}
-	if _, err := e.m.Start(context.Background(), KindAptUpdate, StartRequest{Owner: "admin"}); !errors.Is(err, ErrBusy) {
-		t.Errorf("start while running err = %v", err)
+	if _, err := e.m.Start(context.Background(), KindAptUpdate, StartRequest{Owner: "admin"}); !errors.Is(err, ErrBusy) || !e.m.Busy() {
+		t.Errorf("start while running err = %v, busy = %v", err, e.m.Busy())
 	}
 	if _, err := e.m.Start(context.Background(), "bogus", StartRequest{}); !errors.Is(err, ErrUnknownKind) {
 		t.Errorf("unknown kind err = %v", err)

@@ -52,12 +52,15 @@ func TestRead(t *testing.T) {
 type starter struct {
 	kinds []string
 	err   error
+	busy  bool
 }
 
 func (s *starter) Start(_ context.Context, kind string) (string, error) {
 	s.kinds = append(s.kinds, kind)
 	return "id", s.err
 }
+
+func (s *starter) Busy() bool { return s.busy }
 
 func TestActions(t *testing.T) {
 	a := New(aptindex.NewReaderFS(fstest.MapFS{}))

@@ -74,6 +74,8 @@ func (j jobStarter) Start(ctx context.Context, kind string) (string, error) {
 	return id, err
 }
 
+func (j jobStarter) Busy() bool { return j.h.Jobs.Busy() }
+
 // jobsList는 진행 중인 작업과 이 사용자의 결과다(GET /api/jobs).
 func (h *handler) jobsList(w http.ResponseWriter, _ *http.Request, s auth.Session) {
 	h.Jobs.Offer()

@@ -48,13 +48,18 @@ type Addon struct {
 	Actions map[string]Action
 }
 
-// Action은 조작 하나의 구현이다(POST /api/addons/{id}/actions/{name}).
+// Action은 조작 하나의 구현이다(POST /api/addons/{id}/actions/{name}). Run과 Query 중 하나만 둔다.
 type Action struct {
-	// Timeout은 Run 전체에 주는 시간이다. 0이면 DefaultActionTimeout이다.
+	// Timeout은 Run·Query 전체에 주는 시간이다. 0이면 DefaultActionTimeout이다.
 	Timeout time.Duration
 	// Run은 조작을 실행한다. 대상(Target)은 브라우저가 보낸 값이므로 OMV에 넘기기 전에 반드시 검사한다.
 	// 잘못된 대상은 ErrInvalidTarget, 사용자에게 이유를 알려야 하는 거절은 *ActionError로 돌려준다.
+	// 성공하면 서버가 본문 없이 204로 답한다.
 	Run func(ctx context.Context, req ActionRequest) error
+	// Query는 결과를 돌려주는 조작이다(시스템 업데이트의 변경 기록). 쓰기 RPC로 선언해야 하는 메서드
+	// (파라미터로 셸 명령을 만드는 메서드 등)를 불러 데이터를 읽을 때 쓴다. 대상 검사와 오류는 Run과 같고,
+	// 성공하면 서버가 결과를 JSON 200으로 답한다.
+	Query func(ctx context.Context, req ActionRequest) (any, error)
 }
 
 // DefaultActionTimeout은 Action.Timeout이 0일 때 쓰는 시간이다.
@@ -77,6 +82,9 @@ type ActionRequest struct {
 // apt_locked, config_dirty).
 type JobStarter interface {
 	Start(ctx context.Context, kind string) (id string, err error)
+	// Busy는 서버 백그라운드 작업이 진행 중인지(시작을 준비하는 중 포함)다. apt 잠금을 함께 쓰는 조작이
+	// 작업과 겹치지 않게 거절할 때 쓴다.
+	Busy() bool
 }
 
 var (
@@ -120,7 +128,7 @@ func (r Request) Has(name string) bool { return slices.Contains(r.Sources, name)
 // RPCCaller는 provider가 OMV RPC를 부를 때 쓴다. 서버가 요청마다 사용자 세션으로 만든다.
 //
 // 그 애드온이 manifest에 선언한 메서드만 부를 수 있다(Registry.Classify). Fetch에 넘기는 호출기는
-// 읽기만, 조작(Action.Run)에 넘기는 호출기는 WritesEnabled가 켜져 있으면 쓰기도 부를 수 있다.
+// 읽기만, 조작(Action.Run·Query)에 넘기는 호출기는 WritesEnabled가 켜져 있으면 쓰기도 부를 수 있다.
 // OMV 세션의 마지막 접근 시각은 갱신하지 않는다.
 type RPCCaller interface {
 	Call(ctx context.Context, service, method string, params any) (json.RawMessage, error)
@@ -284,8 +292,12 @@ func validateActions(a Addon) error {
 			return fmt.Errorf("action %q declared twice", d.Name)
 		}
 		seen[d.Name] = true
-		if act, ok := a.Actions[d.Name]; !ok || act.Run == nil {
+		act, ok := a.Actions[d.Name]
+		if !ok || (act.Run == nil && act.Query == nil) {
 			return fmt.Errorf("action %q has no implementation", d.Name)
+		}
+		if act.Run != nil && act.Query != nil {
+			return fmt.Errorf("action %q has both Run and Query", d.Name)
 		}
 	}
 	for name := range a.Actions {
@@ -405,6 +417,69 @@ func WaitBg(ctx context.Context, c RPCCaller, filename string, interval time.Dur
 		case <-ctx.Done():
 			t.Stop()
 			return ErrActionTimeout
+		case <-t.C:
+		}
+	}
+}
+
+// bgOutputChunk는 ReadBg가 Exec.getOutput 한 번에 읽는 길이다(OMV 스키마의 최소 1024 이상).
+const bgOutputChunk = 512 << 10
+
+// bgOutput은 Exec.getOutput 응답이다. pos는 다음에 읽을 위치(출력 파일의 바이트 위치)다.
+type bgOutput struct {
+	Pos           int64  `json:"pos"`
+	Output        string `json:"output"`
+	PendingOutput bool   `json:"pendingOutput"`
+	Running       bool   `json:"running"`
+}
+
+// ReadBg는 OMV 백그라운드 작업(execBgProc)의 출력을 끝까지 읽고 앞에서부터 limit 바이트까지 돌려준다.
+// cut은 limit을 넘어 뒤를 버렸는지다(UTF-8 글자 경계는 지키지 않는다).
+//
+// Exec.getOutput(관리자 전용)을 읽을 출력이 남아 있으면 바로, 작업이 진행 중이면 interval마다 부른다.
+// OMV는 작업이 끝나고 출력을 다 읽어야 상태·출력 파일을 지우므로 limit을 넘은 뒤에도 끝까지 읽고 버린다.
+// 작업이 실패하면 OMV가 Exec.getOutput에서 예외를 던지며, 그 오류를 감싸지 않고 돌려준다(호출한 쪽이
+// 문구로 원인을 가리고, 문구는 로그에만 남긴다). ctx가 끝나면 ErrActionTimeout이고 이때 파일은 남는다.
+func ReadBg(ctx context.Context, c RPCCaller, filename string, interval time.Duration, limit int) (string, bool, error) {
+	if filename == "" {
+		return "", false, fmt.Errorf("%w: empty background status file name", ErrActionFailed)
+	}
+	var (
+		buf strings.Builder
+		cut bool
+		pos int64
+	)
+	for {
+		var res bgOutput
+		err := CallInto(ctx, c, "Exec", "getOutput",
+			map[string]any{"filename": filename, "pos": pos, "length": bgOutputChunk}, &res)
+		switch {
+		case ctx.Err() != nil:
+			return "", false, ErrActionTimeout
+		case err != nil:
+			return "", false, err
+		case res.Pos < pos || (res.PendingOutput && res.Pos == pos):
+			// 위치가 나아가지 않으면 같은 요청을 끝없이 되풀이하게 된다.
+			return "", false, fmt.Errorf("%w: output position did not advance (%d -> %d)", ErrActionFailed, pos, res.Pos)
+		}
+		pos = res.Pos
+		if room := limit - buf.Len(); len(res.Output) > room {
+			buf.WriteString(res.Output[:max(room, 0)])
+			cut = true
+		} else {
+			buf.WriteString(res.Output)
+		}
+		if res.PendingOutput {
+			continue
+		}
+		if !res.Running {
+			return buf.String(), cut, nil
+		}
+		t := time.NewTimer(interval)
+		select {
+		case <-ctx.Done():
+			t.Stop()
+			return "", false, ErrActionTimeout
 		case <-t.C:
 		}
 	}
