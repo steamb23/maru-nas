@@ -183,6 +183,8 @@ const ERROR_CODES: readonly ErrorCode[] = [
   'share_read_only',
   'job_busy',
   'apt_locked',
+  'no_changelog',
+  'download_failed',
 ]
 
 export type RequiredLevel = NonNullable<ErrorResponse['required']>

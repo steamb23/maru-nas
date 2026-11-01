@@ -356,7 +356,8 @@ export const MANIFESTS = {
       ],
       "write": [
         "Apt.update",
-        "Apt.upgrade"
+        "Apt.upgrade",
+        "Apt.getChangeLog"
       ]
     },
     "actions": [
@@ -368,6 +369,10 @@ export const MANIFESTS = {
         "name": "upgrade",
         "admin": true,
         "confirm": true
+      },
+      {
+        "name": "changelog",
+        "admin": true
       }
     ]
   },

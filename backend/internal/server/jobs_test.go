@@ -433,3 +433,77 @@ func TestJobsExecStopNotAllowed(t *testing.T) {
 		t.Errorf("Exec.getOutput = %v %v", kind, ids)
 	}
 }
+
+// changelogIndex는 변경 기록 테스트의 업데이트 목록이다.
+const changelogIndex = `[
+  {"name": "openssl", "version": "3.5.4-1~deb13u1", "oldversion": "3.5.1-1", "summary": "Secure Sockets Layer toolkit",
+   "filename": "pool/main/o/openssl/openssl_3.5.4-1~deb13u1_amd64.deb", "size": 1},
+  {"name": "newpkg", "version": "1.0", "summary": "New package", "filename": "pool/main/n/newpkg_1.0_all.deb", "size": 1}
+]`
+
+const changelogText = `openssl (3.5.4-1~deb13u1) trixie-security; urgency=medium
+
+  * Example security update.
+
+ -- Example Maintainer <maint@example.org>  Mon, 13 Oct 2026 10:00:00 +0000
+
+openssl (3.5.1-1) unstable; urgency=medium
+
+  * New upstream release.
+
+ -- Example Maintainer <maint@example.org>  Tue, 01 Jul 2026 10:00:00 +0000
+`
+
+func TestPackagesChangelog(t *testing.T) {
+	reader := aptindex.NewReaderFS(fstest.MapFS{
+		aptindex.IndexPath:      &fstest.MapFile{Data: []byte(changelogIndex)},
+		aptindex.DpkgStatusPath: &fstest.MapFile{Data: []byte("Package: openssl\nStatus: install ok installed\nDescription: s\n Installed text.\n")},
+	})
+	m := jobs.New(jobs.Config{Store: jobs.NewMemoryStore(), Index: reader, BootID: func() string { return "boot" }})
+	t.Cleanup(m.Close)
+	e := newEnv(t, envOptions{addons: testRegistry(t, packages.New(reader)), jobs: m})
+	cfg := slowApt(200)
+	cfg.Changelogs = map[string]omvfake.AptChangelog{"openssl": {Text: changelogText}}
+	e.fake.SetAptConfig(cfg)
+	e.fake.SetBgPolls(0)
+	admin := e.browser()
+	wantStatus(t, admin.login("admin", "admin"), http.StatusOK)
+
+	// 설명은 목록 응답의 detail로 준다.
+	rec := admin.do(http.MethodGet, "/api/addons/packages?detail=openssl", nil)
+	wantStatus(t, rec, http.StatusOK)
+	if d := decode[api.PackagesResponse](t, rec).Detail; d == nil || d.Description != "Installed text." || d.DescriptionFrom != api.DescriptionInstalled {
+		t.Errorf("detail = %+v", d)
+	}
+
+	rec = act(admin, "packages", "changelog", "openssl")
+	wantStatus(t, rec, http.StatusOK)
+	cl := decode[api.PackageChangelog](t, rec)
+	if !cl.Matched || !strings.HasPrefix(cl.Recent, "openssl (3.5.4-1~deb13u1)") || !strings.HasPrefix(cl.Earlier, "openssl (3.5.1-1)") {
+		t.Errorf("changelog = %+v", cl)
+	}
+	// OMV에는 목록의 파일 이름을 넘긴다.
+	var params []string
+	for _, c := range e.fake.Calls() {
+		if c.Method == "getChangeLog" {
+			params = append(params, string(c.Params))
+		}
+	}
+	if len(params) != 1 || !strings.Contains(params[0], `"pool/main/o/openssl/openssl_3.5.4-1~deb13u1_amd64.deb"`) {
+		t.Errorf("getChangeLog params = %v", params)
+	}
+
+	wantCode(t, act(admin, "packages", "changelog", "newpkg"), http.StatusBadGateway, api.ErrDownloadFailed)
+	wantCode(t, act(admin, "packages", "changelog", "nope"), http.StatusNotFound, api.ErrNotFound)
+	// 브라우저는 /api/rpc로 Apt.getChangeLog를 부를 수 없다(파라미터로 셸 명령을 만드는 메서드다).
+	wantCode(t, admin.do(http.MethodPost, "/api/rpc", rpcReq("Apt", "getChangeLog", `{"filename":"x;reboot_1_all.deb"}`)),
+		http.StatusForbidden, api.ErrRPCForbidden)
+
+	// 작업이 진행 중이면 apt 잠금이 겹치지 않게 거절한다.
+	wantStatus(t, act(admin, "packages", "check", ""), http.StatusNoContent)
+	wantCode(t, act(admin, "packages", "changelog", "newpkg"), http.StatusConflict, api.ErrJobBusy)
+
+	user := e.browser()
+	wantStatus(t, user.login("user", "user"), http.StatusOK)
+	wantCode(t, act(user, "packages", "changelog", "openssl"), http.StatusForbidden, api.ErrAdminRequired)
+}

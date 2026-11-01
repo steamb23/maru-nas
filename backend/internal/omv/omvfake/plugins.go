@@ -257,6 +257,12 @@ func (s *Server) handlePlugin(sess *session, service, method string, params json
 		}
 		res, rerr := s.aptJob(method)
 		return res, rerr, true
+	case "Apt.getChangeLog":
+		if e := adminOnly(); e != nil {
+			return nil, e, true
+		}
+		res, rerr := s.aptChangelog(params)
+		return res, rerr, true
 	case "PowerMgmt.get":
 		if e := adminOnly(); e != nil {
 			return nil, e, true
