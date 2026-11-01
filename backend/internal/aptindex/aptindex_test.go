@@ -175,3 +175,73 @@ func TestRebootSource(t *testing.T) {
 		t.Errorf("no reboot = %v, %v", got, err)
 	}
 }
+
+func TestIndexDescription(t *testing.T) {
+	pkgs, err := ParseIndex(strings.NewReader(string(readFixture(t, "upgradeindex.json"))))
+	if err != nil {
+		t.Fatal(err)
+	}
+	// omv-mkaptidx가 만든 문단 사이의 빈 줄 둘은 하나로 줄인다.
+	want := "Example NAS solution based on Debian Linux. It contains services\nlike SSH, SMB/CIFS and rsync.\n\nFeatures:\n* web administration\n* plugin system"
+	if got := pkgs[2].Description; got != want {
+		t.Errorf("description = %q", got)
+	}
+	if pkgs[0].Description != "" {
+		t.Errorf("libc6 description = %q", pkgs[0].Description)
+	}
+	if got := IndexDescription("\n\n  a  \n\n\n\nb\n\n"); got != "  a\n\nb" {
+		t.Errorf("tidy = %q", got)
+	}
+}
+
+func TestParseInstalledDescription(t *testing.T) {
+	status := string(readFixture(t, "dpkg-status"))
+	cases := []struct {
+		name, want string
+		found      bool
+	}{
+		// 요약(첫 줄)은 빼고, " ."은 빈 줄, 두 칸 이상 들여쓰기는 남긴다.
+		{"libc6", "Contains the standard libraries that are used by nearly all programs on\n" +
+			"the system. This package includes shared versions of the standard C library\n" +
+			"and the standard math library.\n\nExample list:\n * first item that is long enough to\n" +
+			"   wrap onto a second line\n * second item", true},
+		{"libc6:i386", "The i386 copy.", true},
+		{"held-pkg", "A held package is still installed.", true},
+		{"summary-only", "", true},
+		{"removed-pkg", "", false},
+		{"libc", "", false},
+		{"libc6:arm64", "", false},
+	}
+	for _, c := range cases {
+		got, found, err := ParseInstalledDescription(strings.NewReader(status), c.name)
+		if err != nil || found != c.found || got != c.want {
+			t.Errorf("%s = %q, %v, %v", c.name, got, found, err)
+		}
+	}
+}
+
+func TestDescriptionLimit(t *testing.T) {
+	long := strings.Repeat("word ", 30) + "\n"
+	got := IndexDescription(strings.Repeat(long, 1000))
+	if len(got) > maxDescriptionBytes || !strings.HasSuffix(got, "word") {
+		t.Errorf("len = %d, tail %q", len(got), got[max(len(got)-10, 0):])
+	}
+}
+
+func TestReaderInstalledDescription(t *testing.T) {
+	r := NewReaderFS(fstest.MapFS{DpkgStatusPath: {Data: readFixture(t, "dpkg-status")}})
+	if got, err := r.InstalledDescription("libc6:i386"); err != nil || got != "The i386 copy." {
+		t.Errorf("libc6:i386 = %q, %v", got, err)
+	}
+	if got, err := r.InstalledDescription("nope"); err != nil || got != "" {
+		t.Errorf("nope = %q, %v", got, err)
+	}
+	// 파일이 없으면(개발 환경) 설명이 없을 뿐 오류가 아니다.
+	if got, err := NewReaderFS(fstest.MapFS{}).InstalledDescription("libc6"); err != nil || got != "" {
+		t.Errorf("no status = %q, %v", got, err)
+	}
+	dir := NewReaderFS(fstest.MapFS{DpkgStatusPath + "/x": {Data: []byte("x")}})
+	if _, err := dir.InstalledDescription("libc6"); err == nil {
+		t.Error("directory status parsed")
+	}
+}

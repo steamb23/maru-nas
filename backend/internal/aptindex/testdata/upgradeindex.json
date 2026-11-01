@@ -7,7 +7,7 @@
     "depends": "",
     "description": "openmediavault - The open network attached storage solution",
     "descriptionmd5": "00000000000000000000000000000000",
-    "extendeddescription": "",
+    "extendeddescription": "Example NAS solution based on Debian Linux. It contains services\nlike SSH, SMB/CIFS and rsync.\n\n\nFeatures:\n* web administration\n* plugin system",
     "filename": "pool/main/o/openmediavault/openmediavault_8.5.12-1_all.deb",
     "homepage": "https://www.openmediavault.org",
     "installedsize": 4096000,
