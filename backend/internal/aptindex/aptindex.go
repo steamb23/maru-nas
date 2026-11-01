@@ -26,7 +26,7 @@ const (
 	RebootPkgsPath = "run/reboot-required.pkgs"
 )
 
-// 읽는 크기의 상한. 인덱스는 패키지마다 2KB 안팎이다.
+// 읽는 크기의 상한. 인덱스는 패키지마다 2KB 안팎이다(긴 설명은 maxDescriptionBytes).
 const (
 	maxIndexBytes   = 32 << 20
 	maxPkgsBytes    = 64 << 10
@@ -53,6 +53,9 @@ type Package struct {
 	Filename string
 	// Size는 내려받을 크기(바이트)다.
 	Size int64
+	// Description은 후보 버전의 긴 설명이다(요약 제외, IndexDescription으로 다듬음). Debian 공식 저장소의
+	// 패키지는 비어 있다(description.go).
+	Description string
 }
 
 // indexEntry는 upgradeindex.json 항목 중 읽는 필드다. 나머지 필드는 버린다.
@@ -66,6 +69,8 @@ type indexEntry struct {
 	Summary    string       `json:"summary"`
 	Filename   string       `json:"filename"`
 	Size       *json.Number `json:"size"`
+	// ExtendedDescription은 omv-mkaptidx가 python-apt의 raw_description에서 만든 긴 설명이다.
+	ExtendedDescription string `json:"extendeddescription"`
 }
 
 // ParseIndex는 upgradeindex.json(JSON 배열)을 읽는다. 이름이 없는 항목은 버리고 이름순으로 정렬한다.
@@ -87,13 +92,14 @@ func ParseIndex(r io.Reader) ([]Package, error) {
 			continue
 		}
 		p := Package{
-			Name:       name,
-			Version:    field(e.Version),
-			OldVersion: field(e.OldVersion),
-			Repository: field(e.Repository),
-			Section:    field(e.Section),
-			Summary:    field(e.Summary),
-			Filename:   field(e.Filename),
+			Name:        name,
+			Version:     field(e.Version),
+			OldVersion:  field(e.OldVersion),
+			Repository:  field(e.Repository),
+			Section:     field(e.Section),
+			Summary:     field(e.Summary),
+			Filename:    field(e.Filename),
+			Description: IndexDescription(e.ExtendedDescription),
 		}
 		if e.Size != nil {
 			if n, err := e.Size.Int64(); err == nil && n > 0 {

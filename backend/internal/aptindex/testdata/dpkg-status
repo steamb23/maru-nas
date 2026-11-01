@@ -1,0 +1,50 @@
+Package: libc6
+Status: install ok installed
+Priority: optional
+Section: libs
+Installed-Size: 12345
+Maintainer: Example Maintainers <maint@example.org>
+Architecture: amd64
+Multi-Arch: same
+Source: glibc
+Version: 2.41-12
+Depends: libgcc-s1
+Conffiles:
+ /etc/ld.so.conf.d/x86_64-linux-gnu.conf 00000000000000000000000000000000
+Description: Example C Library: Shared libraries
+ Contains the standard libraries that are used by nearly all programs on
+ the system. This package includes shared versions of the standard C library
+ and the standard math library.
+ .
+ Example list:
+  * first item that is long enough to
+    wrap onto a second line
+  * second item
+Homepage: https://www.example.org/libc
+
+Package: libc6
+Status: install ok installed
+Architecture: i386
+Version: 2.41-12
+Description: Example C Library: Shared libraries (i386)
+ The i386 copy.
+
+Package: removed-pkg
+Status: deinstall ok config-files
+Architecture: all
+Version: 1.0-1
+Description: Example removed package
+ Only configuration files are left.
+
+Package: held-pkg
+Status: hold ok installed
+Architecture: all
+Version: 2.0-1
+Description: Example held package
+ A held package is still installed.
+
+Package: summary-only
+Status: install ok installed
+Architecture: all
+Version: 3.0-1
+Description: Example package without a long description
