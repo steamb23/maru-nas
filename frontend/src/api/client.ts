@@ -59,6 +59,8 @@ import type {
   NotificationPrefsRequest,
   NotificationsResponse,
   OverridableSetting,
+  PackageChangelog,
+  PackageDetail,
   PackageUpdate,
   PackagesResponse,
   PasskeyAssertion,
@@ -405,6 +407,24 @@ export async function runAddonAction(
   })
 }
 
+// runAddonQuery는 결과를 돌려주는 애드온 조작(Query) 하나를 실행하고 결과를 guard로 검사한다(시스템 업데이트의
+// 변경 기록). 경로와 오류는 runAddonAction과 같다.
+export async function runAddonQuery<T>(
+  id: string,
+  action: string,
+  target: string,
+  guard: (v: unknown) => v is T,
+  opts: RunAddonActionOptions = {},
+): Promise<T> {
+  const body: ActionRequest = { target }
+  const path = `/addons/${encodeURIComponent(id)}/actions/${encodeURIComponent(action)}`
+  const data = await postJSON(path, { body, signal: opts.signal })
+  if (!guard(data)) {
+    throw new Error(`${path}: unexpected response shape`)
+  }
+  return data
+}
+
 // hasAddonSources는 애드온 응답에 공통으로 들어 있는 출처 필드를 검사한다.
 export function hasAddonSources(v: Record<string, unknown>): boolean {
   return isArrayOf(v.sources, isStr) && isOptional(v.failedSources, (x): x is string[] => isArrayOf(x, isStr))
@@ -638,6 +658,17 @@ function isPackageUpdate(v: unknown): v is PackageUpdate {
   )
 }
 
+// isPackageDetail은 패키지 하나의 설명(?detail=<이름>)의 모양을 본다.
+export function isPackageDetail(v: unknown): v is PackageDetail {
+  return (
+    isObj(v) &&
+    isStr(v.name) &&
+    isOptional(v.summary, isStr) &&
+    isOptional(v.description, isStr) &&
+    isOptional(v.descriptionFrom, (x) => isOneOf(x, ['candidate', 'installed'] as const))
+  )
+}
+
 // isPackagesResponse는 시스템 업데이트 애드온 응답의 모양을 본다.
 export function isPackagesResponse(v: unknown): v is PackagesResponse {
   return (
@@ -649,8 +680,33 @@ export function isPackagesResponse(v: unknown): v is PackagesResponse {
     isObj(v.reboot) &&
     isBool(v.reboot.required) &&
     isOptional(v.reboot.since, isStr) &&
-    isOptional(v.reboot.packages, (x) => isArrayOf(x, isStr))
+    isOptional(v.reboot.packages, (x) => isArrayOf(x, isStr)) &&
+    isOptional(v.detail, isPackageDetail)
   )
+}
+
+// isPackageChangelog은 변경 기록 조작(changelog) 결과의 모양을 본다.
+export function isPackageChangelog(v: unknown): v is PackageChangelog {
+  return (
+    isObj(v) &&
+    isStr(v.name) &&
+    isStr(v.version) &&
+    isStr(v.recent) &&
+    isOptional(v.earlier, isStr) &&
+    isBool(v.matched) &&
+    isOptional(v.truncated, isBool)
+  )
+}
+
+// fetchPackageDetail은 업데이트할 패키지 하나의 설명이다. 그 패키지가 목록에 없으면 null이다.
+export async function fetchPackageDetail(name: string, signal?: AbortSignal): Promise<PackageDetail | null> {
+  const res = await fetchAddon('packages', isPackagesResponse, { query: { detail: name }, signal })
+  return res.detail ?? null
+}
+
+// fetchPackageChangelog은 패키지 하나의 변경 기록이다. OMV가 패키지 파일을 먼저 내려받아야 하면 몇 분 걸린다.
+export function fetchPackageChangelog(name: string, signal?: AbortSignal): Promise<PackageChangelog> {
+  return runAddonQuery('packages', 'changelog', name, isPackageChangelog, { signal })
 }
 
 // fetchJobs는 진행 중인 서버 백그라운드 작업과 이 사용자의 결과를 가져온다(관리자). 모르는 종류의 결과는 뺀다.

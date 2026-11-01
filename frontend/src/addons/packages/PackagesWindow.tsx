@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Job, PackageUpdate, PackagesResponse } from '../../api/types.gen'
 import { useLanguage } from '../../i18n'
@@ -12,11 +12,11 @@ import { type ActionErrorCode, isBusy } from '../common/actionState'
 import { formatBytes, formatTime } from '../common/format'
 import { useAddonActions } from '../common/useAddonActions'
 import type { WindowViewProps } from '../types'
+import { PackageDetail } from './PackageDetail'
 import { usePackagesNav } from './nav'
 import {
   type OutputBuffer,
   UPDATE_SETTINGS_ROUTE,
-  changelogRoute,
   elapsedSeconds,
   formatElapsed,
   jobHeading,
@@ -100,6 +100,12 @@ export function PackagesWindow({ active }: WindowViewProps) {
 
   const confirmOpen = ctl.state.confirm?.action === 'upgrade'
 
+  // 행의 자세히 보기(설명·변경 기록 모달). 창에 두어 탭이 바뀌어 목록이 사라져도 닫는 애니메이션이 이어진다.
+  // 닫으면 open만 끄고, 애니메이션이 끝나면(onClosed) 비운다.
+  const [detail, setDetail] = useState<{ pkg: PackageUpdate; open: boolean } | null>(null)
+  const closeDetail = useCallback(() => setDetail((d) => (d ? { ...d, open: false } : d)), [])
+  const clearDetail = useCallback(() => setDetail((d) => (d?.open ? d : null)), [])
+
   return (
     <div className="pkg-window">
       <div className="pkg-tabs-row">
@@ -147,6 +153,7 @@ export function PackagesWindow({ active }: WindowViewProps) {
           onInstall={() => ctl.request('', 'upgrade')}
           onDismissError={() => ctl.dismiss('')}
           onShowJob={() => setTab('job')}
+          onDetail={(pkg) => setDetail({ pkg, open: true })}
         />
       ) : (
         <JobView
@@ -165,6 +172,18 @@ export function PackagesWindow({ active }: WindowViewProps) {
         onCancel={ctl.cancel}
         onConfirm={ctl.confirm}
       />
+      {detail && (
+        <PackageDetail
+          key={detail.pkg.name}
+          pkg={detail.pkg}
+          open={detail.open}
+          busy={busy}
+          workbench={workbench}
+          onClose={closeDetail}
+          onClosed={clearDetail}
+          onGone={refresh}
+        />
+      )}
     </div>
   )
 }
@@ -181,6 +200,7 @@ interface ListProps {
   onInstall: () => void
   onDismissError: () => void
   onShowJob: () => void
+  onDetail: (pkg: PackageUpdate) => void
 }
 
 function ListView(p: ListProps) {
@@ -288,7 +308,7 @@ function ListView(p: ListProps) {
           </div>
           <ul className="pkg-list selectable" aria-label={t('packages.listLabel')}>
             {data.packages.map((pkg) => (
-              <PackageRow key={pkg.name} pkg={pkg} workbench={p.workbench} />
+              <PackageRow key={pkg.name} pkg={pkg} onDetail={p.onDetail} />
             ))}
           </ul>
         </div>
@@ -297,7 +317,7 @@ function ListView(p: ListProps) {
   )
 }
 
-function PackageRow({ pkg, workbench }: { pkg: PackageUpdate; workbench: boolean }) {
+function PackageRow({ pkg, onDetail }: { pkg: PackageUpdate; onDetail: (pkg: PackageUpdate) => void }) {
   const { t } = useTranslation()
   const lang = useLanguage()
   return (
@@ -306,7 +326,11 @@ function PackageRow({ pkg, workbench }: { pkg: PackageUpdate; workbench: boolean
         <span className="pkg-name">{pkg.name}</span>
         <span className="pkg-sub">
           {pkg.repository && <span className="badge">{pkg.repository}</span>}
-          {pkg.summary && <span className="pkg-summary">{pkg.summary}</span>}
+          {pkg.summary && (
+            <span className="pkg-summary" lang="en">
+              {pkg.summary}
+            </span>
+          )}
         </span>
       </div>
       <div className="pkg-version-col">
@@ -318,19 +342,16 @@ function PackageRow({ pkg, workbench }: { pkg: PackageUpdate; workbench: boolean
         </span>
       </div>
       <span className="pkg-size pkg-nums">{formatBytes(pkg.size, lang)}</span>
-      {workbench && pkg.filename ? (
-        <button
-          type="button"
-          className="row-action-button"
-          title={t('packages.changelog')}
-          aria-label={t('packages.changelogLabel', { name: pkg.name })}
-          onClick={() => openWorkbenchRoute(changelogRoute(pkg.filename ?? ''))}
-        >
-          <IconImage name="external-link-symbolic" size={14} />
-        </button>
-      ) : (
-        <span />
-      )}
+      <button
+        type="button"
+        className="row-action-button"
+        title={t('packages.detail.open')}
+        aria-label={t('packages.detail.openLabel', { name: pkg.name })}
+        aria-haspopup="dialog"
+        onClick={() => onDetail(pkg)}
+      >
+        <IconImage name="dialog-information-symbolic" size={16} />
+      </button>
     </li>
   )
 }

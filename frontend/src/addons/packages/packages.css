@@ -524,6 +524,248 @@
   word-break: keep-all;
 }
 
+/* 패키지 자세히 보기(설명·변경 기록 모달, PackageDetail). 크기를 고정하고 .modal-body 하나만 스크롤한다.
+   모달은 .window-body 밖 호스트에 그려져 @container pkg-window가 닿지 않으므로 줄바꿈으로만 좁은 폭에 맞춘다. */
+.pkg-detail .modal-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pkg-detail-body {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.pkg-detail-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.pkg-detail-versions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+  min-width: 0;
+}
+
+.pkg-detail-versions .pkg-old,
+.pkg-detail-versions .pkg-version {
+  font-size: 12px;
+}
+
+.pkg-detail-arrow {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.pkg-detail-sub {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  min-width: 0;
+  font-size: 12px;
+}
+
+.pkg-detail-sub .badge {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pkg-detail-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.pkg-detail-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.pkg-detail-heading {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.pkg-detail-head .badge {
+  align-self: center;
+}
+
+.pkg-detail-since {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* 설명 원문(lang="en"). 문단은 다시 흐르고, 글머리표 줄은 목록, 들여 쓴 줄은 원문 그대로다. */
+.pkg-detail-desc {
+  font-size: 13px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+  border-radius: 4px;
+  outline: none;
+}
+
+.pkg-detail-desc:focus-visible,
+.pkg-detail .pkg-output:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  outline-offset: 1px;
+}
+
+.pkg-detail-desc p,
+.pkg-detail-desc ul,
+.pkg-detail-desc pre {
+  margin: 0 0 8px;
+}
+
+.pkg-detail-desc > :last-child {
+  margin-bottom: 0;
+}
+
+.pkg-detail-summary {
+  font-weight: 600;
+}
+
+.pkg-detail-desc ul {
+  padding-left: 20px;
+}
+
+.pkg-detail-desc li + li {
+  margin-top: 2px;
+}
+
+.pkg-detail-desc pre {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 12px;
+  white-space: pre-wrap;
+}
+
+/* 한 줄 안내(출처, 요약만, 설명 실패, 이전 기록 생략, 설치된 버전 못 찾음) */
+.pkg-detail-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-muted);
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.pkg-detail-note.error {
+  color: light-dark(#b42318, #ffb4ab);
+}
+
+.pkg-detail-note .addon-button {
+  margin-left: 2px;
+}
+
+/* 변경 기록 pre: 안쪽 스크롤 없이 늘어나 본문 하나만 스크롤한다(max-height 없음). */
+.pkg-detail .pkg-output {
+  flex: none;
+  min-height: 0;
+  overflow: visible;
+}
+
+.pkg-detail-toggle {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: 4px;
+  margin-left: -4px;
+  padding: 4px 8px 4px 2px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pkg-detail-toggle:hover {
+  background: var(--hover-bg);
+  color: var(--text);
+}
+
+.pkg-detail-toggle .symbolic-icon {
+  transition: transform 0.15s ease;
+}
+
+.pkg-detail-toggle[aria-expanded='true'] .symbolic-icon {
+  transform: rotate(90deg);
+}
+
+:root[data-animations='off'] .pkg-detail-toggle .symbolic-icon {
+  transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pkg-detail-toggle .symbolic-icon {
+    transition: none;
+  }
+}
+
+.pkg-detail-earlier {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pkg-detail-earlier[hidden] {
+  display: none;
+}
+
+/* 불러오는 중·변경 기록 없음: .pkg-waiting 점선 상자를 가운데 정렬로 */
+.pkg-detail-placeholder,
+.pkg-detail-placeholder > div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.pkg-detail-placeholder {
+  min-height: 96px;
+  padding: 16px;
+  text-align: center;
+}
+
+.pkg-detail-placeholder p {
+  margin: 0;
+}
+
+.pkg-detail-placeholder-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* 단추 줄: 워크벤치 링크는 왼쪽, 닫기는 오른쪽. 링크 글자가 본문 왼쪽 끝에 맞도록 안쪽 여백만큼 당긴다. */
+.pkg-detail .modal-buttons .pkg-link {
+  margin-right: auto;
+  margin-left: -8px;
+}
+
 /* 좁은 창: 행의 버전 열을 이름 아래로 옮기고, 도구 막대의 설명은 다음 줄로 보낸다. */
 @container pkg-window (max-width: 560px) {
   .pkg-row {

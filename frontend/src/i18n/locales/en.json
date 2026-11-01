@@ -849,7 +849,8 @@
   },
   "dialog": {
     "ok": "OK",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "close": "Close"
   },
   "elevation": {
     "title": "Administrator authentication",
@@ -1507,8 +1508,43 @@
     },
     "current": "Current {{version}}",
     "newInstall": "New install",
-    "changelog": "Changelog (OMV Workbench)",
-    "changelogLabel": "{{name}} changelog (OMV Workbench)",
+    "detail": {
+      "open": "Description and changelog",
+      "openLabel": "{{name}} description and changelog",
+      "newVersion": "New {{version}}",
+      "size": "{{size}} to download",
+      "description": "Description",
+      "original": "English original",
+      "installedDesc": "This is the description of the installed version.",
+      "noLong": "This package has no detailed description.",
+      "descFailed": "Couldn't load the detailed description.",
+      "changelog": "Changelog",
+      "since": "Since the installed version",
+      "unmatched": "The installed version's entry wasn't found, so the whole changelog is shown.",
+      "noRecent": "No changes have been recorded since the installed version.",
+      "earlier": "Installed version and earlier",
+      "truncated": "The changelog is long, so the rest was omitted.",
+      "loading": "Loading the changelog",
+      "loadingHint": "If OMV has to download the package file ({{size}}) first, this can take a few minutes.",
+      "waited": "Waiting for {{elapsed}}",
+      "none": "This package has no changelog.",
+      "busy": {
+        "title": "An update task is running",
+        "body": "The changelog loads when the task finishes."
+      },
+      "failed": {
+        "title": "Couldn't load the changelog",
+        "download": "OMV couldn't download the package file. Check that the repository is reachable, then try again.",
+        "timeout": "OMV is taking too long to respond. Try again in a moment.",
+        "other": "OMV returned an error. Try again in a moment."
+      },
+      "gone": {
+        "title": "The update list has changed",
+        "body": "This package is no longer in the update list. It may already be installed, so check the list."
+      },
+      "retry": "Try again",
+      "workbench": "View in OMV Workbench"
+    },
     "upToDate": {
       "title": "All packages are up to date",
       "body": "You'll get a notification when new updates are available."
