@@ -75,9 +75,9 @@ func main() {
 			role = "admin"
 		}
 		if u.TOTP != "" {
-			log.Printf("  account %s / %s (%s, 2FA code %s)", u.Name, u.Password, role, u.TOTP)
+			log.Printf("  account %s (%s, 2FA enabled)", u.Name, role)
 		} else {
-			log.Printf("  account %s / %s (%s)", u.Name, u.Password, role)
+			log.Printf("  account %s (%s)", u.Name, role)
 		}
 	}
 	pluginData := omvfake.DefaultPluginData()
