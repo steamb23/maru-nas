@@ -104,6 +104,7 @@ if [[ $fake == 1 ]]; then
   # 시스템 업데이트 앱과 APT·재부팅 알림은 가짜 OMV 프로세스가 이 가짜 루트에 쓴 업데이트 목록(upgradeindex.json)과
   # 재부팅 권장 파일을 읽는다. 시나리오는 FAKEAPT_SCENARIO(success, fail, core-removal, locked, dirty, slow)다.
   export MARU_DEV_NOTIFY_ROOT="${MARU_DEV_NOTIFY_ROOT:-$MARU_STATE_DIR/notify-root}"
+  # 디스크 건강의 SMART 상세는 가짜 OMV가 답한다. FAKESMART_DELAY(예: 5s)면 잠든 디스크를 깨우는 것처럼 늦게 답한다.
 fi
 
 # 이미 떠 있는 서버가 있으면 시작하지 않는다. 일부만 떠서 다른 서버(예: 실제 OMV에 연결된

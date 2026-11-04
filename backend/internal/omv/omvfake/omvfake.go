@@ -12,7 +12,8 @@
 //     options.updatelastaccess=false면 마지막 접근 시각을 갱신하지 않는다.
 //   - 인증이 필요한 서비스(Session 밖)는 세션이 없으면 401.
 //   - WebGui.getAutoLogoutSettings는 세션 timeout을 분 단위로 돌려준다(OMV 설정과 같은 단위).
-//   - Smart.getList, Compose.getContainers, CpuTemp.get은 합성 값을 돌려준다(plugins.go).
+//   - Smart.getList, Compose.getContainers, CpuTemp.get은 합성 값을 돌려준다(plugins.go). 디스크 하나의
+//     SMART 상세(Smart.getInformation 등)는 smart.go이고, SetSmartDelay로 응답을 늦춘다.
 //   - Exec.isRunning은 백그라운드 작업이 끝났는지 알려 준다(exec.go).
 //   - 로그인 성공 시 OPENMEDIAVAULT-LOGIN-* 쿠키가 없으면 "새 브라우저 로그인"
 //     메일을 보낸 것으로 센다(LoginMails).
@@ -35,6 +36,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -162,6 +164,8 @@ type Server struct {
 	glitches map[string]glitch
 	// apt는 Apt.update·upgrade의 가짜 작업 설정이다(apt.go).
 	apt AptConfig
+	// smartDelay는 SMART 상세 RPC의 응답 지연(time.Duration)이다(smart.go의 SetSmartDelay). 잠금 밖에서 읽는다.
+	smartDelay atomic.Int64
 }
 
 type session struct {
@@ -300,6 +304,14 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	touch := true
 	if v, ok := body.Options["updatelastaccess"].(bool); ok {
 		touch = v
+	}
+	// 잠든 디스크를 깨우는 시간 흉내. 잠금을 잡기 전에 기다려 다른 호출을 막지 않는다.
+	if d := time.Duration(s.smartDelay.Load()); d > 0 && isSmartDetail(body.Service, body.Method) {
+		select {
+		case <-time.After(d):
+		case <-r.Context().Done():
+			return
+		}
 	}
 
 	s.mu.Lock()

@@ -11,6 +11,7 @@ import (
 // 코어·플러그인 RPC의 합성 응답. 형식은 OMV 8 소스를 따른다.
 //
 //   - Smart.getList (admin): engined/rpc/smart.inc. rpc.common.getlist 파라미터, {total, data}
+//   - Smart.getInformation·getAttributes·getSelfTestLogs·getExtendedInformation (admin): 디스크 하나의 상세(smart.go)
 //   - Compose.getContainers (모두): engined/rpc/compose.inc(openmediavault-compose).
 //     첫 행은 런타임 행(name Docker/Podman, status는 번역된 문구), 나머지는 docker container ls
 //   - CpuTemp.get (모두): engined/rpc/cputemp.inc(openmediavault-cputemp). {cputemp: 숫자}
@@ -70,6 +71,9 @@ type ServiceStatus struct {
 // PluginData는 가짜 OMV가 돌려주는 코어·플러그인 RPC 값이다. SetPluginData로 바꾼다.
 type PluginData struct {
 	Smart []SmartDevice
+	// SmartDetails는 장치 이름 → SMART 상세 RPC 값이다(smart.go). Smart에 있고 여기에 없는 장치는 SMART를
+	// 지원하지 않는 것처럼 답한다.
+	SmartDetails map[string]SmartDetail
 	// Runtime은 Compose.getContainers 첫 행이다. RuntimeStatus는 OMV가 번역한 문구다.
 	Runtime       string
 	RuntimeStatus string
@@ -124,6 +128,7 @@ func DefaultPluginData() PluginData {
 			fakeDisk("sdb", "Fake HDD 8TB", "8001563222016", 36, "BAD_ATTRIBUTE_IN_THE_PAST"),
 			fakeDisk("sdc", "Fake USB Disk", "500107862016", "", "GOOD"),
 		},
+		SmartDetails:  DefaultSmartDetails(),
 		Runtime:       "Docker",
 		RuntimeStatus: "running",
 		Containers: []Container{
@@ -197,6 +202,11 @@ func (s *Server) handlePlugin(sess *session, service, method string, params json
 			return nil, e, true
 		}
 		if res, rerr, ok := s.handleService(service, method, params); ok {
+			return res, rerr, true
+		}
+	}
+	if service == "Smart" {
+		if res, rerr, ok := s.handleSmartDetail(sess, method, params); ok {
 			return res, rerr, true
 		}
 	}

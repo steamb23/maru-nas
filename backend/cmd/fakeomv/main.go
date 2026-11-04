@@ -22,6 +22,8 @@
 // 적용 요청을 처리해 가짜 루트의 상태 파일에 쓴다. FAKEUPGRADE_SCENARIO로 시나리오(web, manual, latest, check-fail,
 // apply-fail, disabled)를, FAKEUPGRADE_STEP으로 단계 사이 지연(기본 1.5s)을 고른다.
 //
+// FAKESMART_DELAY(예: 5s)가 있으면 디스크 건강의 SMART 상세 RPC가 그만큼 늦게 답한다(잠든 디스크를 깨우는 시간 흉내).
+//
 // MARU_DEV_NOTICES가 있으면 maru의 개발용 알림 출처가 읽는 가짜 알림 파일을 그 경로에 쓴다(notices.go).
 // FAKENOTICES로 시나리오(sample, none, many, rotate)를, FAKENOTICES_STEP으로 rotate 주기(기본 30s)를 고른다.
 package main
@@ -136,6 +138,10 @@ func main() {
 		log.Printf("fake apt index under %s (%d updates, scenario %s)", root, len(fakePackages), scenario)
 	}
 	srv.SetPluginData(pluginData)
+	if d := envDuration("FAKESMART_DELAY", 0); d > 0 {
+		srv.SetSmartDelay(d)
+		log.Printf("fake SMART detail RPCs answer after %v", d)
+	}
 	mux := http.NewServeMux()
 	mux.Handle("/rpc.php", srv)
 	mux.HandleFunc("GET /{$}", workbenchPage)
