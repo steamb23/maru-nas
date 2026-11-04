@@ -70,6 +70,24 @@
   color: var(--text);
 }
 
+/* 애드온 패키지 창의 배지. 제목이 잘려도 배지는 보이게 제목 바로 뒤에 두고 남는 자리를 배지 뒤로 민다. */
+.titlebar-title.with-badge {
+  flex: 0 1 auto;
+}
+
+.titlebar-badge {
+  flex: none;
+  margin-right: auto;
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 4px;
+  background: var(--hover-bg);
+  font-size: 11px;
+  line-height: 18px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
 /* 버튼 영역 너비를 늘리면 windows/geometry.ts의 MIN_VISIBLE도 함께 늘린다.
    오른쪽 위 크기 조절 핸들과 겹치는 부분은 버튼이 우선한다. */
 .titlebar-buttons {

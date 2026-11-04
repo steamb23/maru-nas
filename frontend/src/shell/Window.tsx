@@ -146,6 +146,7 @@ export function Window({ id, bounds, closingState, onClosed }: Props) {
   if (!win) return null
   const app = getWindowApp(win.appId)
   const title = windowTitle(t, win)
+  const pkg = isPackageApp(win.appId)
   const maximizeLabel = win.maximized ? t('window.restore') : t('window.maximize')
   const layout = layoutOf(win)
 
@@ -256,7 +257,7 @@ export function Window({ id, bounds, closingState, onClosed }: Props) {
         className={classes}
         style={style}
         hidden={anim.hidden}
-        aria-label={title}
+        aria-label={pkg ? `${title} (${t('addonPackages.badge')})` : title}
         aria-hidden={closing || undefined}
         onPointerDownCapture={() => focus(id)}
       >
@@ -273,7 +274,9 @@ export function Window({ id, bounds, closingState, onClosed }: Props) {
           }}
         >
           <IconImage name={app.icon} size={20} app />
-          <h2 className="titlebar-title">{title}</h2>
+          <h2 className={pkg ? 'titlebar-title with-badge' : 'titlebar-title'}>{title}</h2>
+          {/* 애드온 패키지는 이름을 스스로 정하므로(내장 앱 이름일 수도 있다) 배지로 구분한다. */}
+          {pkg && <span className="titlebar-badge">{t('addonPackages.badge')}</span>}
           <div className="titlebar-buttons">
             <button type="button" className="win-btn" aria-label={t('window.minimize')}
               title={t('window.minimize')}
