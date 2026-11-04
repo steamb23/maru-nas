@@ -15,10 +15,11 @@ import (
 
 // addonFrameCSP는 애드온 프레임 파일의 CSP다. sandbox allow-scripts로 불투명 출처가 되어 대시보드·OMV의 쿠키와
 // 저장소에 닿지 못하고(주소를 바로 열어도 같다), 네트워크 연결·폼·다른 출처 자원을 막는다. 데이터는 호스트와의
-// postMessage 브리지로만 받는다(.claude/docs/addon-packages.md의 "프레임").
+// postMessage 브리지로만 받는다(.claude/docs/addon-packages.md의 "프레임"). CSP3의 webrtc 지시어는 크롬이 모르는 지시어로
+// 콘솔 오류를 내므로 두지 않는다(WebRTC로 새는 경로는 막지 못하는 한계로 문서에 둔다).
 const addonFrameCSP = "sandbox allow-scripts; default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; " +
 	"img-src 'self' data: blob:; font-src 'self' data:; connect-src 'none'; form-action 'none'; base-uri 'none'; " +
-	"frame-ancestors 'self'; webrtc 'block'"
+	"frame-ancestors 'self'"
 
 // addonFrameTypes는 프레임 경로로 내주는 파일 형식이다. /etc/mime.types에 기대지 않는다.
 var addonFrameTypes = map[string]string{
