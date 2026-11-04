@@ -125,7 +125,8 @@
 ## 권한 요약과 승인
 
 - `addonpkg/permissions.go`의 `Summary`: 관리자 전용, 플러그인, 읽기·쓰기 메서드, 조작, 백엔드, 네트워크. `Digest`는 요약의 해시로 installed.json의 `grant`에 둔다. `Diff(old, new)`는 업데이트 때 더해진·빠진 권한이다
-- 위험 코드: `omv_write`, `backend`, `backend_shared_data`(백엔드는 모든 사용자가 함께 쓴다), `net_lan`, `net_loopback`, `admin_only_rpc_unknown`(관리자 전용인지 모르는 플러그인 메서드)
+- 위험 코드: `omv_write`, `backend`, `backend_shared_data`(백엔드가 OMV를 부르고 모든 사용자가 같은 백엔드를 쓴다), `net_lan`, `net_loopback`. 금지 표 밖의 메서드는 검토하지 않았다는 안내는 위험 코드 없이 검토 화면에 늘 보인다
+- 받지 않은 이유(`addonpkg.Error.Reason`): `archive_invalid`, `too_large`, `manifest_invalid`, `incompatible`, `arch_missing`, `backend_invalid`, `backend_unsupported`, 그리고 레지스트리의 거부 코드
 - 경고: `author_changed`, `downgrade`, `reinstall`, `same_digest`, `backends_disabled`
 - 보증 수준
     - 설치·업데이트·다시 켜기: 관리 창(`requireManage`, 비밀번호와 등록한 수단). 쓰기·백엔드·네트워크가 있는 패키지는 거기에 아래 쓰기 조작과 같은 단계도 필요하다
