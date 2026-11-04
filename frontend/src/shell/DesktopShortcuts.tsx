@@ -8,7 +8,7 @@ import { appAccess, useCapabilitiesStore } from '../addons/capabilities'
 import { ICON_HEIGHT, ICON_WIDTH, iconCenter, inBounds, previewOffsets, rowsPerColumn, slotAt } from '../shortcuts/layout'
 import { placeShortcut, removeShortcut, visibleShortcuts } from '../shortcuts/list'
 import { useShortcutStore } from '../shortcuts/store'
-import { APP_IDS, type AppId, getApp, isAppId } from '../windows/apps'
+import { type AppId, appIds, getApp, isAppId } from '../windows/apps'
 import type { Point, Rect, Size } from '../windows/geometry'
 import { GHOST_GRAB } from './appDrawerAnim'
 import { launchApp } from './launchApp'
@@ -361,7 +361,7 @@ export function DesktopShortcuts({ bounds, listRef, ref }: Props) {
     // "바로가기 추가 ▸" 하위 메뉴. 볼 수 있는 앱마다 하나씩, 이미 있는 앱은 체크 표시와 함께 비활성이다.
     desktopMenuItems: () => {
       if (status !== 'ready') return []
-      const items = APP_IDS.filter(include).map((id): ContextMenuAction => {
+      const items = appIds().filter(include).map((id): ContextMenuAction => {
         const app = getApp(id)
         const added = apps.includes(id)
         return {

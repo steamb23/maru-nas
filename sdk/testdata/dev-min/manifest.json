@@ -1,0 +1,15 @@
+{
+  "format": 1,
+  "id": "dev-min",
+  "version": "0.1.0",
+  "sdk": 1,
+  "name": { "en": "Dev minimal", "ko": "개발 최소" },
+  "description": { "en": "A minimal package for checking the host in a browser." },
+  "author": { "name": "Maru NAS" },
+  "icon": "icon.svg",
+  "views": {
+    "window": { "entry": "window.html", "defaultSize": { "width": 420, "height": 300 } },
+    "widget": { "entry": "widget.html", "defaultSize": { "cols": 2, "rows": 1 } }
+  },
+  "rpc": { "read": ["System.getInformation"] }
+}

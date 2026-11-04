@@ -3,7 +3,7 @@
 // 바탕화면·위젯 등 우클릭 메뉴는 모두 이 모델로 항목을 만들어 contextMenuStore의 openAt으로 연다.
 // 화면에는 ContextMenu 하나만 그린다(한 번에 메뉴 하나).
 import type { ParseKeys } from 'i18next'
-import type { IconName } from '../icons/resolver'
+import type { AppIcon } from '../icons/appIcon'
 
 interface ItemBase {
   // 같은 메뉴 안에서 고유한 값. React key로 쓴다.
@@ -11,7 +11,7 @@ interface ItemBase {
   labelKey: ParseKeys
   // labelKey 문구의 치환값(창 번호를 붙인 제목 등)
   labelParams?: Record<string, string | number>
-  icon?: IconName
+  icon?: AppIcon
   // 비활성 항목은 보이고 포커스도 받지만 누를 수 없다(aria-disabled). 하위 메뉴는 열리지 않는다.
   disabled?: boolean
   // 항목 오른쪽에 흐리게 붙이는 짧은 설명(비활성 이유 등)

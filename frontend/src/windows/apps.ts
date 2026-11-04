@@ -1,25 +1,38 @@
 // 데스크톱에서 열 수 있는 앱 목록. "모든 앱" 화면은 이 순서대로 놓인다(창 보기가 있는 애드온, 준비 중 앱,
-// 셸 앱, 링크 앱).
+// 셸 앱, 링크 앱, 애드온 패키지).
 // 바탕화면에는 사용자가 고른 바로가기만 놓인다(src/shortcuts).
 import type { ParseKeys } from 'i18next'
+import {
+  type PackageAppId,
+  currentPackages,
+  isKnownPackage,
+  knownPackage,
+  packageTitleKey,
+} from '../addonpkg/catalog'
+import type { AddonPackageView } from '../api/types.gen'
 import { type AddonId, MANIFESTS } from '../addons/manifests.gen'
 import type { AddonManifest } from '../addons/types'
-import type { IconName } from '../icons/resolver'
+import type { AppIcon } from '../icons/appIcon'
 import type { Size } from './geometry'
+
+export type { PackageAppId } from '../addonpkg/catalog'
 
 // addon: 내장 애드온의 창 보기(addons/registry.ts). placeholder: "준비 중" 빈 창.
 // shell: 애드온이 아니라 셸이 직접 그리는 창(shell/shellViews.ts, 설정 앱).
 // link: 창 없이 브라우저 탭으로 여는 앱(shell/launchApp.ts). 창 저장소에는 들어가지 않는다.
-export type AppKind = 'addon' | 'placeholder' | 'shell' | 'link'
+// addonpkg: 애드온 패키지의 창 보기(샌드박스 프레임, addonpkg/AddonFrame.tsx). 목록은 capabilities로 받는다.
+export type AppKind = 'addon' | 'placeholder' | 'shell' | 'link' | 'addonpkg'
 
 interface AppBase {
   // 앱 이름의 번역 키. 창 상태에는 제목을 복사하지 않고 그릴 때 번역한다(언어를 바꾸면 바로 바뀌게).
+  // 애드온 패키지는 패키지가 준 이름을 넣은 키(addonpkg/names.ts)다.
   titleKey: ParseKeys
-  icon: IconName
+  // 아이콘 이름 또는 주소(애드온 패키지의 아이콘).
+  icon: AppIcon
 }
 
 export interface WindowAppDef extends AppBase {
-  kind: 'addon' | 'placeholder' | 'shell'
+  kind: 'addon' | 'placeholder' | 'shell' | 'addonpkg'
   defaultSize: Size
   // 크기 조절로 줄일 수 있는 최소 크기. 생략하면 공통 하한(geometry의 MIN_WIDTH·MIN_HEIGHT)을 쓰며,
   // 공통 하한보다 작은 값은 공통 하한으로 올라간다.
@@ -106,8 +119,10 @@ const LINK_APPS = {
 
 // WindowAppId는 창으로 여는 앱이다. 창 저장소(store.ts)는 이 id만 받는다.
 export type ShellAppId = keyof typeof SHELL_APPS
-export type WindowAppId = WindowAddonId | keyof typeof PLACEHOLDER_APPS | ShellAppId
+export type BuiltinWindowAppId = WindowAddonId | keyof typeof PLACEHOLDER_APPS | ShellAppId
+export type WindowAppId = BuiltinWindowAppId | PackageAppId
 export type LinkAppId = keyof typeof LINK_APPS
+export type BuiltinAppId = BuiltinWindowAppId | LinkAppId
 export type AppId = WindowAppId | LinkAppId
 
 function addonApp(m: AddonManifest): WindowAppDef | null {
@@ -129,42 +144,87 @@ const ADDON_APPS = Object.fromEntries(
   }),
 ) as Record<WindowAddonId, WindowAppDef>
 
-const WINDOW_APPS: Record<WindowAppId, WindowAppDef> = { ...ADDON_APPS, ...PLACEHOLDER_APPS, ...SHELL_APPS }
+const WINDOW_APPS: Record<BuiltinWindowAppId, WindowAppDef> = { ...ADDON_APPS, ...PLACEHOLDER_APPS, ...SHELL_APPS }
 
-export const APPS: Record<AppId, AppDef> = { ...WINDOW_APPS, ...LINK_APPS }
+const APPS: Record<BuiltinAppId, AppDef> = { ...WINDOW_APPS, ...LINK_APPS }
 
-export const APP_IDS = Object.keys(APPS) as AppId[]
+// APP_IDS는 빌드에 든 앱 id다(추천순). 애드온 패키지까지 담은 목록은 appIds()다.
+export const APP_IDS = Object.keys(APPS) as BuiltinAppId[]
+const BUILTIN_APP_IDS = APP_IDS
 
-export function getApp(id: AppId): AppDef {
-  return APPS[id]
+function isBuiltin(id: string): id is BuiltinAppId {
+  return Object.hasOwn(APPS, id)
 }
 
-// getWindowApp은 창 앱의 정의(크기 포함)다.
+// packageApp은 애드온 패키지의 창 앱 정의다. 창 보기가 없는 패키지(위젯만)는 앱이 아니다.
+export function packageApp(view: AddonPackageView): WindowAppDef | null {
+  const win = view.views.window
+  if (!win) return null
+  return {
+    titleKey: packageTitleKey(view.id) as ParseKeys,
+    icon: { url: view.icon },
+    kind: 'addonpkg',
+    defaultSize: { ...win.defaultSize },
+    minSize: win.minSize && { ...win.minSize },
+  }
+}
+
+// MISSING_PACKAGE_APP은 이 탭에서 본 적 없는 패키지 id의 정의다. 저장된 창 상태 등 밖에서 온 id를 그릴 때만 쓴다.
+const MISSING_PACKAGE_APP: WindowAppDef = {
+  titleKey: 'addonPackages.unavailableTitle',
+  icon: 'application-x-addon',
+  kind: 'addonpkg',
+  defaultSize: { width: 480, height: 320 },
+}
+
+// appIds는 지금 열 수 있는 앱 id다(내장 앱 다음에 창 보기가 있는 애드온 패키지). 목록을 그리는 컴포넌트는
+// capabilities 저장소에 붙어 있으므로 패키지 목록이 바뀌면 다시 그린다.
+export function appIds(): AppId[] {
+  const pkgs = currentPackages()
+    .filter((p) => p.views.window && !isBuiltin(p.id))
+    .map((p) => p.id as PackageAppId)
+  return [...BUILTIN_APP_IDS, ...pkgs]
+}
+
+export function getApp(id: AppId): AppDef {
+  if (isBuiltin(id)) return APPS[id]
+  return getWindowApp(id)
+}
+
+// getWindowApp은 창 앱의 정의(크기 포함)다. 사라진 애드온 패키지는 이 탭에서 마지막으로 본 정의(묘비)를 준다.
 export function getWindowApp(id: WindowAppId): WindowAppDef {
-  return WINDOW_APPS[id]
+  if (Object.hasOwn(WINDOW_APPS, id)) return WINDOW_APPS[id as BuiltinWindowAppId]
+  const view = knownPackage(id)
+  return (view && packageApp(view)) ?? MISSING_PACKAGE_APP
 }
 
 // isMultiInstance는 한 탭에서 창을 여러 개 열 수 있는 앱인지 확인한다.
 export function isMultiInstance(id: AppId): id is WindowAppId {
-  return Object.hasOwn(WINDOW_APPS, id) && WINDOW_APPS[id as WindowAppId].multiInstance === true
+  return Object.hasOwn(WINDOW_APPS, id) && WINDOW_APPS[id as BuiltinWindowAppId].multiInstance === true
 }
 
-// isAppId는 지금 빌드에 있는 앱 id인지 확인한다. 저장된 바로가기처럼 밖에서 온 id를 거를 때 쓴다.
+// isAppId는 지금 열 수 있는 앱 id인지 확인한다(빌드에 든 앱, 또는 지금 목록에 창 보기가 있는 애드온 패키지).
+// 저장된 바로가기처럼 밖에서 온 id를 거를 때 쓴다.
 export function isAppId(id: string): id is AppId {
-  return Object.hasOwn(APPS, id)
+  return isBuiltin(id) || currentPackages().some((p) => p.id === id && p.views.window !== undefined)
 }
 
-// isAddonApp은 id가 애드온의 창 보기인지 확인한다. 보기 컴포넌트는 addons/registry.ts에서 찾는다.
+// isAddonApp은 id가 내장 애드온의 창 보기인지 확인한다. 보기 컴포넌트는 addons/registry.ts에서 찾는다.
 export function isAddonApp(id: AppId): id is WindowAddonId {
   return Object.hasOwn(ADDON_APPS, id)
 }
 
+// isPackageApp은 id가 애드온 패키지인지(이 탭에서 본 적이 있는지) 확인한다. 보기는 addonpkg/AddonFrame.tsx가 그린다.
+export function isPackageApp(id: string): id is PackageAppId {
+  return !isBuiltin(id) && isKnownPackage(id)
+}
+
 // isShellApp은 id가 셸이 직접 그리는 창 앱인지 확인한다. 보기 컴포넌트는 shell/shellViews.ts에서 찾는다.
-export function isShellApp(id: AppId): id is ShellAppId {
+export function isShellApp(id: AppId | string): id is ShellAppId {
   return Object.hasOwn(SHELL_APPS, id)
 }
 
 // isLinkApp은 id가 창 없이 브라우저 탭으로 여는 앱인지 확인한다.
-export function isLinkApp(id: AppId): id is LinkAppId {
+export function isLinkApp(id: AppId | string): id is LinkAppId {
   return Object.hasOwn(LINK_APPS, id)
 }

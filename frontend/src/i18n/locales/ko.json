@@ -190,6 +190,10 @@
         "body_one": "파일 {{count}}개를 올리지 못했습니다.",
         "body_other": "파일 {{count}}개를 올리지 못했습니다.",
         "bodyStopped": "올리기가 중간에 멈췄습니다."
+      },
+      "addonMessage": {
+        "title": "애드온 {{name}}",
+        "body": "{{text}}"
       }
     },
     "tasks": {
@@ -1836,5 +1840,14 @@
         "jobTimeout": "정해진 시간 안에 끝나지 않아 더 기다리지 않았습니다. 서버에서는 계속 진행 중일 수 있으니 잠시 뒤 업데이트 확인을 다시 하세요."
       }
     }
+  },
+  "addonPackages": {
+    "unavailableTitle": "쓸 수 없는 애드온",
+    "unavailable": "이 애드온 패키지를 더 이상 쓸 수 없습니다. 관리자가 끄거나 지웠을 수 있습니다.",
+    "badge": "애드온 패키지",
+    "confirmTitle": "{{name}} 애드온의 요청",
+    "frameTitle": "{{name}} 애드온 화면",
+    "reload": "다시 불러오기",
+    "frameFailed": "애드온 화면을 불러오지 못했습니다."
   }
 }

@@ -6,9 +6,11 @@ import type { GridSize, WidgetPlacement } from '../api/types.gen'
 import { AddonUnavailable } from '../addons/AddonUnavailable'
 import type { UnavailableReason } from '../addons/capabilities'
 import { usePageVisible } from '../addons/common/usePageVisible'
+import { AddonFrame } from '../addonpkg/AddonFrame'
+import { type PackageAppId, knownPackage } from '../addonpkg/catalog'
 import { ADDON_VIEWS } from '../addons/registry'
 import { IconImage } from '../icons/IconImage'
-import { type WidgetAddonId, getWidget } from '../widgets/catalog'
+import { type BuiltinWidgetId, type WidgetAddonId, getWidget } from '../widgets/catalog'
 import {
   type CellRect,
   type PxRect,
@@ -21,7 +23,7 @@ import {
   snapCell,
 } from '../widgets/grid'
 import { canPlace } from '../widgets/layout'
-import { isAddonApp } from '../windows/apps'
+import { isAddonApp, isPackageApp } from '../windows/apps'
 import { useWindowStore } from '../windows/store'
 import type { ContextMenuItem } from './contextMenu'
 import { type DragDelta, usePointerDrag } from './usePointerDrag'
@@ -85,7 +87,8 @@ export function WidgetFrame({
 }: Props) {
   const { t } = useTranslation()
   const def = getWidget(id)
-  const View = ADDON_VIEWS[id].Widget
+  // 내장 애드온은 보기 컴포넌트, 애드온 패키지는 샌드박스 프레임으로 그린다.
+  const View = def.kind === 'addon' ? ADDON_VIEWS[id as BuiltinWidgetId].Widget : null
   const pageVisible = usePageVisible()
   const ref = useRef<HTMLElement>(null)
   const [mode, setMode] = useState<Mode>('idle')
@@ -104,8 +107,8 @@ export function WidgetFrame({
 
   const rect = cellToPx(placement, area)
   const cells: CellRect = { right: placement.right, top: placement.top, cols: placement.cols, rows: placement.rows }
-  const opensWindow = isAddonApp(id)
-  const title = t(def.manifest.title)
+  const opensWindow = isAddonApp(id) || (isPackageApp(id) && knownPackage(id)?.views.window !== undefined)
+  const title = t(def.titleKey)
 
   useLayoutEffect(() => {
     const from = dropFrom.current
@@ -254,16 +257,23 @@ export function WidgetFrame({
         onKeyDown={onKeyDown}
       >
         <header className="widget-title">
-          <IconImage name={def.manifest.icon} size={16} />
+          <IconImage name={def.icon} size={16} />
           <h2>{title}</h2>
         </header>
         <div className="widget-body">
           {notice ? (
             <AddonUnavailable reason={notice} plugins={plugins} compact />
-          ) : (
+          ) : View ? (
             <ViewBoundary compact>
               <View active={pageVisible} size={{ cols: placement.cols, rows: placement.rows }} />
             </ViewBoundary>
+          ) : (
+            <AddonFrame
+              id={id as PackageAppId}
+              view="widget"
+              active={pageVisible}
+              grid={{ cols: placement.cols, rows: placement.rows }}
+            />
           )}
         </div>
         {resizable &&

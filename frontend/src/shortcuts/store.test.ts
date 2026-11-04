@@ -48,12 +48,12 @@ describe('load', () => {
     expect(store.getState().apps).toEqual([])
   })
 
-  it('지금 빌드에 없는 앱과 중복은 뺀다', async () => {
+  it('지금 없는 앱(꺼진 애드온 패키지 등)은 남기고 중복만 뺀다', async () => {
     const { store } = setup({
       fetchPreferences: async () => ({ shortcuts: [{ app: 'files' }, { app: 'removed-app' }, { app: 'files' }] }),
     })
     await store.getState().load()
-    expect(store.getState().apps).toEqual(['files'])
+    expect(store.getState().apps).toEqual(['files', 'removed-app'])
   })
 
   it('실패하면 error', async () => {

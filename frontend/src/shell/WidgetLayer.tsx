@@ -5,10 +5,11 @@ import { useTranslation } from 'react-i18next'
 import type { WidgetPlacement } from '../api/types.gen'
 import { requiredPlugins, useCapabilitiesStore, widgetAccess } from '../addons/capabilities'
 import { useAppearanceStore, widgetsLocked } from '../appearance/store'
-import { WIDGET_IDS, type WidgetAddonId, getWidget, isWidgetAddon } from '../widgets/catalog'
+import { type WidgetAddonId, getWidget, isWidgetAddon, widgetIds } from '../widgets/catalog'
 import { type PxRect, type PxSize, gridSize, reservedCells } from '../widgets/grid'
 import { commitPlacement, fitLayout, placeNew, removePlacement } from '../widgets/layout'
 import { useWidgetStore } from '../widgets/store'
+import { stableOrder } from '../windows/store'
 import type { ContextMenuAction, ContextMenuItem } from './contextMenu'
 import { WidgetFrame } from './WidgetFrame'
 
@@ -46,6 +47,7 @@ export function WidgetLayer({ bounds, iconsRef, iconsReady, ref }: Props) {
   const [icons, setIcons] = useState<PxRect | null>(null)
   // 위젯을 끌거나 크기를 바꾸는 중이면 레이어를 창 위로 올린다.
   const [raised, setRaised] = useState(false)
+  const [order, setOrder] = useState<string[]>([])
 
   // 로그인한 동안만 그려진다. 로그아웃·만료로 언마운트되면 다음 사용자를 위해 비운다.
   useEffect(() => {
@@ -94,15 +96,15 @@ export function WidgetLayer({ bounds, iconsRef, iconsReady, ref }: Props) {
   useImperativeHandle(ref, () => ({
     desktopMenuItems: () => {
       if (status !== 'ready' || !iconsReady) return []
-      const items = WIDGET_IDS.filter((id) => widgetAccess(caps, id).visible).map((id): ContextMenuAction => {
+      const items = widgetIds().filter((id) => widgetAccess(caps, id).visible).map((id): ContextMenuAction => {
         const def = getWidget(id)
         const added = placements.some((p) => p.addon === id)
         const spot = added ? null : placeNew(def.defaultSize, shown, grid, reserved)
         return {
           kind: 'action',
           id,
-          labelKey: def.manifest.title,
-          icon: def.manifest.icon,
+          labelKey: def.titleKey,
+          icon: def.icon,
           checked: added,
           disabled: added || !spot,
           detailKey: !added && !spot ? 'widgets.noSpace' : undefined,
@@ -124,12 +126,22 @@ export function WidgetLayer({ bounds, iconsRef, iconsReady, ref }: Props) {
     },
   }))
 
+  // 위젯은 처음 그린 순서대로 둔다. 저장 배치의 순서가 바뀌어도 요소가 옮겨지지 않게 한다(옮겨지면 애드온 패키지
+  // 위젯의 iframe이 다시 뜬다).
+  const renderIds = stableOrder(
+    order,
+    shown.map((p) => p.addon),
+  )
+  if (renderIds.length !== order.length || renderIds.some((id, i) => id !== order[i])) setOrder(renderIds)
+  const byId = new Map(shown.map((p) => [p.addon, p]))
+
   if (status !== 'ready' || !iconsReady) return null
 
   return (
     <div className={raised ? 'widget-layer raised' : 'widget-layer'} aria-label={t('widgets.label')} role="region">
-      {shown.map((p) => {
-        if (!isWidgetAddon(p.addon)) return null
+      {renderIds.map((addon) => {
+        const p = byId.get(addon)
+        if (!p || !isWidgetAddon(p.addon)) return null
         const id = p.addon
         return (
           <WidgetFrame

@@ -62,6 +62,8 @@ import driveHarddiskSymbolic from '@colloid/devices/symbolic/drive-harddisk-symb
 import applicationPdf from '@colloid/mimetypes/scalable/application-pdf.svg?url'
 import applicationXCdImage from '@colloid/mimetypes/scalable/application-x-cd-image.svg?url'
 import applicationXExecutable from '@colloid/mimetypes/scalable/application-x-executable.svg?url'
+import applicationXAddon from '@colloid/mimetypes/scalable/application-x-addon.svg?url'
+import addonSymbolic from '@colloid/apps/symbolic/addon-symbolic.svg?url'
 import audioXGeneric from '@colloid/mimetypes/scalable/audio-x-generic.svg?url'
 import imageXGeneric from '@colloid/mimetypes/scalable/image-x-generic.svg?url'
 import inodeSymlink from '@colloid/mimetypes/scalable/inode-symlink.svg?url'
@@ -195,6 +197,8 @@ export const COLLOID_ICONS = {
   'text-x-script': { url: textXScript, kind: 'color' },
   'text-html': { url: textHtml, kind: 'color' },
   'application-x-executable': { url: applicationXExecutable, kind: 'color' },
+  'application-x-addon': { url: applicationXAddon, kind: 'color' },
+  'addon-symbolic': { url: addonSymbolic, kind: 'symbolic' },
   'inode-symlink': { url: inodeSymlink, kind: 'color' },
   'unknown': { url: iconUnknown, kind: 'color' },
 } as const satisfies Record<string, Icon>

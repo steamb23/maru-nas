@@ -4,8 +4,9 @@ import { IconImage } from '../icons/IconImage'
 import { AddonUnavailable } from '../addons/AddonUnavailable'
 import { type UnavailableReason, appAccess, requiredPlugins, useCapabilitiesStore } from '../addons/capabilities'
 import { usePageVisible } from '../addons/common/usePageVisible'
+import { AddonFrame } from '../addonpkg/AddonFrame'
 import { ADDON_VIEWS } from '../addons/registry'
-import { type WindowAppId, getWindowApp, isAddonApp, isShellApp } from '../windows/apps'
+import { type WindowAppId, getWindowApp, isAddonApp, isPackageApp, isShellApp } from '../windows/apps'
 import { type Point, type Rect, type Size, clampPosition, restoreGrab } from '../windows/geometry'
 import { type WindowState, selectActiveId, useWindowStore } from '../windows/store'
 import { windowTitle } from '../windows/title'
@@ -68,15 +69,19 @@ const fromButton = (e: { target: EventTarget }) => e.target instanceof Element &
 // 내용은 다시 그리지 않는다(항목이 많은 창에서 끌기가 버벅이지 않게).
 const WindowBody = memo(function WindowBody({
   appId,
+  windowId,
   notice,
   active,
 }: {
   appId: WindowAppId
+  windowId: string
   notice: UnavailableReason | null
   active: boolean
 }) {
   const View = isAddonApp(appId) ? ADDON_VIEWS[appId].Window : isShellApp(appId) ? SHELL_VIEWS[appId] : null
   if (notice) return <AddonUnavailable reason={notice} plugins={requiredPlugins(appId)} />
+  // 애드온 패키지는 샌드박스 프레임으로 그린다(React.lazy를 쓰지 않는다. 실패를 기억해 다시 불러올 수 없다).
+  if (isPackageApp(appId)) return <AddonFrame id={appId} view="window" active={active} windowId={windowId} />
   return View ? (
     <ViewBoundary>
       <View active={active} />
@@ -293,7 +298,12 @@ export function Window({ id, bounds, closingState, onClosed }: Props) {
         </header>
         <WindowModalContext value={modalLayer}>
           <div className="window-body" inert={blocked}>
-            <WindowBody appId={win.appId} notice={notice} active={!win.minimized && !closing && pageVisible} />
+            <WindowBody
+              appId={win.appId}
+              windowId={id}
+              notice={notice}
+              active={!win.minimized && !closing && pageVisible}
+            />
           </div>
           <div className="modal-host modal-host-window" ref={setModalHost} />
           <DialogOutlet scope={dialogScope} />

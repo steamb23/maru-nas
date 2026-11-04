@@ -7,7 +7,7 @@ import * as client from '../api/client'
 import { createSaveQueue } from '../api/saveQueue'
 import type { Preferences, Shortcut } from '../api/types.gen'
 import type { AppId } from '../windows/apps'
-import { defaultShortcuts, knownShortcuts } from './list'
+import { defaultShortcuts, storedShortcuts } from './list'
 
 // idle: 아직 불러오지 않음. loading: 불러오는 중. ready: 목록 있음. error: 불러오지 못함(바로가기를 그리지 않음).
 export type ShortcutStatus = 'idle' | 'loading' | 'ready' | 'error'
@@ -59,7 +59,7 @@ export function createShortcutStore(api: ShortcutApi) {
         try {
           const prefs = await api.fetchPreferences()
           if (gen !== generation) return
-          const apps = prefs.shortcuts === undefined ? defaultShortcuts() : knownShortcuts(prefs.shortcuts)
+          const apps = prefs.shortcuts === undefined ? defaultShortcuts() : storedShortcuts(prefs.shortcuts)
           set({ status: 'ready', loaded: true, apps, saveFailed: false })
         } catch {
           if (gen === generation) set({ status: 'error', loaded: true })

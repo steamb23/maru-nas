@@ -190,6 +190,10 @@
         "body_one": "Couldn't upload {{count}} file.",
         "body_other": "Couldn't upload {{count}} files.",
         "bodyStopped": "The upload stopped partway."
+      },
+      "addonMessage": {
+        "title": "Addon {{name}}",
+        "body": "{{text}}"
       }
     },
     "tasks": {
@@ -1836,5 +1840,14 @@
         "jobTimeout": "The task didn't finish in time, so it's no longer being watched. It may still be running on the server, so check for updates again in a moment."
       }
     }
+  },
+  "addonPackages": {
+    "unavailableTitle": "Unavailable addon",
+    "unavailable": "This addon package is no longer available. An administrator may have turned it off or removed it.",
+    "badge": "Addon package",
+    "confirmTitle": "Request from the {{name}} addon",
+    "frameTitle": "{{name}} addon view",
+    "reload": "Reload",
+    "frameFailed": "Couldn't load the addon view."
   }
 }

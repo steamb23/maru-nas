@@ -205,14 +205,29 @@ export class ApiError extends Error {
   readonly retryAfterSeconds?: number
   // required는 security_required일 때 거쳐야 하는 보안 강화 모드의 단계다.
   readonly required?: RequiredLevel
+  // reason, detail은 addon_invalid일 때 패키지를 받지 않은 이유 코드와 영어 설명이다(관리자 화면).
+  readonly reason?: string
+  readonly detail?: string
+  // addonCode는 패키지 백엔드가 준 오류 코드다(addon_error).
+  readonly addonCode?: string
 
-  constructor(status: number, message: string, code?: ErrorCode, retryAfterSeconds?: number, required?: RequiredLevel) {
+  constructor(
+    status: number,
+    message: string,
+    code?: ErrorCode,
+    retryAfterSeconds?: number,
+    required?: RequiredLevel,
+    extra: { reason?: string; detail?: string; addonCode?: string } = {},
+  ) {
     super(message)
     this.name = 'ApiError'
     this.status = status
     this.code = code
     this.retryAfterSeconds = retryAfterSeconds
     this.required = required
+    this.reason = extra.reason
+    this.detail = extra.detail
+    this.addonCode = extra.addonCode
   }
 }
 
@@ -233,17 +248,21 @@ async function toApiError(path: string, res: Response): Promise<ApiError> {
   let code: ErrorCode | undefined
   let retryAfter: number | undefined
   let required: RequiredLevel | undefined
+  const extra: { reason?: string; detail?: string; addonCode?: string } = {}
   try {
     const body: unknown = await res.json()
     if (isObj(body)) {
       if (ERROR_CODES.includes(body.code as ErrorCode)) code = body.code as ErrorCode
       if (isNum(body.retryAfterSeconds) && body.retryAfterSeconds > 0) retryAfter = body.retryAfterSeconds
       if (isOneOf(body.required, ['password', 'twoFactor'] as const)) required = body.required
+      if (isStr(body.reason) && /^[a-z_]{1,40}$/.test(body.reason)) extra.reason = body.reason
+      if (isStr(body.detail)) extra.detail = body.detail.slice(0, 1000)
+      if (isStr(body.addonCode) && /^[a-z][a-z0-9_]{0,31}$/.test(body.addonCode)) extra.addonCode = body.addonCode
     }
   } catch {
     // JSON이 아닌 오류 응답(프록시 502 페이지 등)
   }
-  return new ApiError(res.status, `${path}: HTTP ${res.status}`, code, retryAfter, required)
+  return new ApiError(res.status, `${path}: HTTP ${res.status}`, code, retryAfter, required, extra)
 }
 
 interface RequestOptions {
@@ -430,6 +449,64 @@ export async function runAddonQuery<T>(
     throw new Error(`${path}: unexpected response shape`)
   }
   return data
+}
+
+// 애드온 패키지. 브리지(addonpkg/hostServices.ts)가 프레임 대신 부른다. 응답은 패키지가 정한 JSON이라 형태를 검사하지
+// 않고 프레임에 그대로 넘긴다.
+
+function addonPath(id: string, rest = ''): string {
+  return `/addons/${encodeURIComponent(id)}${rest}`
+}
+
+// fetchAddonPackageData는 패키지 백엔드의 데이터다(GET /api/addons/{id}).
+export async function fetchAddonPackageData(id: string, query: Record<string, string>, signal?: AbortSignal): Promise<unknown> {
+  const params = new URLSearchParams(query)
+  const qs = params.size > 0 ? `?${params}` : ''
+  return getJSON(`${addonPath(id)}${qs}`, { signal })
+}
+
+// addonPackageRPC는 패키지가 선언한 OMV 읽기 RPC를 부른다(POST /api/addons/{id}/rpc).
+export async function addonPackageRPC(
+  id: string,
+  service: string,
+  method: string,
+  params: unknown,
+  signal?: AbortSignal,
+): Promise<unknown> {
+  return postJSON(addonPath(id, '/rpc'), { body: { service, method, params: params ?? null }, signal })
+}
+
+// runAddonPackageAction은 패키지 조작을 실행한다. 결과가 없으면(204) null이다.
+export async function runAddonPackageAction(
+  id: string,
+  name: string,
+  target: string,
+  input: unknown,
+  signal?: AbortSignal,
+): Promise<unknown> {
+  const body: Record<string, unknown> = { target }
+  if (input !== undefined) body.input = input
+  const res = await request('POST', addonPath(id, `/actions/${encodeURIComponent(name)}`), { body, signal })
+  if (res.status === 204) return null
+  return res.json()
+}
+
+// fetchAddonStorage는 이 사용자의 패키지 저장값이다. 없으면 null이다.
+export async function fetchAddonStorage(id: string): Promise<unknown> {
+  const data = await getJSON(`/preferences/addons/${encodeURIComponent(id)}`)
+  return isObj(data) ? (data.data ?? null) : null
+}
+
+// saveAddonStorage는 이 사용자의 패키지 저장값을 바꾼다.
+export async function saveAddonStorage(id: string, data: unknown): Promise<void> {
+  await request('PUT', `/preferences/addons/${encodeURIComponent(id)}`, { body: { data } })
+}
+
+// fetchAddonMessages는 패키지 번역(en 위에 lang)이다.
+export async function fetchAddonMessages(id: string, lang: string, signal?: AbortSignal): Promise<Record<string, string>> {
+  const data = await getJSON(addonPath(id, `/i18n/${encodeURIComponent(lang)}`), { signal })
+  if (!isObj(data)) return {}
+  return Object.fromEntries(Object.entries(data).filter((e): e is [string, string] => isStr(e[1])))
 }
 
 // hasAddonSources는 애드온 응답에 공통으로 들어 있는 출처 필드를 검사한다.

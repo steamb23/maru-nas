@@ -88,6 +88,8 @@ func TestValidateRejects(t *testing.T) {
 		"empty name":    {func(m map[string]any) { m["name"] = map[string]any{"en": "  "} }, "name.en"},
 		"control":       {func(m map[string]any) { m["name"] = map[string]any{"en": "Hi\x07"} }, "name.en"},
 		"bidi":          {func(m map[string]any) { m["name"] = map[string]any{"en": "Hi‮"} }, "name.en"},
+		"interpolation": {func(m map[string]any) { m["name"] = map[string]any{"en": "Hi {{x}}"} }, "name.en"},
+		"nesting":       {func(m map[string]any) { m["name"] = map[string]any{"en": "$t(apps.files)"} }, "name.en"},
 		"author":        {func(m map[string]any) { m["author"] = map[string]any{} }, "author.name"},
 		"author url":    {func(m map[string]any) { m["author"] = map[string]any{"name": "A", "url": "javascript:alert(1)"} }, "author.url"},
 		"icon":          {func(m map[string]any) { m["icon"] = "../icon.svg" }, "icon"},
