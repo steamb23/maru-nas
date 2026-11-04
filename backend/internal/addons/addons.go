@@ -19,6 +19,7 @@ import (
 	"strings"
 	"time"
 
+	"maru/backend/config"
 	"maru/backend/internal/api"
 )
 
@@ -184,8 +185,9 @@ var (
 	methodPattern = regexp.MustCompile(MethodPattern)
 )
 
-// IDPattern은 애드온·조작 id 형식이다. 애드온 패키지 manifest 스키마(sdk/js/schema)도 이 값을 쓴다.
-const IDPattern = `^[a-z][a-z0-9]*(-[a-z0-9]+)*$`
+// IDPattern은 애드온·조작 id 형식이다. 애드온 패키지 manifest 스키마(sdk/js/schema)와 백엔드 동기화(설치기)도 이 값을
+// 쓰므로 원본은 backend/config에 있다.
+const IDPattern = config.AddonIDPattern
 
 // MethodPattern은 OMV RPC 메서드 이름("Service.method") 형식이다.
 const MethodPattern = `^[A-Za-z][A-Za-z0-9]*\.[A-Za-z][A-Za-z0-9]*$`
