@@ -3,6 +3,7 @@
 import type { ComponentType } from 'react'
 import type { WindowViewProps } from '../addons/types'
 import { AboutPage } from './AboutPage'
+import { AddonsPage } from './AddonsPage'
 import { DefaultScreenPage } from './DefaultScreenPage'
 import { GeneralPage } from './GeneralPage'
 import { LoginScreenPage } from './LoginScreenPage'
@@ -23,6 +24,7 @@ export const SETTINGS_PAGE_VIEWS: Record<SettingsPageId, ComponentType<WindowVie
   'default-screen': DefaultScreenPage,
   server: ServerPage,
   'security-policy': SecurityPolicyPage,
+  addons: AddonsPage,
   update: UpdatePage,
   about: AboutPage,
 }

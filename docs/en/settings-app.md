@@ -1,6 +1,6 @@
 # Settings app
 
-Open it with "Settings" in "All apps", the header (your user name) of the profile menu on the taskbar, or "Open screen settings" in the desktop's right-click menu. It covers only dashboard settings, your own account's profile, security methods and information.
+Open it with "Settings" in "All apps", the header (your user name) of the profile menu on the taskbar, or "Open screen settings" in the desktop's right-click menu. It covers only dashboard settings, your own account's profile, security methods, addon package management and information.
 
 | Page | Contents | Who |
 |---|---|---|
@@ -12,11 +12,13 @@ Open it with "Settings" in "All apps", the header (your user name) of the profil
 | Default screen | The default theme and wallpaper for users who have not chosen their own screen settings | Administrators |
 | Server | Changing the workbench address, the SMART check time and whether the web terminal is allowed ([Settings you can change on the web](configuration.md#settings-you-can-change-on-the-web)), privileged helper status and root elevation, file explorer options (reading the shared folder list, showing disk tops, following OMV shared folder privileges, creating disk trashes), current settings and how to change them | Administrators |
 | Security policy | Hardening level per feature (web terminal, root elevation, file explorer and its check scope), how long passkey sign-in lasts, passkey public address status, resetting users' sign-in methods | Administrators |
+| Addons | Uploading addon packages (`.maru-addon`), reviewing permissions before installing, turning installed packages on or off and removing them, package details (permissions, SHA-256, who installed it) | Administrators |
 | Update | [Update channel](upgrade.md#update-channel), checking for a new version, the commit list and new settings, [upgrading from the dashboard](upgrade.md#upgrading-from-the-dashboard) | Administrators |
 | About | Version, license, open source notices | All users |
 
 - Administrator pages are visible only to OMV administrator accounts, and their settings apply to all users.
 - Wallpapers can be PNG, JPEG or WebP, up to 20 MB. The reverse proxy's request body size limit must also be larger than that ([Proxy requirements](reverse-proxy.md#proxy-requirements)).
+- Addon package files can be up to 64 MiB. Installing, updating, turning a package back on and deleting backend data happen only after you enter your password again (and confirm with a security method if you registered one).
 - The sign-in background is shown before signing in, so anyone who can reach the dashboard address can see it.
 - Email and tags in the profile are OMV account information. Saving them leaves pending "Apply changes" in OMV, so for administrator accounts saving also applies them (it does not save if OMV has changes that were not applied yet), and for regular user accounts an administrator has to apply them in the OMV web UI. System accounts such as the OMV default administrator (`admin`), and accounts that OMV does not allow to be edited, cannot be changed.
 - Change the password, groups and other account information, and any other OMV or operating system settings, in the OMV web UI.

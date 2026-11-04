@@ -2,6 +2,12 @@ import type {
   AboutResponse,
   ActionRequest,
   AddonCapability,
+  AddonEnabledRequest,
+  AddonPackageStatus,
+  AddonPackagesResponse,
+  AddonPendingInstall,
+  AddonPermissions,
+  AddonPermissionsDiff,
   AppearancePrefs,
   AppearanceRequest,
   CapabilitiesResponse,
@@ -270,6 +276,8 @@ interface RequestOptions {
   body?: unknown
   // image가 있으면 JSON 대신 이미지 바이트를 그 형식으로 보낸다(배경 이미지 올리기).
   image?: Blob
+  // raw가 있으면 JSON 대신 바이트를 application/octet-stream으로 보낸다(애드온 패키지 올리기). 파일의 type은 쓰지 않는다.
+  raw?: Blob
   // true면 401을 받아도 onUnauthorized를 부르지 않는다.
   authRequest?: boolean
   // range가 있으면 Range 머리로 보낸다(GET만, 미리보기의 텍스트 앞부분).
@@ -286,6 +294,9 @@ async function request(
     // 이미지 올리기만 원시 이미지 본문을 받는다(다른 출처의 폼은 이 형식을 보낼 수 없다).
     init.headers = { 'Content-Type': opts.image.type }
     init.body = opts.image
+  } else if (opts.raw) {
+    init.headers = { 'Content-Type': 'application/octet-stream' }
+    init.body = opts.raw
   } else if (method === 'POST' || method === 'PUT') {
     // 백엔드는 본문이 있는 요청에 application/json만 받는다(CSRF 보조 장치).
     init.headers = { 'Content-Type': 'application/json' }
@@ -507,6 +518,134 @@ export async function fetchAddonMessages(id: string, lang: string, signal?: Abor
   const data = await getJSON(addonPath(id, `/i18n/${encodeURIComponent(lang)}`), { signal })
   if (!isObj(data)) return {}
   return Object.fromEntries(Object.entries(data).filter((e): e is [string, string] => isStr(e[1])))
+}
+
+// 애드온 패키지 관리(관리자, /api/site/addons). 응답 형태는 검토 화면이 쓰는 필드만 검사한다.
+
+function isStrMap(v: unknown): v is Record<string, string> {
+  return isObj(v) && Object.values(v).every(isStr)
+}
+
+const isStrList = (v: unknown): v is string[] => isArrayOf(v, isStr)
+
+function isAddonPermissions(v: unknown): v is AddonPermissions {
+  return (
+    isObj(v) &&
+    isBool(v.admin) &&
+    isStrList(v.plugins) &&
+    isStrList(v.read) &&
+    isStrList(v.write) &&
+    isStrList(v.actions) &&
+    isBool(v.backend) &&
+    isStrList(v.network) &&
+    isStrList(v.risks) &&
+    isBool(v.elevated)
+  )
+}
+
+function isAddonPackageStatus(v: unknown): v is AddonPackageStatus {
+  return (
+    isObj(v) &&
+    isStr(v.id) &&
+    isBool(v.dev) &&
+    isBool(v.enabled) &&
+    isOneOf(v.state, ['active', 'disabled', 'rejected', 'invalid'] as const) &&
+    isOptional(v.version, isStr) &&
+    isOptional(v.rev, isStr) &&
+    isOptional(v.reason, isStr) &&
+    isOptional(v.detail, isStr) &&
+    isOptional(v.name, isStrMap) &&
+    isOptional(v.description, isStrMap) &&
+    isOptional(v.author, isStr) &&
+    isOptional(v.authorUrl, isStr) &&
+    isOptional(v.sha256, isStr) &&
+    isOptional(v.installedBy, isStr) &&
+    isOptional(v.installedAt, isStr) &&
+    isOptional(v.updatedAt, isStr) &&
+    isOptional(v.icon, isStr) &&
+    isOptional(v.permissions, isAddonPermissions)
+  )
+}
+
+function isAddonPackagesResponse(v: unknown): v is AddonPackagesResponse {
+  return (
+    isObj(v) &&
+    isArrayOf(v.packages, isAddonPackageStatus) &&
+    isBool(v.canInstall) &&
+    isBool(v.indexError) &&
+    isNum(v.maxUploadBytes) &&
+    isNum(v.sdk)
+  )
+}
+
+function isAddonPermissionsDiff(v: unknown): v is AddonPermissionsDiff {
+  return (
+    isObj(v) &&
+    isBool(v.adminAdded) &&
+    isBool(v.adminRemoved) &&
+    isStrList(v.addedPlugins) &&
+    isStrList(v.addedRead) &&
+    isStrList(v.removedRead) &&
+    isStrList(v.addedWrite) &&
+    isStrList(v.removedWrite) &&
+    isStrList(v.addedActions) &&
+    isBool(v.backendAdded) &&
+    isBool(v.backendRemoved) &&
+    isStrList(v.addedNetwork) &&
+    isStrList(v.removedNetwork) &&
+    isBool(v.widens)
+  )
+}
+
+function isAddonPendingInstall(v: unknown): v is AddonPendingInstall {
+  return (
+    isObj(v) &&
+    isStr(v.pendingId) &&
+    isNum(v.expiresInSeconds) &&
+    isAddonPackageStatus(v.package) &&
+    isOptional(v.installed, isAddonPackageStatus) &&
+    isOptional(v.diff, isAddonPermissionsDiff) &&
+    isStrList(v.warnings)
+  )
+}
+
+// fetchAddonPackages는 관리자의 패키지 목록이다(GET /api/site/addons).
+export async function fetchAddonPackages(signal?: AbortSignal): Promise<AddonPackagesResponse> {
+  const data = await getJSON('/site/addons', { signal })
+  if (!isAddonPackagesResponse(data)) throw new Error('/site/addons: unexpected response shape')
+  return data
+}
+
+// uploadAddonPackage는 패키지 파일을 올려 검토 대기를 만든다. 아직 설치하지 않는다.
+export async function uploadAddonPackage(file: Blob, signal?: AbortSignal): Promise<AddonPendingInstall> {
+  const data = await (await request('POST', '/site/addons/uploads', { raw: file, signal })).json()
+  if (!isAddonPendingInstall(data)) throw new Error('/site/addons/uploads: unexpected response shape')
+  return data
+}
+
+// installAddonUpload는 검토한 대기를 설치한다. 관리 창·단계 확인이 모자라면 403이고 대기는 남는다.
+export async function installAddonUpload(pendingId: string): Promise<AddonPackageStatus> {
+  const data = await postJSON(`/site/addons/uploads/${encodeURIComponent(pendingId)}/install`)
+  if (!isAddonPackageStatus(data)) throw new Error('/site/addons/uploads: unexpected response shape')
+  return data
+}
+
+// discardAddonUpload는 검토 대기를 버린다. 이미 없어도 성공이다.
+export async function discardAddonUpload(pendingId: string): Promise<void> {
+  await request('DELETE', `/site/addons/uploads/${encodeURIComponent(pendingId)}`)
+}
+
+// setAddonPackageEnabled는 패키지를 켜거나 끈다. 켜기는 설치와 같은 확인이 필요하다.
+export async function setAddonPackageEnabled(id: string, enabled: boolean): Promise<AddonPackageStatus> {
+  const body: AddonEnabledRequest = { enabled }
+  const data = await (await request('PUT', `/site/addons/${encodeURIComponent(id)}`, { body })).json()
+  if (!isAddonPackageStatus(data)) throw new Error('/site/addons: unexpected response shape')
+  return data
+}
+
+// uninstallAddonPackage는 패키지를 지운다. purge면 패키지 백엔드의 데이터도 지운다(관리 창 필요).
+export async function uninstallAddonPackage(id: string, purge: boolean): Promise<void> {
+  await request('DELETE', `/site/addons/${encodeURIComponent(id)}${purge ? '?purge=1' : ''}`)
 }
 
 // hasAddonSources는 애드온 응답에 공통으로 들어 있는 출처 필드를 검사한다.

@@ -14,6 +14,7 @@ export type SettingsPageId =
   | 'default-screen'
   | 'server'
   | 'security-policy'
+  | 'addons'
   | 'update'
   | 'about'
 
@@ -79,6 +80,13 @@ export const SETTINGS_PAGES: readonly SettingsPageDef[] = [
     id: 'security-policy',
     labelKey: 'settings.pages.securityPolicy',
     icon: 'security-high-symbolic',
+    group: 'admin',
+    requires: 'admin',
+  },
+  {
+    id: 'addons',
+    labelKey: 'settings.pages.addons',
+    icon: 'addon-symbolic',
     group: 'admin',
     requires: 'admin',
   },

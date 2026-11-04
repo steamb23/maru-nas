@@ -183,7 +183,9 @@ export function StepUpForm({
 
   const hint =
     mode === 'manage'
-      ? t(needFactor ? 'security.stepUp.manageHint' : 'security.stepUp.managePasswordHint')
+      ? purpose === 'addons'
+        ? t(needFactor ? 'security.stepUp.addonsHint' : 'security.stepUp.addonsPasswordHint')
+        : t(needFactor ? 'security.stepUp.manageHint' : 'security.stepUp.managePasswordHint')
       : needPassword
         ? t('security.stepUp.passwordHint')
         : t(HINT_KEYS[factor as Factor])
