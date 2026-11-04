@@ -209,48 +209,58 @@ func Read(r io.Reader, lim Limits, dst *os.Root, arch string) (*Package, error) 
 	}
 	pkg.SHA256 = hex.EncodeToString(h.Sum(nil))
 
+	if err := inspect(pkg, dst, manifest, files, languages, arch, true); err != nil {
+		return nil, err
+	}
+	return pkg, nil
+}
+
+// inspect는 풀린 파일(files: 경로 → 크기)을 manifest와 맞춰 검사하고 pkg를 채운다. needBackend가 false면
+// (개발 디렉터리) 백엔드 패키지에 실행 파일이 없어도 된다(개발자가 개발 소켓으로 따로 띄운다).
+func inspect(pkg *Package, dst *os.Root, manifest []byte, files map[string]int64, languages []string, arch string, needBackend bool) error {
 	if manifest == nil {
-		return nil, fail(ReasonManifest, "manifest.json is missing")
+		return fail(ReasonManifest, "manifest.json is missing")
 	}
 	m, err := format.Decode(manifest)
 	if err != nil {
-		return nil, fail(ReasonManifest, "%v", err)
+		return fail(ReasonManifest, "%v", err)
 	}
 	if err := format.Validate(m); err != nil {
 		var p *format.Problem
 		if errors.As(err, &p) && p.Incompatible {
-			return nil, fail(ReasonIncompatible, "%v", err)
+			return fail(ReasonIncompatible, "%v", err)
 		}
-		return nil, fail(ReasonManifest, "%v", err)
+		return fail(ReasonManifest, "%v", err)
 	}
 	pkg.Manifest = m
 	if err := checkContents(dst, m, files); err != nil {
-		return nil, err
+		return err
 	}
 	slices.Sort(languages)
 	pkg.Languages = languages
 	for _, lang := range languages {
 		if err := checkI18n(dst, "i18n/"+lang+".json"); err != nil {
-			return nil, err
+			return err
 		}
 	}
+	pkg.Backends = nil
 	for file, a := range backendArchs {
 		if _, ok := files["backend/"+file]; ok {
 			if err := checkELF(dst, "backend/"+file, a); err != nil {
-				return nil, err
+				return err
 			}
 			pkg.Backends = append(pkg.Backends, a)
 		}
 	}
 	slices.Sort(pkg.Backends)
 	if m.HasBackend() {
-		if !slices.Contains(pkg.Backends, arch) {
-			return nil, fail(ReasonArchMissing, "no backend for %s (backend/linux-%s)", arch, arch)
+		if needBackend && !slices.Contains(pkg.Backends, arch) {
+			return fail(ReasonArchMissing, "no backend for %s (backend/linux-%s)", arch, arch)
 		}
 	} else if len(pkg.Backends) > 0 {
-		return nil, fail(ReasonManifest, "backend files are present but the manifest declares no backend")
+		return fail(ReasonManifest, "backend files are present but the manifest declares no backend")
 	}
-	return pkg, nil
+	return nil
 }
 
 // cleanName은 tar 항목 이름을 검사한다. 끝의 /(디렉터리)와 앞의 ./는 떼어 낸다.

@@ -43,6 +43,8 @@ type MemoryStore struct {
 	site    api.SiteSettings
 	images  map[ImageKey]memImage
 	records map[string]security.Record
+	// addonData는 사용자 → 애드온 패키지 id → 저장값이다.
+	addonData map[string]map[string]AddonData
 	// rev는 이미지 리비전을 만드는 카운터다.
 	rev int
 }

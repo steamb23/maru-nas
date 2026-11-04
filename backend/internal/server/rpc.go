@@ -17,7 +17,8 @@ const maxRPCBodyBytes = 64 << 10
 
 // rpc는 브라우저의 OMV RPC 요청을 그 사용자의 OMV 세션으로 중계한다.
 //
-//   - 등록된 애드온이 선언한 읽기 메서드만 통과시킨다. 쓰기 메서드는 addons.WritesEnabled와 상관없이
+//   - 내장 애드온이 선언한 읽기 메서드만 통과시킨다. 애드온 패키지가 선언한 메서드는 이 중계로 넓히지 않고
+//     부르는 패키지를 아는 POST /api/addons/{id}/rpc(addonRPC)로만 통과시킨다. 쓰기 메서드는 addons.WritesEnabled와 상관없이
 //     항상 거부한다. Compose.doContainerCommand처럼 파라미터를 검사하지 않고 셸 명령을 만드는 OMV
 //     메서드가 있으므로, 쓰기는 파라미터를 백엔드가 만드는 애드온 조작(/api/addons/{id}/actions)으로만 한다.
 //   - 그 메서드를 선언한 애드온 중 이 사용자가 쓸 수 있는 것이 있어야 한다(역할, 플러그인).
@@ -73,10 +74,14 @@ func (h *handler) rpc(w http.ResponseWriter, r *http.Request, s auth.Session) {
 		writeError(w, http.StatusBadGateway, api.ErrOMVError, "rpc call failed")
 		return
 	}
+	writeRPCResult(w, res.Result)
+}
+
+// writeRPCResult는 OMV 응답의 response 값을 그대로 쓴다(큰 정수의 정밀도를 지키려고 다시 직렬화하지 않는다).
+func writeRPCResult(w http.ResponseWriter, result json.RawMessage) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "no-store")
 	w.WriteHeader(http.StatusOK)
-	result := res.Result
 	if len(result) == 0 {
 		result = json.RawMessage("null")
 	}

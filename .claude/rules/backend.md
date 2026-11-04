@@ -32,6 +32,8 @@ paths:
 - OMV 설정을 바꾸고 적용하는 흐름(적용 대기 확인 → 변경 → `Config.applyChangesBg` → `WaitBg`)은 `addons.ApplyChange` 하나로 한다. 이 백엔드 안의 적용은 그 안의 잠금으로 하나씩 실행된다(서비스 켜기·끄기, 관리자의 프로필 저장). 적용 대기가 이미 있으면 남이 만든 변경을 대신 배포하지 않게 409 `config_dirty`로 거절한다
 - 프로필(`GET·PUT /api/profile`)은 로그인한 사용자 자신만 다룬다. 관리자는 `UserMgmt.getUser(자기 이름)`, 일반 사용자는 `getUserByContext`로 읽고, SSH 키·uid 등은 넘기지 않는다. OMV의 설명 칸(comment, GECOS)은 워크벤치가 "Tags"로 쓰므로 쉼표로 나눈 태그로 주고받는다. 저장은 보내지 않은 값을 지금 값으로 채워 보내며, 관리자는 `ApplyChange`로 적용까지, 일반 사용자는 적용 대기로 남긴다. 시스템 계정·수정 금지 계정은 409 `profile_readonly`
 - 프로필 사진은 배경 이미지와 같은 이미지 저장소의 사용자 자리(`prefs.UserAvatar`)이고 상한은 2MiB다(브라우저가 512px로 잘라 줄여 보낸다)
+- 레지스트리는 `h.addons()`로 얻는다(애드온 패키지가 있으면 `addonpkg.Manager`가 교체한 레지스트리). `/api/rpc` 중계만 내장 레지스트리(`Config.Addons`)를 본다. 패키지(`addons.KindPackage`)는 Go 구현이 없으므로 `addonData`·`addonAction`이 `Fetch`·`Run`을 보기 전에 종류로 갈라 `packageData`·`packageAction`으로 보낸다(`.claude/rules/addon-packages.md`)
+- 개발 서버: `MARU_DEV_ADDONS`(콜론으로 나눈 풀린 패키지 디렉터리)와 `MARU_DEV_ADDON_SDK`(프레임의 `_maru/` 파일 디렉터리)는 개발 전용 환경 변수다. 플래그·가동 설정 목록·설치기 레지스트리에 넣지 않는다(`cmd/maru/devaddons.go`)
 - 내장 애드온의 현황 데이터는 `Addon.Fetch` → `GET /api/addons/{id}`로 준다. provider는 `Request.RPC`(그 애드온이 선언한 메서드만, `updatelastaccess=false`)로 OMV를 부르고, 일부 출처 실패는 응답의 `failedSources`에 담는다(`.claude/docs/addons.md`의 "애드온 데이터 API")
 - `Smart.getList`는 대기 중인 디스크를 깨운다. 주기적으로 부르지 말고 `smart.Cache`를 거친다(온도는 `Peek`만)
 - OMV가 매번 프로세스를 실행하는 느린 읽기 RPC(`Services.getStatus`, `Compose.getContainers`)는 `addons.SharedCache`로 세션 사이에 짧게(5초) 함께 쓴다. 결과가 사용자와 무관한 RPC에만 쓰고, `Request.Refresh`면 건너뛰며, 상태를 바꾸는 조작은 끝난 뒤(실패해도) `Invalidate`한다

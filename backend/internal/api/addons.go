@@ -99,6 +99,8 @@ type CapabilitiesResponse struct {
 	Helper bool `json:"helper"`
 	// Terminal은 웹 터미널을 쓸 수 있는지다(-terminal, 설정에서 덮어쓴 값). 실제로 들어갈 수 있는지는 sshd가 정한다.
 	Terminal bool `json:"terminal"`
+	// AddonPackages는 이 사용자에게 보이는 애드온 패키지다(켜져 있고 레지스트리가 받은 것, 관리자 전용은 관리자에게만).
+	AddonPackages []AddonPackageView `json:"addonPackages"`
 }
 
 // AddonCapability는 애드온 하나를 이 사용자가 쓸 수 있는지다.

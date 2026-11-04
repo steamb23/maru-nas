@@ -102,3 +102,20 @@ func TestNotBuilt(t *testing.T) {
 		t.Errorf("Cache-Control %q", got)
 	}
 }
+
+// 대시보드 문서는 frame-src 'self'만 둔다. 애드온 프레임이 스스로 바깥 주소로 이동하는 것을 막는다.
+// 스크립트·자원 파일에는 붙이지 않는다.
+func TestDocumentCSP(t *testing.T) {
+	h := newHandler(distFS("<!doctype html>"))
+	for _, target := range []string{"/", "/index.html"} {
+		if got := get(t, h, target, nil).Header().Get("Content-Security-Policy"); got != DocumentCSP {
+			t.Errorf("%s: CSP %q", target, got)
+		}
+	}
+	if got := get(t, h, "/assets/index-AbC1.js", nil).Header().Get("Content-Security-Policy"); got != "" {
+		t.Errorf("asset CSP %q", got)
+	}
+	if DocumentCSP != "frame-src 'self'" {
+		t.Errorf("DocumentCSP = %q (keep it to frame-src only)", DocumentCSP)
+	}
+}

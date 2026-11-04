@@ -20,7 +20,11 @@ import (
 // capability(역할, 플러그인)를 먼저 확인하고, 애드온의 Fetch에 이 사용자의 OMV 세션으로 만든
 // RPC 호출기를 넘긴다. Fetch 안의 OMV 호출이 401을 받으면 대시보드 세션도 지운다.
 func (h *handler) addonData(w http.ResponseWriter, r *http.Request, s auth.Session) {
-	a, ok := h.Addons.Get(r.PathValue("id"))
+	a, ok := h.addons().Get(r.PathValue("id"))
+	if ok && a.Kind == addons.KindPackage {
+		h.packageData(w, r, s, a)
+		return
+	}
 	if !ok || a.Fetch == nil {
 		writeJSON(w, http.StatusNotFound, api.ErrorResponse{Error: "not found"})
 		return
@@ -79,7 +83,7 @@ func (c *rpcCaller) Call(ctx context.Context, service, method string, params any
 		kind, allowed = c.fixed[name]
 	} else {
 		var ids []string
-		kind, ids = c.h.Addons.Classify(service, method)
+		kind, ids = c.h.addons().Classify(service, method)
 		allowed = kind != addons.RPCNone && slices.Contains(ids, c.addon)
 	}
 	if !allowed || (kind == addons.RPCWrite && !(c.writes && addons.WritesEnabled)) {

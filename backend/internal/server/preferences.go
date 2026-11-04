@@ -155,7 +155,7 @@ func (h *handler) setWidgets(w http.ResponseWriter, r *http.Request, s auth.Sess
 		writeError(w, http.StatusBadRequest, api.ErrBadRequest, "widgets is required")
 		return
 	}
-	if err := h.Addons.ValidateWidgets(req.Widgets); err != nil {
+	if err := h.addons().ValidateWidgets(req.Widgets); err != nil {
 		writeError(w, http.StatusBadRequest, api.ErrBadRequest, err.Error())
 		return
 	}

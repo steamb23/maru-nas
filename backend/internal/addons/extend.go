@@ -25,6 +25,8 @@ const (
 
 // Rejection은 Extend가 받지 않은 패키지와 그 이유다. Detail은 로그·관리자 화면용 영어 문장이다.
 type Rejection struct {
+	// Index는 Extend에 넘긴 후보 목록에서의 위치다.
+	Index  int
 	ID     string
 	Code   string
 	Detail string
@@ -58,10 +60,12 @@ func Extend(base *Registry, cands []Addon) (*Registry, []Rejection) {
 	}
 
 	var rejected []Rejection
+	index := 0
 	reject := func(id, code, format string, args ...any) {
-		rejected = append(rejected, Rejection{ID: id, Code: code, Detail: fmt.Sprintf(format, args...)})
+		rejected = append(rejected, Rejection{Index: index, ID: id, Code: code, Detail: fmt.Sprintf(format, args...)})
 	}
-	for _, c := range cands {
+	for i, c := range cands {
+		index = i
 		id := c.Manifest.ID
 		switch {
 		case c.Kind != KindPackage:
@@ -93,8 +97,9 @@ func Extend(base *Registry, cands []Addon) (*Registry, []Rejection) {
 	r, err := NewRegistry(accepted...)
 	if err != nil {
 		// 위에서 하나씩 통과시켰으므로 일어나지 않는다. 일어나면 내장만 둔다.
-		for _, c := range cands {
+		for i, c := range cands {
 			if packageIDs[c.Manifest.ID] {
+				index = i
 				reject(c.Manifest.ID, RejectInvalid, "%v", err)
 			}
 		}

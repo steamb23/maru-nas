@@ -6,10 +6,12 @@ package server
 
 import (
 	"context"
+	"io/fs"
 	"log"
 	"net/http"
 	"time"
 
+	"maru/backend/internal/addonpkg"
 	"maru/backend/internal/addons"
 	"maru/backend/internal/api"
 	"maru/backend/internal/auth"
@@ -66,12 +68,18 @@ type Config struct {
 	// Static은 /api/ 밖의 요청을 처리한다(프론트엔드 빌드 결과).
 	Static http.Handler
 	OMV    OMV
-	// Addons는 등록된 애드온이다. nil이면 빈 목록이다.
+	// Addons는 내장 애드온이다. nil이면 빈 목록이다. /api/rpc 중계는 이 레지스트리만 본다.
 	Addons *addons.Registry
+	// Packages는 애드온 패키지다(설치본, 개발본). 기준 레지스트리는 Addons와 같아야 한다. nil이면 패키지를 쓰지 않는다.
+	Packages *addonpkg.Manager
+	// AddonSDK는 애드온 프레임에 주는 SDK 런타임(sdk.js, maru.css)이 든 파일 시스템이다. nil이면 404다.
+	AddonSDK fs.FS
 	// Plugins가 nil이면 아무 플러그인도 설치되지 않은 것으로 본다.
 	Plugins PluginDetector
 	// Prefs는 사용자 설정 저장소다. nil이면 메모리에 둔다(재시작하면 사라진다).
 	Prefs prefs.Store
+	// AddonData는 애드온 패키지의 사용자별 저장값이다. nil이면 Prefs가 구현하면 그것을, 아니면 메모리를 쓴다.
+	AddonData prefs.AddonDataStore
 	// Site는 전역 설정, Images는 배경 이미지 저장소다. nil이면 메모리에 둔다.
 	Site   prefs.SiteStore
 	Images prefs.ImageStore
@@ -131,6 +139,10 @@ type handler struct {
 	Config
 	// actions는 진행 중인 애드온 조작이다.
 	actions *inflight
+	// uiTokens는 애드온 프레임 파일 경로의 토큰이다(세션·패키지마다 하나, addon_ui.go).
+	uiTokens *uiTokens
+	// uploads는 검토를 기다리는 애드온 패키지다(addon_admin.go).
+	uploads *pendingUploads
 	// about은 실행 파일의 버전·빌드 정보다. 실행 중에 바뀌지 않으므로 시작할 때 한 번 읽는다.
 	about api.AboutResponse
 	// over는 웹에서 덮어쓴 가동 설정이다(site.go).
@@ -188,6 +200,13 @@ func New(cfg Config) http.Handler {
 	if cfg.Prefs == nil {
 		cfg.Prefs = prefs.NewMemoryStore()
 	}
+	if cfg.AddonData == nil {
+		if ad, ok := cfg.Prefs.(prefs.AddonDataStore); ok {
+			cfg.AddonData = ad
+		} else {
+			cfg.AddonData = prefs.NewMemoryStore()
+		}
+	}
 	if cfg.Site == nil {
 		cfg.Site = prefs.NewMemoryStore()
 	}
@@ -210,6 +229,8 @@ func New(cfg Config) http.Handler {
 	h := &handler{
 		Config:          cfg,
 		actions:         newInflight(),
+		uiTokens:        newUITokens(),
+		uploads:         newPendingUploads(cfg.Now),
 		about:           buildinfo.Read(),
 		terminalLimiter: auth.NewLimiter(),
 		securityLimiter: auth.NewLimiter(),
@@ -238,16 +259,20 @@ func New(cfg Config) http.Handler {
 	}
 	cfg.Jobs.Register(runner)
 	cfg.Jobs.Resume()
-	if cfg.Helper != nil || cfg.Terminal != nil {
-		// 세션이 어떻게 끝나든(로그아웃, 만료, 밀려남, 2차 인증 포기) 도우미 티켓을 폐기하고
-		// 그 세션의 터미널과 파일 탐색기 목록을 닫는다.
-		cfg.Sessions.OnRemove = func(s auth.Session) {
+	// 세션이 어떻게 끝나든(로그아웃, 만료, 밀려남, 2차 인증 포기) 도우미 티켓을 폐기하고
+	// 그 세션의 터미널, 파일 탐색기 목록, 애드온 프레임 토큰, 검토 대기를 닫는다.
+	cfg.Sessions.OnRemove = func(s auth.Session) {
+		h.uiTokens.removeSession(s.ID)
+		h.uploads.removeSession(s.ID)
+		if cfg.Helper != nil {
 			h.closeHelper(s.HelperTicket)
-			h.files.RemoveSession(s.ID)
-			if cfg.Terminal != nil {
-				cfg.Terminal.CloseSession(s.ID, terminal.ReasonSessionEnded)
-			}
 		}
+		h.files.RemoveSession(s.ID)
+		if cfg.Terminal != nil {
+			cfg.Terminal.CloseSession(s.ID, terminal.ReasonSessionEnded)
+		}
+	}
+	if cfg.Helper != nil {
 		cfg.Sessions.OnRemovePending = func(p auth.Pending) { h.closeHelper(p.HelperTicket) }
 	}
 	return h.routes()
@@ -266,7 +291,12 @@ func (h *handler) system(w http.ResponseWriter, _ *http.Request, _ auth.Session)
 // capabilities는 플러그인 설치 상태와 세션 역할로 애드온마다 쓸 수 있는지 알려 준다.
 // OMV 웹 UI 주소(설정했으면), 권한 도우미 설정 여부, 웹 터미널 허용 여부도 함께 알려 준다.
 func (h *handler) capabilities(w http.ResponseWriter, _ *http.Request, s auth.Session) {
-	resp := h.Addons.Capabilities(h.Plugins.Plugins(), s.Admin)
+	if h.Packages != nil {
+		// 개발 패키지 파일이 바뀌었으면 다시 불러온다(rev가 바뀌어 열린 프레임이 새로 뜬다).
+		h.Packages.RescanDev()
+	}
+	resp := h.addons().Capabilities(h.Plugins.Plugins(), s.Admin)
+	resp.AddonPackages = h.packageViews(s)
 	resp.WorkbenchURL = h.workbenchURL()
 	resp.Helper = h.Helper != nil
 	resp.Terminal = h.terminalEnabled()

@@ -32,6 +32,26 @@ const (
 	revalidateCache = "no-cache"
 )
 
+// DocumentCSP는 대시보드 문서(HTML)의 CSP다. 애드온 패키지의 샌드박스 프레임은 스스로 다른 주소로 이동할 수 있고,
+// 그것을 막는 것은 부모 문서의 frame-src뿐이다(.claude/docs/addon-packages.md의 "프레임"). 다른 지시어는 두지 않는다.
+// 개발 서버(frontend/vite.config.ts의 server.headers)도 같은 값을 준다.
+const DocumentCSP = "frame-src 'self'"
+
+// addonSDKDir는 애드온 프레임에 주는 SDK 런타임의 빌드 위치다(frontend/vite.sdk.config.ts).
+const addonSDKDir = "addon-sdk"
+
+// AddonSDK는 포함된 SDK 런타임(sdk.js, maru.css)이다. 프론트를 빌드하지 않았으면 nil이다.
+func AddonSDK() fs.FS {
+	sdk, err := fs.Sub(staticFS, "static/dist/"+addonSDKDir)
+	if err != nil {
+		return nil
+	}
+	if _, err := fs.Stat(sdk, "sdk.js"); err != nil {
+		return nil
+	}
+	return sdk
+}
+
 // Handler는 포함된 프론트엔드를 서빙한다. 경로는 대시보드 루트 기준이며,
 // 경로 접두사가 있으면 리버스 프록시가 제거한다.
 func Handler() http.Handler {
@@ -64,6 +84,9 @@ func newHandler(dist fs.FS) http.Handler {
 		if etag, ok := etags[name]; ok {
 			h := w.Header()
 			h.Set("ETag", etag)
+			if strings.HasSuffix(name, ".html") {
+				h.Set("Content-Security-Policy", DocumentCSP)
+			}
 			if strings.HasPrefix(name, assetsDir) {
 				h.Set("Cache-Control", immutableCache)
 			} else {
