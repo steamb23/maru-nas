@@ -9,10 +9,10 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"time"
 
+	"maru/backend/config"
 	"maru/backend/internal/addons"
 )
 
@@ -28,11 +28,9 @@ const stagingPrefix = ".staging-"
 // currentLink는 지금 rev를 가리키는 심볼릭 링크 이름이다.
 const currentLink = "current"
 
-// revPattern은 저장 디렉터리 이름이다(<version>-<sha256 앞 8자>, 개발 패키지는 dev-<해시>).
-var revPattern = regexp.MustCompile(`^[0-9A-Za-z][0-9A-Za-z.-]{0,40}-[0-9a-f]{8}$`)
-
-// ValidRev는 rev가 저장 디렉터리 이름 형식인지다.
-func ValidRev(rev string) bool { return revPattern.MatchString(rev) && !strings.Contains(rev, "..") }
+// ValidRev는 rev가 저장 디렉터리 이름 형식인지다(<version>-<sha256 앞 8자>, 개발 패키지는 dev-<해시>).
+// 백엔드 동기화(설치기)도 같은 규칙을 쓰므로 원본은 backend/config에 있다.
+func ValidRev(rev string) bool { return config.ValidAddonRev(rev) }
 
 // Record는 설치한 패키지 하나의 기록이다.
 type Record struct {
