@@ -8,6 +8,7 @@ paths:
   - "backend/config/addons*.go"
   - "frontend/src/addonpkg/**"
   - "frontend/src/settings/Addons*"
+  - "frontend/src/settings/addons*"
   - "sdk/**"
   - "installer/internal/setup/*addon*"
   - "installer/internal/setup/templates/maru-addon*"
@@ -31,4 +32,5 @@ paths:
 - 패키지 압축 파일은 `os.Root` 스테이징에 풀고 rename한다. 일반 파일·디렉터리만 받고 상한을 넘으면 멈춘다. 권한은 받은 값을 쓰지 않고 정한 값(디렉터리 0755, 파일 0644, `backend/run` 0755)으로 맞춘다
 - SDK(`sdk/`)는 MIT다. GPL 코드(대시보드 `frontend/src`, `backend`)를 `sdk/`로 복사하지 않는다. 대시보드와 함께 쓰는 파일은 원본을 `sdk/` 안에 두고 대시보드가 불러온다
 - `sdk/js` 소스는 npm 패키지를 import하지 않는다(의존성 없음, 락 파일 없음). 검사는 프론트 도구가 한다. `sdk/go`는 표준 라이브러리만 쓰고, `backend`는 `sdk/go`를 import하지 않는다(업그레이드 확인의 `git archive -- installer backend`에 `sdk/`가 없다)
-- 패키지 manifest 형식(`internal/addonpkg/format`)을 바꾸면 `make types`로 `sdk/schema/manifest.schema.json`도 다시 만들고, 형식을 깨는 변경이면 `format` 또는 SDK 수준(`api.AddonSDKLevel`)을 올린다. SDK 수준은 하위 호환을 지키며 올린다
+- SDK CLI(`sdk/js/cli`)는 상수를 다시 적지 않고 스키마 파일의 `x-maru`를 읽는다. 압축 파일 규칙(`archive.go`)이나 manifest 검사를 바꾸면 `x-maru`(`addonpkg.Schema`), 공유 벡터(`sdk/testdata/manifests/`의 `valid`·`invalid`·`server-only`), 고정 파일(`sdk/testdata/packed/`)을 함께 고친다
+- 패키지 manifest 형식(`internal/addonpkg/format`)을 바꾸면 `make types`로 `sdk/js/schema/manifest.schema.json`도 다시 만들고, 형식을 깨는 변경이면 `format` 또는 SDK 수준(`api.AddonSDKLevel`)을 올린다. SDK 수준은 하위 호환을 지키며 올린다

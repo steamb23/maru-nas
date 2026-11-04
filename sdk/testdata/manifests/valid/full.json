@@ -1,0 +1,95 @@
+{
+  "$schema": "../../../js/schema/manifest.schema.json",
+  "format": 1,
+  "id": "full-example",
+  "version": "1.2.3-beta.1",
+  "sdk": 1,
+  "name": {
+    "en": "Full example",
+    "ko": "\uc804\uccb4 \uc608\uc2dc",
+    "de": "Vollst\u00e4ndiges Beispiel"
+  },
+  "description": {
+    "en": "Every field of the manifest.",
+    "ko": "manifest\uc758 \ubaa8\ub4e0 \ud544\ub4dc\uc785\ub2c8\ub2e4."
+  },
+  "author": {
+    "name": "Example Author",
+    "url": "https://example.com/addon"
+  },
+  "icon": "icon.svg",
+  "views": {
+    "window": {
+      "entry": "window.html",
+      "defaultSize": {
+        "width": 640,
+        "height": 480
+      },
+      "minSize": {
+        "width": 320,
+        "height": 240
+      }
+    },
+    "widget": {
+      "entry": "widget.html",
+      "defaultSize": {
+        "cols": 2,
+        "rows": 2
+      },
+      "minSize": {
+        "cols": 1,
+        "rows": 1
+      },
+      "maxSize": {
+        "cols": 4,
+        "rows": 3
+      }
+    }
+  },
+  "requires": {
+    "admin": true,
+    "plugins": [
+      {
+        "package": "openmediavault-example",
+        "rpcFile": "example.inc"
+      }
+    ]
+  },
+  "rpc": {
+    "read": [
+      "System.getInformation",
+      "Example.getList"
+    ],
+    "write": [
+      "Example.set"
+    ]
+  },
+  "actions": [
+    {
+      "name": "refresh",
+      "label": {
+        "en": "Refresh"
+      }
+    },
+    {
+      "name": "apply-change",
+      "admin": true,
+      "confirm": true,
+      "timeoutSeconds": 120,
+      "label": {
+        "en": "Apply",
+        "ko": "\uc801\uc6a9"
+      },
+      "confirmText": {
+        "en": "Apply the change?",
+        "ko": "\ubcc0\uacbd\uc744 \uc801\uc6a9\ud560\uae4c\uc694?"
+      }
+    }
+  ],
+  "backend": {
+    "network": [
+      "lan",
+      "loopback"
+    ]
+  }
+}

@@ -260,10 +260,15 @@ func validateRPC(r RPC) error {
 		return problem("rpc", "at most %d methods", MaxMethods)
 	}
 	for kind, list := range map[string][]string{"rpc.read": r.Read, "rpc.write": r.Write} {
+		seen := map[string]bool{}
 		for i, m := range list {
 			if !addons.ValidMethod(m) || len(m) > 100 {
 				return problem(kind+"["+strconv.Itoa(i)+"]", "must be Service.method")
 			}
+			if seen[m] {
+				return problem(kind+"["+strconv.Itoa(i)+"]", "%q listed twice", m)
+			}
+			seen[m] = true
 		}
 	}
 	return nil

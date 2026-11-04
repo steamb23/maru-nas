@@ -1,5 +1,5 @@
 // Package format은 애드온 패키지 manifest(manifest.json)의 형식과 의미 검사다. 압축 파일·저장소와 상관없는
-// 순수 계층이라 SDK의 구조 스키마(sdk/schema/manifest.schema.json)도 여기서 만든다.
+// 순수 계층이라 SDK의 구조 스키마(sdk/js/schema/manifest.schema.json)도 여기서 만든다.
 // 설계는 .claude/docs/addon-packages.md의 "manifest".
 package format
 
@@ -24,6 +24,8 @@ type Text map[string]string
 
 // Manifest는 패키지 manifest다. 모르는 필드는 받지 않는다(Decode).
 type Manifest struct {
+	// Schema는 편집기가 쓰는 JSON 스키마 주소다(sdk/js/schema/manifest.schema.json). 검사하지 않고 무시한다.
+	Schema      string   `json:"$schema,omitempty"`
 	Format      int      `json:"format"`
 	ID          string   `json:"id"`
 	Version     string   `json:"version"`

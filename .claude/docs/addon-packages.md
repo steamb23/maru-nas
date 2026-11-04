@@ -58,7 +58,7 @@
 
 ## manifest
 
-`format: 1`. 모르는 필드는 거부한다(`DisallowUnknownFields`). 원본은 Go 구조체(`internal/addonpkg/format`)이고, 구조 스키마 `sdk/schema/manifest.schema.json`은 `cmd/genaddons`가 만든다(골든 테스트). 의미 검사의 기준은 서버이고, SDK CLI는 구조만 본다.
+`format: 1`. 모르는 필드는 거부한다(`DisallowUnknownFields`). 원본은 Go 구조체(`internal/addonpkg/format`)이고, 구조 스키마 `sdk/js/schema/manifest.schema.json`(npm 패키지에 함께 넣으려고 `sdk/js` 아래에 둔다)은 `cmd/genaddons`가 `format.Schema`와 압축 파일 규칙(`x-maru`, `addonpkg.Schema`)으로 만든다(골든 테스트). 의미 검사의 기준은 서버이고, SDK CLI는 스키마와 `x-maru`의 파일 배치 규칙만 본다. 둘의 경계는 공유 벡터 `sdk/testdata/manifests/`(`valid`, `invalid`, `server-only`)가 정한다
 
 | 필드 | 내용 |
 |---|---|
@@ -197,10 +197,20 @@
 ## SDK 런타임과 CSS
 
 - `_maru/sdk.js`: 의존성 없는 고전 스크립트, `globalThis.maru`. `frontend/vite.sdk.config.ts`가 `sdk/js/src/client.ts`에서 파일 하나로 빌드해 `backend/internal/web/static/dist/addon-sdk/`에 둔다(`npm run build`에 포함). 패키지에 넣지 않으므로 프로토콜은 늘 호스트 빌드와 같다
-- npm 패키지 `@maru-nas/addon-sdk`(`sdk/js`)는 손으로 쓴 공개 API 타입(`types/index.d.ts`, 런타임이 `satisfies`로 맞춘다)과 CLI만 담는다
+- npm 패키지 `@maru-nas/addon-sdk`(`sdk/js`, 버전은 대시보드와 따로 `0.y.z`)는 손으로 쓴 공개 API 타입(`types/index.d.ts`, 런타임이 `satisfies`로 맞춘다), manifest 스키마(`schema/`), CLI(`cli/`)만 담는다. 런타임 소스(`src/`)는 넣지 않는다
 - `sdk/js/src/tokens.css`: `:root` 토큰과 `data-theme`·`data-animations` 규칙. `frontend/src/base.css`가 불러온다
-- `sdk/js/src/maru.css`: 공통 클래스(`.addon-card`, `.badge`, `.meter`, `.status-dot`, `.addon-button`, `.row-*`, `.widget-line` 등). `frontend/src/addons/common/common.css`가 불러온다. 원본이 하나라 대시보드와 패키지의 모양이 어긋나지 않는다
+- `sdk/js/src/components.css`: 공통 클래스(`.addon-card`, `.badge`, `.meter`, `.status-dot`, `.addon-button`, `.row-*`, `.widget-line` 등). `frontend/src/addons/common/common.css`가 불러온다. 원본이 하나라 대시보드와 패키지의 모양이 어긋나지 않는다
+- `sdk/js/src/frame.css`: 프레임 문서의 바탕(창 배경, 위젯은 투명). `_maru/maru.css`는 `tokens.css`, `components.css`, `frame.css`를 이어 붙인 파일이다(`vite.sdk.config.ts`)
 - SDK 소스는 npm 패키지를 import하지 않는다. 검사는 프론트 도구가 한다(별칭 `@maru-sdk`, `tsconfig.app.json`의 `paths`, oxlint 경로, `frontend/src/addonpkg/*.test.ts`)
+
+## CLI(maru-addon)
+
+- `sdk/js/cli/maru-addon.mjs`(진입)와 `lib.mjs`(동작). Node 내장 모듈만 쓰는 `.mjs`라 빌드 없이 Node 20.19 이상에서 돈다. JSDoc 타입은 `frontend/tsconfig.node.json`(`checkJs`)이, 동작은 `frontend/src/addonpkg/cli.node.test.ts`가 검사한다(Node API를 쓰는 테스트는 `*.node.test.ts`로 두고 node 설정이 본다)
+- 상수(상한, 경로 규칙, 언어 목록, SDK 수준)는 스키마 파일의 `x-maru`에서 읽고 CLI에 다시 적지 않는다
+- `init <dir> [--id] [--ts]`: 빌드 없는 JS(창·위젯) 또는 TypeScript + Vite 프로젝트(`addon/`이 패키지 디렉터리, `vite build`가 `addon/ui/`에 쓴다, `_maru/` 참조는 `vite-ignore`). 저장소 체크아웃의 SDK면 TS 템플릿의 SDK 의존성을 `file:`로 둔다(공개 전에는 npm에 없다). `--backend`는 Go SDK(M2) 전까지 거절한다
+- `validate <dir|file>`: 스키마와 파일 배치(Read·ReadDir와 같은 규칙). 개발 디렉터리의 백엔드 패키지는 실행 파일이 없어도 된다(알림만)
+- `pack <dir> [-o]`: 검사한 뒤 묶는다. ustar, 경로 바이트 순, 수정 시각·소유자 0, 권한 0644(`backend/*`는 0755), 디렉터리 항목 없음, 100바이트가 넘는 경로는 prefix 칸. gzip 머리의 수정 시각 0, 운영체제 바이트 3. 같은 입력이면 같은 tar가 나오지만 gzip 바이트(그래서 sha256과 rev)는 zlib 버전에 따라 기기마다 다를 수 있다. 개발 디렉터리의 `dev/`는 넣지 않는다
+- 고정 파일 `sdk/testdata/packed/dev-min.maru-addon`은 `sdk/testdata/dev-min`을 묶은 것이다. Go(`fixture_test.go`)가 `Read`로 받고, 프론트 테스트가 다시 묶은 tar와 풀린 tar를 비교한다. dev-min을 바꾸면 `node sdk/js/cli/maru-addon.mjs pack sdk/testdata/dev-min -o sdk/testdata/packed/dev-min.maru-addon`으로 다시 만든다
 
 ## 사용자별 저장
 
