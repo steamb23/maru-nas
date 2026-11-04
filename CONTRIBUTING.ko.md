@@ -96,7 +96,7 @@ python3 -m venv .venv
 
 - 백엔드는 Go 표준 라이브러리를 쓰고, 웹 터미널에만 `golang.org/x/crypto/ssh`와 `github.com/coder/websocket`을 씁니다. 권한 도우미에는 둘 다 링크하지 않습니다. 설치기(`installer/`, `install.sh`가 실행하는 별도 Go 모듈)는 터미널 화면에 `charm.land/huh/v2`를 쓰며, 이 의존성은 `installer/go.mod`에만 있고 설치기는 백엔드에서 `backend/config`만 씁니다. 프론트엔드는 TypeScript, Vite, React, Zustand이고 웹 터미널에 xterm.js, 인증 앱 QR 코드에 uqr를 씁니다.
 - 의존성을 추가하기 전에 왜 필요한지와 대안이 무엇이었는지 풀 리퀘스트에 설명해 주세요.
-- `backend/internal/api`의 구조체나 애드온 manifest를 바꾸면 `make types`를 실행하고 생성물(`frontend/src/api/types.gen.ts`, `frontend/src/addons/manifests.gen.ts`)을 함께 커밋합니다. 테스트가 최신 상태인지 검사합니다.
+- `backend/internal/api`의 구조체, 애드온 manifest, 애드온 패키지 manifest 형식을 바꾸면 `make types`를 실행하고 생성물(`frontend/src/api/types.gen.ts`, `frontend/src/addons/manifests.gen.ts`, `sdk/js/schema/manifest.schema.json`)을 함께 커밋합니다. 테스트가 최신 상태인지 검사합니다.
 - 식별자, 로그, 에러 메시지는 영어로 유지합니다.
 - 화면에 나오는 모든 문구(`aria-label`, `title` 포함)는 `t()`를 거치고, 키를 `en.json`과 `ko.json`에 함께 넣습니다. 한국어를 쓰기 어렵다면 `ko.json`의 같은 키에 영어 문구를 넣고 풀 리퀘스트에 알려 주세요. 병합 전에 유지자가 번역합니다.
 
@@ -110,6 +110,14 @@ python3 -m venv .venv
 - 비밀번호, OMV 세션 ID, 토큰을 로그·테스트 픽스처·커밋에 남기지 않습니다. 보안 강화 모드의 인증 앱 비밀 키와 복구 코드도 비밀 값입니다.
 - 테스트 픽스처(`testdata/` 등)에는 합성한 값만 씁니다. 디스크 시리얼, MAC·IP 주소, 호스트 이름, 사용자 이름은 가짜 값으로 바꿉니다.
 - 도메인, IP 주소 같은 개인 환경 정보는 git이 무시하는 `*.local.md` 파일에 둡니다. 커밋되는 파일에 하드코딩하지 않습니다.
+
+## 애드온 패키지와 SDK
+
+- 내장 애드온(`backend/internal/addons/<id>/`, `frontend/src/addons/<id>/`)은 대시보드와 함께 빌드하는 현황·조작 기능입니다. 저장소 밖에서 따로 배포할 기능은 애드온 패키지로 만들어 주세요([애드온 개발](docs/ko/addon-dev.md)).
+- `sdk/`(SDK 런타임·타입·스키마·CLI, 예제)는 MIT 라이선스입니다. `sdk/`에 기여하면 그 내용을 MIT로 제공하는 데 동의하는 것으로 봅니다. 대시보드의 GPL 코드(`frontend/src`, `backend`)를 `sdk/`로 복사하지 않습니다.
+- `sdk/js`는 의존성 없이 Node 내장 모듈과 브라우저 API만 씁니다. 검사는 `make check`가 프론트 도구로 합니다.
+- 애드온 패키지에 허용하지 않는 OMV 메서드 표(`backend/internal/addons/packagerpc.go`)를 줄이거나 패키지 프레임의 샌드박스·CSP를 넓히는 변경은 이슈에서 먼저 상의해 주세요.
+- 패키지 형식이나 검사 규칙을 바꾸면 공유 시험 벡터(`sdk/testdata/manifests/`)와 고정 파일(`sdk/testdata/packed/`)도 함께 고칩니다.
 
 ## 번역
 
@@ -135,4 +143,4 @@ python3 -m venv .venv
 
 ## 라이선스
 
-마루 NAS는 GNU General Public License v3.0으로 배포됩니다(`LICENSE` 참고). 기여하시면 기여 내용도 같은 조건으로 제공하는 데 동의하는 것으로 봅니다.
+마루 NAS는 GNU General Public License v3.0으로 배포됩니다(`LICENSE` 참고). 기여하시면 기여 내용도 같은 조건으로 제공하는 데 동의하는 것으로 봅니다. `sdk/`는 MIT 라이선스입니다(`sdk/LICENSE`).

@@ -19,6 +19,9 @@
 | [설정 앱](settings-app.md) | 설정 앱의 페이지와 권한 |
 | [파일 탐색기](files.md) | 홈 폴더와 공유 폴더 둘러보기, 올리기·내려받기, 휴지통, 옮기기와 복사 |
 | [웹 터미널](terminal.md) | 대시보드 창 안의 SSH 셸 |
+| [시스템 업데이트](system-updates.md) | 업데이트 확인과 모두 설치, 작업 진행과 결과 알림 |
+| [디스크 건강](disk-health.md) | 디스크 목록, 디스크마다의 SMART 상세 정보, 디스크가 깨어나는 경우 |
+| [애드온 패키지](addons.md) | 저장소 밖에서 만든 애드온의 설치와 권한 검토, 끄기와 제거 |
 
 ## 보안
 
@@ -27,5 +30,15 @@
 | [권한 도우미](helper.md) | 사용자 권한·root 권한이 필요한 일을 맡는 서비스와 그 보안 설계 |
 | [보안 강화 모드](security.md) | 민감한 기능 앞의 비밀번호 재확인과 2차 인증(패스키, 인증 앱, 복구 코드) |
 | [패스키로 로그인](passkey-login.md) | 비밀번호 없이 패스키로 로그인하기와 그 한계 |
+
+## 애드온 개발
+
+| 문서 | 내용 |
+|---|---|
+| [애드온 개발](addon-dev.md) | 동작 방식, 준비물, 빠른 시작, 개발 서버 |
+| [manifest](addon-manifest.md) | `manifest.json`의 모든 필드와 규칙 |
+| [화면 만들기](addon-frontend.md) | 진입 HTML, SDK API, 창과 위젯, 프레임의 제약, TypeScript + Vite |
+| [묶기와 배포](addon-packaging.md) | 패키지 파일 구성과 한도, `maru-addon` CLI, 버전과 업데이트 |
+| [애드온 보안](addon-security.md) | 대시보드가 막는 것과 막지 못하는 것, 허용하지 않는 메서드 |
 
 이 문서는 저장소의 `docs/ko/`에서 GitHub로 그대로 읽을 수 있고, [Zensical](https://zensical.org/)로 만든 [문서 사이트](https://steamb23.github.io/maru-nas/ko/)로도 볼 수 있습니다. 사이트는 보통 최신 릴리스(`stable`) 기준이고, 개발 중인 내용은 [`main`의 docs/ko/](https://github.com/steamb23/maru-nas/tree/main/docs/ko)에 먼저 반영됩니다. 릴리스 사이에는 사이트에 `main`의 문서가 먼저 올라가 있을 수 있습니다. 고치는 방법은 [CONTRIBUTING.ko.md](https://github.com/steamb23/maru-nas/blob/main/CONTRIBUTING.ko.md)의 "문서"에 있습니다.
