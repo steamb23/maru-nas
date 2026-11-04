@@ -96,7 +96,7 @@ python3 -m venv .venv
 
 - The backend uses the Go standard library, plus `golang.org/x/crypto/ssh` and `github.com/coder/websocket` for the web terminal only. The privileged helper links neither. The installer (`installer/`, a separate Go module run by `install.sh`) uses `charm.land/huh/v2` for its terminal UI; that dependency lives only in `installer/go.mod`, and the installer uses nothing from the backend except `backend/config`. The frontend is TypeScript, Vite, React and Zustand, plus xterm.js for the web terminal and uqr for the authenticator-app QR code.
 - Before adding a dependency, explain in the pull request why it is needed and what the alternatives were.
-- If you change a struct under `backend/internal/api` or an addon manifest, run `make types` and commit the generated files (`frontend/src/api/types.gen.ts`, `frontend/src/addons/manifests.gen.ts`). Tests check that they are up to date.
+- If you change a struct under `backend/internal/api`, an addon manifest or the addon package manifest format, run `make types` and commit the generated files (`frontend/src/api/types.gen.ts`, `frontend/src/addons/manifests.gen.ts`, `sdk/js/schema/manifest.schema.json`). Tests check that they are up to date.
 - Identifiers, log messages and error messages stay in English.
 - Every string shown on screen, including `aria-label` and `title`, goes through `t()` and gets a key in both `en.json` and `ko.json`. If you do not write Korean, put the English text into `ko.json` under the same key and say so in the pull request; the maintainer translates it before merging.
 
@@ -110,6 +110,14 @@ Maru NAS runs as an unprivileged system user and must stay that way.
 - Never put passwords, OMV session IDs or tokens in logs, test fixtures or commits. Authenticator-app secrets and recovery codes of the security hardening mode count as secrets too.
 - Test fixtures (`testdata/` and the like) contain synthetic data only. Replace disk serials, MAC and IP addresses, host names and user names with fake values.
 - Personal environment details (domains, IP addresses) belong in `*.local.md` files, which are ignored by git. Do not hardcode them in committed files.
+
+## Addon packages and the SDK
+
+- Built-in addons (`backend/internal/addons/<id>/`, `frontend/src/addons/<id>/`) are status and operation features built together with the dashboard. Features meant to be distributed separately, outside this repository, should be addon packages ([Addon development](docs/en/addon-dev.md)).
+- `sdk/` (the SDK runtime, types, schema, CLI and examples) is MIT licensed. By contributing to `sdk/`, you agree to provide your contribution under the MIT license. Do not copy the dashboard's GPL code (`frontend/src`, `backend`) into `sdk/`.
+- `sdk/js` has no dependencies and uses only Node built-in modules and browser APIs. `make check` checks it with the frontend tools.
+- Please discuss in an issue first before shrinking the table of OMV methods not allowed for addon packages (`backend/internal/addons/packagerpc.go`) or widening the sandbox or CSP of package frames.
+- If you change the package format or its checks, update the shared test vectors (`sdk/testdata/manifests/`) and the packed fixture (`sdk/testdata/packed/`) too.
 
 ## Translations
 
@@ -135,4 +143,4 @@ Translations are the easiest way to contribute.
 
 ## License
 
-Maru NAS is licensed under the GNU General Public License v3.0 (see `LICENSE`). By contributing, you agree that your contribution is licensed under the same terms.
+Maru NAS is licensed under the GNU General Public License v3.0 (see `LICENSE`). By contributing, you agree that your contribution is licensed under the same terms. `sdk/` is MIT licensed (`sdk/LICENSE`).

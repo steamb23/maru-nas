@@ -27,6 +27,7 @@ Maru NAS is a desktop-like web dashboard that runs on OpenMediaVault 8. Windows,
 - **[File explorer](docs/en/files.md)**: browse your home folder and shared folders with your own permissions, upload, download, and delete to the trash.
 - **[Web terminal](docs/en/terminal.md)**: open an SSH shell on this NAS in a window, as the account you signed in with.
 - **[System updates](docs/en/system-updates.md)**: check for OMV and Debian package updates and install them all. The installation runs to the end on the server even if you close the window, and you get a notification with the result.
+- **[Addon packages](docs/en/addons.md)**: administrators install addons built outside the repository by uploading them in the Settings app. Package screens run in a sandbox, and you review their permissions before installing. How to build one is in [Addon development](docs/en/addon-dev.md).
 - **[Security hardening mode](docs/en/security.md)**: ask for the password again, or for a passkey or an authenticator app, before sensitive features. You can also [sign in with a passkey](docs/en/passkey-login.md).
 - **[Upgrading from the dashboard](docs/en/upgrade.md#upgrading-from-the-dashboard)**: upgrade to a new version from the Settings app, without SSH.
 - **[OMV Workbench link](docs/en/configuration.md#opening-the-omv-workbench)**: open the OMV web UI in a new tab when you need deep configuration.
@@ -135,9 +136,11 @@ What you look up while running Maru NAS after installation is on the [documentat
 | [Web terminal](docs/en/terminal.md) | Turning it on, authentication, SSH settings and security |
 | [System updates](docs/en/system-updates.md) | Checking for and installing all updates, task progress and result notifications, limitations |
 | [Disk health](docs/en/disk-health.md) | The disk list, per-disk SMART details, when disks wake up, limitations |
+| [Addon packages](docs/en/addons.md) | Installing addons built outside the repository, reviewing their permissions, turning them off and removing them, risks and limitations |
 | [Privileged helper](docs/en/helper.md) | The service that does the work needing user or root rights, and its security design |
 | [Security hardening mode](docs/en/security.md) | Password re-check and two-step verification (passkeys, authenticator apps, recovery codes), recovery |
 | [Passkey sign-in](docs/en/passkey-login.md) | Signing in with a passkey instead of a password, and its limits |
+| [Addon development](docs/en/addon-dev.md) | Building packages (manifest, screens, packing, security), the SDK and the `maru-addon` CLI |
 
 ## Contributing
 

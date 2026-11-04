@@ -19,6 +19,9 @@ Maru NAS is a desktop-like web dashboard that runs on OpenMediaVault 8. If you a
 | [Settings app](settings-app.md) | Pages of the Settings app and who can use them |
 | [File explorer](files.md) | Browsing your home folder and shared folders, uploading and downloading, the trash, moving and copying |
 | [Web terminal](terminal.md) | An SSH shell in a dashboard window |
+| [System updates](system-updates.md) | Checking for and installing all updates, task progress and result notifications |
+| [Disk health](disk-health.md) | The disk list, per-disk SMART details, when disks wake up |
+| [Addon packages](addons.md) | Installing addons built outside the repository, reviewing their permissions, turning them off and removing them |
 
 ## Security
 
@@ -27,5 +30,15 @@ Maru NAS is a desktop-like web dashboard that runs on OpenMediaVault 8. If you a
 | [Privileged helper](helper.md) | The service that does the work needing user or root rights, and its security design |
 | [Security hardening mode](security.md) | Password re-check and two-step verification (passkeys, authenticator apps, recovery codes) before sensitive features |
 | [Passkey sign-in](passkey-login.md) | Signing in with a passkey instead of a password, and its limits |
+
+## Addon development
+
+| Page | Contents |
+|---|---|
+| [Addon development](addon-dev.md) | How it works, requirements, quick start, the development server |
+| [Manifest](addon-manifest.md) | Every field of `manifest.json` and its rules |
+| [Building screens](addon-frontend.md) | The entry HTML, the SDK API, windows and widgets, frame restrictions, TypeScript + Vite |
+| [Packing and distribution](addon-packaging.md) | Package file layout and limits, the `maru-addon` CLI, versions and updates |
+| [Addon security](addon-security.md) | What the dashboard prevents and what it cannot, methods that are not allowed |
 
 You can read these pages on GitHub as they are in the repository's `docs/en/`, or on the [documentation site](https://steamb23.github.io/maru-nas/en/) built with [Zensical](https://zensical.org/). The site normally follows the latest release (`stable`), and work in progress shows up first in [docs/en/ on `main`](https://github.com/steamb23/maru-nas/tree/main/docs/en). Between releases, the site may already show the documentation of `main`. How to edit them is under "Documentation" in [CONTRIBUTING.md](https://github.com/steamb23/maru-nas/blob/main/CONTRIBUTING.md).

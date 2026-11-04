@@ -26,11 +26,19 @@ nav = [
     "terminal.md",
     "system-updates.md",
     "disk-health.md",
+    "addons.md",
   ] },
   { "보안" = [
     "helper.md",
     "security.md",
     "passkey-login.md",
+  ] },
+  { "애드온 개발" = [
+    "addon-dev.md",
+    "addon-manifest.md",
+    "addon-frontend.md",
+    "addon-packaging.md",
+    "addon-security.md",
   ] },
 ]
 

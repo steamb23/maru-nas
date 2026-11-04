@@ -31,7 +31,7 @@ The workbench address (`-workbench-url`), the SMART check time (`-smart-refresh-
 ## State directory and backups
 
 - Sessions live only in the backend's memory, so every user must sign in again after the backend restarts.
-- `/var/lib/maru` holds only the dashboard's own state and has nothing to do with the OMV configuration. Copying this directory along with your backups keeps user settings, global settings, uploaded wallpapers and sign-in methods of the security hardening mode.
+- `/var/lib/maru` holds only the dashboard's own state and has nothing to do with the OMV configuration. Copying this directory along with your backups keeps user settings, global settings, uploaded wallpapers, sign-in methods of the security hardening mode, installed [addon packages](addons.md) and the values users saved in them.
 - The sign-in method records contain authenticator app secrets, so protect the backups too ([Design and limitations](security.md#design-and-limitations)).
 
 ## Opening the OMV Workbench

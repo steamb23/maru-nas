@@ -31,11 +31,19 @@ nav = [
     "terminal.md",
     "system-updates.md",
     "disk-health.md",
+    "addons.md",
   ] },
   { "Security" = [
     "helper.md",
     "security.md",
     "passkey-login.md",
+  ] },
+  { "Addon development" = [
+    "addon-dev.md",
+    "addon-manifest.md",
+    "addon-frontend.md",
+    "addon-packaging.md",
+    "addon-security.md",
   ] },
 ]
 

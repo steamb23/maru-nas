@@ -27,6 +27,7 @@ OpenMediaVault 8 위에 올리는 데스크톱형 웹 대시보드입니다. 창
 - **[파일 탐색기](docs/ko/files.md)**: 홈 폴더와 공유 폴더를 사용자마다의 권한으로 둘러보고, 올리고, 내려받고, 휴지통으로 지웁니다.
 - **[웹 터미널](docs/ko/terminal.md)**: 로그인한 계정으로 이 NAS의 SSH 셸을 창 안에 엽니다.
 - **[시스템 업데이트](docs/ko/system-updates.md)**: OMV·Debian 패키지 업데이트를 확인하고 모두 설치합니다. 창을 닫아도 서버에서 끝까지 진행되고 결과를 알림으로 알려 줍니다.
+- **[애드온 패키지](docs/ko/addons.md)**: 저장소 밖에서 만든 애드온을 관리자가 설정 앱에서 올려 설치합니다. 패키지 화면은 샌드박스에서 돌고, 설치하기 전에 권한을 검토합니다. 만드는 방법은 [애드온 개발](docs/ko/addon-dev.md)에 있습니다.
 - **[보안 강화 모드](docs/ko/security.md)**: 민감한 기능 앞에서 비밀번호 재확인이나 패스키·인증 앱으로 한 번 더 확인합니다. [패스키로 로그인](docs/ko/passkey-login.md)도 됩니다.
 - **[대시보드에서 업그레이드](docs/ko/upgrade.md#대시보드에서-업그레이드)**: SSH 없이 설정 앱에서 새 버전으로 올립니다.
 - **[OMV 워크벤치 연결](docs/ko/configuration.md#omv-워크벤치-열기)**: 심층 설정이 필요하면 OMV 웹 UI를 새 탭으로 엽니다.
@@ -135,9 +136,11 @@ git pull
 | [웹 터미널](docs/ko/terminal.md) | 켜기, 인증, SSH 설정과 보안 |
 | [시스템 업데이트](docs/ko/system-updates.md) | 업데이트 확인과 모두 설치, 작업 진행과 결과 알림, 한계 |
 | [디스크 건강](docs/ko/disk-health.md) | 디스크 목록, 디스크마다의 SMART 상세 정보, 디스크가 깨어나는 경우, 한계 |
+| [애드온 패키지](docs/ko/addons.md) | 저장소 밖에서 만든 애드온의 설치와 권한 검토, 끄기와 제거, 위험과 한계 |
 | [권한 도우미](docs/ko/helper.md) | 사용자 권한·root 권한이 필요한 일을 맡는 서비스와 그 보안 설계 |
 | [보안 강화 모드](docs/ko/security.md) | 비밀번호 재확인과 2차 인증(패스키, 인증 앱, 복구 코드), 복구 |
 | [패스키로 로그인](docs/ko/passkey-login.md) | 비밀번호 없이 패스키로 로그인하기와 그 한계 |
+| [애드온 개발](docs/ko/addon-dev.md) | 패키지 만들기(manifest, 화면, 묶기, 보안), SDK와 `maru-addon` CLI |
 
 ## 기여하기
 
