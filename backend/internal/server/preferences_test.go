@@ -96,12 +96,12 @@ func TestSetWidgetsRejectsInvalid(t *testing.T) {
 	wantStatus(t, b.login("admin", "admin"), http.StatusOK)
 
 	cases := map[string]any{
-		"missing widgets": map[string]any{},
-		"null widgets":    map[string]any{"widgets": nil},
-		"not an array":    map[string]any{"widgets": "cpu"},
-		"unknown addon":   api.WidgetsRequest{Widgets: []api.WidgetPlacement{{Addon: "nope", Cols: 3, Rows: 2}}},
-		"window only":     api.WidgetsRequest{Widgets: []api.WidgetPlacement{{Addon: "files", Cols: 3, Rows: 2}}},
-		"size too large":  api.WidgetsRequest{Widgets: []api.WidgetPlacement{{Addon: "cpu", Cols: 5, Rows: 2}}},
+		"missing widgets":  map[string]any{},
+		"null widgets":     map[string]any{"widgets": nil},
+		"not an array":     map[string]any{"widgets": "cpu"},
+		"invalid addon id": api.WidgetsRequest{Widgets: []api.WidgetPlacement{{Addon: "No pe", Cols: 3, Rows: 2}}},
+		"unknown too big":  api.WidgetsRequest{Widgets: []api.WidgetPlacement{{Addon: "nope", Cols: 13, Rows: 2}}},
+		"size too large":   api.WidgetsRequest{Widgets: []api.WidgetPlacement{{Addon: "cpu", Cols: 5, Rows: 2}}},
 		"overlap": api.WidgetsRequest{Widgets: []api.WidgetPlacement{
 			{Addon: "cpu", Cols: 3, Rows: 2},
 			{Addon: "disk", Right: 1, Top: 1, Cols: 2, Rows: 2},

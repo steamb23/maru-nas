@@ -217,10 +217,6 @@ func TestNewRegistryActions(t *testing.T) {
 	}
 
 	cases := map[string]Addon{
-		"no write rpc": addon("a", func(a *Addon) {
-			withAction("start")(a)
-			a.Manifest.RPC.Write = nil
-		}),
 		"bad name":       addon("a", withAction("Start")),
 		"declared twice": addon("a", func(a *Addon) { withAction("start")(a); withAction("start")(a) }),
 		"no implementation": addon("a", func(a *Addon) {

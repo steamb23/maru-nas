@@ -107,7 +107,7 @@
 
 ## 금지 표
 
-`addons/packagerpc.go`, 항목마다 근거 주석. 패키지는 아래 메서드를 읽기로도 쓰기로도 선언할 수 없다(`rpc_denied`). 금지 표를 바꿀 때는 OMV 소스(`/usr/share/openmediavault/engined/rpc/*.inc`, 플러그인 포함)에서 근거를 확인하고 이 문서와 주석을 함께 고친다.
+`addons/packagerpc.go`, 항목마다 근거 주석. 패키지는 아래 메서드를 읽기로도 쓰기로도 선언할 수 없다(`rpc_denied`). OMV는 서비스 이름을 대소문자 구분 없이 찾고(`rpc/servicemanager.inc`의 `mb_strtolower`) 메서드 이름은 등록한 그대로 찾으므로(`rpc/serviceabstract.inc`의 `hasMethod`), 금지 표와 종류 충돌은 서비스 이름만 소문자로 맞춰 비교한다(`rpcKey`). 금지 표를 바꿀 때는 OMV 소스(`/usr/share/openmediavault/engined/rpc/*.inc`, 플러그인 포함)에서 근거를 확인하고 이 문서와 주석을 함께 고친다.
 
 - 기준
     - 호출한 쪽이 명령·스크립트·패키지·파일 내용·호스트 경로·이스케이프하지 않는 CLI 인자를 정하는 메서드. OMV는 명령 인자를 이스케이프 없이 잇는다(`/usr/share/php/openmediavault/system/process.inc`의 `getCommandLine`)

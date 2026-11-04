@@ -314,3 +314,24 @@ func TestRegistryCapabilities(t *testing.T) {
 		t.Error("plugins must be an empty list, not null")
 	}
 }
+
+// 애드온 패키지가 밝힌 플러그인도 같은 조건(RPC 파일과 dpkg 설치)으로 감지한다.
+func TestDetectorExtra(t *testing.T) {
+	e := newDetectorEnv(t)
+	e.dpkg["status"] = &fstest.MapFile{Data: append(e.dpkg["status"].Data,
+		[]byte("\nPackage: openmediavault-nut\nStatus: install ok installed\nVersion: 8.0\n")...)}
+	e.omv[rpcFile("nut.inc")] = &fstest.MapFile{}
+	if got := pluginNames(e.d.Plugins()); slices.Contains(got, "openmediavault-nut") {
+		t.Errorf("unknown plugin detected before SetExtra: %v", got)
+	}
+	// knownPlugins에 있는 패키지는 표의 파일을 쓴다(패키지가 다른 파일을 밝혀도 바뀌지 않는다).
+	e.d.SetExtra(map[string]string{"openmediavault-nut": "nut.inc", "openmediavault-compose": "other.inc"})
+	want := []string{"openmediavault-compose", "openmediavault-kvm", "openmediavault-nut"}
+	if got := pluginNames(e.d.Plugins()); !slices.Equal(got, want) {
+		t.Errorf("plugins = %v, want %v", got, want)
+	}
+	e.d.SetExtra(nil)
+	if got := pluginNames(e.d.Plugins()); slices.Contains(got, "openmediavault-nut") {
+		t.Errorf("plugin kept after SetExtra(nil): %v", got)
+	}
+}
