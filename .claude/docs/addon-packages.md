@@ -171,7 +171,7 @@
     - 요청마다 패키지가 켜져 있고 그 세션이 capability를 만족하고 rev가 맞는지 본다. `os.Root`로 `ui/` 안만 연다
     - `_maru/sdk.js`, `_maru/maru.css`는 호스트가 준다(`web.SDKFile`, 개발은 `MARU_DEV_ADDON_SDK`)
 - 모든 응답의 헤더
-    - `Content-Security-Policy: sandbox allow-scripts; default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'none'; form-action 'none'; base-uri 'none'; frame-ancestors 'self'; webrtc 'block'`
+    - `Content-Security-Policy: sandbox allow-scripts; default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'none'; form-action 'none'; base-uri 'none'; frame-ancestors 'self'`(CSP3의 `webrtc 'block'`은 크롬이 모르는 지시어라 두지 않았다)
     - `X-Content-Type-Options: nosniff`, `Access-Control-Allow-Origin: *`(불투명 출처의 모듈 스크립트·글꼴은 CORS 로드다. 토큰이 권한이다), `Referrer-Policy: no-referrer`, `X-DNS-Prefetch-Control: off`
     - MIME은 고정 표(html, js, mjs, css, json, svg, png, jpg, webp, woff2, txt)다. `/etc/mime.types`에 기대지 않는다
     - 설치본은 `private, max-age=31536000, immutable`, 개발본은 `no-cache`
@@ -293,4 +293,13 @@
 
 ## 시험
 
-구현하면서 채운다. 브라우저(dev-fake)와 VM(desk-test)에서 확인한 범위와 날짜, 확인하다 바뀐 결정을 적는다.
+브라우저(dev-fake)와 VM(desk-test)에서 확인한 범위와 날짜, 확인하다 바뀐 결정을 적는다.
+
+- 2026-11-05, 크롬(Playwright, dev-fake, 개발 패키지 `sdk/testdata/dev-min`)
+    - 샌드박스 프레임 문서에서 CSP `'self'`는 문서 주소의 출처로 풀린다. `script-src 'self'`가 `./_maru/sdk.js`와 패키지의 모듈 스크립트를 허용한다(모듈 로드는 `Access-Control-Allow-Origin: *`로 된다)
+    - 프레임 안 `document.cookie`·`localStorage`는 `SecurityError`를 던진다(불투명 출처). 외부 fetch·같은 출처 fetch는 `connect-src 'none'`, 외부 이미지는 `img-src`로 막힌다. 같은 출처 이미지도 쿠키가 붙지 않아 API에서 401이다
+    - 호스트가 받는 `event.origin`은 `'null'`이다
+    - 프레임이 스스로 `https://example.com/`으로 이동하면 대시보드의 `frame-src 'self'`가 막는다. 그 뒤의 두 번째 `load`로 프레임을 다시 만든다
+    - 다른 창 뒤의 패키지 창 프레임을 누르면 그 창이 앞으로 오고 `document.activeElement`가 프레임이 된다(합성 `pointerdown`)
+    - 호스트 테마를 바꾸면 프레임에 바로 반영된다(context). 위젯 프레임은 `inert`·`pointer-events: none`이고 배경이 투명하다
+    - CSP3 `webrtc 'block'`은 크롬이 모르는 지시어라 콘솔 오류를 내서 뺐다

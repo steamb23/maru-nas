@@ -43,6 +43,8 @@ lint:
 	cd backend && go vet ./...
 	cd installer && go vet ./...
 	npm --prefix frontend run lint
+	# 애드온 SDK(sdk/js, 의존성 없음)는 프론트 도구로 검사한다. tsc는 tsconfig.app.json의 include가 함께 본다.
+	cd sdk/js && ../../frontend/node_modules/.bin/oxlint -c ../../frontend/.oxlintrc.json src types
 	npm --prefix frontend run typecheck
 
 # -count=1: 테스트 캐시는 backend 모듈 밖 파일(frontend/src/addons/manifests.gen.ts) 변경을

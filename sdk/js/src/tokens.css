@@ -1,0 +1,68 @@
+/* SPDX-License-Identifier: MIT
+   마루 NAS의 디자인 토큰과 테마·애니메이션 규칙. 대시보드(frontend/src/base.css가 불러온다)와 애드온 패키지 프레임
+   (_maru/maru.css)이 이 파일 하나를 함께 쓴다. 색은 light-dark()로 color-scheme을 따르므로 <html data-theme>만
+   바꾸면 된다. */
+:root {
+  font-family: system-ui, sans-serif;
+  font-size: 14px;
+  color-scheme: light dark;
+
+  /* windows/geometry.ts의 TITLEBAR_HEIGHT와 맞춘다. */
+  --titlebar-height: 36px;
+  /* 창 내용 열의 최대 폭. 설정 창과 목록형 애드온 창(.addon-window)이 넓은 창에서 이 폭의 가운데 열로 줄인다.
+     창을 꽉 채우는 앱형 창(시스템 정보)은 쓰지 않는다. 사이드바 틀은 창 너비를 다 써야 하므로
+     .window-body가 아니라 내용 컨테이너의 좌우 padding으로 건다. */
+  --window-content-width: 720px;
+  /* 떠 있는 작업표시줄과 최대화·타일 창이 화면 가장자리·서로와 두는 간격.
+     최대화·타일 창 배치는 windows/geometry.ts의 FLOAT_GAP으로 계산하므로 함께 바꾼다. */
+  --float-gap: 8px;
+  /* 작업표시줄 패널 두께와, 창 영역에서 빼는 높이 */
+  --taskbar-height: 52px;
+  --taskbar-reserve: calc(var(--taskbar-height) + var(--float-gap));
+
+  --accent: #3c84f7;
+  --text: light-dark(#1f2328, #e6e8eb);
+  --text-muted: light-dark(#5b636e, #9aa3ad);
+  --window-bg: light-dark(#ffffff, #23262b);
+  --window-border: light-dark(rgb(0 0 0 / 0.14), rgb(255 255 255 / 0.12));
+  --titlebar-bg: light-dark(#eef0f3, #2d3137);
+  --titlebar-active-bg: light-dark(#e1e6ee, #353a42);
+  --taskbar-bg: light-dark(rgb(246 247 249 / 0.88), rgb(28 30 34 / 0.88));
+  --hover-bg: light-dark(rgb(0 0 0 / 0.07), rgb(255 255 255 / 0.1));
+
+  /* 누름 피드백: hover보다 진한 배경, 아이콘·타일·버튼류는 살짝 줄어든다(scale 속성).
+     transform은 끌기·애니메이션이 직접 쓰므로 줄어듦에는 개별 속성 scale만 쓴다.
+     누를 때는 빠르게(--press-in), 뗄 때는 조금 천천히(--press-out) 돌아온다. */
+  --press-bg: light-dark(rgb(0 0 0 / 0.14), rgb(255 255 255 / 0.18));
+  --press-scale: 0.96;
+  --press-in: 60ms;
+  --press-out: 150ms;
+}
+
+/* 애니메이션을 끄면(화면 설정의 data-animations, 시스템의 '동작 줄이기') CSS 전환을 모두 끈다.
+   값은 바로 바뀌고(누름 배경·크기, 스위치, 작업표시줄 표시 등) 움직이는 과정만 사라진다.
+   Web Animations 재생은 animationsEnabled가, 키프레임 애니메이션(진행 표시)은 각 파일이 따로 다룬다.
+   파일마다 전환 끄기 규칙을 따로 두지 않는다. */
+:root[data-animations='off'] *,
+:root[data-animations='off'] *::before,
+:root[data-animations='off'] *::after {
+  transition: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+  }
+}
+
+/* 화면 설정의 테마. auto면 data-theme이 없어 브라우저(OS) 설정을 따른다(appearance/dom.ts의 applyTheme).
+   light-dark() 토큰은 color-scheme을 따르므로 여기만 바꾸면 된다. */
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+}

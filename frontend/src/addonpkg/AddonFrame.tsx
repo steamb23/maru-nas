@@ -108,8 +108,9 @@ export function AddonFrame({ id, view, active, windowId, grid }: Props) {
     const url = new URL(uiBase + entry, document.baseURI)
     url.searchParams.set('theme', initialLook.theme)
     url.searchParams.set('anim', initialLook.animations ? '1' : '0')
+    url.searchParams.set('view', view)
     return url.href
-  }, [uiBase, entry, initialLook])
+  }, [uiBase, entry, initialLook, view])
 
   const messagesKey = pkgId && rev ? `${pkgId}/${rev}/${lang}` : ''
   useEffect(() => {

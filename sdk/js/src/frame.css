@@ -1,0 +1,44 @@
+/* SPDX-License-Identifier: MIT
+   애드온 패키지 프레임 문서의 기본 모양. _maru/maru.css가 tokens.css·components.css 다음에 싣는다.
+   창 보기는 창 배경을 깔고, 위젯 보기는 위젯 틀의 배경이 보이게 투명하게 둔다(sdk.js가 <html data-view>를 둔다). */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  color: var(--text);
+  background: var(--window-bg);
+  font-family: system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+:root[data-view='widget'] body {
+  background: transparent;
+  overflow: hidden;
+}
+
+/* 창 보기의 기본 여백. 목록형 화면은 .addon-window(가운데 열)를 쓴다. */
+:root[data-view='window'] body {
+  overflow: auto;
+}
+
+a {
+  color: var(--accent);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
