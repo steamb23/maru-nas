@@ -95,8 +95,9 @@ export function satisfies(a: Assurance, level: Level): boolean {
 // Choice는 확인 폼에서 고를 수 있는 확인 방법이다. 등록한 2차 수단과, 관리 확인에서만 받는 기기 추가 코드다.
 export type Choice = Factor | 'deviceCode'
 
-// ManagePurpose는 관리 확인을 여는 목적이다. 패스키 등록은 고를 수 있는 방법과 순서가 다르다.
-export type ManagePurpose = 'addPasskey'
+// ManagePurpose는 관리 확인을 여는 목적이다. 패스키 등록은 고를 수 있는 방법과 순서가 다르고, 애드온 패키지
+// 관리(설정의 애드온 페이지)는 안내 문구만 다르다.
+export type ManagePurpose = 'addPasskey' | 'addons'
 
 const DEFAULT_ORDER: readonly Choice[] = ['passkey', 'totp', 'recovery']
 // 패스키 등록은 새 기기에서 하는 경우가 많고, 그 기기에는 등록한 패스키가 없기 쉽다.

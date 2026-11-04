@@ -1,0 +1,179 @@
+/* 설정의 애드온 페이지(AddonsPage.tsx): 패키지 목록 행, 검토·정보 대화상자의 권한 요약. */
+
+/* 목록 행 이름: 아이콘, 이름, 버전, 배지 */
+.addons-pkg-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+}
+
+.addons-pkg-title .package-icon,
+.addons-summary-head .package-icon {
+  flex: none;
+}
+
+.addons-pkg-name {
+  font-weight: 600;
+}
+
+.addons-pkg-version {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.addons-pkg-problem {
+  background: light-dark(#fdecea, #4a2422);
+  color: light-dark(#a1261d, #f4b4ae);
+}
+
+/* 백엔드의 영어 설명(오류 안내, 쓸 수 없는 이유 아래) */
+.addons-pkg-detail {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  opacity: 0.8;
+  overflow-wrap: anywhere;
+}
+
+/* 제거 확인의 백엔드 데이터 지우기 */
+.addons-pkg-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  margin-top: 12px;
+  cursor: pointer;
+}
+
+.addons-pkg-check input {
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+/* 검토·정보 대화상자 */
+.addons-summary {
+  font-size: 13px;
+}
+
+.addons-summary-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.addons-summary-text {
+  min-width: 0;
+}
+
+.addons-summary-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  font-size: 15px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.addons-summary-meta {
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+
+.addons-summary-desc {
+  margin: 12px 0 0;
+  overflow-wrap: anywhere;
+}
+
+.addons-summary-warning {
+  margin: 10px 0 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: light-dark(#fff4e0, #47361a);
+  color: light-dark(#7a4b00, #f6d49a);
+}
+
+.addons-summary-heading {
+  margin: 16px 0 4px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* 이름-값 목록(권한, SHA-256, 설치 기록). 위험 목록을 사이에 두고 둘로 나뉘므로 이름 칸 너비를 고정해 맞춘다. */
+.addons-perms {
+  display: grid;
+  grid-template-columns: 9em minmax(0, 1fr);
+  gap: 6px 12px;
+  margin: 8px 0 0;
+}
+
+.addons-perms dt {
+  color: var(--text-muted);
+}
+
+.addons-perms dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.addons-perm-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.addons-perm-list li + li {
+  margin-top: 2px;
+}
+
+.addons-perm-list li.removed {
+  color: var(--text-muted);
+  text-decoration: line-through;
+}
+
+.addons-perm-list code,
+.addons-sha {
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  font-size: 12px;
+}
+
+.addons-sha {
+  overflow-wrap: anywhere;
+}
+
+.addons-perm-change {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 999px;
+  font-size: 11px;
+  text-decoration: none;
+}
+
+.addons-perm-change.added {
+  background: light-dark(#fff4e0, #47361a);
+  color: light-dark(#7a4b00, #f6d49a);
+}
+
+.addons-perm-change.removed {
+  background: var(--hover-bg);
+  color: var(--text-muted);
+}
+
+/* 위험 목록 */
+.addons-risks {
+  margin: 12px 0 0;
+  padding: 8px 10px 8px 28px;
+  border-radius: 8px;
+  background: light-dark(#fdecea, #4a2422);
+  color: light-dark(#a1261d, #f4b4ae);
+}
+
+.addons-risks li + li {
+  margin-top: 4px;
+}
+

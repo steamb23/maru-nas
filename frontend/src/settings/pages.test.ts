@@ -21,7 +21,7 @@ describe('groupPages', () => {
     const groups = groupPages(visiblePages({ admin: true }))
     expect(groups.map((g) => [g.id, g.labelKey, g.pages.length])).toEqual([
       ['user', 'settings.groups.user', 3],
-      ['admin', 'settings.groups.admin', 5],
+      ['admin', 'settings.groups.admin', 6],
       ['info', null, 1],
     ])
   })

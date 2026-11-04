@@ -1137,7 +1137,8 @@
       "profile": "Profile",
       "security": "Security",
       "securityPolicy": "Security policy",
-      "update": "Update"
+      "update": "Update",
+      "addons": "Addons"
     },
     "about": {
       "build": "Version information",
@@ -1564,6 +1565,120 @@
       "filesScopeDesc": "If applied to writes and deletions only, browsing folders and downloading need no check, and the check is asked only before uploading, creating, renaming, moving, deleting, and trash operations.",
       "filesScopeAll": "Including browsing and downloads",
       "filesScopeWrites": "Writes and deletions only"
+    },
+    "addons": {
+      "intro": "Addon packages are addons built outside the Maru NAS repository. Their screens run in a sandbox separate from the dashboard, but review the permissions and install packages only from authors you trust.",
+      "indexError": "The install record (installed.json) could not be read, so none of the installed packages can be used. Check the server log.",
+      "install": "Install a package",
+      "installDesc": "Upload an addon package file (.maru-addon) to see its permissions before installing. Files up to {{size}} MiB can be uploaded.",
+      "cannotInstall": "Packages cannot be installed because there is no state directory. Only development packages are shown.",
+      "upload": "Upload package…",
+      "installed": "Installed addons",
+      "installedDesc": "Turning an addon off removes it from every user's apps and desktop. Shortcuts and widget placements are kept and come back when you turn it on again.",
+      "empty": "No addon packages are installed.",
+      "dev": "Development",
+      "detailsButton": "Details",
+      "uninstall": "Remove",
+      "enableLabel": "Turn on {{name}}",
+      "uninstallTitle": "Remove addon",
+      "uninstallMessage": "Remove the {{name}} addon? Users' shortcuts and widget placements are kept and come back if you install it again.",
+      "purge": "Also delete the data saved by its backend",
+      "state": {
+        "invalid": "Invalid",
+        "incompatible": "Incompatible",
+        "conflict": "Conflict",
+        "notAllowed": "Not allowed"
+      },
+      "reason": {
+        "archive_invalid": "The package file is not in a valid format.",
+        "too_large": "The package file exceeds a size limit.",
+        "manifest_invalid": "manifest.json is not valid.",
+        "incompatible": "This package cannot be used with this dashboard version. Update the dashboard or use a package made for this version.",
+        "arch_missing": "The package has no backend for this server's architecture.",
+        "backend_invalid": "The package's backend executable is not valid.",
+        "backend_unsupported": "This dashboard does not support packages with a backend yet.",
+        "conflict_builtin": "Its id is the same as a built-in addon's.",
+        "conflict_package": "Its id is the same as another addon package installed earlier.",
+        "rpc_denied": "It declares an OMV method that addon packages are not allowed to use.",
+        "rpc_kind": "It declares a method as a write that another addon declares as a read, or the other way around.",
+        "reserved_id": "It uses an id reserved by the dashboard.",
+        "invalid": "Its addon declaration did not pass the checks.",
+        "unknown": "It cannot be used for an unknown reason."
+      },
+      "risk": {
+        "omv_write": "It can change OMV settings. OMV administrator access is close to root, so install it only if you trust the author that much.",
+        "backend": "It includes a program (backend) that runs on this server.",
+        "backend_shared_data": "The backend is shared by all users. Values read with an administrator's session may be shown to regular users.",
+        "net_lan": "The backend can connect to other devices on the LAN. Through the LAN's router or a proxy it may also reach the internet.",
+        "net_loopback": "The backend can connect to other services on this server (the OMV web UI, SSH and so on).",
+        "unknown": "It has a risk this dashboard does not recognize."
+      },
+      "warning": {
+        "author_changed": "The author is different from the installed version.",
+        "downgrade": "This version is older than the installed one.",
+        "reinstall": "It has the same version number as the installed one, but different contents.",
+        "same_digest": "It is the same file as the installed package."
+      },
+      "review": {
+        "title": "Review addon installation",
+        "updateTitle": "Review addon update",
+        "install": "Install",
+        "update": "Update",
+        "version": "Version {{version}}",
+        "versionChange": "Version {{from}} → {{to}}",
+        "author": "Author: {{author}}",
+        "authorNote": "The name and author are written by the package itself and are not verified.",
+        "permissions": "Permissions",
+        "widens": "This update widens the permissions. Check the newly added ones.",
+        "notWidens": "This update does not widen any permission.",
+        "added": "New",
+        "removed": "Removed",
+        "writeSteps": "Actions that change OMV settings ask you to confirm your identity every time they run."
+      },
+      "perm": {
+        "users": "Available to",
+        "adminOnly": "Administrators only",
+        "everyone": "All users",
+        "plugins": "Required plugins",
+        "read": "OMV reads",
+        "write": "OMV writes",
+        "actions": "Actions",
+        "backend": "Backend",
+        "backendYes": "Yes (runs on this server)",
+        "backendNo": "None",
+        "network": "Backend network",
+        "nothing": "None"
+      },
+      "network": {
+        "none": "No network access",
+        "lan": "LAN",
+        "loopback": "Other services on this server (loopback)",
+        "other": "{{value}}"
+      },
+      "details": {
+        "title": "Addon details",
+        "installedBy": "Installed by",
+        "installedAt": "Installed",
+        "updatedAt": "Updated",
+        "devNote": "A development package loaded through MARU_DEV_ADDONS. It cannot be turned off or removed here."
+      },
+      "errors": {
+        "failed": "Could not change the addon packages.",
+        "tooLarge": "The package file is too large. Files up to {{size}} MiB can be uploaded.",
+        "unavailable": "Packages cannot be installed because there is no state directory.",
+        "expired": "The review time ran out. Upload the package again.",
+        "readonly": "Development packages cannot be changed here.",
+        "busy": "An action of this addon is in progress. Try again after it finishes.",
+        "notFound": "The package was not found. The list has been reloaded.",
+        "notConfirmed": "Identity confirmation was not completed."
+      },
+      "done": {
+        "installed": "Installed the {{name}} addon.",
+        "updated": "Updated the {{name}} addon.",
+        "enabled": "Turned on the {{name}} addon.",
+        "disabled": "Turned off the {{name}} addon.",
+        "uninstalled": "Removed the {{name}} addon."
+      }
     }
   },
   "appearance": {
@@ -1603,7 +1718,9 @@
       "usePasskey": "Use passkey",
       "switchDeviceCode": "Use a device code",
       "deviceCode": "Device code",
-      "deviceCodeHint": "Create the code on another device that has your passkey, under Settings → Security → Add a passkey on another device. If this device has your passkey, choose Use a passkey."
+      "deviceCodeHint": "Create the code on another device that has your passkey, under Settings → Security → Add a passkey on another device. If this device has your passkey, choose Use a passkey.",
+      "addonsHint": "To change addon packages, enter your password and confirm with a method you registered.",
+      "addonsPasswordHint": "To change addon packages, enter your password again."
     },
     "errors": {
       "wrongPassword": "Incorrect password.",
