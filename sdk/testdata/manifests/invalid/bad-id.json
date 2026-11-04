@@ -1,0 +1,22 @@
+{
+  "format": 1,
+  "id": "Bad_ID",
+  "version": "0.1.0",
+  "sdk": 1,
+  "name": {
+    "en": "Minimal window"
+  },
+  "author": {
+    "name": "Example Author"
+  },
+  "icon": "icon.svg",
+  "views": {
+    "window": {
+      "entry": "window.html",
+      "defaultSize": {
+        "width": 400,
+        "height": 300
+      }
+    }
+  }
+}

@@ -8,6 +8,8 @@ CLAUDE.local.md
 
 # 의존성
 node_modules/
+# 애드온 SDK(sdk/js)는 의존성이 없으므로 락 파일을 두지 않는다
+/sdk/js/package-lock.json
 
 # 빌드 결과물
 /bin/

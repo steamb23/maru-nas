@@ -1,0 +1,16 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <!-- The dashboard serves _maru/ next to the built files. vite-ignore keeps Vite from bundling them. -->
+    <link rel="stylesheet" href="./_maru/maru.css" vite-ignore />
+    <script src="./_maru/sdk.js" vite-ignore></script>
+  </head>
+  <body>
+    <main class="addon-window">
+      <h1 id="title"></h1>
+      <p id="host"></p>
+    </main>
+    <script type="module" src="./src/window.ts"></script>
+  </body>
+</html>

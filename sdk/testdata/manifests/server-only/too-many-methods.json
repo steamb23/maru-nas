@@ -1,0 +1,106 @@
+{
+  "format": 1,
+  "id": "minimal-window",
+  "version": "0.1.0",
+  "sdk": 1,
+  "name": {
+    "en": "Minimal window"
+  },
+  "author": {
+    "name": "Example Author"
+  },
+  "icon": "icon.svg",
+  "views": {
+    "window": {
+      "entry": "window.html",
+      "defaultSize": {
+        "width": 400,
+        "height": 300
+      }
+    }
+  },
+  "rpc": {
+    "read": [
+      "Example.read0",
+      "Example.read1",
+      "Example.read2",
+      "Example.read3",
+      "Example.read4",
+      "Example.read5",
+      "Example.read6",
+      "Example.read7",
+      "Example.read8",
+      "Example.read9",
+      "Example.read10",
+      "Example.read11",
+      "Example.read12",
+      "Example.read13",
+      "Example.read14",
+      "Example.read15",
+      "Example.read16",
+      "Example.read17",
+      "Example.read18",
+      "Example.read19",
+      "Example.read20",
+      "Example.read21",
+      "Example.read22",
+      "Example.read23",
+      "Example.read24",
+      "Example.read25",
+      "Example.read26",
+      "Example.read27",
+      "Example.read28",
+      "Example.read29",
+      "Example.read30",
+      "Example.read31",
+      "Example.read32",
+      "Example.read33",
+      "Example.read34",
+      "Example.read35",
+      "Example.read36",
+      "Example.read37",
+      "Example.read38",
+      "Example.read39"
+    ],
+    "write": [
+      "Example.write0",
+      "Example.write1",
+      "Example.write2",
+      "Example.write3",
+      "Example.write4",
+      "Example.write5",
+      "Example.write6",
+      "Example.write7",
+      "Example.write8",
+      "Example.write9",
+      "Example.write10",
+      "Example.write11",
+      "Example.write12",
+      "Example.write13",
+      "Example.write14",
+      "Example.write15",
+      "Example.write16",
+      "Example.write17",
+      "Example.write18",
+      "Example.write19",
+      "Example.write20",
+      "Example.write21",
+      "Example.write22",
+      "Example.write23",
+      "Example.write24",
+      "Example.write25",
+      "Example.write26",
+      "Example.write27",
+      "Example.write28",
+      "Example.write29"
+    ]
+  },
+  "actions": [
+    {
+      "name": "run"
+    }
+  ],
+  "backend": {
+    "network": []
+  }
+}

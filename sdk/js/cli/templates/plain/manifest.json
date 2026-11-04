@@ -1,0 +1,16 @@
+{
+  "$schema": "@@SCHEMA@@",
+  "format": 1,
+  "id": "@@ID@@",
+  "version": "0.1.0",
+  "sdk": @@SDK_LEVEL@@,
+  "name": { "en": "@@NAME@@" },
+  "description": { "en": "A Maru NAS addon." },
+  "author": { "name": "Your name" },
+  "icon": "icon.svg",
+  "views": {
+    "window": { "entry": "window.html", "defaultSize": { "width": 480, "height": 320 } },
+    "widget": { "entry": "widget.html", "defaultSize": { "cols": 2, "rows": 1 } }
+  },
+  "rpc": { "read": ["System.getInformation"] }
+}

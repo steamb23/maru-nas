@@ -1,0 +1,18 @@
+{
+  "name": "@maru-nas/addon-sdk",
+  "version": "0.1.0",
+  "description": "SDK for Maru NAS addon packages: API types, the manifest schema and the maru-addon CLI.",
+  "license": "MIT",
+  "type": "module",
+  "types": "./types/index.d.ts",
+  "exports": {
+    ".": { "types": "./types/index.d.ts" },
+    "./schema/manifest.schema.json": "./schema/manifest.schema.json",
+    "./package.json": "./package.json"
+  },
+  "bin": { "maru-addon": "./cli/maru-addon.mjs" },
+  "files": ["cli", "schema", "types", "README.md"],
+  "engines": { "node": ">=20.19" },
+  "repository": { "type": "git", "url": "git+https://github.com/steamb23/maru-nas.git", "directory": "sdk/js" },
+  "keywords": ["maru-nas", "openmediavault", "addon"]
+}

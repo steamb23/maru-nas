@@ -1,0 +1,27 @@
+{
+  "format": 1,
+  "id": "widget-only",
+  "version": "2.0.0",
+  "sdk": 1,
+  "name": {
+    "en": "Widget only"
+  },
+  "author": {
+    "name": "Example Author"
+  },
+  "icon": "icon.svg",
+  "views": {
+    "widget": {
+      "entry": "widget.html",
+      "defaultSize": {
+        "cols": 1,
+        "rows": 1
+      }
+    }
+  },
+  "rpc": {
+    "read": [
+      "System.getInformation"
+    ]
+  }
+}

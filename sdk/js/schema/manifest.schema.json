@@ -1,0 +1,488 @@
+{
+  "$id": "https://raw.githubusercontent.com/steamb23/maru-nas/main/sdk/js/schema/manifest.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "manifest.json of a Maru NAS addon package (.maru-addon). The dashboard checks more than this schema when installing.",
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "actions": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "admin": {
+            "type": "boolean"
+          },
+          "confirm": {
+            "type": "boolean"
+          },
+          "confirmText": {
+            "additionalProperties": {
+              "maxLength": 300,
+              "minLength": 1,
+              "pattern": "\\S",
+              "type": "string"
+            },
+            "propertyNames": {
+              "enum": [
+                "cs",
+                "de",
+                "en",
+                "es",
+                "fr",
+                "it",
+                "nl",
+                "pl",
+                "pt-PT",
+                "ru",
+                "uk",
+                "ja",
+                "zh-Hans",
+                "zh-Hant",
+                "ko"
+              ]
+            },
+            "required": [
+              "en"
+            ],
+            "type": "object"
+          },
+          "label": {
+            "additionalProperties": {
+              "maxLength": 40,
+              "minLength": 1,
+              "pattern": "\\S",
+              "type": "string"
+            },
+            "propertyNames": {
+              "enum": [
+                "cs",
+                "de",
+                "en",
+                "es",
+                "fr",
+                "it",
+                "nl",
+                "pl",
+                "pt-PT",
+                "ru",
+                "uk",
+                "ja",
+                "zh-Hans",
+                "zh-Hant",
+                "ko"
+              ]
+            },
+            "required": [
+              "en"
+            ],
+            "type": "object"
+          },
+          "name": {
+            "maxLength": 32,
+            "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$",
+            "type": "string"
+          },
+          "timeoutSeconds": {
+            "maximum": 600,
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "maxItems": 32,
+      "type": "array"
+    },
+    "author": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "maxLength": 60,
+          "minLength": 1,
+          "pattern": "\\S",
+          "type": "string"
+        },
+        "url": {
+          "maxLength": 200,
+          "pattern": "^https?://[^\\s/?#]+",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    },
+    "backend": {
+      "additionalProperties": false,
+      "properties": {
+        "network": {
+          "items": {
+            "enum": [
+              "lan",
+              "loopback"
+            ]
+          },
+          "type": "array",
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "network"
+      ],
+      "type": "object"
+    },
+    "description": {
+      "additionalProperties": {
+        "maxLength": 200,
+        "minLength": 1,
+        "pattern": "\\S",
+        "type": "string"
+      },
+      "propertyNames": {
+        "enum": [
+          "cs",
+          "de",
+          "en",
+          "es",
+          "fr",
+          "it",
+          "nl",
+          "pl",
+          "pt-PT",
+          "ru",
+          "uk",
+          "ja",
+          "zh-Hans",
+          "zh-Hant",
+          "ko"
+        ]
+      },
+      "required": [
+        "en"
+      ],
+      "type": "object"
+    },
+    "format": {
+      "const": 1
+    },
+    "icon": {
+      "const": "icon.svg"
+    },
+    "id": {
+      "maxLength": 24,
+      "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$",
+      "type": "string"
+    },
+    "name": {
+      "additionalProperties": {
+        "maxLength": 40,
+        "minLength": 1,
+        "pattern": "\\S",
+        "type": "string"
+      },
+      "propertyNames": {
+        "enum": [
+          "cs",
+          "de",
+          "en",
+          "es",
+          "fr",
+          "it",
+          "nl",
+          "pl",
+          "pt-PT",
+          "ru",
+          "uk",
+          "ja",
+          "zh-Hans",
+          "zh-Hant",
+          "ko"
+        ]
+      },
+      "required": [
+        "en"
+      ],
+      "type": "object"
+    },
+    "requires": {
+      "additionalProperties": false,
+      "properties": {
+        "admin": {
+          "type": "boolean"
+        },
+        "plugins": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "package": {
+                "maxLength": 100,
+                "pattern": "^openmediavault-[a-z0-9.+-]+$",
+                "type": "string"
+              },
+              "rpcFile": {
+                "maxLength": 100,
+                "pattern": "^[a-z0-9_-]+\\.inc$",
+                "type": "string"
+              }
+            },
+            "required": [
+              "package",
+              "rpcFile"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "rpc": {
+      "additionalProperties": false,
+      "properties": {
+        "read": {
+          "items": {
+            "maxLength": 100,
+            "pattern": "^[A-Za-z][A-Za-z0-9]*\\.[A-Za-z][A-Za-z0-9]*$",
+            "type": "string"
+          },
+          "maxItems": 64,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "write": {
+          "items": {
+            "maxLength": 100,
+            "pattern": "^[A-Za-z][A-Za-z0-9]*\\.[A-Za-z][A-Za-z0-9]*$",
+            "type": "string"
+          },
+          "maxItems": 64,
+          "type": "array",
+          "uniqueItems": true
+        }
+      },
+      "type": "object"
+    },
+    "sdk": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "version": {
+      "maxLength": 32,
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(-[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?$",
+      "type": "string"
+    },
+    "views": {
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "widget": {
+          "additionalProperties": false,
+          "properties": {
+            "defaultSize": {
+              "additionalProperties": false,
+              "properties": {
+                "cols": {
+                  "maximum": 12,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "rows": {
+                  "maximum": 12,
+                  "minimum": 1,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "cols",
+                "rows"
+              ],
+              "type": "object"
+            },
+            "entry": {
+              "maxLength": 100,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,94}\\.html$",
+              "type": "string"
+            },
+            "maxSize": {
+              "additionalProperties": false,
+              "properties": {
+                "cols": {
+                  "maximum": 12,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "rows": {
+                  "maximum": 12,
+                  "minimum": 1,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "cols",
+                "rows"
+              ],
+              "type": "object"
+            },
+            "minSize": {
+              "additionalProperties": false,
+              "properties": {
+                "cols": {
+                  "maximum": 12,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "rows": {
+                  "maximum": 12,
+                  "minimum": 1,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "cols",
+                "rows"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "entry",
+            "defaultSize"
+          ],
+          "type": "object"
+        },
+        "window": {
+          "additionalProperties": false,
+          "properties": {
+            "defaultSize": {
+              "additionalProperties": false,
+              "properties": {
+                "height": {
+                  "maximum": 4096,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "width": {
+                  "maximum": 4096,
+                  "minimum": 1,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "width",
+                "height"
+              ],
+              "type": "object"
+            },
+            "entry": {
+              "maxLength": 100,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,94}\\.html$",
+              "type": "string"
+            },
+            "minSize": {
+              "additionalProperties": false,
+              "properties": {
+                "height": {
+                  "maximum": 4096,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "width": {
+                  "maximum": 4096,
+                  "minimum": 1,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "width",
+                "height"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "entry",
+            "defaultSize"
+          ],
+          "type": "object"
+        }
+      },
+      "type": "object"
+    }
+  },
+  "required": [
+    "format",
+    "id",
+    "version",
+    "sdk",
+    "name",
+    "author",
+    "icon",
+    "views"
+  ],
+  "title": "Maru NAS addon package manifest",
+  "type": "object",
+  "x-maru": {
+    "archive": {
+      "backendFiles": [
+        "linux-amd64",
+        "linux-arm64"
+      ],
+      "devDir": "dev",
+      "limits": {
+        "backend": 67108864,
+        "compressed": 67108864,
+        "entries": 2000,
+        "i18n": 131072,
+        "icon": 131072,
+        "manifest": 65536,
+        "text": 262144,
+        "total": 167772160,
+        "uiFile": 8388608
+      },
+      "maxDepth": 16,
+      "reservedUI": "_maru",
+      "segmentPattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$",
+      "topDirs": [
+        "ui",
+        "i18n",
+        "backend"
+      ],
+      "topFiles": [
+        "manifest.json",
+        "icon.svg",
+        "LICENSE",
+        "README.md"
+      ]
+    },
+    "i18n": {
+      "fallback": "en",
+      "keyPattern": "^[A-Za-z0-9_.-]{1,100}$",
+      "languages": [
+        "cs",
+        "de",
+        "en",
+        "es",
+        "fr",
+        "it",
+        "nl",
+        "pl",
+        "pt-PT",
+        "ru",
+        "uk",
+        "ja",
+        "zh-Hans",
+        "zh-Hant",
+        "ko"
+      ],
+      "maxKeys": 2000,
+      "maxValueBytes": 2000
+    },
+    "sdk": 1
+  }
+}

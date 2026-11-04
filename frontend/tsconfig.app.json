@@ -26,5 +26,7 @@
     /* 애드온 SDK(sdk/js/src, MIT)는 호스트와 함께 쓰는 원본이다. vite.config.ts의 별칭과 맞춘다. */
     "paths": { "@maru-sdk/*": ["../sdk/js/src/*"] }
   },
-  "include": ["src", "../sdk/js/src"]
+  "include": ["src", "../sdk/js/src"],
+  /* Node API를 쓰는 테스트(*.node.test.ts)는 tsconfig.node.json이 검사한다. */
+  "exclude": ["src/**/*.node.test.ts"]
 }

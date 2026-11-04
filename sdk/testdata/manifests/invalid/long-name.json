@@ -1,0 +1,22 @@
+{
+  "format": 1,
+  "id": "minimal-window",
+  "version": "0.1.0",
+  "sdk": 1,
+  "name": {
+    "en": "nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn"
+  },
+  "author": {
+    "name": "Example Author"
+  },
+  "icon": "icon.svg",
+  "views": {
+    "window": {
+      "entry": "window.html",
+      "defaultSize": {
+        "width": 400,
+        "height": 300
+      }
+    }
+  }
+}

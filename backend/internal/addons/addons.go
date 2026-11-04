@@ -180,9 +180,15 @@ type methodEntry struct {
 }
 
 var (
-	idPattern     = regexp.MustCompile(`^[a-z][a-z0-9]*(-[a-z0-9]+)*$`)
-	methodPattern = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9]*\.[A-Za-z][A-Za-z0-9]*$`)
+	idPattern     = regexp.MustCompile(IDPattern)
+	methodPattern = regexp.MustCompile(MethodPattern)
 )
+
+// IDPattern은 애드온·조작 id 형식이다. 애드온 패키지 manifest 스키마(sdk/js/schema)도 이 값을 쓴다.
+const IDPattern = `^[a-z][a-z0-9]*(-[a-z0-9]+)*$`
+
+// MethodPattern은 OMV RPC 메서드 이름("Service.method") 형식이다.
+const MethodPattern = `^[A-Za-z][A-Za-z0-9]*\.[A-Za-z][A-Za-z0-9]*$`
 
 // NewRegistry는 애드온 목록을 검사해 Registry를 만든다. 순서는 그대로 유지한다.
 func NewRegistry(list ...Addon) (*Registry, error) {

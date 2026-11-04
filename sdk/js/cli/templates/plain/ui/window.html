@@ -1,0 +1,17 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <!-- The dashboard serves _maru/ next to these files: the SDK runtime (globalThis.maru) and the shared styles. -->
+    <link rel="stylesheet" href="./_maru/maru.css" />
+    <script src="./_maru/sdk.js"></script>
+  </head>
+  <body>
+    <main class="addon-window">
+      <h1 id="title"></h1>
+      <p id="host"></p>
+    </main>
+    <!-- The frame's Content-Security-Policy blocks inline scripts, so keep scripts in files. -->
+    <script type="module" src="./window.js"></script>
+  </body>
+</html>

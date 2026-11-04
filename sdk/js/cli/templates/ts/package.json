@@ -1,0 +1,16 @@
+{
+  "name": "@@ID@@",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc && vite build",
+    "watch": "vite build --watch",
+    "validate": "maru-addon validate addon",
+    "pack": "maru-addon pack addon"
+  },
+  "devDependencies": {
+    "@maru-nas/addon-sdk": "@@SDK_DEP@@",
+    "typescript": "~6.0.2",
+    "vite": "^8.3.0"
+  }
+}
