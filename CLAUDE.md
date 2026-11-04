@@ -4,7 +4,7 @@
 
 OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표시줄·아이콘이 있는 데스크톱형 웹 대시보드.
 
-영역별 상세 규칙은 `.claude/rules/`에 있고 해당 파일을 다룰 때 로드된다: `auth-omv.md`(OMV 8 동작, 인증 설계), `backend.md`, `helper.md`(권한 도우미), `terminal.md`(웹 터미널), `files.md`(파일 탐색기), `security.md`(보안 강화 모드), `frontend.md`, `frontend-shell.md`(창·작업표시줄·애니메이션), `i18n.md`, `icons.md`, `installer.md`(설치기). 작업 전 설계를 논의할 때는 해당 파일을 직접 읽는다. 설계 문서는 `.claude/docs/`(`addons.md`, `data-sources.md`, `helper.md`, `upgrade.md`)에, 나중에 개발할 기능 목록은 `.claude/docs/roadmap.md`에 있다.
+영역별 상세 규칙은 `.claude/rules/`에 있고 해당 파일을 다룰 때 로드된다: `auth-omv.md`(OMV 8 동작, 인증 설계), `backend.md`, `helper.md`(권한 도우미), `terminal.md`(웹 터미널), `files.md`(파일 탐색기), `security.md`(보안 강화 모드), `frontend.md`, `frontend-shell.md`(창·작업표시줄·애니메이션), `i18n.md`, `icons.md`, `installer.md`(설치기), `addon-packages.md`(애드온 패키지와 SDK). 작업 전 설계를 논의할 때는 해당 파일을 직접 읽는다. 설계 문서는 `.claude/docs/`(`addons.md`, `addon-packages.md`, `data-sources.md`, `helper.md`, `upgrade.md`)에, 나중에 개발할 기능 목록은 `.claude/docs/roadmap.md`에 있다.
 
 이 파일과 규칙·설계 문서에서 사용자 문서를 가리킬 때는 한국어 판(`docs/ko/`)과 그 페이지의 한국어 제목을 쓴다. 영어 판에만 해당하는 사실(`README.md`가 거는 링크 등)을 적을 때만 `docs/en/`을 쓴다.
 
@@ -33,6 +33,7 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 - 비밀번호, OMV 세션 ID, 토큰을 로그·파일·커밋·테스트 픽스처에 남기지 않는다
   - 예외: 보안 강화 모드의 인증 수단 기록(상태 디렉터리의 `security/<이름>.json`, `0600`)은 TOTP 비밀 키를 저장한다(TOTP는 서버가 비밀을 가져야 확인할 수 있다). 복구 코드는 해시만 둔다. 이 기록의 값도 로그·응답·커밋·테스트 픽스처에는 남기지 않는다(`.claude/rules/security.md`)
   - 예외: 패스키로 로그인(분할 키)은 브라우저 PRF로 암호화한 비밀번호 암호문을 그 브라우저의 localStorage에만 두고, 서버는 그 키의 나머지 조각(share)만 같은 기록에 둔다. share는 비밀번호도, 비밀번호에서 만든 값도 아니며 혼자서는 아무것도 풀 수 없다. share는 등록 응답과 패스키 서명을 확인한 뒤의 응답에만 담고, share·암호문·PRF 결과는 로그·커밋·테스트 픽스처에 남기지 않는다(`.claude/rules/security.md`의 "패스키로 로그인")
+- 애드온 패키지 코드는 믿지 않는다. 패키지 프론트는 `allow-same-origin` 없는 샌드박스 iframe에서만, 백엔드는 설치기가 켠 systemd 템플릿(동적 uid)에서만 돌린다. maru가 패키지 실행 파일을 직접 실행하지 않고, 패키지 코드에 OMV 세션 ID·도우미 티켓·대시보드 쿠키·root를 주지 않는다(`.claude/rules/addon-packages.md`)
 - `.claude/docs/roadmap.md`에 있는 기능은 사용자가 요청하기 전에 구현하지 않는다. 필요해 보이면 구현하지 말고 제안한다
 
 ## 아키텍처
@@ -49,15 +50,16 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
   - 사용자 문서는 영어(`README.md`, `docs/en/`)와 한국어(`README.ko.md`, `docs/ko/`)를 함께 두고, 한쪽을 고치면 같은 커밋에서 다른 쪽도 고친다. 두 폴더의 페이지는 파일 이름이 같다. 다른 언어 판으로 가는 링크는 `README.md`·`README.ko.md`의 첫 줄에만 두고(`docs/` 페이지는 사이트의 언어 선택과 목차로 오간다), 영어 문서의 화면 이름·문구는 `en.json`과 설치기의 영어 문구에 맞춘다. 문서 사이트는 언어마다 따로 빌드한다. `zensical.toml`이 `docs/en/`을 `site/en/`에, `zensical.ko.toml`이 `docs/ko/`를 `site/ko/`에 빌드하고, 배포할 때 사이트 첫 주소에 브라우저 언어로 둘 중 하나를 고르는 `docs/index.html`과 영어 사이트의 404 페이지를 둔다. 두 설정의 목차는 같은 순서로 두고, 언어에 따른 항목(이름, 주소, 원본·빌드 위치, 목차, 화면 문구) 밖의 설정은 같게 둔다
   - `docs/`는 빌드하지 않아도 GitHub에서 읽혀야 한다. GitHub가 그리는 문법만 쓰고(알림은 `> [!NOTE]`·`[!TIP]`·`[!WARNING]`, Zensical 전용 `!!!`·`===`·속성 목록은 쓰지 않음), 중첩 목록과 목록 안 코드 블록은 4칸 들여쓰고, 표 칸에 `|`를 넣지 않는다. 페이지 사이 링크는 상대 경로 `.md`와 그 언어의 제목 앵커로 걸고(영어 페이지는 `docs/en/` 안에서, 한국어 페이지는 `docs/ko/` 안에서), `docs/` 밖 파일은 GitHub 절대 주소로 건다. 앵커가 GitHub와 사이트에서 같도록 한 페이지 안에 같은 제목을 두 번 쓰지 않는다
   - 사용자 문서에는 사용자가 할 일과 조건, 한도, 위험과 한계를 둔다. 내부 구현(파일 이름, 유닛 하드닝 목록, 서비스 구성 등)은 `.claude/`의 설계 문서에 둔다
-- **백엔드는 얇은 API 서버**다. 역할은 (1) 현황 읽기: `/proc`·`/sys` 직접 읽기, root가 필요한 정보는 OMV RPC, (2) 설정 변경 요청을 OMV `rpc.php`로 전달, (3) 대시보드 설정(사용자별 위젯 배치·바로가기·화면 설정, 관리자의 전역 설정, 배경 이미지) 저장, 세 가지뿐이다. OMV RPC로 할 수 없는 권한 작업은 (4) 권한 도우미에 맡긴다. (5) 웹 터미널은 같은 호스트의 sshd에 SSH 클라이언트로 붙어 셸을 중계한다
+- **백엔드는 얇은 API 서버**다. 역할은 (1) 현황 읽기: `/proc`·`/sys` 직접 읽기, root가 필요한 정보는 OMV RPC, (2) 설정 변경 요청을 OMV `rpc.php`로 전달, (3) 대시보드 설정(사용자별 위젯 배치·바로가기·화면 설정, 관리자의 전역 설정, 배경 이미지) 저장, 세 가지뿐이다. OMV RPC로 할 수 없는 권한 작업은 (4) 권한 도우미에 맡긴다. (5) 웹 터미널은 같은 호스트의 sshd에 SSH 클라이언트로 붙어 셸을 중계한다. (6) 애드온 패키지의 프레임 파일을 내주고, 패키지 백엔드와 그 OMV 호출을 중계한다
   - (3)은 상태 디렉터리(`-state-dir`, `internal/prefs`)에 대시보드 자신의 상태만 두며 OMV 설정·시스템 파일을 쓰지 않는다. 내용은 `.claude/rules/backend.md`
-  - 설정 앱(`src/settings/`)은 대시보드 설정, 자기 계정 프로필, 보안 수단, 정보만 다룬다. 전역에 적용되는 설정은 관리자만 바꾸고, 그 밖의 OMV·OS 설정은 넣지 않는다. 페이지 목록은 `docs/ko/settings-app.md`
+  - 설정 앱(`src/settings/`)은 대시보드 설정, 자기 계정 프로필, 보안 수단, 애드온 패키지 관리, 정보만 다룬다. 전역에 적용되는 설정은 관리자만 바꾸고, 그 밖의 OMV·OS 설정은 넣지 않는다. 페이지 목록은 `docs/ko/settings-app.md`
   - 웹에서 덮어쓰는 가동 설정은 재시작 없이 바뀌는 워크벤치 주소, SMART 확인 시각, 웹 터미널 허용뿐이다(`site.json`, 플래그보다 우선). 나머지는 root가 `/etc/default/maru`를 고친다
 - **권한 도우미**(`maru-helper`, `-helper-socket`, 설치기가 기본으로 설치): root로 도는 별도 실행 파일이 소켓 활성화로 maru 서비스 사용자의 연결만 받는다. 로그인할 때 비밀번호를 `unix_chkpwd`로 확인해 티켓을 주고, 연산을 그 사용자 권한으로 강등해 실행한다. root 연산은 권한 상승한 관리자 세션에서 5분 동안, 정해진 목록만 쓴다(지금은 `id`, 대시보드에서 업그레이드의 `upgrade.apply`, 파일 탐색기 디스크 휴지통의 `trash.prepare`). 상세는 `.claude/docs/helper.md`, 규칙은 `.claude/rules/helper.md`
 - **파일 탐색기**(`internal/files`, `src/files/`, 셸 앱): 홈 폴더와 공유 폴더를 도우미의 사용자 권한 연산으로 둘러보고 내려받고 올리고 하위 폴더까지 찾는다. 공유 폴더 목록은 관리자 세션이 받은 스냅숏(`site.json`)이고, 접근은 파일 시스템 권한을 따르며 관리자가 켜면 OMV 공유 폴더 권한도 따른다. 큰 폴더는 이름을 먼저 읽고 보이는 범위의 정보만 읽는다. 파일 미리보기는 따로 여는 셸 앱(`src/viewer/`)이다. 상세는 `.claude/rules/files.md`
 - **알림**(`internal/notify`, `src/notifications/`, 셸의 알림 버튼·알림 센터·토스트): 서버 알림은 백엔드 출처가 알리는 상태(로그인한 동안 60초마다 받음, 읽음 상태는 사용자별 저장), 클라이언트 알림은 이 탭에서 생긴 일(`notify()`, 탭의 메모리)이다. 규칙은 `.claude/rules/backend.md`·`.claude/rules/frontend-shell.md`의 "알림"
 - **서버 백그라운드 작업**(`internal/jobs`, 시스템 업데이트 앱 `packages`): 브라우저 없이 서버에서 끝까지 도는 OMV 작업(APT 업데이트 확인·모두 설치) 하나를 시작하고, 관리자 OMV 세션으로 `Exec.getOutput`을 읽어 끝까지 지켜본다(시작한 세션이 끊기면 다른 관리자 세션으로 옮김). 진행 기록·출력·사용자별 결과는 상태 디렉터리 `jobs/`에 두고 결과는 지울 수 있는 알림으로 알린다. 실행·감시는 `jobs.Runner`로 나눠 나중에 상태 파일 서비스로 바꿀 수 있다. 규칙은 `.claude/rules/backend.md`의 "서버 백그라운드 작업"
 - **웹 터미널**(`internal/terminal`, 기본 꺼짐): 백엔드가 루프백 sshd에 대시보드 세션 사용자로만 접속해 WebSocket(`/api/terminal`)으로 셸을 중계한다. TTY를 직접 띄우지 않으며, 누가 들어갈 수 있는지는 OMV의 SSH 설정이 정한다. 상세는 `.claude/rules/terminal.md`
+- **애드온 패키지**(`internal/addonpkg`, `src/addonpkg/`, SDK `sdk/`): 저장소 밖에서 만든 애드온을 관리자가 설정 앱에서 올려 설치한다(`.maru-addon`, 상태 디렉터리 `addons/`). 프론트는 `sandbox="allow-scripts"` iframe(불투명 출처)에서 postMessage 브리지로만 호스트를 부르고, 백엔드는 설치기가 켠 systemd 템플릿(`--addon-backends`, 동적 uid)으로 돌며 OMV는 호스트 소켓과 요청마다 만든 호출 토큰으로만 부른다. 상세는 `.claude/docs/addon-packages.md`, 규칙은 `.claude/rules/addon-packages.md`
 - **보안 강화 모드**(`internal/security`): 웹 터미널·root 권한 상승을 세션의 보증 수준(로그인 < 비밀번호 재확인 < 2차 인증)으로 막는다. 2차 인증(패스키·TOTP·복구 코드·OMV 2차 인증)의 확인은 maru가 하며 도우미에 넣지 않는다. 상세는 `.claude/rules/security.md`
 - **OMV RPC는 항상 백엔드가 중계한다**: 브라우저 → `/api/rpc` → 백엔드 → OMV `rpc.php`. 브라우저가 `rpc.php`를 직접 호출하지 않는다
   - 백엔드는 대시보드 세션마다 OMV 세션을 메모리에 보관하고, 항상 같은 주소(127.0.0.1)와 고정 User-Agent로 OMV를 호출한다
@@ -70,8 +72,9 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 - **설치기**: 별도 Go 모듈 `installer/`(`go.work` 없이 `replace`로 로컬 `backend`). TUI 의존성 `charm.land/huh/v2`는 이 모듈에만 있다. 백엔드와 공유하는 검증 함수·환경 변수 키·기본값·버전·업그레이드 파일 형식은 공개 패키지 `backend/config`(표준 라이브러리만)에 둔다
 - **프론트엔드**: TypeScript + Vite + React(`frontend/`), 창 상태는 Zustand 단일 저장소(`windows[]`). 웹 터미널의 xterm.js와 인증 앱 QR의 uqr은 쓰는 화면의 지연 청크에만 싣는다. 린트 oxlint, 테스트 Vitest(DOM 환경 없이 순수 함수·저장소만)
 - **타입 공유**: tygo로 `backend/internal/api` → `frontend/src/api/types.gen.ts`. 생성물은 커밋하며 직접 수정하지 않는다
-- **현지화**: 1차 지원 `en`, `ko`는 항상 완전하게 두고, 나머지 언어(`languages.ts`의 `SUPPORTED_LANGUAGES`)는 기여나 일괄 번역으로 채운다. 화면 문구(aria-label·title 포함)는 모두 `t()`를 거치고, 새 키는 `en.json`과 `ko.json`에 함께 넣는다. 로그인 대기 이스터에그 문구와 로그인 화면의 브랜드 영역(한글 이름, 로마자 표기, 태그라인)은 현지화 제외
+- **현지화**: 1차 지원 `en`, `ko`는 항상 완전하게 두고, 나머지 언어(`languages.ts`의 `SUPPORTED_LANGUAGES`)는 기여나 일괄 번역으로 채운다. 화면 문구(aria-label·title 포함)는 모두 `t()`를 거치고, 새 키는 `en.json`과 `ko.json`에 함께 넣는다. 로그인 대기 이스터에그 문구와 로그인 화면의 브랜드 영역(한글 이름, 로마자 표기, 태그라인)은 현지화 제외. 애드온 패키지의 문구(이름, 조작 라벨, 프레임 안 화면)는 패키지가 자기 번역 파일로 가져온다
 - **아이콘**: Colloid 테마 하나만, 리졸버 `getIcon(name)`으로 freedesktop 이름을 써서 가져온다
+- **SDK**(`sdk/`, MIT): `sdk/js`(브리지 프로토콜·클라이언트·공통 CSS·타입·CLI `maru-addon`, 의존성 없음, 프론트 도구로 검사)와 `sdk/go`(백엔드 SDK, 표준 라이브러리만). 대시보드와 함께 쓰는 파일(`protocol.ts`, `tokens.css`, `maru.css`)도 원본은 `sdk/`에 있다
 
 ## 애드온과 위젯
 
@@ -80,8 +83,8 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 - **애드온 = manifest + provider + 보기(창, 위젯)**. 시스템 정보를 포함한 모든 기능을 같은 계약으로 만든다. 보기는 창과 바탕화면 위젯 중 하나 이상이며, 둘은 같은 provider·API를 쓰고 화면만 다르다
 - **위젯은 창 시스템과 분리한다**. 바탕화면 위 별도 레이어에 그리드 칸 단위로 붙이고, 창 저장소·창 컴포넌트에 위젯용 분기를 넣지 않는다. 공유는 provider, `/api/*`, `poller.ts`, 공통 훅까지만 한다
   - 그리드는 오른쪽 위 기준이고, 배치는 백엔드에 사용자별로 저장한다(`/api/preferences`). 추가·제거는 컨텍스트 메뉴(`shell/contextMenu.ts`)로 한다. 상세는 `.claude/docs/addons.md`의 "위젯 시스템"
-- `/api/rpc` 중계는 manifest 허용 목록의 read 메서드만 통과시킨다. write는 애드온 조작(`POST /api/addons/{id}/actions/{action}`)으로만 부르며, 조작이 대상을 검사하고 OMV 파라미터를 직접 만든다
-- 내장 애드온만 정적 목록으로 둔다(백엔드 `internal/addons/<id>/` + `internal/addons/builtin`, 프론트 `src/addons/<id>/` + `src/addons/registry.ts`). 컴파일 타임 타입(`AppId`)을 유지하고, 별도 패키지·런타임 로딩·Go `plugin`은 쓰지 않는다. 프론트 보기를 처음 쓸 때 내려받는 것(`lazyView`)은 이 정적 목록 안의 지연 로딩이다
+- `/api/rpc` 중계는 내장 manifest 허용 목록의 read 메서드만 통과시킨다. write는 애드온 조작(`POST /api/addons/{id}/actions/{action}`)으로만 부르며, 내장 조작은 대상을 검사하고 OMV 파라미터를 직접 만든다. 애드온 패키지의 조작은 패키지 백엔드가 파라미터를 만들므로, maru는 선언한 메서드만 통과시키고 금지 표(`internal/addons/packagerpc.go`)로 직접적인 root 경로를 막으며 실행할 때마다 단계 확인을 거친다(`.claude/docs/addon-packages.md`)
+- 내장 애드온은 정적 목록으로 둔다(백엔드 `internal/addons/<id>/` + `internal/addons/builtin`, 프론트 `src/addons/<id>/` + `src/addons/registry.ts`). 컴파일 타임 타입(`AddonId`)을 유지하고 Go `plugin`은 쓰지 않는다. 프론트 보기를 처음 쓸 때 내려받는 것(`lazyView`)은 이 정적 목록 안의 지연 로딩이다. 저장소 밖 애드온은 애드온 패키지로만 더하며(런타임 등록, 샌드박스 iframe + 별도 프로세스), 내장 목록과 섞지 않는다
 - manifest 원본은 Go 구조체이고 프론트 목록(`manifests.gen.ts`)은 `make types`로 생성한다. 백엔드·프론트 id 일치는 Go 골든 테스트와 tsc(`Record<AddonId, …>`)가 검사한다
 - 플러그인 설치 여부는 `/usr/share/openmediavault/engined/rpc/<name>.inc`와 `/var/lib/dpkg/status`로 감지해 `/api/capabilities`로 내려준다
 - provider는 권한이 필요 없는 직접 읽기(`/proc`, `/sys`)를 1차로, OMV RPC를 보강으로 쓰고 응답에 출처를 담는다
