@@ -38,6 +38,11 @@ export function formatBytes(bytes: number, locale: string, fractionDigits = 1): 
   return `${n.format(v)} ${BYTE_UNITS[i]}`
 }
 
+// formatCount는 수를 locale의 자릿수 구분 기호와 함께 표시한다(소수점 없이). 예: ko·en "31,482"
+export function formatCount(value: number, locale: string): string {
+  return numberFormat(locale, { maximumFractionDigits: 0 }).format(value)
+}
+
 // UnitDisplay는 단위 표기 길이다. narrow는 위젯처럼 좁은 곳에 쓴다(en "3d", ko "3일").
 export type UnitDisplay = 'long' | 'narrow'
 

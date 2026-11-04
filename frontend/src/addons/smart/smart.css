@@ -11,9 +11,544 @@
   font-size: 11px;
 }
 
-.smart-toolbar {
+/* 창: 왼쪽 디스크 목록 + 오른쪽 상세. 좁으면(.narrow) 한 번에 하나만 그린다(SmartWindow). */
+.smart-window {
+  display: flex;
+  height: 100%;
+  overflow: hidden;
+}
+
+.smart-list {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 8px;
+  width: 280px;
+  min-height: 0;
+  padding: 12px 10px;
+  overflow-y: auto;
+  border-right: 1px solid var(--window-border);
+  background: var(--titlebar-bg);
+}
+
+.smart-window.narrow .smart-list {
+  flex: 1;
+  width: auto;
+  border-right: none;
+  background: none;
+}
+
+.smart-list-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
+  padding: 0 4px 4px;
+}
+
+/* 마지막 확인 시각은 좁은 목록에서 잘리지 않게 줄을 바꾼다. */
+.smart-list-head .addon-card-sub {
+  white-space: normal;
+}
+
+.smart-disks {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  transition: opacity 0.2s;
+}
+
+.smart-disks.stale {
+  opacity: 0.45;
+}
+
+.smart-disk {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.smart-disk:hover {
+  background: var(--hover-bg);
+}
+
+.smart-disk:active {
+  background: var(--press-bg);
+}
+
+.smart-disk[aria-current='true'] {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+.smart-disk[aria-current='true']:hover {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+.smart-disk[aria-current='true']:active {
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+.smart-disk-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.smart-disk-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.smart-disk-name {
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.smart-disk-temp {
+  flex: none;
+  margin-left: auto;
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.smart-disk-model {
+  overflow: hidden;
+  font-size: 12px;
+  color: var(--text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.smart-list-hint {
+  margin: auto 0 0;
+  padding: 8px 4px 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.smart-detail {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.smart-detail-head {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 20px 0;
+}
+
+.smart-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  align-self: flex-start;
+  margin-bottom: 8px;
+  padding-left: 8px;
+}
+
+.smart-detail-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.smart-detail-title h2 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.smart-spacer {
+  flex: 1;
+}
+
+.smart-reload {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.smart-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: scale var(--press-out) ease;
+}
+
+.smart-link:hover {
+  background: var(--hover-bg);
+}
+
+.smart-link:active {
+  background: var(--press-bg);
+  scale: var(--press-scale);
+  transition-duration: var(--press-in);
+}
+
+.smart-detail-sub {
+  padding-left: 16px;
+  font-size: 12px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.smart-tabs {
+  display: flex;
+  flex: none;
+  gap: 2px;
+  margin-top: 10px;
+  padding: 0 16px;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--window-border);
+}
+
+.smart-tab {
+  flex: none;
+  margin-bottom: -1px;
+  padding: 8px 12px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 6px 6px 0 0;
+  background: none;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.smart-tab:hover {
+  background: var(--hover-bg);
+}
+
+.smart-tab:active {
+  background: var(--press-bg);
+}
+
+.smart-tab[aria-selected='true'] {
+  border-bottom-color: var(--accent);
+  color: var(--text);
+}
+
+.smart-panel {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  padding: 14px 20px 20px;
+  overflow: auto;
+}
+
+.smart-panel > div {
+  display: flex;
+  flex-direction: column;
   gap: 12px;
+}
+
+/* 읽는 중·실패·고르기 전 안내. 남은 높이의 가운데에 둔다. */
+.smart-detail > .smart-state,
+.smart-panel > .smart-state {
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+}
+
+.smart-state {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 24px 16px;
+  text-align: center;
+}
+
+.smart-state-title {
+  margin: 0;
+  font-weight: 600;
+}
+
+.smart-state-text {
+  max-width: 320px;
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.smart-spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid color-mix(in srgb, var(--text-muted) 30%, transparent);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: row-spin 0.8s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .smart-spinner {
+    animation-duration: 2.4s;
+  }
+}
+
+.smart-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.smart-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--window-border);
+  border-radius: 8px;
+}
+
+.smart-tile-label,
+.smart-tile-sub {
+  overflow: hidden;
+  font-size: 12px;
+  color: var(--text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.smart-tile-value {
+  font-size: 18px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.smart-tile .meter {
+  margin: 3px 0 2px;
+}
+
+.smart-kv {
+  margin: 0;
+}
+
+.smart-kv-row {
+  display: grid;
+  grid-template-columns: minmax(96px, 30%) minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  min-height: 32px;
+  border-bottom: 1px solid var(--window-border);
+  font-size: 13px;
+}
+
+.smart-kv dt {
+  color: var(--text-muted);
+}
+
+.smart-kv dd {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.smart-mono {
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+}
+
+.smart-muted {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.smart-legend {
+  margin: -4px 0 0;
+}
+
+/* 한국어 설명 문구가 낱말 가운데서 줄을 바꾸지 않게 한다. */
+.smart-legend,
+.smart-info p,
+.smart-foot .smart-muted {
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.smart-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+}
+
+.smart-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.smart-table-wrap {
+  overflow-x: auto;
+}
+
+.smart-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.smart-table th {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--window-border);
+  font-size: 12px;
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+  color: var(--text-muted);
+}
+
+.smart-table td {
+  padding: 5px 8px;
+  border-bottom: 1px solid color-mix(in srgb, var(--window-border) 60%, transparent);
+  vertical-align: middle;
+}
+
+.smart-table .num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.smart-table tr.warn td {
+  background: color-mix(in srgb, #e8a317 14%, transparent);
+}
+
+.smart-table tr.crit td {
+  background: color-mix(in srgb, #d93025 10%, transparent);
+}
+
+.smart-table .smart-group th {
+  padding-top: 10px;
+  border-bottom: none;
+  background: color-mix(in srgb, var(--hover-bg) 60%, transparent);
+}
+
+.smart-health-table td:last-child {
+  width: 45%;
+}
+
+.smart-attr-name {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.smart-en {
+  display: block;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.smart-prefail {
+  padding: 0 5px;
+  border: 1px solid var(--window-border);
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 16px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.smart-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+/* NVMe 건강 정보의 값 칸은 원래 값(16진수, 데이터 단위)을 뒤에 붙이므로 좁으면 줄을 바꾼다. */
+.smart-status.wrap {
+  flex-wrap: wrap;
+  white-space: normal;
+}
+
+.smart-info {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  font-size: 13px;
+}
+
+.smart-info p {
+  flex: 1 1 240px;
+  margin: 0;
+}
+
+.smart-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.smart-raw {
+  flex: 1;
+  min-height: 0;
+}
+
+.smart-raw-text {
+  flex: 1;
+  min-height: 200px;
+  margin: 0;
+  padding: 12px 14px;
+  overflow: auto;
+  border: 1px solid var(--window-border);
+  border-radius: 8px;
+  background: light-dark(#f3f4f6, #1b1e22);
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre;
 }
