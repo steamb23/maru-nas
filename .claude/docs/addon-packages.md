@@ -313,3 +313,12 @@
     - 다른 창 뒤의 패키지 창 프레임을 누르면 그 창이 앞으로 오고 `document.activeElement`가 프레임이 된다(합성 `pointerdown`)
     - 호스트 테마를 바꾸면 프레임에 바로 반영된다(context). 위젯 프레임은 `inert`·`pointer-events: none`이고 배경이 투명하다
     - CSP3 `webrtc 'block'`은 크롬이 모르는 지시어라 콘솔 오류를 내서 뺐다
+- 2026-11-05, 크롬(Playwright, dev-fake, 설정 앱과 `sdk/examples/hello-widget`, CLI로 묶은 패키지)
+    - 설정 앱: 올리기 → 검토(권한, 업데이트 차이, `author_changed` 경고) → 관리 창(비밀번호) → 설치·업데이트, 끄기·다시 켜기, 제거. 열린 패키지 창은 끄면 "쓸 수 없는 애드온"이 되고 다시 켜면 프레임이 돌아온다. 거절 이유(`reserved_id`, `rpc_denied`, `arch_missing`)와 영어 설명이 보인다. 관리 확인을 취소하면 검토 대기를 버린다
+    - `maru-addon init`(JS, `--ts` + Vite 8 빌드)으로 만든 패키지를 `pack`해 올리면 설치되고 창이 그려진다. Vite가 붙이는 `<script type="module" crossorigin>`도 `Access-Control-Allow-Origin: *`로 로드된다. `vite-ignore`를 단 `_maru/` 참조는 그대로 남는다
+    - 사용자 조작 판정: 프레임 스크립트가 스스로 부른 `openWorkbench`는 `bridge_gesture_required`, 프레임의 단추를 누르면 받는다(워크벤치 안내 대화상자 뒤 새 탭)
+    - `FAKEOMV_TIMEOUT=1m`에서 프레임 안 키 입력만으로 90초 넘게 세션이 이어지고, 입력을 멈추면 만료된다
+    - 프레임 샌드박스(`allow-forms` 없음)는 폼 제출을 막고 `submit` 이벤트도 일어나지 않는다. 샌드박스를 넓히지 않고 개발 문서에 적었다(단추·Enter를 직접 처리)
+    - 확인(`confirm`)은 "<이름> 애드온의 요청" 제목, 알림(`notify`)은 "애드온 <이름>" 제목으로 보인다. 저장(`storage`)은 사용자별로 남는다
+    - 대시보드의 `frame-src 'self'` 아래에서도 파일 미리보기의 PDF(같은 출처 iframe, 크롬 내장 뷰어)가 그려진다
+    - 프레임 주소를 새 탭에서 바로 열어도 출처가 `null`이고 `document.cookie`·`localStorage`가 `SecurityError`다(응답 CSP의 `sandbox`)

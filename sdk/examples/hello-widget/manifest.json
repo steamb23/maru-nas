@@ -1,0 +1,27 @@
+{
+  "$schema": "../../js/schema/manifest.schema.json",
+  "format": 1,
+  "id": "hello-widget",
+  "version": "0.1.0",
+  "sdk": 1,
+  "name": { "en": "Hello widget", "ko": "안녕 위젯" },
+  "description": {
+    "en": "An example addon package: reads the host name, keeps a per-user greeting and shows it on the desktop.",
+    "ko": "예제 애드온 패키지입니다. 호스트 이름을 읽고, 사용자마다 인사말을 저장해 바탕화면에 보입니다."
+  },
+  "author": { "name": "Maru NAS", "url": "https://github.com/steamb23/maru-nas" },
+  "icon": "icon.svg",
+  "views": {
+    "window": {
+      "entry": "window.html",
+      "defaultSize": { "width": 460, "height": 400 },
+      "minSize": { "width": 340, "height": 300 }
+    },
+    "widget": {
+      "entry": "widget.html",
+      "defaultSize": { "cols": 2, "rows": 1 },
+      "maxSize": { "cols": 3, "rows": 1 }
+    }
+  },
+  "rpc": { "read": ["System.getInformation"] }
+}

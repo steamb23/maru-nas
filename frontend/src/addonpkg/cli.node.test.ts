@@ -121,6 +121,19 @@ describe('checkPackage', () => {
   })
 })
 
+describe('SDK 예제', () => {
+  it('sdk/examples의 예제는 검사를 통과한다', () => {
+    const dir = join(SDK, 'examples')
+    const examples = readdirSync(dir).filter((d) => !d.startsWith('.'))
+    expect(examples.length).toBeGreaterThan(0)
+    for (const ex of examples) {
+      const r = validate(join(dir, ex))
+      expect(r.problems, ex).toEqual([])
+      expect(r.notes, ex).toEqual([])
+    }
+  })
+})
+
 describe('pack', () => {
   it('고정 파일과 같은 tar를 만든다(gzip 바이트는 zlib 버전에 따라 다를 수 있다)', () => {
     const { files: f } = readPackageDir(DEV_MIN)

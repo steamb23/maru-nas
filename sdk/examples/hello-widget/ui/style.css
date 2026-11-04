@@ -1,0 +1,19 @@
+/* 예제 창의 입력 줄. 나머지 모양은 호스트가 주는 _maru/maru.css의 공통 클래스를 쓴다. */
+.greeting-row {
+  display: flex;
+  gap: 8px;
+}
+
+.greeting-row input {
+  flex: 1;
+  min-width: 0;
+  padding: 5px 8px;
+  border: 1px solid var(--window-border);
+  border-radius: 6px;
+  background: transparent;
+}
+
+.greeting-row input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}

@@ -1,0 +1,30 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="./_maru/maru.css" />
+    <link rel="stylesheet" href="./style.css" />
+    <script src="./_maru/sdk.js"></script>
+  </head>
+  <body>
+    <main class="addon-window">
+      <section class="addon-card">
+        <div class="addon-card-head"><span class="addon-card-title" id="title"></span></div>
+        <div id="host"></div>
+        <div class="addon-card-sub" id="system" hidden></div>
+      </section>
+
+      <h2 class="addon-section-title" id="greeting-title"></h2>
+      <!-- 프레임 샌드박스는 폼 제출을 막으므로(allow-forms 없음) <form> 대신 단추와 Enter 키를 직접 처리한다. -->
+      <div class="greeting-row">
+        <input id="name" maxlength="40" autocomplete="off" />
+        <button type="button" class="addon-button primary" id="save"></button>
+        <button type="button" class="addon-button" id="clear"></button>
+      </div>
+      <p class="addon-hint" id="greeting-hint"></p>
+
+      <div><button type="button" class="addon-button" id="workbench"></button></div>
+    </main>
+    <script type="module" src="./window.js"></script>
+  </body>
+</html>

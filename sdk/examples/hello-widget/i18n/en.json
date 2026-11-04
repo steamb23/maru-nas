@@ -1,0 +1,17 @@
+{
+  "title": "Hello widget",
+  "host": "This NAS is {{name}}.",
+  "hostUnknown": "Could not read the host name.",
+  "system": "OMV {{version}}, up for {{hours}} h",
+  "greeting": "Greeting",
+  "greetingHint": "Saved for your account only. The desktop widget shows it.",
+  "namePlaceholder": "Your name",
+  "save": "Save",
+  "clear": "Clear",
+  "clearConfirm": "Clear your saved greeting?",
+  "saved": "Saved the greeting for {{name}}.",
+  "cleared": "Cleared the greeting.",
+  "workbench": "Open the OMV dashboard",
+  "hello": "Hello",
+  "helloName": "Hello, {{name}}"
+}
