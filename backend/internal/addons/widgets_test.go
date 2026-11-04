@@ -61,8 +61,8 @@ func TestValidateWidgetsRejects(t *testing.T) {
 	}
 	tooMany := make([]api.WidgetPlacement, MaxWidgets+1)
 	cases := map[string][]api.WidgetPlacement{
-		"unknown addon":   with(func(p *api.WidgetPlacement) { p.Addon = "nope" }),
-		"no widget view":  with(func(p *api.WidgetPlacement) { p.Addon = "window-only" }),
+		"invalid id":      with(func(p *api.WidgetPlacement) { p.Addon = "Nope" }),
+		"unknown too big": {{Addon: "nope", Cols: MaxWidgetSpan + 1, Rows: 1}},
 		"duplicate":       {cpu, {Addon: "cpu", Right: 5, Cols: 3, Rows: 2}},
 		"below min":       with(func(p *api.WidgetPlacement) { p.Cols = 1 }),
 		"above max":       with(func(p *api.WidgetPlacement) { p.Rows = 4 }),
@@ -78,5 +78,23 @@ func TestValidateWidgetsRejects(t *testing.T) {
 		if err := r.ValidateWidgets(list); err == nil {
 			t.Errorf("%s: expected error", name)
 		}
+	}
+}
+
+// 꺼지거나 지운 애드온 패키지의 배치는 프론트가 지우지 않고 남기므로, 모르는 id도 형식과 크기 한도만 맞으면
+// 저장할 수 있어야 한다.
+func TestValidateWidgetsKeepsUnknown(t *testing.T) {
+	r := widgetRegistry(t)
+	list := []api.WidgetPlacement{
+		{Addon: "cpu", Cols: 3, Rows: 2},
+		{Addon: "removed-package", Right: 4, Cols: 5, Rows: 5},
+		{Addon: "window-only", Top: 3, Cols: 1, Rows: 1},
+	}
+	if err := r.ValidateWidgets(list); err != nil {
+		t.Fatal(err)
+	}
+	overlap := append(list, api.WidgetPlacement{Addon: "other", Right: 5, Top: 1, Cols: 1, Rows: 1})
+	if err := r.ValidateWidgets(overlap); err == nil {
+		t.Error("overlapping unknown widgets: expected error")
 	}
 }

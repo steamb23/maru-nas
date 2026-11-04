@@ -395,3 +395,6 @@ export const MANIFESTS = {
 } as const satisfies Record<string, AddonManifest>
 
 export type AddonId = keyof typeof MANIFESTS
+
+// 애드온 패키지가 쓸 수 없는 앱 id(internal/addons/reserved.go). 프론트에만 있는 앱의 id는 모두 여기에 있어야 한다.
+export const RESERVED_APP_IDS = ["addon","addons","app","apps","dashboard","desktop","files","maru","omv","package","settings","shell","system","terminal","transfers","viewer","workbench"] as const

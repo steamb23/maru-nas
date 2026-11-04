@@ -60,7 +60,10 @@ type Detector struct {
 	TTL time.Duration
 	Now func() time.Time
 
-	mu      sync.Mutex
+	mu sync.Mutex
+	// extra는 애드온 패키지가 밝힌 플러그인 패키지 → RPC 파일이다(SetExtra). knownPlugins에 있는 패키지는
+	// knownPlugins의 파일을 쓴다.
+	extra   map[string]string
 	plugins map[string]bool
 	omv     OMVInfo
 	checked time.Time
@@ -108,6 +111,17 @@ func (d *Detector) Refresh() {
 	d.refreshLocked()
 }
 
+// SetExtra는 애드온 패키지가 밝힌 플러그인 표를 바꾼다. 바뀌면 다음 호출 때 다시 확인한다.
+func (d *Detector) SetExtra(extra map[string]string) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	if maps.Equal(d.extra, extra) {
+		return
+	}
+	d.extra = maps.Clone(extra)
+	d.stale = true
+}
+
 // Invalidate는 다음 Plugins 호출 때 다시 확인하게 한다. OMV가 RPC 서비스를 찾지 못했다고
 // 응답했을 때(플러그인이 지워졌을 수 있음) 부른다.
 func (d *Detector) Invalidate() {
@@ -148,7 +162,12 @@ func (d *Detector) detect() (map[string]bool, string, error) {
 		return nil, "", err
 	}
 	out := make(map[string]bool)
-	for pkg, file := range knownPlugins {
+	table := maps.Clone(d.extra)
+	if table == nil {
+		table = make(map[string]string, len(knownPlugins))
+	}
+	maps.Copy(table, knownPlugins)
+	for pkg, file := range table {
 		if _, ok := installed[pkg]; !ok {
 			continue
 		}

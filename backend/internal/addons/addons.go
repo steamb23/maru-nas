@@ -1,8 +1,11 @@
 // Package addons는 애드온 계약(manifest, provider, RPC 허용 목록)을 정의한다.
 //
 // 애드온은 manifest(api.Manifest)와 우선순위 순서의 provider 목록이다. 내장 애드온은
-// internal/addons/<id>/에 두고 internal/addons/builtin의 정적 목록에 등록한다.
-// 런타임 로딩이나 Go plugin 패키지는 쓰지 않는다(.claude/docs/addons.md).
+// internal/addons/<id>/에 두고 internal/addons/builtin의 정적 목록에 등록한다. 내장 목록에는
+// 런타임 로딩이나 Go plugin 패키지를 쓰지 않는다(.claude/docs/addons.md).
+//
+// 저장소 밖 애드온(애드온 패키지, internal/addonpkg)은 Extend로 내장 레지스트리에 한 건씩 더한다.
+// 패키지는 Kind가 KindPackage이고 Go 구현(Fetch, Actions)이 없다(.claude/docs/addon-packages.md).
 package addons
 
 import (
@@ -36,9 +39,24 @@ type Provider interface {
 	Requires() api.Requirements
 }
 
-// Addon은 내장 애드온 하나다.
+// Kind는 애드온의 출처다.
+type Kind int
+
+const (
+	// KindBuiltin은 저장소 안에서 함께 빌드한 애드온이다(0값).
+	KindBuiltin Kind = iota
+	// KindPackage는 관리자가 설치한 애드온 패키지다. 보기는 샌드박스 iframe이고, 데이터·조작은
+	// 패키지 백엔드가 맡으므로 Fetch·Actions가 없다.
+	KindPackage
+)
+
+// Addon은 애드온 하나다.
 type Addon struct {
+	Kind     Kind
 	Manifest api.Manifest
+	// Plugins는 패키지가 requires.plugins에 밝힌 플러그인 패키지 → RPC 파일 이름이다(knownPlugins에 없는
+	// 플러그인도 쓸 수 있게). 내장 애드온은 비워 두고 knownPlugins만 쓴다.
+	Plugins map[string]string
 	// Providers는 우선순위 순서다. 쓸 수 있는 것 중 앞의 것을 먼저 쓴다.
 	Providers []Provider
 	// Fetch는 GET /api/addons/{id}의 응답을 만든다. 없으면 그 경로는 404다.
@@ -220,7 +238,8 @@ func validate(a Addon) error {
 	if !idPattern.MatchString(m.ID) {
 		return fmt.Errorf("addon %q: invalid id", m.ID)
 	}
-	if m.Title == "" || m.Icon == "" {
+	// 패키지의 이름·아이콘은 번역 키·아이콘 이름이 아니라 패키지 파일에 있다(addonpkg).
+	if a.Kind == KindBuiltin && (m.Title == "" || m.Icon == "") {
 		return fmt.Errorf("addon %q: title and icon are required", m.ID)
 	}
 	if m.Views.Window == nil && m.Views.Widget == nil {
@@ -240,7 +259,7 @@ func validate(a Addon) error {
 			return fmt.Errorf("addon %q: %w", m.ID, err)
 		}
 	}
-	if err := validateRequires(m.Requires); err != nil {
+	if err := validateRequires(m.Requires, a.Plugins); err != nil {
 		return fmt.Errorf("addon %q: %w", m.ID, err)
 	}
 	seen := make(map[string]bool)
@@ -269,7 +288,7 @@ func validate(a Addon) error {
 			return fmt.Errorf("addon %q: provider names must be unique and non-empty", m.ID)
 		}
 		names[p.Name()] = true
-		if err := validateRequires(p.Requires()); err != nil {
+		if err := validateRequires(p.Requires(), a.Plugins); err != nil {
 			return fmt.Errorf("addon %q: provider %q: %w", m.ID, p.Name(), err)
 		}
 	}
@@ -277,12 +296,10 @@ func validate(a Addon) error {
 }
 
 // validateActions는 manifest의 actions 선언과 구현이 1:1로 맞는지 확인한다.
-// 조작은 상태를 바꾸므로 쓰기 RPC를 하나 이상 선언해야 한다.
+// 패키지는 선언만 있고 구현은 패키지 백엔드에 있으므로 Actions가 비어 있어야 한다.
+// "내장 조작이 있으면 쓰기 RPC 1개 이상"은 builtin의 테스트가 본다(패키지 조작은 OMV 쓰기 없이도 된다).
 func validateActions(a Addon) error {
 	decl := a.Manifest.Actions
-	if len(decl) > 0 && len(a.Manifest.RPC.Write) == 0 {
-		return errors.New("actions require at least one write rpc")
-	}
 	seen := make(map[string]bool)
 	for _, d := range decl {
 		if !idPattern.MatchString(d.Name) {
@@ -292,6 +309,9 @@ func validateActions(a Addon) error {
 			return fmt.Errorf("action %q declared twice", d.Name)
 		}
 		seen[d.Name] = true
+		if a.Kind == KindPackage {
+			continue
+		}
 		act, ok := a.Actions[d.Name]
 		if !ok || (act.Run == nil && act.Query == nil) {
 			return fmt.Errorf("action %q has no implementation", d.Name)
@@ -299,6 +319,9 @@ func validateActions(a Addon) error {
 		if act.Run != nil && act.Query != nil {
 			return fmt.Errorf("action %q has both Run and Query", d.Name)
 		}
+	}
+	if a.Kind == KindPackage && (len(a.Actions) > 0 || a.Fetch != nil) {
+		return errors.New("package addons must not have Go implementations")
 	}
 	for name := range a.Actions {
 		if !seen[name] {
@@ -328,9 +351,13 @@ func validateWidget(w *api.WidgetView) error {
 	return nil
 }
 
-func validateRequires(req api.Requirements) error {
+// validateRequires는 요구한 플러그인이 knownPlugins나 그 애드온이 밝힌 표(extra, 패키지만)에 있는지 본다.
+func validateRequires(req api.Requirements, extra map[string]string) error {
 	for _, p := range req.Plugins {
-		if _, ok := knownPlugins[p]; !ok {
+		if _, ok := knownPlugins[p]; ok {
+			continue
+		}
+		if _, ok := extra[p]; !ok {
 			return fmt.Errorf("unknown plugin %q (add it to knownPlugins)", p)
 		}
 	}

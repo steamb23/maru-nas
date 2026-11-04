@@ -14,8 +14,11 @@ const (
 	MaxWidgetCoord = 200
 )
 
-// ValidateWidgets는 저장할 위젯 배치를 검사한다. 각 위젯은 위젯 보기가 있는 등록된 애드온이고,
-// 크기는 manifest 범위 안, 좌표는 0~MaxWidgetCoord, 애드온마다 하나, 서로 겹치지 않아야 한다.
+// ValidateWidgets는 저장할 위젯 배치를 검사한다. 좌표는 0~MaxWidgetCoord, 애드온마다 하나, 서로 겹치지
+// 않아야 한다. 위젯 보기가 있는 등록된 애드온이면 크기가 manifest 범위 안이어야 한다.
+//
+// 등록되지 않았거나 위젯 보기가 없는 id(꺼지거나 지운 애드온 패키지)는 형식과 크기 한도(1~MaxWidgetSpan)만
+// 본다. 프론트는 모르는 배치를 지우지 않고 그리지만 않으므로, 그 배치가 있어도 저장할 수 있어야 한다.
 // capability(역할·플러그인)는 보지 않는다. 역할이나 플러그인이 바뀌어도 배치를 잃지 않게 하고,
 // 표시 여부는 프론트가 정한다.
 func (r *Registry) ValidateWidgets(list []api.WidgetPlacement) error {
@@ -24,15 +27,17 @@ func (r *Registry) ValidateWidgets(list []api.WidgetPlacement) error {
 	}
 	seen := make(map[string]bool, len(list))
 	for i, p := range list {
-		a, ok := r.Get(p.Addon)
-		if !ok || a.Manifest.Views.Widget == nil {
-			return fmt.Errorf("widget %d: unknown widget addon %q", i, p.Addon)
+		if len(p.Addon) > maxAppIDLen || !idPattern.MatchString(p.Addon) {
+			return fmt.Errorf("widget %d: invalid addon id %q", i, p.Addon)
 		}
 		if seen[p.Addon] {
 			return fmt.Errorf("widget %d: duplicate widget addon %q", i, p.Addon)
 		}
 		seen[p.Addon] = true
-		lo, hi := WidgetSizeRange(*a.Manifest.Views.Widget)
+		lo, hi := api.GridSize{Cols: 1, Rows: 1}, api.GridSize{Cols: MaxWidgetSpan, Rows: MaxWidgetSpan}
+		if a, ok := r.Get(p.Addon); ok && a.Manifest.Views.Widget != nil {
+			lo, hi = WidgetSizeRange(*a.Manifest.Views.Widget)
+		}
 		if p.Cols < lo.Cols || p.Cols > hi.Cols || p.Rows < lo.Rows || p.Rows > hi.Rows {
 			return fmt.Errorf("widget %d: size %dx%d out of range", i, p.Cols, p.Rows)
 		}

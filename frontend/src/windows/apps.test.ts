@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { MANIFESTS } from '../addons/manifests.gen'
+import { MANIFESTS, RESERVED_APP_IDS } from '../addons/manifests.gen'
 import {
   APP_IDS,
   type WindowAppId,
@@ -87,5 +87,14 @@ describe('isAppId', () => {
 describe('isMultiInstance', () => {
   it('창을 여러 개 여는 앱은 파일 탐색기와 웹 터미널이다', () => {
     expect(APP_IDS.filter(isMultiInstance)).toEqual(['files', 'terminal'])
+  })
+})
+
+// 프론트에만 있는 앱(셸·링크·준비 중 앱)의 id는 백엔드가 모르므로, 애드온 패키지가 같은 id를 쓰지 못하게
+// 예약 목록(backend/internal/addons/reserved.go)에 있어야 한다.
+describe('RESERVED_APP_IDS', () => {
+  const reserved: readonly string[] = RESERVED_APP_IDS
+  it.each(APP_IDS.filter((id) => !isAddonApp(id)))('%s는 예약되어 있다', (id) => {
+    expect(reserved).toContain(id)
   })
 })
