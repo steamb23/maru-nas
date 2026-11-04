@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import { APP_IDS, type AppId } from '../windows/apps'
-import { defaultShortcuts, knownShortcuts, placeShortcut, removeShortcut, visibleShortcuts } from './list'
+import {
+  MAX_SHORTCUTS,
+  capShortcuts,
+  defaultShortcuts,
+  placeShortcut,
+  removeShortcut,
+  storedShortcuts,
+  visibleShortcuts,
+} from './list'
 
 // 테스트에서는 smart·services를 숨겨진(관리자 전용) 앱으로 본다.
 const hidden = new Set<AppId>(['smart', 'services'])
@@ -13,20 +21,35 @@ describe('defaultShortcuts', () => {
   })
 })
 
-describe('knownShortcuts', () => {
-  it('지금 빌드에 없는 앱과 중복을 뺀다', () => {
-    const stored = [{ app: 'storage' }, { app: 'removed-app' }, { app: 'files' }, { app: 'storage' }]
-    expect(knownShortcuts(stored)).toEqual(['storage', 'files'])
+describe('storedShortcuts', () => {
+  it('지금 없는 앱은 남기고 형식이 틀린 id와 중복만 뺀다', () => {
+    const stored = [{ app: 'storage' }, { app: 'removed-app' }, { app: 'files' }, { app: 'storage' }, { app: 'Bad id' }]
+    expect(storedShortcuts(stored)).toEqual(['storage', 'removed-app', 'files'])
   })
 
   it('빈 목록은 빈 목록', () => {
-    expect(knownShortcuts([])).toEqual([])
+    expect(storedShortcuts([])).toEqual([])
+  })
+})
+
+describe('capShortcuts', () => {
+  it('상한을 넘으면 지금 없는 앱부터 뺀다', () => {
+    const unknown = Array.from({ length: MAX_SHORTCUTS }, (_, i) => `gone-${i}`) as AppId[]
+    const out = capShortcuts([...unknown.slice(0, 2), 'files', ...unknown.slice(2), 'storage'])
+    expect(out).toHaveLength(MAX_SHORTCUTS)
+    expect(out).toContain('files')
+    expect(out).toContain('storage')
+    expect(out).not.toContain('gone-0')
   })
 })
 
 describe('visibleShortcuts', () => {
   it('보이는 앱만 순서대로', () => {
     expect(visibleShortcuts(['smart', 'files', 'services', 'storage'], include)).toEqual(['files', 'storage'])
+  })
+
+  it('지금 없는 앱은 그리지 않는다', () => {
+    expect(visibleShortcuts(['files', 'gone' as AppId, 'storage'], all)).toEqual(['files', 'storage'])
   })
 })
 

@@ -2,8 +2,9 @@
 //
 // 아직 받지 못했거나 요청이 실패하면 모두 쓸 수 있는 것으로 보고 그린다. 실제 차단은 백엔드가 한다.
 import { create } from 'zustand'
+import { knownPackage, setPackages } from '../addonpkg/catalog'
 import type { AddonCapability, CapabilitiesResponse } from '../api/types.gen'
-import { type AppId, isAddonApp, isLinkApp } from '../windows/apps'
+import { type AppId, isAddonApp, isLinkApp, isPackageApp } from '../windows/apps'
 import { linkConfigured } from '../windows/links'
 import type { WidgetAddonId } from '../widgets/catalog'
 import { type AddonId, MANIFESTS } from './manifests.gen'
@@ -37,7 +38,7 @@ export function appAccess(caps: CapabilitiesResponse | null, id: AppId): AppAcce
   if (isLinkApp(id)) return linkConfigured(id, caps) ? OPEN : HIDDEN
   if (id === 'terminal') return caps?.terminal ? OPEN : HIDDEN
   if (id === 'files') return caps && !caps.helper ? HELPER_MISSING : OPEN
-  return isAddonApp(id) ? addonAccess(caps, id) : OPEN
+  return isAddonApp(id) || isPackageApp(id) ? addonAccess(caps, id) : OPEN
 }
 
 // widgetAccess는 capability로 위젯을 어떻게 그릴지 정한다. 규칙은 appAccess와 같다.
@@ -46,7 +47,7 @@ export function widgetAccess(caps: CapabilitiesResponse | null, id: WidgetAddonI
   return addonAccess(caps, id)
 }
 
-function addonAccess(caps: CapabilitiesResponse | null, id: AddonId): AppAccess {
+function addonAccess(caps: CapabilitiesResponse | null, id: string): AppAccess {
   if (!caps) return OPEN
   const c = caps.addons.find((a) => a.id === id)
   if (!c || c.available) return OPEN
@@ -57,19 +58,30 @@ function addonAccess(caps: CapabilitiesResponse | null, id: AddonId): AppAccess 
 // requiredPlugins는 애드온 manifest가 선언한 OMV 플러그인 패키지 이름이다. 애드온이 아닌 앱은 빈 목록.
 // 안내 문구에 쓴다.
 export function requiredPlugins(id: AppId | AddonId): readonly string[] {
-  if (!Object.hasOwn(MANIFESTS, id)) return []
+  if (!Object.hasOwn(MANIFESTS, id)) return knownPackage(id)?.requires.plugins ?? []
   return (MANIFESTS as Record<AddonId, AddonManifest>)[id as AddonId].requires.plugins ?? []
 }
 
 interface CapabilitiesState {
   // 로그인한 사용자 기준 capability. 아직 받지 못했으면 null.
   caps: CapabilitiesResponse | null
+  // settled는 첫 요청이 끝났는지다(받음 또는 실패). 위젯 레이어는 이것을 기다린다. 애드온 패키지 바로가기가
+  // 늦게 그려져 아이콘 열이 늘면 위젯이 밀려나기 때문이다.
+  settled: boolean
   set: (caps: CapabilitiesResponse) => void
+  // settle은 첫 요청이 실패했을 때 부른다(그동안 모두 그린다).
+  settle: () => void
   clear: () => void
 }
 
 export const useCapabilitiesStore = create<CapabilitiesState>((set) => ({
   caps: null,
-  set: (caps) => set({ caps }),
-  clear: () => set({ caps: null }),
+  settled: false,
+  // 애드온 패키지 목록도 함께 바꾼다(앱·위젯 표가 읽는다). 같은 렌더에서 보이게 저장소보다 먼저 넣는다.
+  set: (caps) => {
+    setPackages(caps.addonPackages ?? [])
+    set({ caps, settled: true })
+  },
+  settle: () => set({ settled: true }),
+  clear: () => set({ caps: null, settled: false }),
 }))

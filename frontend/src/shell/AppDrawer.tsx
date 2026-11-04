@@ -11,7 +11,8 @@ import { appTitles } from '../i18n/appNames'
 import { IconImage } from '../icons/IconImage'
 import { placeShortcut, removeShortcut } from '../shortcuts/list'
 import { useShortcutStore } from '../shortcuts/store'
-import { APP_IDS, type AppId, getApp, isAppId } from '../windows/apps'
+import { knownPackage } from '../addonpkg/catalog'
+import { APP_IDS, type AppId, appIds, getApp, isAppId } from '../windows/apps'
 import type { Point, Size } from '../windows/geometry'
 import {
   DRAWER_CLOSE_MS,
@@ -62,7 +63,15 @@ const GRID_ID = `${APP_DRAWER_ID}-grid`
 
 // 검색어 후보: 지원하는 모든 언어의 앱 이름과 앱 id. 화면 언어와 무관하게 어느 언어로 쳐도 찾게 한다.
 // 다른 언어의 카탈로그는 받지 않았을 수 있으므로 앱 이름만 따로 담은 appNames를 쓴다.
-const SEARCH_TERMS = new Map(APP_IDS.map((id) => [id, [...appTitles(getApp(id).titleKey), id]]))
+// 애드온 패키지는 패키지가 준 언어별 이름으로 찾는다.
+const SEARCH_TERMS = new Map<string, string[]>(APP_IDS.map((id) => [id, [...appTitles(getApp(id).titleKey), id]]))
+
+function searchTerms(id: AppId): string[] {
+  const builtin = SEARCH_TERMS.get(id)
+  if (builtin) return builtin
+  const pkg = knownPackage(id)
+  return pkg ? [...Object.values(pkg.name), id] : [id]
+}
 
 const { close } = useAppDrawerStore.getState()
 
@@ -133,8 +142,8 @@ export function AppDrawer({ bounds, shortcuts }: Props) {
   const include = (id: AppId) => appAccess(caps, id).visible
 
   // 정렬한 뒤 검색한다. 검색 결과는 맞는 정도가 같으면 정렬 순서를 따른다.
-  const sorted = sortApps(APP_IDS.filter(include), sort, (id) => t(getApp(id).titleKey), lang)
-  const results = searchApps(sorted, (id) => SEARCH_TERMS.get(id) ?? [id], query)
+  const sorted = sortApps(appIds().filter(include), sort, (id) => t(getApp(id).titleKey), lang)
+  const results = searchApps(sorted, searchTerms, query)
   const activeIndex = Math.min(active, Math.max(results.length - 1, 0))
 
   const openApp = (id: AppId) => {

@@ -3,6 +3,7 @@
 import { useEffect, useEffectEvent, useLayoutEffect, useRef, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import type { NoticeAction } from '../api/types.gen'
+import { useCapabilitiesStore } from '../addons/capabilities'
 import { useNotificationStore } from '../notifications/store'
 import type { SettingsPageId } from '../settings/pages'
 import { useSettingsNavStore } from '../settings/navStore'
@@ -81,7 +82,15 @@ export function Desktop() {
   // 바로가기 목록을 불러오기(또는 실패하기) 전에는 아이콘 영역 크기를 알 수 없으므로 위젯을 그리지 않는다.
   // 먼저 그리면 위젯이 아이콘 자리에 놓였다가 바로가기가 들어오며 밀려난다.
   // 한 번 불러온 뒤에는 다시 시도하는 동안에도 위젯을 그대로 둔다(loaded).
-  const iconsReady = useShortcutStore((s) => s.loaded)
+  // 위젯은 바로가기와 첫 capabilities(애드온 패키지 바로가기)를 그린 뒤 그린다. capabilities가 늦으면 1.5초 뒤 그린다.
+  const shortcutsLoaded = useShortcutStore((s) => s.loaded)
+  const capsSettled = useCapabilitiesStore((s) => s.settled)
+  const [capsWaited, setCapsWaited] = useState(false)
+  useEffect(() => {
+    const timer = window.setTimeout(() => setCapsWaited(true), 1500)
+    return () => window.clearTimeout(timer)
+  }, [])
+  const iconsReady = shortcutsLoaded && (capsSettled || capsWaited)
   // 창은 처음 열린 순서대로 그린다. 앞뒤는 z-index가 정하므로, 작업표시줄에서 순서를 바꿔도
   // 창 DOM이 옮겨지지 않게 한다(옮겨지면 창 안의 스크롤 위치나 iframe이 초기화된다).
   // 닫힌 창은 저장소에서 바로 지워지지만, 닫기 애니메이션이 끝나 onClosed가 불릴 때까지

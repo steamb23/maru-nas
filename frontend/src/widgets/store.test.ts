@@ -47,11 +47,11 @@ describe('load', () => {
     expect(store.getState().placements).toEqual([])
   })
 
-  it('지금 빌드에 없는 위젯은 뺀다', async () => {
+  it('지금 그릴 수 없는 위젯(꺼진 애드온 패키지 등)도 남긴다', async () => {
     const gone = { ...placement, addon: 'removed-addon', right: 6 }
     const { store } = setup({ fetchPreferences: async () => ({ widgets: [placement, gone] }) })
     await store.getState().load()
-    expect(store.getState().placements).toEqual([placement])
+    expect(store.getState().placements).toEqual([placement, gone])
   })
 
   it('실패하면 error', async () => {

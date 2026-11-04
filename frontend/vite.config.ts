@@ -7,6 +7,7 @@ import { type Plugin, defineConfig, loadEnv } from 'vite'
 const fromHere = (p: string) => fileURLToPath(new URL(p, import.meta.url))
 
 const vendorIcons = fromHere('../vendor/icons')
+const sdkSrc = fromHere('../sdk/js/src')
 const locales = fromHere('src/i18n/locales')
 
 // Colloid의 일부 SVG(external-link-symbolic 등)는 루트 <svg>에 xmlns가 없어 브라우저가 이미지로 읽지 못한다.
@@ -68,6 +69,8 @@ export default defineConfig(({ mode }) => {
         '@colloid': fromHere('../vendor/icons/colloid/src'),
         // 테마 밖 제3자 아이콘 출처(vendor/icons/<출처>/). src/icons/sources/에서만 쓴다.
         '@vendor-icons': vendorIcons,
+        // 애드온 SDK 원본(sdk/js/src, MIT). 호스트가 프로토콜·공통 CSS를 함께 쓴다(tsconfig.app.json의 paths와 맞춘다).
+        '@maru-sdk': sdkSrc,
       },
     },
     server: {
@@ -75,9 +78,11 @@ export default defineConfig(({ mode }) => {
       port: Number(env.DEV_PORT) || 5173,
       strictPort: true,
       allowedHosts: env.DEV_ALLOWED_HOSTS ? env.DEV_ALLOWED_HOSTS.split(',') : [],
-      // 아이콘 서브모듈이 Vite 루트 밖에 있으므로 vendor/icons만 추가로 허용한다.
+      // 아이콘 서브모듈과 애드온 SDK 원본이 Vite 루트 밖에 있으므로 vendor/icons와 sdk/js/src만 추가로 허용한다.
       // 저장소 루트 전체를 허용하면 CLAUDE.local.md 등이 LAN에 노출된다.
-      fs: { allow: [fromHere('.'), vendorIcons] },
+      fs: { allow: [fromHere('.'), vendorIcons, sdkSrc] },
+      // 대시보드 문서의 CSP. 애드온 프레임이 스스로 다른 주소로 이동하지 못하게 한다(backend/internal/web의 DocumentCSP와 같다).
+      headers: { 'Content-Security-Policy': "frame-src 'self'" },
       proxy: {
         // xfwd: 브라우저 IP를 X-Forwarded-For로 넘긴다(로그인 제한·OMV 인증 로그용).
         // ws: 웹 터미널(/api/terminal)의 WebSocket도 넘긴다.

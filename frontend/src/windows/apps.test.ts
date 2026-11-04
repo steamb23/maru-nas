@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { MANIFESTS, RESERVED_APP_IDS } from '../addons/manifests.gen'
 import {
   APP_IDS,
-  type WindowAppId,
+  type BuiltinWindowAppId,
   getApp,
   getWindowApp,
   isAddonApp,
@@ -13,7 +13,7 @@ import {
 } from './apps'
 import { MIN_HEIGHT, MIN_WIDTH } from './geometry'
 
-const windowAppIds = APP_IDS.filter((id): id is WindowAppId => !isLinkApp(id))
+const windowAppIds = APP_IDS.filter((id): id is BuiltinWindowAppId => !isLinkApp(id))
 
 describe('APPS', () => {
   it.each(windowAppIds)('%s의 기본 크기는 최소 크기 이상이다', (id) => {

@@ -6,7 +6,8 @@ paths:
 # 프론트엔드 공통
 
 - Vite `base`는 상대 경로 `./`다. 자산과 API(`${BASE_URL}api`)를 문서 URL 기준으로 찾으므로 어떤 경로 접두사 아래에서도 동작한다. 절대 경로(`/...`)로 자산·API를 참조하지 않는다. 개발 서버는 `/`에서 서빙하고 `/api/*`를 백엔드로 프록시한다
-- `server.fs.allow`는 `frontend/`와 `vendor/icons/`만 허용한다. 개발 서버가 LAN에 열려 있으므로 저장소 루트 전체를 허용하지 않는다
+- `server.fs.allow`는 `frontend/`, `vendor/icons/`, `sdk/js/src/`(애드온 SDK 원본, 별칭 `@maru-sdk`)만 허용한다. 개발 서버가 LAN에 열려 있으므로 저장소 루트 전체를 허용하지 않는다. SDK 원본은 npm 패키지를 import하지 않고, 호스트와 함께 쓰는 파일(`protocol.ts` 등)의 검사(tsc·oxlint·Vitest)는 프론트 도구가 한다(`.claude/rules/addon-packages.md`)
+- 개발 서버와 대시보드 문서는 `Content-Security-Policy: frame-src 'self'`를 준다(`vite.config.ts`의 `server.headers`, 백엔드 `web.DocumentCSP`). 다른 출처의 iframe이 필요해지면 이 값을 넓히기 전에 애드온 프레임의 유출 경로를 다시 검토한다
 - 개인 환경 값(`DEV_HOST`, `DEV_ALLOWED_HOSTS`, `MARU_LISTEN`, `MARU_OMV_URL`, `MARU_WORKBENCH_URL`)은 커밋하지 않는 `frontend/.env.local`에 둔다. `scripts/dev.sh`가 `MARU_*`·`DEV_*` 값을 환경 변수로 내보내므로 git 워크트리에서 실행하거나 `make dev BRANCH=<브랜치>`로 워크트리를 골라도 주 체크아웃의 값이 적용된다(워크트리의 `frontend/.env.local`이 우선). `make dev-fake`는 `MARU_OMV_URL`·`MARU_WORKBENCH_URL`을 가짜 OMV로 덮는다
 - `src/api/types.gen.ts`, `src/addons/manifests.gen.ts`는 생성물이다. 직접 수정하지 말고 `make types`로 다시 만든다
 - 컴포넌트 테스트용 DOM 환경(jsdom 등)은 쓰지 않는다. 로직은 DOM 없는 순수 함수·저장소로 분리해 node 환경의 Vitest로 테스트하고, 화면 동작은 브라우저에서 확인한다

@@ -113,12 +113,13 @@ const CLIENT_TEXT: Record<ClientEventCode, { title: ParseKeys; body: ParseKeys; 
     body: 'notifications.client.filesUploadFailed.body',
     stopped: 'notifications.client.filesUploadFailed.bodyStopped',
   },
+  addonMessage: { title: 'notifications.client.addonMessage.title', body: 'notifications.client.addonMessage.body' },
 }
 
 export function clientText(e: ClientEvent): NoticeText {
   const text = CLIENT_TEXT[e.code]
   const params = e.params ?? {}
-  const body = params.count === undefined ? (text.stopped ?? null) : text.body
+  const body = params.count === undefined && text.stopped ? text.stopped : text.body
   return { title: text.title, body, params }
 }
 

@@ -1,9 +1,12 @@
 import type { CSSProperties } from 'react'
+import { type AppIcon, isIconURL } from './appIcon'
 import { colorIconStyle } from './iconStyle'
-import { type IconName, getIcon } from './resolver'
+import { getIcon } from './resolver'
 
 interface Props {
-  name: IconName
+  // 아이콘 표의 이름 또는 주소(애드온 패키지 아이콘). 주소는 컬러 그림으로 <img>에만 넣는다(SVG 안의 스크립트는
+  // <img>에서 돌지 않는다).
+  name: AppIcon
   size: number
   className?: string
   // app이면 앱을 나타내는 아이콘(getApp(id).icon)으로 그린다: "모든 앱" 타일, 바탕화면 바로가기,
@@ -15,6 +18,19 @@ interface Props {
 // 컬러 아이콘은 <img>로 그대로, symbolic 아이콘은 mask-image로 잘라 currentColor를 칠한다.
 // 아이콘은 모두 장식용이며, 의미는 감싸는 요소의 라벨로 전달한다.
 export function IconImage({ name, size, className, app = false }: Props) {
+  if (isIconURL(name)) {
+    return (
+      <img
+        className={`package-icon ${className ?? ''}`.trim()}
+        src={name.url}
+        width={size}
+        height={size}
+        alt=""
+        draggable={false}
+        referrerPolicy="no-referrer"
+      />
+    )
+  }
   const icon = getIcon(name)
   if (icon.kind === 'color') {
     const style = colorIconStyle(icon, size, app)

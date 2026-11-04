@@ -107,6 +107,19 @@ if [[ $fake == 1 ]]; then
   # 디스크 건강의 SMART 상세는 가짜 OMV가 답한다. FAKESMART_DELAY(예: 5s)면 잠든 디스크를 깨우는 것처럼 늦게 답한다.
 fi
 
+# 애드온 패키지: MARU_DEV_ADDONS(콜론으로 나눈 풀린 패키지 디렉터리)는 실제·가짜 OMV 모두 그대로 넘긴다.
+# FAKEADDONS=examples면 --fake일 때 sdk/examples의 예제를 그 뒤에 더한다(기본 none, 평소 개발 서버는 그대로).
+# 프레임의 _maru/ 파일(SDK 런타임)은 vite build --watch로 상태 디렉터리에 만든다(embed된 빌드는 개발 중에 없거나 오래됐다).
+if [[ $fake == 1 && ${FAKEADDONS:-none} == examples ]]; then
+  for d in "$root"/sdk/examples/*/; do
+    [[ -f "$d/manifest.json" ]] && MARU_DEV_ADDONS="${MARU_DEV_ADDONS:+$MARU_DEV_ADDONS:}${d%/}"
+  done
+fi
+if [[ -n ${MARU_DEV_ADDONS:-} ]]; then
+  export MARU_DEV_ADDONS
+  export MARU_DEV_ADDON_SDK="${MARU_DEV_ADDON_SDK:-$MARU_STATE_DIR/addon-sdk}"
+fi
+
 # 이미 떠 있는 서버가 있으면 시작하지 않는다. 일부만 떠서 다른 서버(예: 실제 OMV에 연결된
 # 백엔드)에 붙는 일을 막는다. Vite 포트(DEV_PORT)는 vite.config.ts의 server.port와 같은 기본값을 쓴다.
 ports=("${MARU_LISTEN##*:}" "${DEV_PORT:-5173}")
@@ -139,6 +152,13 @@ trap cleanup EXIT INT TERM
 if [[ $fake == 1 ]]; then
   echo "[dev] fake omv: http://$FAKEOMV_LISTEN"
   (cd "$root/backend" && exec setsid go run ./cmd/fakeomv) &
+  pids+=($!)
+fi
+
+if [[ -n ${MARU_DEV_ADDON_SDK:-} && -f "$root/frontend/vite.sdk.config.ts" ]]; then
+  echo "[dev] addon packages: ${MARU_DEV_ADDONS} (sdk: $MARU_DEV_ADDON_SDK)"
+  (cd "$root/frontend" && exec setsid npx vite build -c vite.sdk.config.ts --watch --outDir "$MARU_DEV_ADDON_SDK" \
+    --emptyOutDir --logLevel warn) &
   pids+=($!)
 fi
 

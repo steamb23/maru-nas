@@ -36,6 +36,7 @@ paths:
 - `WidgetLayer`는 `.desktop-area` 안에서 아이콘 다음, 창 앞(DOM 순서)에 그린다. 평소에는 창 아래이고, 위젯을 끌거나 크기를 바꾸는 동안만 창 위로 올라온다(`.widget-layer.raised`)
 - `src/widgets/`와 `src/windows/`는 서로 import하지 않는다. 위젯이 창을 여는 일은 `shell/WidgetFrame.tsx`가 창 저장소의 `open`을 불러 처리한다
 - 저장 배치는 `widgets/store.ts`, 화면 배치는 `fitLayout`으로 렌더링 때 계산한다. 저장 배치는 사용자가 바꾼 위젯만 `commitPlacement`로 바꾼다(화면 크기 변화로 바꾸지 않는다)
+- 위젯은 처음 그린 순서대로 DOM에 둔다(`WidgetLayer`의 `stableOrder`). 저장 배치의 순서가 바뀌어도(`commitPlacement`가 밀려난 위젯을 뒤로 보냄) 요소가 옮겨지면 애드온 패키지 위젯의 iframe이 다시 뜨기 때문이다
 - 끄는 동안 위치·크기는 렌더링 없이 요소 style을 직접 바꾼다. 끝나면 지우지 말고 지금 자리의 값으로 되돌린다(React는 값이 바뀌지 않은 style을 다시 넣지 않는다)
 - 위젯 잠금은 `WidgetLayer`가 화면 설정 저장소(`appearance/store.ts`의 `widgetsLocked`)에서 읽어 `WidgetFrame`의 `locked`로 넘긴다. 잠기면 끌기를 시작하지 않고 크기 조절 핸들을 그리지 않으며, "위젯 추가 ▸"(`desktopMenuItems`)와 "위젯 제거"를 비활성("잠김")으로 둔다. 끌기를 시작했는지는 `mode`가 아니라 ref(`moving`)로 판단한다(놓는 순간 `mode`가 아직 렌더되지 않았을 수 있다). 끄는 도중 잠겨도 시작한 끌기는 끝낸다
 - 포인터 끌기 공통 처리는 `usePointerDrag`(임계 거리, pointer capture, 취소)를 쓴다. 창(`Window.tsx`)의 끌기 코드는 아직 이 훅으로 옮기지 않았다
@@ -44,7 +45,7 @@ paths:
 ## 바로가기와 모든 앱
 
 - 바탕화면에는 사용자가 고른 바로가기만 놓는다(`DesktopShortcuts`). 모든 앱은 작업표시줄 왼쪽 끝 버튼으로 여는 "모든 앱" 화면(`AppDrawer`)에 있다. 화면 용어는 "바로가기"(붙여 씀)와 "모든 앱", 코드 이름은 `shortcut`과 `AppDrawer`다
-- 앱은 창 앱(`addon`, `placeholder`, 셸이 직접 그리는 `shell`)과 링크 앱(`link`, 창 없이 브라우저 탭으로 연다)이다(`windows/apps.ts`). 셸 앱의 보기 컴포넌트는 `shell/shellViews.ts`에 두어 node 테스트 대상인 `apps.ts`가 컴포넌트를 import하지 않게 한다. 창 저장소는 `WindowAppId`만 받으므로, 앱을 여는 곳(서랍 타일·바로가기·메뉴 "열기")은 `shell/launchApp.ts`의 `launchApp`을 부른다
+- 앱은 창 앱(`addon`, `placeholder`, 셸이 직접 그리는 `shell`, 애드온 패키지 `addonpkg`)과 링크 앱(`link`, 창 없이 브라우저 탭으로 연다)이다(`windows/apps.ts`). 애드온 패키지는 capabilities의 `addonPackages`로 받아 내장 표 다음에 더한다(`addonpkg/catalog.ts`). 앱 목록은 `appIds()`, 정의는 `getApp`이고, 이 탭에서 본 패키지는 사라진 뒤에도 묘비로 정의가 남아 열린 창을 그린다. 패키지 이름은 번역 리소스(`addonPackageNames.<id>`, `addonpkg/names.ts`)에 넣어 다른 앱처럼 `t(titleKey)`로 그리고, 아이콘은 주소(`{url}`)를 `IconImage`가 `<img>`로 그린다. 보기는 `addonpkg/AddonFrame.tsx`(샌드박스 프레임, `.claude/rules/addon-packages.md`)다. 셸 앱의 보기 컴포넌트는 `shell/shellViews.ts`에 두어 node 테스트 대상인 `apps.ts`가 컴포넌트를 import하지 않게 한다. 창 저장소는 `WindowAppId`만 받으므로, 앱을 여는 곳(서랍 타일·바로가기·메뉴 "열기")은 `shell/launchApp.ts`의 `launchApp`을 부른다
   - 창 앱은 앱마다 창 하나이고, 다시 열면 그 창을 복원해 앞으로 가져온다(저장소의 `open`). `multiInstance` 앱(지금은 파일 탐색기와 웹 터미널)만 열 때마다(바로가기·서랍 클릭, "열기") 새 창을 연다. 열린 창을 앞으로 가져오는 것은 작업표시줄 버튼이 한다
   - 바로가기는 한 번 눌러 연다. 습관대로 두 번 누르면 `multiInstance` 앱이 창 두 개를 열므로 연속 누르기의 둘째 click부터(`detail` 2 이상)는 무시한다(`DesktopShortcuts`의 `onClick`)
   - 창 id는 늘 `win-<n>`이고 앱 id와 같지 않다. 앱 id로 창 하나를 찾는 코드는 `multiInstance` 앱에서 틀리므로, 새로 만들면 여러 창을 전제로 한다
@@ -54,10 +55,10 @@ paths:
   - 링크 앱은 주소(`/api/capabilities`의 `workbenchUrl`)가 있을 때만 보인다. capability를 받기 전에도 숨긴다(`appAccess`의 예외). 셸 앱인 웹 터미널(`terminal`)도 같은 예외로 `capabilities.terminal`(관리자가 허용)일 때만 보인다. 프로필 메뉴의 "OMV 워크벤치 열기"는 `requires: 'workbench'`로 같은 조건을 따른다. 파일 탐색기(`files`)는 권한 도우미가 없어도(`capabilities.helper`가 false) 숨기지 않고, 창 안에 보기 대신 못 쓰는 이유를 안내한다(`notice: 'helper_missing'`, 프런트만 쓰는 사유). 파일 작업 창(`transfers`)은 탐색기가 여는 창이라 늘 숨긴다(창은 작업표시줄에만 보인다, `.claude/rules/files.md`의 "파일 작업")
 - 목록은 `shortcuts/store.ts`(사용자별 `/api/preferences`의 `shortcuts`, 불러오기·저장 방식은 위젯 저장소와 같다), 순서 계산은 `shortcuts/list.ts`, 칸 계산은 `shortcuts/layout.ts`가 한다
   - 저장 목록에는 지금 보이지 않는 앱(일반 사용자의 관리자 전용 앱)도 남긴다. 화면 순서와 놓을 자리는 보이는 목록 기준이며(`placeShortcut`), 보이지 않는 앱은 서로의 순서를 지킨다
-  - 한 번도 저장하지 않았으면 기본 목록(시스템 정보·파일·저장소), 모두 지웠으면 빈 바탕화면이다. 모르는 앱 id는 불러올 때 뺀다
+  - 한 번도 저장하지 않았으면 기본 목록(시스템 정보·파일·저장소), 모두 지웠으면 빈 바탕화면이다. 지금 없는 앱 id(꺼지거나 지운 애드온 패키지, 아직 목록을 받지 못한 패키지)는 지우지 않고 그리지만 않는다(`storedShortcuts`, `visibleShortcuts`). 64개를 넘으면 지금 없는 앱부터 뺀다(`capShortcuts`)
 - 앱 이름(바탕화면 아이콘, 서랍 타일)은 띄어쓰기에서만 줄을 바꾸고(`word-break: keep-all`), 한 단어가 한 줄보다 길 때만 글자 사이에서 자른다(`overflow-wrap: anywhere`). 한글 이름이 단어 중간에서 잘리지 않게 하기 위해서다
 - 배치는 왼쪽 위부터 위에서 아래로, 넘치면 다음 열이다(`grid-auto-flow: column`). `layout.ts`의 상수와 `rowsPerColumn`은 CSS(`.desktop-icons`, `.desktop-icon`)와 맞춘다. 끄는 동안 쓰는 한 열의 아이콘 수는 그려진 목록(`gridTemplateRows`)에서 잰다(브라우저 확대로 영역 높이가 소수점이면 반올림한 `bounds`로 계산한 값과 다를 수 있다)
-- 위젯 레이어는 바로가기를 불러온 뒤(`iconsReady` = 저장소의 `loaded`)에 그린다. 먼저 그리면 아이콘 목록 너비가 0이라 위젯이 아이콘 자리에 놓였다가 밀려난다. `loaded`는 한 번 불러오면(실패 포함) 다시 시도하는 동안에도 남아, 재시도 때 위젯이 다시 마운트되지 않는다
+- 위젯 레이어는 바로가기를 불러오고 첫 capabilities가 끝난 뒤(`iconsReady` = 바로가기 저장소의 `loaded` + capabilities 저장소의 `settled`, 늦으면 1.5초 뒤)에 그린다. 먼저 그리면 아이콘 목록 너비가 0이거나 애드온 패키지 바로가기가 늦게 들어와 위젯이 아이콘 자리에 놓였다가 밀려난다. `loaded`는 한 번 불러오면(실패 포함) 다시 시도하는 동안에도 남아, 재시도 때 위젯이 다시 마운트되지 않는다
 - 메뉴: 바로가기 → "열기"·"바로가기 제거", 빈 바탕화면 → "바로가기 추가 ▸"(이미 있는 앱은 체크·비활성), 서랍 타일 → "열기"·"바탕화면에 바로가기 추가" 또는 "바로가기 제거". `multiInstance` 앱도 같다("열기"가 새 창을 연다)
 - 끌기(바탕화면 순서 바꾸기, "모든 앱" → 바탕화면)
   - pointer capture는 누른 요소(바탕화면 아이콘 버튼, 서랍 타일)가 갖는다. 끄는 동안 그 요소를 지우거나 DOM에서 옮기거나 `inert`로 만들지 않는다(capture가 풀려 끌기가 취소된다). `li`의 순서는 놓거나 취소한 뒤 `settle`에서만 바뀐다

@@ -6,7 +6,7 @@ import { create } from 'zustand'
 import * as client from '../api/client'
 import { createSaveQueue } from '../api/saveQueue'
 import type { Preferences, WidgetPlacement } from '../api/types.gen'
-import { defaultLayout, knownPlacements } from './catalog'
+import { defaultLayout, fitSizes, storedPlacements } from './catalog'
 
 // idle: 아직 불러오지 않음. loading: 불러오는 중. ready: 배치 있음. error: 불러오지 못함(위젯을 그리지 않음).
 export type WidgetStatus = 'idle' | 'loading' | 'ready' | 'error'
@@ -52,15 +52,17 @@ export function createWidgetStore(api: WidgetApi) {
         try {
           const prefs = await api.fetchPreferences()
           if (gen !== generation) return
-          const placements = prefs.widgets === undefined ? defaultLayout() : knownPlacements(prefs.widgets)
+          const placements = prefs.widgets === undefined ? defaultLayout() : storedPlacements(prefs.widgets)
           set({ status: 'ready', placements, saveFailed: false })
         } catch {
           if (gen === generation) set({ status: 'error' })
         }
       },
 
-      set: (placements) => {
+      set: (next) => {
         if (get().status !== 'ready') return
+        // 지금 그릴 수 있는 위젯의 크기를 범위 안으로 맞춰 저장한다(범위 밖 크기는 백엔드가 받지 않는다).
+        const placements = [...fitSizes(next)]
         set({ placements })
         saves.push(placements)
       },

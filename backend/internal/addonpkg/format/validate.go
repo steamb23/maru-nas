@@ -172,6 +172,13 @@ func checkString(s string, max int) string {
 			return fmt.Sprintf("must not contain control or format characters (U+%04X)", r)
 		}
 	}
+	// 호스트는 패키지 이름·조작 문구를 번역 리소스(i18next)에 넣어 그린다. 치환·중첩 문법이 있으면 다른 문구
+	// (내장 앱 이름 등)를 끌어올 수 있으므로 받지 않는다.
+	for _, seq := range []string{"{{", "}}", "$t("} {
+		if strings.Contains(s, seq) {
+			return fmt.Sprintf("must not contain %q", seq)
+		}
+	}
 	return ""
 }
 

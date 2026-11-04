@@ -1,0 +1,30 @@
+/* 애드온 패키지의 샌드박스 프레임(AddonFrame). 창·위젯 본문을 꽉 채운다. 배경은 프레임 문서가 정한다(maru.css가 창
+   배경색을 깐다). */
+.addonpkg-frame {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: transparent;
+}
+
+/* 위젯은 틀이 끌기·크기 조절·창 열기를 맡는다. 프레임은 포인터를 받지 않는다. */
+.addonpkg-widget {
+  pointer-events: none;
+}
+
+/* 패키지를 끄거나 지운 뒤에도 열려 있는 창·위젯의 안내. */
+.addonpkg-unavailable {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  padding: 16px;
+  color: var(--text-muted);
+  text-align: center;
+  font-size: 13px;
+}
+
+/* 서버가 주는 패키지 아이콘(IconImage의 주소 아이콘). */
+.package-icon {
+  object-fit: contain;
+}
