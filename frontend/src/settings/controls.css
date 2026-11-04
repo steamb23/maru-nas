@@ -174,30 +174,8 @@
   line-height: 1.6;
 }
 
-.settings-copy {
+.settings-commands .copy-button {
   position: absolute;
   top: 6px;
   right: 6px;
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border: none;
-  border-radius: 6px;
-  background: none;
-  cursor: pointer;
-  transition: scale var(--press-out) ease;
-}
-
-.settings-copy:hover,
-.settings-copy:focus-visible {
-  background: var(--hover-bg);
-  outline: none;
-}
-
-.settings-copy:active {
-  background: var(--press-bg);
-  scale: var(--press-scale);
-  transition-duration: var(--press-in);
 }

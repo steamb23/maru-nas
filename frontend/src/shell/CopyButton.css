@@ -1,0 +1,27 @@
+/* 클립보드 복사 아이콘 단추(CopyButton). 자리는 쓰는 쪽이 정한다(설정의 명령 상자는 오른쪽 위에 띄운다). */
+.copy-button {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  transition: scale var(--press-out) ease;
+}
+
+.copy-button:hover,
+.copy-button:focus-visible {
+  background: var(--hover-bg);
+  outline: none;
+}
+
+.copy-button:active {
+  background: var(--press-bg);
+  scale: var(--press-scale);
+  transition-duration: var(--press-in);
+}

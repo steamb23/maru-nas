@@ -264,6 +264,9 @@
     "ok": "OK",
     "cancel": "Annuler"
   },
+  "clipboard": {
+    "copied": "Copié"
+  },
   "linkNotice": {
     "title": "Ouvrir dans un nouvel onglet",
     "workbench": "OMV Workbench s'ouvre dans un nouvel onglet du navigateur. Vous devrez vous reconnecter à OMV dans ce nouvel onglet.",
@@ -407,7 +410,6 @@
       "howToDesc": "Ces valeurs sont des variables d'environnement dans /etc/default/maru. Redémarrez le service après les avoir modifiées. Si vous changez l'adresse d'écoute, mettez aussi à jour le proxy inverse.",
       "howToInstall": "Vous pouvez aussi relancer ./install.sh --reinstall depuis le dépôt et répondre à ses questions.",
       "copy": "Copier les commandes",
-      "copied": "Copié",
       "sources": {
         "default": "Par défaut",
         "env": "Variable d'environnement",

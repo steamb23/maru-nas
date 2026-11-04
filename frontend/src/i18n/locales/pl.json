@@ -270,6 +270,9 @@
     "ok": "OK",
     "cancel": "Anuluj"
   },
+  "clipboard": {
+    "copied": "Skopiowano"
+  },
   "linkNotice": {
     "title": "Otwórz w nowej karcie",
     "workbench": "OMV Workbench otwiera się w nowej karcie przeglądarki. W nowej karcie trzeba ponownie zalogować się do OMV.",
@@ -413,7 +416,6 @@
       "howToDesc": "Te wartości to zmienne środowiskowe w /etc/default/maru. Po edycji uruchom ponownie usługę. Jeśli zmienisz adres nasłuchiwania, zaktualizuj też odwrotne proxy.",
       "howToInstall": "Możesz też ponownie uruchomić ./install.sh --reinstall z repozytorium i odpowiedzieć na pytania.",
       "copy": "Kopiuj polecenia",
-      "copied": "Skopiowano",
       "sources": {
         "default": "Domyślna",
         "env": "Zmienna środowiskowa",

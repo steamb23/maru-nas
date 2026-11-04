@@ -270,6 +270,9 @@
     "ok": "OK",
     "cancel": "Zrušit"
   },
+  "clipboard": {
+    "copied": "Zkopírováno"
+  },
   "linkNotice": {
     "title": "Otevřít na nové kartě",
     "workbench": "OMV Workbench se otevře na nové kartě prohlížeče. Na nové kartě se budete muset do OMV přihlásit znovu.",
@@ -413,7 +416,6 @@
       "howToDesc": "Tyto hodnoty jsou proměnné prostředí v /etc/default/maru. Po úpravě službu restartujte. Pokud změníte adresu pro naslouchání, upravte i reverzní proxy.",
       "howToInstall": "Můžete také znovu spustit ./install.sh --reinstall z repozitáře a odpovědět na jeho otázky.",
       "copy": "Kopírovat příkazy",
-      "copied": "Zkopírováno",
       "sources": {
         "default": "Výchozí",
         "env": "Proměnná prostředí",

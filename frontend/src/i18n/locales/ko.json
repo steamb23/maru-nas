@@ -852,6 +852,9 @@
     "cancel": "취소",
     "close": "닫기"
   },
+  "clipboard": {
+    "copied": "복사했습니다"
+  },
   "elevation": {
     "title": "관리자 인증",
     "description": "비밀번호를 입력하면 이 세션에서 5분 동안 root 권한을 씁니다.",
@@ -1039,7 +1042,6 @@
       "howToDesc": "이 값들은 /etc/default/maru의 환경 변수로 정합니다. 고친 뒤 서비스를 다시 시작해야 반영됩니다. 수신 주소를 바꾸면 리버스 프록시 설정도 함께 바꿔 주세요.",
       "howToInstall": "저장소에서 ./install.sh --reinstall을 다시 실행해 질문에 답하는 방법도 있습니다.",
       "copy": "명령 복사",
-      "copied": "복사했습니다",
       "sources": {
         "default": "기본값",
         "env": "환경 변수",
