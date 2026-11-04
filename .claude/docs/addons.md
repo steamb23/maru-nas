@@ -4,12 +4,11 @@
 
 데이터·조작이 없는 셸 기능("모든 앱", 바로가기, OMV 웹 UI를 새 탭으로 여는 링크 앱)은 애드온이 아니다. 링크 앱은 `windows/apps.ts`의 `kind: 'link'`이며 `.claude/rules/frontend-shell.md`의 "바로가기와 모든 앱"을 본다.
 
-범위는 아래 두 층이다.
+범위는 아래 세 층이다.
 
 1. **애드온 계약**: 애드온이 무엇을 필요로 하고 무엇을 호출하는지 선언하는 manifest, provider, capability
-2. **내장 애드온**: 저장소 안에 소스로 들어 있고 함께 빌드되는 애드온. 기능을 추가하려면 포크해서 기여하거나 직접 빌드해서 쓴다
-
-런타임에 불러오는 애드온은 만들지 않는다. 아래 "향후 고려"에 나중을 위한 제약만 적어 둔다.
+2. **내장 애드온**: 저장소 안에 소스로 들어 있고 함께 빌드되는 애드온. 이 문서의 나머지는 대부분 내장 애드온 이야기다
+3. **애드온 패키지**: 저장소 밖에서 만들어 관리자가 설치하는 애드온. 같은 계약(레지스트리, capability, 조작 경로)에 런타임으로 더하고, 프론트는 샌드박스 iframe, 백엔드는 별도 프로세스다. 설계는 [addon-packages.md](addon-packages.md)
 
 ## 애드온 계약
 
@@ -29,7 +28,7 @@
 | `rpc.write` | 호출하는 상태 변경 OMV RPC. 조작(`actions`)만 부른다 |
 | `actions` | 상태를 바꾸는 조작(`name`, `admin`, `confirm`). 구현은 `Addon.Actions`. 아래 "조작" |
 
-레지스트리(`addons.NewRegistry`)는 등록할 때 manifest를 검사한다: id 형식(소문자·숫자·`-`)과 중복, 보기 1개 이상(창 또는 위젯), 크기(위젯은 최소 ≤ 기본 ≤ 최대), `Service.method` 형식, 같은 메서드를 읽기와 쓰기로 함께 선언하지 않기, `Session.*` 금지(로그인·로그아웃은 백엔드만 부른다), 조작 선언과 구현의 1:1 일치(조작이 있으면 `rpc.write` 1개 이상), provider 1개 이상.
+레지스트리(`addons.NewRegistry`)는 등록할 때 manifest를 검사한다: id 형식(소문자·숫자·`-`)과 중복, 보기 1개 이상(창 또는 위젯), 크기(위젯은 최소 ≤ 기본 ≤ 최대), `Service.method` 형식, 같은 메서드를 읽기와 쓰기로 함께 선언하지 않기, `Session.*` 금지(로그인·로그아웃은 백엔드만 부른다), 조작 선언과 구현의 1:1 일치(내장만. 패키지는 선언만 있고 구현은 백엔드에 있다), provider 1개 이상. "내장 조작이 있으면 `rpc.write` 1개 이상"은 `builtin`의 테스트가 본다(패키지 조작은 OMV 쓰기 없이도 된다). 패키지는 `addons.Extend`가 한 건씩 더 검사한다([addon-packages.md](addon-packages.md)의 "레지스트리").
 
 한 애드온 안에서도 출처마다 조건이 다를 수 있다(예: 온도는 hwmon은 누구나, SMART 디스크 온도는 admin). 그래서 `requires`는 "창·위젯을 쓸 수 있는 최소 조건"이고, provider별 조건은 provider가 따로 선언한다.
 
@@ -356,8 +355,9 @@
   - `frontend/src/widgets/`: 위젯 그리드·배치 계산(`grid.ts`, `layout.ts`), 위젯 목록(`catalog.ts`), 저장 배치 저장소(`store.ts`). 창의 `src/windows/`와 서로 import하지 않는다
   - `frontend/src/addons/common/`: 애드온이 함께 쓰는 `poller.ts`, `format.ts`
   - `windows/apps.ts`는 창 보기가 있는 애드온을 manifest에서 만들고 준비 중 앱과 합친다. 준비 중 앱과 같은 id의 애드온을 만들면 준비 중 앱을 지운다
-- 별도 패키지, 런타임 로딩, Go `plugin` 패키지는 쓰지 않는다
+- 내장 목록에는 런타임 로딩과 Go `plugin` 패키지를 쓰지 않는다
   - `lazyView`의 지연 로딩은 이 정적 목록 안의 일이다. 목록과 `AddonId`는 컴파일 타임에 정해지고, 빌드에 들어간 보기 코드를 내려받는 시점만 늦춘다
+  - 저장소 밖 애드온은 애드온 패키지로만 더한다([addon-packages.md](addon-packages.md)). 패키지는 `AddonId`·`ADDON_VIEWS`에 들어가지 않고 앱 종류 `'addonpkg'`로 따로 그린다
 
 ### manifest 원본과 id 일치 검사
 
@@ -388,21 +388,18 @@
 
 ## 향후 고려 (구현하지 않음)
 
-공개 후 필요해지면 다시 검토한다. 지금 설계는 이 둘을 막지 않는 정도만 신경 쓴다.
+공개 후 필요해지면 다시 검토한다.
 
 ### 선언형 애드온
 
 - YAML 같은 데이터만으로 정의한다. "이 RPC를 호출해 표·게이지·키-값으로 보여 준다" 정도다. OMV workbench의 `dashboard.d/*.yaml` 위젯과 같은 방식이다
 - 실행하는 코드가 없으므로 비교적 안전하다. RPC 허용 목록과 쓰기 제한도 manifest 검사로 그대로 강제할 수 있다
 - tempmon, zfs, nut처럼 RPC 하나를 표로 보여 주면 되는 플러그인 대부분이 여기에 해당한다
+- 애드온 패키지(아래)의 manifest·설치·검토 화면에 보기 종류를 더하는 방식으로 붙일 수 있다. 그리는 쪽은 호스트이므로 프레임이 필요 없다
 
 ### 코드 애드온
 
-- 이 대시보드는 OMV와 같은 출처로 서빙된다. 그래서 서드파티 JS를 그냥 실행하면 OMV workbench와 같은 출처 권한을 갖는다
-  - 브라우저에 OMV 로그인 쿠키가 있으면 `rpc.php`를 직접 호출할 수 있다. 백엔드 중계와 허용 목록을 모두 우회하게 된다
-  - workbench의 sessionStorage도 읽을 수 있다
-- 따라서 서드파티 프론트 코드는 반드시 `sandbox="allow-scripts"` iframe(`allow-same-origin` 없이, opaque origin)에 넣는다. 백엔드와는 postMessage SDK로만 통신하게 한다
-- 백엔드 확장은 Go `plugin`을 쓰지 않는다. Go 버전과 의존성 버전이 정확히 같아야 하고 언로드도 안 된다. 대신 별도 프로세스(유닉스 소켓 HTTP)를 백엔드가 중계하는 방식으로 한다
+애드온 패키지로 만들었다([addon-packages.md](addon-packages.md)). 이 대시보드가 OMV와 같은 출처로 서빙될 수 있으므로 서드파티 JS는 `sandbox="allow-scripts"` iframe(불투명 출처)에서만 돌리고 호스트와는 postMessage로만 통신한다. 백엔드는 Go `plugin` 대신 별도 프로세스(유닉스 소켓 HTTP)를 maru가 중계한다.
 
 ### 공개 시 라이선스
 
