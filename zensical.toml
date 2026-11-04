@@ -30,6 +30,7 @@ nav = [
     "files.md",
     "terminal.md",
     "system-updates.md",
+    "disk-health.md",
   ] },
   { "Security" = [
     "helper.md",

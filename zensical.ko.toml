@@ -25,6 +25,7 @@ nav = [
     "files.md",
     "terminal.md",
     "system-updates.md",
+    "disk-health.md",
   ] },
   { "보안" = [
     "helper.md",

@@ -22,7 +22,7 @@ Maru NAS is a desktop-like web dashboard that runs on OpenMediaVault 8. Windows,
 
 ## Features
 
-- **Status windows and widgets**: see system information, storage, network, temperatures and disk health (SMART) in windows or as desktop widgets.
+- **Status windows and widgets**: see system information, storage, network, temperatures and [disk health](docs/en/disk-health.md) (SMART, with per-disk details) in windows or as desktop widgets.
 - **Simple operations**: start, stop and restart containers (compose plugin), and turn core services on and off. Administrators can also shut down, restart or put the NAS to sleep from the profile menu.
 - **[File explorer](docs/en/files.md)**: browse your home folder and shared folders with your own permissions, upload, download, and delete to the trash.
 - **[Web terminal](docs/en/terminal.md)**: open an SSH shell on this NAS in a window, as the account you signed in with.
@@ -134,6 +134,7 @@ What you look up while running Maru NAS after installation is on the [documentat
 | [File explorer](docs/en/files.md) | Visible folders and permissions, uploading and downloading, the trash, moving and copying |
 | [Web terminal](docs/en/terminal.md) | Turning it on, authentication, SSH settings and security |
 | [System updates](docs/en/system-updates.md) | Checking for and installing all updates, task progress and result notifications, limitations |
+| [Disk health](docs/en/disk-health.md) | The disk list, per-disk SMART details, when disks wake up, limitations |
 | [Privileged helper](docs/en/helper.md) | The service that does the work needing user or root rights, and its security design |
 | [Security hardening mode](docs/en/security.md) | Password re-check and two-step verification (passkeys, authenticator apps, recovery codes), recovery |
 | [Passkey sign-in](docs/en/passkey-login.md) | Signing in with a passkey instead of a password, and its limits |

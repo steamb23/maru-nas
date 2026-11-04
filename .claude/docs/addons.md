@@ -223,7 +223,6 @@
 | `network` | 네트워크 | 없음 | `proc` | 5초 / 2초 |
 | `temperature` | 온도 | 없음 | `hwmon`, `omv-cputemp`(cputemp 플러그인), `omv-smart`(admin, 캐시만) | 10초 / 5초 |
 | `containers` | 컨테이너 | compose 플러그인 | `omv-compose` | 30초 / 15초 |
-| `smart` | 디스크 건강 | admin | `omv-smart` | 10분(캐시 확인만) / 같음 + 새로고침 |
 
 위젯 목록이 위젯에 다 들어가지 않으면 마지막 줄을 "외 N개"로 쓴다(`addons/common/widgetRows.ts`의 `widgetCapacity`·`fitList`, 줄 높이는 각 위젯의 CSS와 맞춘다). 크기는 브라우저 실측(ko·en)으로 정했다.
 
@@ -265,8 +264,17 @@
   - 새로고침(`?refresh=1`)이고 마지막으로 가져온 지 1분이 지났다. 응답의 `refreshInSeconds`로 남은 시간을 알려 주고, 창은 그동안 버튼을 막는다
 - 동시 요청은 OMV 호출 하나로 합친다. 실패하면 1분 동안 다시 부르지 않고, 보관한 결과가 있으면 그것을 준다
 - 파라미터는 OMV workbench의 SMART 대시보드 위젯과 같은 `{start: 0, limit: -1}`이다
-- `overallstatus`는 workbench의 색 구분을 따라 good(GOOD), warning(BAD_SECTOR), failing(BAD_ATTRIBUTE_NOW, BAD_ATTRIBUTE_IN_THE_PAST, BAD_SECTOR_MANY), unknown(BAD_STATUS 등)으로 줄이고 원래 값도 준다. 시리얼 번호·WWN은 브라우저에 넘기지 않는다
+- `overallstatus`는 workbench의 색 구분을 따라 good(GOOD), warning(BAD_SECTOR), failing(BAD_ATTRIBUTE_NOW, BAD_ATTRIBUTE_IN_THE_PAST, BAD_SECTOR_MANY), unknown(BAD_STATUS 등)으로 줄이고 원래 값도 준다. 목록 응답(위젯이 함께 받는다)에는 시리얼 번호·WWN·장치 파일을 넣지 않는다
 - 위젯은 10분마다 백엔드에 묻지만 백엔드는 기준 시각을 넘긴 경우에만 OMV를 부른다
+- **상세**(`detail`, `Query`, 관리자, 시간 제한 2분, 시안은 Design 캔버스 "디스크 건강 상세 시안"의 B·D1~D6): 대상은 목록의 장치 이름이다. 목록 스냅숏(`Snapshot.DeviceFile`)에 없으면 404 `not_found`이고, OMV에는 스냅숏에 보관한 그 디스크의 장치 파일(Smart.getList의 predictable `devicefile`, 없으면 `canonicaldevicefile`, 그것도 없으면 `/dev/<이름>`)을 `{devicefile}`로 넘긴다
+  - 메서드(`Smart.getInformation`·`getAttributes`·`getSelfTestLogs`·`getExtendedInformation`, 관리자)는 읽기지만 RPC마다 smartctl을 `--nocheck` 없이 실행해 잠든 디스크를 깨운다. 브라우저가 고른 장치 파일로 `/api/rpc`가 부르지 못하게 쓰기로 선언했다
+  - 실행 횟수를 줄이려고 종류마다 부르는 메서드가 다르다. NVMe(이름이 `nvme`로 시작)는 `getInformation` + `getExtendedInformation`, 그 밖은 `getInformation` + `getAttributes`이고 속성이 있으면(ATA) `getSelfTestLogs`를 더한다. 속성이 없으면 `kind: other`(SAS 등, 정보와 원문만)
+  - `getInformation`은 INFORMATION·SMART DATA 구역의 `키: 값` 줄을 키를 소문자로 붙여(`percentageused`, `warningcomp.temperaturetime`) 준다. 백엔드의 닫힌 표(`infoFields`·`healthFields`)가 camelCase 키·숫자·단위(`SmartField`)로 바꾸고 표에 없는 키는 버린다. 그래서 WWN(`wwn`, `luwwndeviceid`)·EUI-64 같은 식별자는 응답에 없고 시리얼 번호만 있다. 원문(`raw`)에는 smartctl 출력이 그대로 남는다. NVMe는 `usercapacity`가 비어 용량을 `totalnvmcapacity`에서 읽고, 데이터 단위는 512,000바이트로 바꾼다
+  - 속성은 OMV의 평가를 `Summarize`로 줄이고 `BAD_STATUS`(고장 예고가 아니거나 임계값이 의미 없는 속성)는 평가 없음으로 둔다. OMV의 영어 설명은 버리고, 화면이 흔한 smartctl 이름 30여 개만 번역한다
+  - NVMe 자가 진단 기록은 OMV `getSelfTestLogs`가 ATA 형식만 읽어 빈 배열이므로 원문의 "Self-test Log (NVMe Log 0x06)" 구역을 smartmontools 7.4 `nvmeprint.cpp` 형식대로 읽는다(`smart/nvme.go`, smartctl 7.4에서 `-x`가 이 기록을 켠다). 읽지 못하면 `selfTestsUnreadable`이고 화면이 원문 탭을 안내한다. NVMe는 원문을 함께 받으므로 응답에 담는다
+  - OMV 오류 문구는 장치 파일(시리얼 번호가 들어 있다)을 지운 뒤 로그에만 남긴다. `does not support S.M.A.R.T.`는 409 `smart_unsupported`, `does not exist.`는 404 `not_found`, 그 밖은 502 `action_failed`
+- **원문**(`raw`, `Query`, 관리자): `getExtendedInformation`(smartctl `--xall`)만 부르고 256KiB에서 줄 단위로 자른다. 창은 ATA 디스크의 원문 탭을 처음 열 때만 묻는다
+- 창(시안 B): 왼쪽 디스크 목록(280px), 오른쪽 상세. 600px보다 좁으면 목록과 상세를 하나씩 보인다. 상세를 읽으면 디스크를 깨우므로 처음에는 아무 디스크도 고르지 않고, 고른 디스크의 결과는 창이 열려 있는 동안 디스크별로 기억해 "다시 읽기"로만 새로 읽는다(`useSmartDetails`). 다른 디스크로 옮겨도 읽던 요청은 끝까지 받는다(백엔드가 끝까지 읽으므로). `action_busy`면 2초 뒤 다시 묻는다. NVMe 건강 정보의 점과 개요 타일 색은 OMV 8.6의 NVMe 평가와 같은 기준이다(위험 경고 ≠ 0, 예비 공간 < 임계값, 수명 사용률 ≥ 100은 위험, 미디어 오류 > 0은 주의)
 
 ### 조작이 있는 내장 애드온
 
@@ -276,6 +284,7 @@
 | `services` | 서비스 | admin | `omv-services` | `enable`, `disable`(확인) | 30초 / 10초 |
 | `system-info` | 시스템 정보 | 없음 | `omv-power`(admin) | `shutdown`, `reboot`, `standby`(모두 확인), 관리자. 프로필 메뉴의 전원 모달이 부른다 | 5초 / 1초(숨기면 2초) |
 | `packages` | 시스템 업데이트 | admin | `apt-index` | `check`, `upgrade`(확인), 관리자. 서버 백그라운드 작업을 시작한다. `changelog`(관리자, `Query`)는 변경 기록을 돌려준다 | 없음 / 30초(작업 목록 3초·30초, 출력 1초) |
+| `smart` | 디스크 건강 | admin | `omv-smart` | `detail`, `raw`(관리자, `Query`). 디스크 하나의 SMART 상세와 smartctl 원문을 돌려준다(위 "디스크 건강") | 10분(캐시 확인만) / 같음 + 새로고침 |
 
 #### 서비스 (`services`)
 

@@ -18,7 +18,7 @@
 | 항목 | 직접 읽기 (1차) | 코어 RPC | 플러그인 RPC |
 |---|---|---|---|
 | 디스크 용량 | `/proc/mounts` + `statfs` | `FileSystemMgmt.enumerateMountedFilesystems` (admin): 라벨, 장치, OMV가 관리하는 파일시스템 여부 | zfs, mergerfs, md 등 (아래 표) |
-| SMART | 불가 (`smartctl`은 root 필요) | `Smart.getList` (admin): 디스크마다 `overallstatus`, `temperature` 포함. 세부 항목은 `Smart.getAttributes`, `Smart.getInformation` (admin) | - |
+| SMART | 불가 (`smartctl`은 root 필요) | `Smart.getList` (admin): 디스크마다 `overallstatus`, `temperature` 포함. 디스크 하나의 상세는 `Smart.getInformation`, `getAttributes`, `getSelfTestLogs`, `getExtendedInformation` (admin, `{devicefile}`) | - |
 | 온도 | `/sys/class/hwmon/*/temp*_input` (CPU `coretemp`·`k10temp`, NVMe, `acpitz` 등) | SATA 디스크 온도는 `Smart.getList` (admin)로만 얻는다. `drivetemp` 커널 모듈이 로드되어 있으면 hwmon으로도 보인다 | `CpuTemp.get`/`get2`~`get4`/`getSensors` (모두), `TempMon.getAll` (모두) |
 | 네트워크 | `/proc/net/dev` (누적 바이트·패킷). 속도는 프론트가 두 응답의 차이로 계산한다(백엔드는 단조 시각 `sampledAtMs`를 함께 준다). 링크 상태·속도는 `/sys/class/net/<if>/operstate`, `speed` | `Network.enumerateDevicesList` (admin): 주소, 링크, 속도, 누적 카운터 | - |
 | 프로세스 | `/proc/<pid>/stat`·`status`·`cmdline` (hidepid가 없으면 모든 PID가 보인다. `io`는 같은 사용자나 root만 읽어 쓰지 않는다) | `System.getTopInfo` (admin): `top -b -n 1` 출력(`format: json`이면 `jc`로 바꿈) | - |
@@ -47,6 +47,7 @@
 - 네트워크: 직접 읽기만. `Network.enumerateDevicesList`(admin)는 주소·설정 표시가 필요해지면 관리자용 보강 provider 후보다
 - 온도: hwmon, `CpuTemp.get`(hwmon에 CPU 센서가 없을 때만), SMART 캐시의 디스크 온도(관리자)
 - SMART: `Smart.getList`(admin)를 하루 한 번·새로고침 때만. 백그라운드 버전 `getListBg`는 쓰지 않았다(백엔드 캐시가 같은 역할)
+- SMART 상세: 사용자가 디스크를 고를 때만 `Smart.getInformation`과 종류에 맞는 메서드(ATA `getAttributes`·`getSelfTestLogs`, NVMe `getExtendedInformation`)를 부른다. 메서드마다 smartctl이 디스크를 깨우므로 쓰기로 선언해 조작으로만 부른다(`addons.md`의 "디스크 건강")
 - 컨테이너: `Compose.getContainers`(모두)
 - 시스템 정보 창: 직접 읽기만. 프로세스 목록은 `System.getTopInfo`(admin) 대신 `/proc`를 읽는다. 그 RPC는 호출마다 `top`(과 `jc`)을 실행하므로 2초 주기에는 무겁다. 대신 OMV와 같이 관리자에게만 준다(provider 조건)
 - 파일 탐색기의 공유 폴더 목록: `ShareMgmt.enumerateSharedFolders`(admin, 파라미터 없음, `{total, data}`가 아닌 배열). 일반 사용자 세션으로는 받을 수 없어 관리자 세션이 받아 `site.json`에 스냅숏으로 둔다. 항목의 `absdirpath`·`status`는 8.1.0부터 있다(`auth-omv.md`의 "OMV 8 버전별 차이"). 파일 자체는 OMV RPC가 아니라 권한 도우미의 사용자 권한 연산으로 다룬다(`.claude/rules/files.md`). 스냅숏이 없을 때 보이는 디스크는 `/proc/mounts`의 `/srv` 아래 마운트와 by-label 라벨이다(디스크 용량과 같은 직접 읽기)
