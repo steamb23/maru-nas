@@ -236,8 +236,8 @@ export const MANIFESTS = {
     "views": {
       "window": {
         "defaultSize": {
-          "width": 520,
-          "height": 400
+          "width": 900,
+          "height": 580
         },
         "minSize": {
           "width": 360,
@@ -265,8 +265,24 @@ export const MANIFESTS = {
     "rpc": {
       "read": [
         "Smart.getList"
+      ],
+      "write": [
+        "Smart.getInformation",
+        "Smart.getAttributes",
+        "Smart.getSelfTestLogs",
+        "Smart.getExtendedInformation"
       ]
-    }
+    },
+    "actions": [
+      {
+        "name": "detail",
+        "admin": true
+      },
+      {
+        "name": "raw",
+        "admin": true
+      }
+    ]
   },
   "services": {
     "id": "services",

@@ -379,6 +379,60 @@ func TestAddonDataBuiltinSmart(t *testing.T) {
 	}
 }
 
+// 디스크 하나의 SMART 상세는 관리자의 조작으로만 묻고, 목록에 있는 디스크의 OMV 장치 파일로 부른다.
+func TestAddonDataSmartDetail(t *testing.T) {
+	cache := smart.NewCache(0, 0)
+	e, _, _ := newDataEnv(t, smart.New(cache))
+	cache.Now = e.clk.Now
+
+	a := e.browser()
+	wantStatus(t, a.login("admin", "admin"), http.StatusOK)
+	// 목록을 받기 전에는 어떤 디스크도 모른다.
+	wantCode(t, act(a, "smart", "detail", "sda"), http.StatusNotFound, api.ErrNotFound)
+	wantStatus(t, a.do(http.MethodGet, "/api/addons/smart", nil), http.StatusOK)
+
+	r := act(a, "smart", "detail", "sda")
+	wantStatus(t, r, http.StatusOK)
+	d := decode[api.SmartDetail](t, r)
+	if d.Kind != "ata" || d.DeviceFile != "/dev/disk/by-id/fake-sda" || len(d.Attributes) == 0 || len(d.SelfTests) == 0 {
+		t.Errorf("sda %+v", d)
+	}
+	var params []string
+	for _, c := range e.fake.Calls() {
+		if c.Service == "Smart" && c.Method != "getList" {
+			params = append(params, c.Method+" "+string(c.Params))
+		}
+	}
+	if len(params) != 3 || !strings.Contains(params[0], `"devicefile":"/dev/disk/by-id/fake-sda"`) {
+		t.Errorf("calls %v", params)
+	}
+	// 시리얼 번호는 보이고 WWN은 넣지 않는다.
+	if body := r.Body.String(); !strings.Contains(body, "FAKE-SERIAL-sda") || strings.Contains(body, "0x0000000000000000") {
+		t.Errorf("body %s", body)
+	}
+
+	r = act(a, "smart", "detail", "nvme0n1")
+	wantStatus(t, r, http.StatusOK)
+	if d := decode[api.SmartDetail](t, r); d.Kind != "nvme" || len(d.Health) == 0 || len(d.SelfTests) != 4 || d.Raw == "" {
+		t.Errorf("nvme %+v", d)
+	}
+	r = act(a, "smart", "raw", "sdb")
+	wantStatus(t, r, http.StatusOK)
+	if raw := decode[api.SmartRaw](t, r); !strings.Contains(raw.Text, "Fake HDD 8TB") {
+		t.Errorf("raw %+v", raw)
+	}
+	wantCode(t, act(a, "smart", "detail", "sdc"), http.StatusConflict, api.ErrSmartUnsupported)
+	wantCode(t, act(a, "smart", "detail", ""), http.StatusBadRequest, api.ErrBadRequest)
+	wantCode(t, act(a, "smart", "detail", "/dev/sda"), http.StatusNotFound, api.ErrNotFound)
+	// 상세 메서드는 쓰기로 선언해 /api/rpc가 중계하지 않는다(브라우저가 고른 장치 파일로 디스크를 깨우지 못하게).
+	wantStatus(t, a.do(http.MethodPost, "/api/rpc", api.RPCRequest{Service: "Smart", Method: "getExtendedInformation",
+		Params: json.RawMessage(`{"devicefile":"/dev/sda"}`)}), http.StatusForbidden)
+
+	user := e.browser()
+	wantStatus(t, user.login("user", "user"), http.StatusOK)
+	wantCode(t, act(user, "smart", "detail", "sda"), http.StatusForbidden, api.ErrAdminRequired)
+}
+
 // 서비스 상태는 관리자만 본다.
 func TestAddonDataBuiltinServices(t *testing.T) {
 	e, _, _ := newDataEnv(t, services.New())

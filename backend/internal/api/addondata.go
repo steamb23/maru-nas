@@ -248,3 +248,93 @@ type SmartDisk struct {
 	// Monitored는 OMV에서 이 디스크의 SMART 모니터링을 켰는지다.
 	Monitored bool `json:"monitored"`
 }
+
+// SmartDetail은 디스크 하나의 SMART 상세다(디스크 건강의 detail 조작, 대상은 SmartDisk.Device).
+//
+// OMV RPC마다 smartctl을 한 번 실행하므로 대기 중인 디스크를 깨운다. 사용자가 디스크를 고를 때만 묻는다.
+// 시리얼 번호는 넣지만 WWN·EUI-64 같은 다른 식별자는 넣지 않는다(원문 Raw에는 smartctl 출력 그대로 남는다).
+type SmartDetail struct {
+	Device string `json:"device"`
+	// DeviceFile은 OMV가 이 디스크를 가리키는 장치 파일이다(워크벤치의 SMART 상세 화면 링크에 쓴다).
+	DeviceFile string `json:"deviceFile"`
+	// Kind는 장치 종류다. ata: 속성 표가 있음, nvme: NVMe 건강 로그, other: 그 밖(SAS 등, 정보와 원문만).
+	Kind string `json:"kind" tstype:"'ata' | 'nvme' | 'other'"`
+	// ReadAt은 읽은 시각(RFC 3339)이다.
+	ReadAt       string   `json:"readAt"`
+	Celsius      *float64 `json:"celsius,omitempty"`
+	PowerOnHours *int64   `json:"powerOnHours,omitempty"`
+	PowerCycles  *int64   `json:"powerCycles,omitempty"`
+	// Info는 장치 정보다(정해진 항목만, 정해진 순서).
+	Info []SmartField `json:"info"`
+	// Health는 NVMe SMART/건강 정보 로그다(정해진 항목만, 정해진 순서). NVMe가 아니면 비어 있다.
+	Health []SmartField `json:"health"`
+	// Attributes는 ATA 속성 표다. ATA가 아니면 비어 있다.
+	Attributes []SmartAttribute `json:"attributes"`
+	// SelfTests는 자가 진단 기록이다(최근 것부터).
+	SelfTests []SmartSelfTest `json:"selfTests"`
+	// SelfTestStatus는 진행 중인 NVMe 자가 진단(smartctl의 Self-test status 줄)이다. 진행 중이 아니면 없다.
+	SelfTestStatus string `json:"selfTestStatus,omitempty"`
+	// SelfTestsUnreadable은 원문에서 NVMe 자가 진단 기록을 읽지 못했다는 뜻이다(화면은 원문을 보라고 안내한다).
+	SelfTestsUnreadable bool `json:"selfTestsUnreadable,omitempty"`
+	// Raw는 smartctl --xall 원문이다. NVMe는 자가 진단 기록을 읽느라 함께 받으므로 담고, 그 밖은 raw 조작으로 묻는다.
+	Raw          string `json:"raw,omitempty"`
+	RawTruncated bool   `json:"rawTruncated,omitempty"`
+}
+
+// SmartField는 장치 정보·NVMe 건강 정보의 항목 하나다.
+type SmartField struct {
+	// Key는 항목 이름이다(백엔드가 정한 camelCase, 화면의 번역 키).
+	Key string `json:"key"`
+	// N은 같은 이름이 여럿인 항목의 번호다(온도 센서 1~8). 없으면 0이다.
+	N int `json:"n,omitempty"`
+	// Value는 smartctl이 쓴 값 그대로다.
+	Value string `json:"value"`
+	// Num은 Value에서 읽은 숫자다(Unit 단위). 읽지 못하면 없다.
+	Num  *float64 `json:"num,omitempty"`
+	Unit string   `json:"unit,omitempty" tstype:"'percent' | 'celsius' | 'bytes' | 'hours' | 'minutes' | 'count' | 'hex'"`
+}
+
+// SmartAttribute는 ATA SMART 속성 하나다(OMV Smart.getAttributes).
+type SmartAttribute struct {
+	ID int `json:"id"`
+	// Name은 smartctl의 속성 이름(Reallocated_Sector_Ct 등)이다.
+	Name  string `json:"name"`
+	Flags string `json:"flags"`
+	// Prefailure는 고장 예고 속성(P 플래그)인지다.
+	Prefailure bool `json:"prefailure"`
+	Value      int  `json:"value"`
+	Worst      int  `json:"worst"`
+	Threshold  int  `json:"threshold"`
+	// WhenFailed는 smartctl의 WHEN_FAILED 열(-, FAILING_NOW, In_the_past)이다.
+	WhenFailed string `json:"whenFailed"`
+	// Raw는 원시값 그대로다(34 (Min/Max 19/46) 등).
+	Raw string `json:"raw"`
+	// RawNum은 Raw 앞의 정수다. 읽지 못하면 없다.
+	RawNum *float64 `json:"rawNum,omitempty"`
+	// Status는 OMV 평가의 요약이다(SmartDisk.Status와 같은 값). OMV가 평가하지 않는 속성이면 없다.
+	Status string `json:"status,omitempty" tstype:"'good' | 'warning' | 'failing' | 'unknown'"`
+}
+
+// SmartSelfTest는 자가 진단 기록 한 줄이다.
+type SmartSelfTest struct {
+	Num  int    `json:"num"`
+	Type string `json:"type" tstype:"'short' | 'extended' | 'vendor' | 'other'"`
+	// TypeText는 smartctl이 쓴 종류 그대로다(Short offline, Extended 등).
+	TypeText string `json:"typeText"`
+	Result   string `json:"result" tstype:"'ok' | 'failed' | 'aborted' | 'running' | 'other'"`
+	// StatusText는 smartctl이 쓴 결과 그대로다.
+	StatusText string `json:"statusText"`
+	// Remaining은 남은 비율(%)이다. ATA만 있다.
+	Remaining    *int  `json:"remaining,omitempty"`
+	PowerOnHours int64 `json:"powerOnHours"`
+	// FailingLBA는 처음 오류가 난 LBA다. 없으면 빈 값이다.
+	FailingLBA string `json:"failingLba,omitempty"`
+}
+
+// SmartRaw는 디스크 하나의 smartctl --xall 원문이다(디스크 건강의 raw 조작).
+type SmartRaw struct {
+	Device    string `json:"device"`
+	ReadAt    string `json:"readAt"`
+	Text      string `json:"text"`
+	Truncated bool   `json:"truncated,omitempty"`
+}

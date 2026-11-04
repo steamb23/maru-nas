@@ -388,6 +388,148 @@ export interface SmartDisk {
    */
   monitored: boolean;
 }
+/**
+ * SmartDetail은 디스크 하나의 SMART 상세다(디스크 건강의 detail 조작, 대상은 SmartDisk.Device).
+ * OMV RPC마다 smartctl을 한 번 실행하므로 대기 중인 디스크를 깨운다. 사용자가 디스크를 고를 때만 묻는다.
+ * 시리얼 번호는 넣지만 WWN·EUI-64 같은 다른 식별자는 넣지 않는다(원문 Raw에는 smartctl 출력 그대로 남는다).
+ */
+export interface SmartDetail {
+  device: string;
+  /**
+   * DeviceFile은 OMV가 이 디스크를 가리키는 장치 파일이다(워크벤치의 SMART 상세 화면 링크에 쓴다).
+   */
+  deviceFile: string;
+  /**
+   * Kind는 장치 종류다. ata: 속성 표가 있음, nvme: NVMe 건강 로그, other: 그 밖(SAS 등, 정보와 원문만).
+   */
+  kind: 'ata' | 'nvme' | 'other';
+  /**
+   * ReadAt은 읽은 시각(RFC 3339)이다.
+   */
+  readAt: string;
+  celsius?: number /* float64 */;
+  powerOnHours?: number /* int64 */;
+  powerCycles?: number /* int64 */;
+  /**
+   * Info는 장치 정보다(정해진 항목만, 정해진 순서).
+   */
+  info: SmartField[];
+  /**
+   * Health는 NVMe SMART/건강 정보 로그다(정해진 항목만, 정해진 순서). NVMe가 아니면 비어 있다.
+   */
+  health: SmartField[];
+  /**
+   * Attributes는 ATA 속성 표다. ATA가 아니면 비어 있다.
+   */
+  attributes: SmartAttribute[];
+  /**
+   * SelfTests는 자가 진단 기록이다(최근 것부터).
+   */
+  selfTests: SmartSelfTest[];
+  /**
+   * SelfTestStatus는 진행 중인 NVMe 자가 진단(smartctl의 Self-test status 줄)이다. 진행 중이 아니면 없다.
+   */
+  selfTestStatus?: string;
+  /**
+   * SelfTestsUnreadable은 원문에서 NVMe 자가 진단 기록을 읽지 못했다는 뜻이다(화면은 원문을 보라고 안내한다).
+   */
+  selfTestsUnreadable?: boolean;
+  /**
+   * Raw는 smartctl --xall 원문이다. NVMe는 자가 진단 기록을 읽느라 함께 받으므로 담고, 그 밖은 raw 조작으로 묻는다.
+   */
+  raw?: string;
+  rawTruncated?: boolean;
+}
+/**
+ * SmartField는 장치 정보·NVMe 건강 정보의 항목 하나다.
+ */
+export interface SmartField {
+  /**
+   * Key는 항목 이름이다(백엔드가 정한 camelCase, 화면의 번역 키).
+   */
+  key: string;
+  /**
+   * N은 같은 이름이 여럿인 항목의 번호다(온도 센서 1~8). 없으면 0이다.
+   */
+  n?: number /* int */;
+  /**
+   * Value는 smartctl이 쓴 값 그대로다.
+   */
+  value: string;
+  /**
+   * Num은 Value에서 읽은 숫자다(Unit 단위). 읽지 못하면 없다.
+   */
+  num?: number /* float64 */;
+  unit?: 'percent' | 'celsius' | 'bytes' | 'hours' | 'minutes' | 'count' | 'hex';
+}
+/**
+ * SmartAttribute는 ATA SMART 속성 하나다(OMV Smart.getAttributes).
+ */
+export interface SmartAttribute {
+  id: number /* int */;
+  /**
+   * Name은 smartctl의 속성 이름(Reallocated_Sector_Ct 등)이다.
+   */
+  name: string;
+  flags: string;
+  /**
+   * Prefailure는 고장 예고 속성(P 플래그)인지다.
+   */
+  prefailure: boolean;
+  value: number /* int */;
+  worst: number /* int */;
+  threshold: number /* int */;
+  /**
+   * WhenFailed는 smartctl의 WHEN_FAILED 열(-, FAILING_NOW, In_the_past)이다.
+   */
+  whenFailed: string;
+  /**
+   * Raw는 원시값 그대로다(34 (Min/Max 19/46) 등).
+   */
+  raw: string;
+  /**
+   * RawNum은 Raw 앞의 정수다. 읽지 못하면 없다.
+   */
+  rawNum?: number /* float64 */;
+  /**
+   * Status는 OMV 평가의 요약이다(SmartDisk.Status와 같은 값). OMV가 평가하지 않는 속성이면 없다.
+   */
+  status?: 'good' | 'warning' | 'failing' | 'unknown';
+}
+/**
+ * SmartSelfTest는 자가 진단 기록 한 줄이다.
+ */
+export interface SmartSelfTest {
+  num: number /* int */;
+  type: 'short' | 'extended' | 'vendor' | 'other';
+  /**
+   * TypeText는 smartctl이 쓴 종류 그대로다(Short offline, Extended 등).
+   */
+  typeText: string;
+  result: 'ok' | 'failed' | 'aborted' | 'running' | 'other';
+  /**
+   * StatusText는 smartctl이 쓴 결과 그대로다.
+   */
+  statusText: string;
+  /**
+   * Remaining은 남은 비율(%)이다. ATA만 있다.
+   */
+  remaining?: number /* int */;
+  powerOnHours: number /* int64 */;
+  /**
+   * FailingLBA는 처음 오류가 난 LBA다. 없으면 빈 값이다.
+   */
+  failingLba?: string;
+}
+/**
+ * SmartRaw는 디스크 하나의 smartctl --xall 원문이다(디스크 건강의 raw 조작).
+ */
+export interface SmartRaw {
+  device: string;
+  readAt: string;
+  text: string;
+  truncated?: boolean;
+}
 
 //////////
 // source: addons.go
@@ -920,6 +1062,10 @@ export const ErrNoChangelog = "no_changelog";
  */
 export const ErrDownloadFailed = "download_failed";
 /**
+ * ErrSmartUnsupported는 장치가 SMART 정보를 주지 않는다는 뜻이다(디스크 건강의 상세, USB 어댑터 등).
+ */
+export const ErrSmartUnsupported = "smart_unsupported";
+/**
  * ErrorResponse는 2xx가 아닌 상태 코드와 함께 반환된다.
  */
 export interface ErrorResponse {
@@ -927,7 +1073,7 @@ export interface ErrorResponse {
   /**
    * Code는 화면에서 분기할 때 쓰는 오류 종류다. 없을 수 있다.
    */
-  code?: 'invalid_credentials' | 'rate_limited' | 'challenge_failed' | 'challenge_expired' | 'omv_unavailable' | 'unauthorized' | 'bad_request' | 'rpc_forbidden' | 'admin_required' | 'plugin_missing' | 'omv_error' | 'action_busy' | 'action_failed' | 'action_timeout' | 'config_dirty' | 'image_too_large' | 'unsupported_image' | 'profile_readonly' | 'helper_unavailable' | 'helper_reauth' | 'elevation_failed' | 'elevation_not_allowed' | 'elevation_required' | 'terminal_disabled' | 'security_required' | 'factor_failed' | 'manage_required' | 'passkey_unavailable' | 'passkey_uv_unsupported' | 'security_unavailable' | 'passkey_login_unknown' | 'passkey_login_expired' | 'passkey_login_stale' | 'upgrade_disabled' | 'upgrade_busy' | 'upgrade_outdated' | 'not_found' | 'permission_denied' | 'outside_roots' | 'file_exists' | 'not_dir' | 'is_dir' | 'not_regular' | 'no_space' | 'read_only' | 'helper_busy' | 'transfer_timeout' | 'listing_expired' | 'sort_pending' | 'not_empty' | 'cross_device' | 'root_folder' | 'no_trash' | 'share_read_only' | 'job_busy' | 'apt_locked' | 'no_changelog' | 'download_failed';
+  code?: 'invalid_credentials' | 'rate_limited' | 'challenge_failed' | 'challenge_expired' | 'omv_unavailable' | 'unauthorized' | 'bad_request' | 'rpc_forbidden' | 'admin_required' | 'plugin_missing' | 'omv_error' | 'action_busy' | 'action_failed' | 'action_timeout' | 'config_dirty' | 'image_too_large' | 'unsupported_image' | 'profile_readonly' | 'helper_unavailable' | 'helper_reauth' | 'elevation_failed' | 'elevation_not_allowed' | 'elevation_required' | 'terminal_disabled' | 'security_required' | 'factor_failed' | 'manage_required' | 'passkey_unavailable' | 'passkey_uv_unsupported' | 'security_unavailable' | 'passkey_login_unknown' | 'passkey_login_expired' | 'passkey_login_stale' | 'upgrade_disabled' | 'upgrade_busy' | 'upgrade_outdated' | 'not_found' | 'permission_denied' | 'outside_roots' | 'file_exists' | 'not_dir' | 'is_dir' | 'not_regular' | 'no_space' | 'read_only' | 'helper_busy' | 'transfer_timeout' | 'listing_expired' | 'sort_pending' | 'not_empty' | 'cross_device' | 'root_folder' | 'no_trash' | 'share_read_only' | 'job_busy' | 'apt_locked' | 'no_changelog' | 'download_failed' | 'smart_unsupported';
   /**
    * RetryAfterSeconds는 rate_limited일 때 다시 시도할 수 있기까지 남은 초다.
    */

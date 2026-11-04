@@ -187,6 +187,7 @@ const ERROR_CODES: readonly ErrorCode[] = [
   'apt_locked',
   'no_changelog',
   'download_failed',
+  'smart_unsupported',
 ]
 
 export type RequiredLevel = NonNullable<ErrorResponse['required']>

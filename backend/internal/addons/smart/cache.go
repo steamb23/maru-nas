@@ -23,6 +23,14 @@ const (
 type Snapshot struct {
 	Disks     []api.SmartDisk
 	CheckedAt time.Time
+	// files는 장치 이름 → OMV 장치 파일이다(상세 RPC의 파라미터). 읽기만 한다.
+	files map[string]string
+}
+
+// DeviceFile은 목록에 있는 name 디스크의 OMV 장치 파일이다.
+func (s Snapshot) DeviceFile(name string) (string, bool) {
+	f, ok := s.files[name]
+	return f, ok && name != ""
 }
 
 // Cache는 Smart.getList 결과를 모든 세션이 함께 쓰도록 보관한다.
@@ -131,8 +139,9 @@ func (c *Cache) fetch(ctx context.Context, rpc addons.RPCCaller, done chan struc
 	// OMV workbench의 SMART 대시보드 위젯과 같은 파라미터(limit -1은 전체)다.
 	raw, err := rpc.Call(fctx, "Smart", "getList", map[string]any{"start": 0, "limit": -1})
 	var disks []api.SmartDisk
+	var files map[string]string
 	if err == nil {
-		disks, err = ParseList(json.RawMessage(raw))
+		disks, files, err = parseList(json.RawMessage(raw))
 	}
 
 	c.mu.Lock()
@@ -148,6 +157,6 @@ func (c *Cache) fetch(ctx context.Context, rpc addons.RPCCaller, done chan struc
 		return Snapshot{}, err
 	}
 	c.failedAt, c.lastErr = time.Time{}, nil
-	c.snap = &Snapshot{Disks: disks, CheckedAt: c.Now()}
+	c.snap = &Snapshot{Disks: disks, CheckedAt: c.Now(), files: files}
 	return *c.snap, nil
 }
