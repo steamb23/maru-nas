@@ -188,6 +188,12 @@ const ERROR_CODES: readonly ErrorCode[] = [
   'no_changelog',
   'download_failed',
   'smart_unsupported',
+  'addon_invalid',
+  'addon_too_large',
+  'addons_unavailable',
+  'upload_expired',
+  'addon_readonly',
+  'addon_no_backend',
 ]
 
 export type RequiredLevel = NonNullable<ErrorResponse['required']>

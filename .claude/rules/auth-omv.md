@@ -48,6 +48,8 @@ OMV 8의 모든 버전을 지원한다. OMV 패키지(`packages.openmediavault.o
 - `/api/*`는 대시보드 세션이 없으면 401을 반환한다(`/api/health`, 로그인 라우트, 로그인 화면이 쓰는 `GET /api/site`와 `GET /api/site/images/login-background` 제외). 본문이 있는 요청(POST, PUT)은 `Content-Type: application/json`만 받는다(CSRF 보조 장치)
   - 예외: 이미지 올리기(`PUT /api/preferences/wallpaper-image`, `…/avatar-image`, `PUT /api/site/images/{name}`)는 원시 이미지 본문(`image/png|jpeg|webp`)만 받는다. HTML 폼은 이 형식을 보낼 수 없고 다른 출처의 fetch는 preflight에서 막히므로 같은 보조 장치가 된다. multipart는 받지 않는다
   - 예외: 파일 탐색기의 올리기(`PUT /api/files/upload`)는 원시 본문(`application/octet-stream`)만 받는다. 이 형식도 HTML 폼이 보낼 수 없고 다른 출처의 fetch는 preflight에서 막힌다. 내려받기(`GET /api/files/download`)는 같은 사이트 이동(`<a download>`)이라 SameSite=Strict 쿠키가 간다
+  - 예외: 애드온 패키지 올리기(`POST /api/site/addons/uploads`, 관리자)는 원시 본문(`application/octet-stream`)만 받는다. 파일 탐색기 올리기와 같은 이유다
+  - 예외: 애드온 프레임 파일(`GET /api/addon-ui/{token}/...`)은 세션 쿠키 대신 경로의 토큰(세션·패키지마다 하나, 세션이 끝나면 무효)으로 확인한다. 불투명 출처의 샌드박스 프레임은 하위 자원 요청에 `SameSite=Strict` 쿠키를 보내지 않기 때문이다(`.claude/docs/addon-packages.md`의 "프레임")
   - 공개 로그인 배경은 대시보드 주소에 닿는 누구나 받을 수 있다(로그인 화면에 보이는 그림이다). 설정 앱이 관리자에게 이 점을 알린다
 - 로그인 상태를 localStorage·sessionStorage에 저장하지 않는다. 앱 시작 시 `/api/session`으로 상태를 복원한다(workbench처럼 탭마다 로그인하지 않게 하기 위함)
   - 패스키로 로그인의 브라우저 항목(localStorage `maru.passkeyLogin`)은 로그인 상태가 아니다. 서버 share와 패스키 PRF가 함께 있어야 풀리는 비밀번호 암호문이며, 있어도 세션은 생기지 않는다(`.claude/rules/security.md`의 "패스키로 로그인")

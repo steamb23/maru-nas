@@ -231,6 +231,25 @@ func (s *Server) handlePlugin(sess *session, service, method string, params json
 		return append(rows, d.Containers...), nil, true
 	case "CpuTemp.get":
 		return map[string]any{"cputemp": d.CPUTemp}, nil, true
+	case "System.getInformation":
+		// 모든 사용자는 시각과 호스트 이름만, 관리자는 버전·CPU·메모리·가동 시간 등도 받는다(system.inc의 getInformation).
+		now := s.Now()
+		info := map[string]any{"ts": now.Unix(), "time": now.Format("Mon Jan _2 15:04:05 2006"), "hostname": "fake-nas.local"}
+		if sess.admin {
+			info["version"] = "8.5.0-1 (Synthetic)"
+			info["cpuModelName"] = "Synthetic CPU @ 2.00GHz"
+			info["cpuUtilization"] = 12.5
+			info["cpuCores"] = 4
+			info["memTotal"] = int64(8 << 30)
+			info["memUsed"] = int64(3 << 30)
+			info["memUtilization"] = 37.5
+			info["kernel"] = "Linux 6.12.0-synthetic"
+			info["uptime"] = 123456.0
+			info["loadAverage"] = map[string]any{"1min": 0.1, "5min": 0.2, "15min": 0.3}
+			info["rebootRequired"] = false
+			info["availablePkgUpdates"] = 2
+		}
+		return info, nil, true
 	case "Services.getStatus":
 		if e := adminOnly(); e != nil {
 			return nil, e, true

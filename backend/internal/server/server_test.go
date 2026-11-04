@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"io/fs"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -15,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	"maru/backend/internal/addonpkg"
 	"maru/backend/internal/addons"
 	"maru/backend/internal/api"
 	"maru/backend/internal/auth"
@@ -78,6 +80,8 @@ type env struct {
 	upgradeRoot, upgradeState string
 	// security는 수단 기록 저장소다(envOptions.security, 없으면 메모리).
 	security security.Store
+	// packages는 envOptions.packages·devAddons일 때의 애드온 패키지 관리자다.
+	packages *addonpkg.Manager
 }
 
 type envOptions struct {
@@ -124,6 +128,10 @@ type envOptions struct {
 	notify *notify.Center
 	// jobs는 Config.Jobs다. 작업 감시자는 OMV 작업 출력을 5ms마다 읽는다.
 	jobs *jobs.Manager
+	// packages면 임시 상태 디렉터리에 애드온 패키지를 설치할 수 있게 한다(env.packages). devAddons는 개발 패키지 디렉터리다.
+	packages  bool
+	devAddons []string
+	addonSDK  fs.FS
 }
 
 func newEnv(t *testing.T, o envOptions) *env {
@@ -221,6 +229,20 @@ func newEnv(t *testing.T, o envOptions) *env {
 	if o.notify != nil {
 		o.notify.Now = clk.Now
 	}
+	var packages *addonpkg.Manager
+	if o.packages || len(o.devAddons) > 0 {
+		if o.addons == nil {
+			o.addons, _ = addons.NewRegistry()
+		}
+		opt := addonpkg.Options{Arch: "amd64", DevDirs: o.devAddons, Now: clk.Now}
+		if o.packages {
+			opt.Store = addonpkg.NewStore(filepath.Join(t.TempDir(), "addons"))
+		}
+		if p, ok := o.plugins.(addonpkg.PluginTable); ok {
+			opt.Plugins = p
+		}
+		packages = addonpkg.NewManager(o.addons, opt)
+	}
 	h := New(Config{
 		System:            o.system,
 		Static:            static,
@@ -228,6 +250,8 @@ func newEnv(t *testing.T, o envOptions) *env {
 		Sessions:          store,
 		Limiter:           lim,
 		Addons:            o.addons,
+		Packages:          packages,
+		AddonSDK:          o.addonSDK,
 		Plugins:           o.plugins,
 		Prefs:             o.prefs,
 		WorkbenchURL:      o.workbenchURL,
@@ -252,7 +276,8 @@ func newEnv(t *testing.T, o envOptions) *env {
 		Now:               clk.Now,
 	})
 	return &env{t: t, h: h, fake: fake, omvTS: ts, clk: clk, store: store, logs: logs, helper: fakeHelper,
-		sshd: sshd, terminal: manager, upgradeRoot: upgradeRoot, upgradeState: upgradeState, security: o.security}
+		sshd: sshd, terminal: manager, upgradeRoot: upgradeRoot, upgradeState: upgradeState, security: o.security,
+		packages: packages}
 }
 
 // browser는 쿠키를 보관하는 간이 브라우저다.

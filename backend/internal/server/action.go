@@ -23,10 +23,15 @@ const maxActionBodyBytes = 4 << 10
 // 어차피 계속 돌므로, 끝날 때까지 진행 중 표시를 유지해 같은 조작이 겹치지 않게 하기 위해서다.
 func (h *handler) addonAction(w http.ResponseWriter, r *http.Request, s auth.Session) {
 	id, name := r.PathValue("id"), r.PathValue("action")
-	a, ok := h.Addons.Get(id)
-	decl, act, found := h.Addons.ActionDecl(id, name)
+	reg := h.addons()
+	a, ok := reg.Get(id)
+	decl, act, found := reg.ActionDecl(id, name)
 	if !ok || !found {
 		writeJSON(w, http.StatusNotFound, api.ErrorResponse{Error: "not found"})
+		return
+	}
+	if a.Kind == addons.KindPackage {
+		h.packageAction(w, r, s, a, decl)
 		return
 	}
 	var req api.ActionRequest

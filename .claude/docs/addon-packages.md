@@ -142,7 +142,7 @@
 | `POST /api/site/addons/uploads/{pid}/install` | 관리 창(+단계). 스테이징 → rename → current 교체 → installed.json → 레지스트리 교체 → 백엔드 갱신 |
 | `DELETE /api/site/addons/uploads/{pid}` | 대기 버리기 |
 | `PUT /api/site/addons/{id}` | `{enabled}`. 켜기는 관리 창(+단계) |
-| `DELETE /api/site/addons/{id}` | `{purge}`. 제거. `purge`는 관리 창 |
+| `DELETE /api/site/addons/{id}` | 제거. `?purge=1`이면 백엔드 데이터도 지운다(관리 창) |
 | `GET /api/addons/{id}/icon` | 세션. `image/svg+xml`, CSP `default-src 'none'; style-src 'unsafe-inline'; sandbox` |
 | `GET /api/addons/{id}/i18n/{lang}` | 세션. 패키지 번역(지원 언어만) |
 | `GET /api/addon-ui/{token}/{rev}/{path...}` | 세션 밖(토큰). 아래 "프레임" |
@@ -150,8 +150,10 @@
 | `GET·PUT /api/preferences/addons/{id}` | 세션. 사용자별 저장 |
 | `GET /api/addons/{id}`, `POST /api/addons/{id}/actions/{action}` | 내장과 같은 경로. 패키지는 백엔드로 프록시 |
 
-- 본문 없는 POST·PUT·DELETE도 `requireJSON`(CSRF 가드). 진행 중인 조작이 있는 패키지의 제거·끄기·업데이트는 409 `action_busy`
-- 오류 코드: `addon_error`(+ `addonCode`), `addon_backend_unavailable`, `addon_backend_disabled`, `addon_no_backend`, `addons_unavailable`, `addon_invalid`(+ 이유), `addon_too_large`, `upload_expired`
+- 본문 없는 POST·PUT도 `{}` JSON 본문을 보낸다(`requireJSON`이 CSRF 보조 장치다). DELETE는 다른 출처에서 preflight 없이 보낼 수 없어 본문을 받지 않는다. 진행 중인 조작이 있는 패키지의 제거·끄기·업데이트는 409 `action_busy`
+- 설치·켜기에 관리 창이나 단계 확인이 모자라면 대기를 남긴 채 403(`manage_required`, `security_required`)이고, 확인한 뒤 같은 대기로 다시 부른다. 대기는 세션마다 2개, 전체 4개, 30분이며 세션이 끝나면 버린다
+- 개발 패키지와 같은 id는 설치할 수 없다(409 `addon_readonly`). 먼저 설치한 같은 id가 있으면 개발본이 이기고 설치본은 "충돌"이다
+- 오류 코드: `addon_invalid`(+ `reason`, `detail`), `addon_too_large`, `addons_unavailable`, `upload_expired`, `addon_readonly`, `addon_no_backend`. 백엔드(M2)에서 `addon_error`(+ `addonCode`), `addon_backend_unavailable`, `addon_backend_disabled`를 더한다
 - 감사 로그: `addon: user=%q action=install id=%s version=%q sha256=%s result=%s`. manifest·브라우저 값은 `%q`
 
 ## capabilities와 프론트 목록

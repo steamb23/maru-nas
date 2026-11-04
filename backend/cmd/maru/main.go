@@ -89,12 +89,17 @@ func main() {
 
 	helper := connectHelper(o.helperSocket)
 
+	builtins := builtin.New(deps)
+	packages := newPackages(builtins, o.stateDir, plugins)
+
 	srv := &http.Server{
 		Handler: server.New(server.Config{
 			System:       deps.System,
 			Static:       web.Handler(),
 			OMV:          omv.NewClient(o.omvURL, userAgent),
-			Addons:       builtin.New(deps),
+			Addons:       builtins,
+			Packages:     packages,
+			AddonSDK:     addonSDK(),
 			Plugins:      plugins,
 			Prefs:        store,
 			Site:         store,
