@@ -6,6 +6,8 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -355,5 +357,66 @@ func TestAddonPackageStorage(t *testing.T) {
 	admin.installAddon(addonArchive(t, nil))
 	if d := get(); string(d) != "null" {
 		t.Errorf("reinstalled data = %s", d)
+	}
+}
+
+// TestAddonSDKExamples는 SDK 예제(sdk/examples)를 개발 패키지로 불러, 보이는 사용자에게 capabilities에 들어가고
+// 보기 진입 파일과 선언한 읽기 RPC가 동작하는지 본다(FAKEADDONS=examples와 같은 경로).
+func TestAddonSDKExamples(t *testing.T) {
+	manifests, err := filepath.Glob("../../../sdk/examples/*/manifest.json")
+	if err != nil || len(manifests) == 0 {
+		t.Fatalf("no examples: %v", err)
+	}
+	var dirs []string
+	for _, m := range manifests {
+		abs, err := filepath.Abs(filepath.Dir(m))
+		if err != nil {
+			t.Fatal(err)
+		}
+		dirs = append(dirs, abs)
+	}
+	e := newEnv(t, envOptions{
+		devAddons: dirs,
+		addonSDK:  fstest.MapFS{"sdk.js": {Data: []byte("globalThis.maru={}")}, "maru.css": {Data: []byte(":root{}")}},
+	})
+	for _, who := range []string{"admin", "user"} {
+		b := e.browser()
+		wantStatus(t, b.login(who, who), http.StatusOK)
+		caps := b.capabilities()
+		for _, dir := range dirs {
+			raw, err := os.ReadFile(filepath.Join(dir, "manifest.json"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			var mf struct {
+				ID       string
+				Requires struct{ Admin bool }
+				RPC      struct{ Read []string }
+				Views    map[string]struct{ Entry string }
+			}
+			if err := json.Unmarshal(raw, &mf); err != nil {
+				t.Fatal(err)
+			}
+			if mf.Requires.Admin && who != "admin" {
+				continue
+			}
+			v := packageView(t, caps, mf.ID)
+			if !v.Dev {
+				t.Errorf("%s: not a development package", mf.ID)
+			}
+			for name, view := range mf.Views {
+				rec := b.do(http.MethodGet, "/"+v.UIBase+view.Entry, nil)
+				if rec.Code != http.StatusOK {
+					t.Errorf("%s %s view (%s): status %d", mf.ID, name, view.Entry, rec.Code)
+				}
+			}
+			for _, m := range mf.RPC.Read {
+				service, method, _ := strings.Cut(m, ".")
+				rec := b.do(http.MethodPost, "/api/addons/"+mf.ID+"/rpc", api.RPCRequest{Service: service, Method: method})
+				if rec.Code != http.StatusOK {
+					t.Errorf("%s as %s: %s: status %d", mf.ID, who, m, rec.Code)
+				}
+			}
+		}
 	}
 }

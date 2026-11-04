@@ -1,0 +1,17 @@
+{
+  "title": "안녕 위젯",
+  "host": "이 NAS는 {{name}}입니다.",
+  "hostUnknown": "호스트 이름을 읽지 못했습니다.",
+  "system": "OMV {{version}}, {{hours}}시간째 가동 중",
+  "greeting": "인사말",
+  "greetingHint": "내 계정에만 저장됩니다. 바탕화면 위젯에 보입니다.",
+  "namePlaceholder": "이름",
+  "save": "저장",
+  "clear": "지우기",
+  "clearConfirm": "저장한 인사말을 지울까요?",
+  "saved": "{{name}} 님의 인사말을 저장했습니다.",
+  "cleared": "인사말을 지웠습니다.",
+  "workbench": "OMV 대시보드 열기",
+  "hello": "안녕하세요",
+  "helloName": "안녕하세요, {{name}} 님"
+}

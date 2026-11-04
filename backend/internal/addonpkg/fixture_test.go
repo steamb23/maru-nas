@@ -53,3 +53,17 @@ func TestReadSDKPackedFixture(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+// TestSDKExamplesReadDir는 SDK 예제(sdk/examples)가 개발 디렉터리 검사(ReadDir)를 통과하는지 본다.
+func TestSDKExamplesReadDir(t *testing.T) {
+	manifests, err := filepath.Glob(filepath.Join(repoRoot, "sdk/examples/*/manifest.json"))
+	if err != nil || len(manifests) == 0 {
+		t.Fatalf("no examples: %v", err)
+	}
+	for _, m := range manifests {
+		dir := filepath.Dir(m)
+		if _, err := ReadDir(dir, DefaultLimits, "amd64"); err != nil {
+			t.Errorf("%s: %v", filepath.Base(dir), err)
+		}
+	}
+}
