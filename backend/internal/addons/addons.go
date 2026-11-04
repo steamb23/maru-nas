@@ -511,3 +511,12 @@ func ReadBg(ctx context.Context, c RPCCaller, filename string, interval time.Dur
 		}
 	}
 }
+
+// ValidID는 id가 애드온·조작 이름 형식(소문자·숫자·'-')인지다. 애드온 패키지 형식 검사가 같은 규칙을 쓴다.
+func ValidID(id string) bool { return idPattern.MatchString(id) }
+
+// ValidMethod는 method가 "Service.method" 형식인지다.
+func ValidMethod(method string) bool { return methodPattern.MatchString(method) }
+
+// ValidateWidgetView는 위젯 크기가 1~MaxWidgetSpan 칸이고 최소 ≤ 기본 ≤ 최대인지 확인한다.
+func ValidateWidgetView(w *api.WidgetView) error { return validateWidget(w) }
