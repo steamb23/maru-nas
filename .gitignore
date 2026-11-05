@@ -13,6 +13,9 @@ node_modules/
 
 # 빌드 결과물
 /bin/
+# 예제·시험 애드온 패키지의 백엔드 실행 파일(make sdk-examples)
+/sdk/examples/*/backend/
+/sdk/testdata/*/backend/
 /backend/internal/web/static/dist/
 /frontend/dist/
 

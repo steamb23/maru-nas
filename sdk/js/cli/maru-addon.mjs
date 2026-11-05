@@ -6,7 +6,9 @@ import { CliError, init, pack, validate } from './lib.mjs'
 const USAGE = `Usage: maru-addon <command> [options]
 
 Commands:
-  init <dir> [--id <id>] [--ts]   Create a new addon package (plain JavaScript, or TypeScript + Vite with --ts)
+  init <dir> [--id <id>] [--ts] [--backend]
+                                  Create a new addon package: plain JavaScript, or TypeScript + Vite with --ts.
+                                  --backend adds a Go backend (<dir>/backend) and puts the package in <dir>/addon
   validate <dir | file>           Check a package directory or a .maru-addon file
   pack <dir> [-o <file>]          Check a package directory and pack it into a .maru-addon file
 
@@ -51,7 +53,9 @@ function main() {
       const r = init(rest[0], { id: /** @type {string | undefined} */ (flags.id), ts: !!flags.ts, backend: !!flags.backend })
       console.log(`Created ${r.id} in ${r.dir}`)
       for (const f of r.files) console.log(`  ${f}`)
-      console.log(flags.ts ? '\nNext: npm install, npm run build, then npm run pack' : `\nNext: maru-addon pack ${rest[0]}`)
+      if (flags.backend) {
+        console.log(`\nNext: build the backend into addon/backend (see ${rest[0]}/README.md), then ${flags.ts ? 'npm install, npm run build and npm run pack' : `maru-addon pack ${rest[0]}/addon`}`)
+      } else console.log(flags.ts ? '\nNext: npm install, npm run build, then npm run pack' : `\nNext: maru-addon pack ${rest[0]}`)
       return 0
     }
     case 'validate': {

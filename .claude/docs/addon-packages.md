@@ -138,7 +138,7 @@
 
 | 경로 | 내용 |
 |---|---|
-| `GET /api/site/addons` | 관리자. 설치본·개발본·잘못됨·충돌·호환 안 됨과 이유 코드, 권한 요약, sha256, 백엔드 상태, 백엔드 켜짐 여부, 상한 |
+| `GET /api/site/addons` | 관리자. 설치본·개발본·잘못됨·충돌·호환 안 됨과 이유 코드, 권한 요약, sha256, 설치할 수 있는지(`canInstall`), 설치 기록 오류(`indexError`), 올리기 상한, SDK 수준. 백엔드 동기화 상태(이 설치에서 백엔드가 켜졌는지, 항목별 동기화 결과, 동기화 멈춤)는 M3(root 동기화)에서 더한다 |
 | `POST /api/site/addons/uploads` | 관리자. 원시 `application/octet-stream`, 64MiB. 200 `{pendingId, expiresInSeconds, package, installed?, diff, warnings}`. 대기는 세션에 묶이고 2개까지 |
 | `POST /api/site/addons/uploads/{pid}/install` | 관리 창(+단계). 스테이징 → rename → current 교체 → installed.json → 레지스트리 교체 → 백엔드 갱신 |
 | `DELETE /api/site/addons/uploads/{pid}` | 대기 버리기 |
@@ -208,9 +208,12 @@
 
 - `sdk/js/cli/maru-addon.mjs`(진입)와 `lib.mjs`(동작). Node 내장 모듈만 쓰는 `.mjs`라 빌드 없이 Node 20.19 이상에서 돈다. JSDoc 타입은 `frontend/tsconfig.node.json`(`checkJs`)이, 동작은 `frontend/src/addonpkg/cli.node.test.ts`가 검사한다(Node API를 쓰는 테스트는 `*.node.test.ts`로 두고 node 설정이 본다)
 - 상수(상한, 경로 규칙, 언어 목록, SDK 수준)는 스키마 파일의 `x-maru`에서 읽고 CLI에 다시 적지 않는다
-- `init <dir> [--id] [--ts]`: 빌드 없는 JS(창·위젯) 또는 TypeScript + Vite 프로젝트(`addon/`이 패키지 디렉터리, `vite build`가 `addon/ui/`에 쓴다, `_maru/` 참조는 `vite-ignore`). 저장소 체크아웃의 SDK면 TS 템플릿의 SDK 의존성을 `file:`로 둔다(공개 전에는 npm에 없다). `--backend`는 Go SDK(M2) 전까지 거절한다
-- `validate <dir|file>`: 스키마와 파일 배치(Read·ReadDir와 같은 규칙). 개발 디렉터리의 백엔드 패키지는 실행 파일이 없어도 된다(알림만)
-- `pack <dir> [-o]`: 검사한 뒤 묶는다. ustar, 경로 바이트 순, 수정 시각·소유자 0, 권한 0644(`backend/*`는 0755), 디렉터리 항목 없음, 100바이트가 넘는 경로는 prefix 칸. gzip 머리의 수정 시각 0, 운영체제 바이트 3. 같은 입력이면 같은 tar가 나오지만 gzip 바이트(그래서 sha256과 rev)는 zlib 버전에 따라 기기마다 다를 수 있다. 개발 디렉터리의 `dev/`는 넣지 않는다
+- `init <dir> [--id] [--ts] [--backend]`: 빌드 없는 JS(창·위젯) 또는 TypeScript + Vite 프로젝트(`addon/`이 패키지 디렉터리, `vite build`가 `addon/ui/`에 쓴다, `_maru/` 참조는 `vite-ignore`). 저장소 체크아웃의 SDK면 TS 템플릿의 SDK 의존성을 `file:`로 둔다(공개 전에는 npm에 없다)
+    - `--backend`: Go 백엔드를 더한다. 패키지 최상위에는 `go.mod`·소스를 둘 수 없으므로(압축 파일 규칙) 패키지 디렉터리는 `<dir>/addon`, 백엔드는 그 옆의 Go 모듈 `<dir>/backend`(`main.go`가 `maruaddon`으로 데이터와 조작 하나)이고 빌드 결과를 `addon/backend/linux-*`에 쓴다(`.gitignore`). manifest는 `backend: {network: []}`, 읽기 `System.getInformation`, 조작 `reset`(쓰기 없음)이고 창이 `app.data()`·`app.action()`을 부른다. `--ts`와 함께 쓰면 TS 프로젝트(`addon/`이 원래 패키지 디렉터리)에 `backend/`를 더한다. 템플릿은 `templates/backend`(패키지 파일, Go 모듈)에 `backend-plain` 또는 `ts` + `backend-ts`를 겹쳐 쓴다(`_go.mod`는 `go.mod`로 바꾼다. 저장소에 자리표시자가 든 `go.mod`를 두지 않는다)
+    - Go SDK는 공개 전이라 저장소 체크아웃의 SDK면 `go.mod`에 `replace`로 그 `sdk/go`를 가리킨다(새 디렉터리가 저장소 안이면 상대 경로, 밖이면 절대 경로, `goModuleDeps`). npm으로 받은 SDK면 의존성 줄을 비우고 README가 `go get`을 안내한다
+    - README는 빌드(`GOOS=linux GOARCH=amd64|arm64 CGO_ENABLED=0 go build -trimpath -o ../addon/backend/linux-*`), 개발 서버에서 실행(`MARU_ADDON_SOCKET`·`MARU_ADDON_HOST`로 `go run .`), 묶기 순서다
+- `validate <dir|file>`: 스키마와 파일 배치(Read·ReadDir와 같은 규칙). 개발 디렉터리의 백엔드 패키지는 실행 파일이 없어도 된다(알림만). 개발 디렉터리의 최상위 `dev/`는 보지 않는다
+- `pack <dir> [-o]`: 검사한 뒤 묶는다. 백엔드를 선언했는데 `backend/linux-*` 실행 파일이 없으면 묶지 않는다. ustar, 경로 바이트 순, 수정 시각·소유자 0, 권한 0644(`backend/*`는 0755), 디렉터리 항목 없음, 100바이트가 넘는 경로는 prefix 칸. gzip 머리의 수정 시각 0, 운영체제 바이트 3. 같은 입력이면 같은 tar가 나오지만 gzip 바이트(그래서 sha256과 rev)는 zlib 버전에 따라 기기마다 다를 수 있다. 개발 디렉터리의 `dev/`는 넣지 않는다
 - 고정 파일 `sdk/testdata/packed/dev-min.maru-addon`은 `sdk/testdata/dev-min`을 묶은 것이다. Go(`fixture_test.go`)가 `Read`로 받고, 프론트 테스트가 다시 묶은 tar와 풀린 tar를 비교한다. dev-min을 바꾸면 `node sdk/js/cli/maru-addon.mjs pack sdk/testdata/dev-min -o sdk/testdata/packed/dev-min.maru-addon`으로 다시 만든다
 
 ## 사용자별 저장
@@ -328,11 +331,17 @@ HTTP/1.1, 유닉스 소켓. 요청의 Host는 `maru`다.
 ## 개발 루프
 
 - 저장소 체크아웃이 필요하다(`make dev`, `make dev-fake`)
-- `MARU_DEV_ADDONS`: 콜론으로 나눈 풀린 패키지 디렉터리. 개발 전용이며 플래그·가동 설정·설치기에 넣지 않는다. capabilities를 받을 때 manifest와 `ui/`의 mtime을 보고 다시 읽으며 rev는 `dev-<해시>`다. 관리자 페이지에 "개발"로 보이고 바꿀 수 없다. 제목 표시줄 메뉴에 "다시 불러오기"가 있다
-- `FAKEADDONS=examples`(선택, 기본 `none`): `make dev-fake`가 `sdk/examples`를 `MARU_DEV_ADDONS` 뒤에 더한다
+- `MARU_DEV_ADDONS`: 콜론으로 나눈 풀린 패키지 디렉터리. 개발 전용이며 플래그·가동 설정·설치기에 넣지 않는다. maru와 가짜 OMV는 `backend/`에서 실행되므로 `scripts/dev.sh`가 항목마다 부른 디렉터리 기준의 절대 경로로 바꾸고, 디렉터리가 아닌 항목은 알리고 뺀다. capabilities를 받을 때 manifest와 `ui/`의 mtime을 보고 다시 읽으며 rev는 `dev-<해시>`다. 관리자 페이지에 "개발"로 보이고 바꿀 수 없다. 제목 표시줄 메뉴에 "다시 불러오기"가 있다
+- `FAKEADDONS=examples`(선택, 기본 `none`): `make dev-fake`가 `sdk/examples`를 `MARU_DEV_ADDONS` 뒤에 더하고 백엔드 예제의 백엔드를 띄운다(아래 "예제와 시험 패키지")
 - `MARU_DEV_ADDON_SDK`: `scripts/dev.sh`가 `vite build -c vite.sdk.config.ts --watch`로 만든 디렉터리. 프레임의 `_maru/`를 여기서 준다(embed된 빌드는 개발 중에 없거나 오래되었다)
-- 개발 백엔드: 개발자가 `MARU_ADDON_SOCKET=<state>/addon-dev/<id>.sock`과 `MARU_ADDON_HOST=<state>/addon-host/<id>.sock`으로 백엔드를 띄운다. maru는 `MARU_DEV_ADDON_BACKENDS=1`일 때 그 호스트 소켓을 열고 백엔드 소켓에 붙는다. 예제 백엔드는 `scripts/dev.sh`가 `go run`으로 띄운다
-- `FAKEOMV_EXTRA_RPC`: 가짜 OMV가 패키지의 `dev/fake-rpc.json`에 적힌 메서드에 정해진 응답을 준다. 그 밖의 플러그인 RPC는 실제 OMV(`make dev`)에서 확인한다
+- 개발 백엔드: 개발자가 `MARU_ADDON_SOCKET=<state>/addon-dev/<id>.sock`과 `MARU_ADDON_HOST=<state>/addon-host/<id>.sock`(선택 `MARU_ADDON_STATE`)으로 백엔드를 띄운다. maru는 `MARU_DEV_ADDON_BACKENDS=1`일 때 그 호스트 소켓을 열고 백엔드 소켓에 붙는다. 백엔드가 떠 있지 않으면 데이터·조작은 503 `addon_backend_unavailable`이다. 개발 패키지는 실행 파일(`backend/linux-*`) 없이도 불러온다(`ReadDir`의 `needBackend=false`). 상태 디렉터리 경로가 길면 소켓 경로가 유닉스 소켓 한도(107바이트)를 넘어 SDK가 시작하지 않는다(`helper.sock`과 같은 주의)
+- 예제와 시험 패키지: UI 패키지 `sdk/examples/<id>/`(또는 시험 패키지 `sdk/testdata/<id>/`)의 백엔드 소스는 `sdk/go/examples/<id>/`(`sdk/go` 모듈 안, `go.mod` 없음, 모든 `.go` 첫 줄 SPDX MIT, `TestLicense`)다. 그래서 `cd sdk/go && go vet ./... && go test ./...`(`make lint`·`make test`)가 예제도 검사한다
+    - `make sdk-examples`(`build`에 넣지 않음): 백엔드 예제마다 `CGO_ENABLED=0 GOOS=linux GOARCH=amd64|arm64 go build -trimpath`로 정적 실행 파일을 그 UI 패키지의 `backend/linux-*`에 둔다. 결과물은 `.gitignore`(`/sdk/examples/*/backend/`, `/sdk/testdata/*/backend/`)다. 실행하지 않아도 개발 서버는 예제를 불러온다
+    - `scripts/dev.sh`: `FAKEADDONS=examples`(가짜 OMV)이고 `MARU_DEV_ADDON_BACKENDS=1`이면 `sdk/examples/<id>` 가운데 `sdk/go/examples/<id>/*.go`가 있는 것만 `go run`(`setsid`, 다른 개발 프로세스와 같은 정리)으로 띄운다. 소켓은 위의 개발 경로, 데이터 디렉터리는 `<state>/addon-state/<id>`다. `addon-dev`·`addon-host`는 maru보다 먼저 만든다(SDK는 소켓 디렉터리를 만들지 않는다). `MARU_DEV_ADDONS`로 더한 패키지와 `sdk/testdata/probe`의 백엔드는 띄우지 않는다
+    - `hello-backend`(예제): 데이터는 `Host.RPCInto`의 `System.getInformation`과 관리자에게만 `PerfStats.get`(관리자 전용 메서드라 `r.Admin`으로 가른다), 백엔드가 데이터 디렉터리(없으면 메모리)에 두는 데이터 요청 수와 마지막 변경 기록(관리자에게만). 관리자·확인 조작 `perfstats`가 `Host.Apply`로 `PerfStats.set {enable}`을 바꾸고 적용한다(`timeoutSeconds: 300`, 다시 켤 때 그래프를 다시 그린다). 적용 대기가 있으면 호스트의 `config_dirty`를 409 `config_dirty`(`addonCode`)로 바꾼다
+    - 쓰기를 `PerfStats.set`으로 고른 이유: OMV 코어(`openmediavault` 패키지의 `engined/rpc/perfstats.inc`, 8.0부터 같다. `.claude/rules/auth-omv.md`의 "OMV 8 버전별 차이"), 파라미터가 불 하나(`rpc.perfstats.set`), 같은 창에서 되돌릴 수 있다. 적용하면 collectd·rrdcached·monit 모듈만 다시 배포하고(성능 그래프가 그동안 멈출 뿐 쌓인 RRD는 남는다) 네트워크·인증·사용자·저장소·웹 UI·접속을 끊는 서비스에 닿지 않는다. 금지 표 밖이다. 가짜 OMV는 `serviceRPC`의 `PerfStats`(모듈 `collectd`)로 흉내 낸다
+    - `probe`(시험 도구, `sdk/testdata/probe`, `requires.admin`): 관리자 `Query` 조작 `run`이 백엔드가 하지 못해야 하는 일(상태 디렉터리 안의 `users`·`security`·`site.json`, root 동기화 기록 `/var/lib/maru-addons`, `/run/maru`, 다른 애드온의 소켓 디렉터리 `/run/maru-addon`·`/run/maru-addon-host`, 도우미 소켓, 시스템 D-Bus, resolved varlink, OMV `config.xml`, `/srv`·`/home`, 보이는 추상 유닉스 소켓, `127.0.0.1:80`, 입력한 LAN 주소, `1.1.1.1:443`, 토큰 없는 호스트 호출)을 하나씩 시도해 표를 돌려준다. 행에는 `reachable`·`blocked`·`timeout`·`error`·`skipped`와 오류 종류(errno 이름, `call_invalid`, `http_<상태>`, `none_visible`)만 담고 읽은 내용은 담지 않는다. `EPERM`(IPAddressDeny)·`EAFNOSUPPORT`(RestrictAddressFamilies)·`EACCES`·`ENOENT`·`ENOTDIR`는 `blocked`, `ECONNREFUSED`와 연결 성공은 `reachable`, 시간 초과는 `timeout`(샌드박스 차단과 구별), `ENETUNREACH` 등은 `error`다. 입력의 `network`(manifest와 같게)가 기대 결과를 정하고, 네트워크가 있는 단계의 추상 소켓은 알려진 한계라 판정하지 않는다. 개발 서버에서는 대부분 닿는 것이 정상이고, M3의 VM 확인에 쓴다
+- `FAKEOMV_EXTRA_RPC`(`make dev-fake`): `scripts/dev.sh`가 `MARU_DEV_ADDONS`(예제를 더한 뒤) 디렉터리의 `dev/fake-rpc.json`을 콜론 목록으로 모아 가짜 OMV 프로세스에 넘긴다(셸에서 준 값 뒤에 더하고, 셸에서 준 상대 경로는 부른 디렉터리 기준의 절대 경로로 바꾼다. 읽지 못한 파일이 있으면 가짜 OMV가 시작하지 않는다). 형식은 `{"Service.method": {"result": <JSON>, "admin": true}}`(`result` 필수, `admin`이면 관리자 세션만, 모르는 필드·`Session` 서비스는 오류, `omvfake.ParseExtraRPC`)다. 가짜 OMV가 구현하지 않은 메서드에만 답하고(구현이 이긴다) 세션 검사는 그대로다. 여러 파일이 같은 메서드를 적으면 앞 파일의 것을 쓰고 로그를 남긴다. 그 밖의 플러그인 RPC는 실제 OMV(`make dev`)에서 확인한다
 
 ## 위험과 한계
 
@@ -355,6 +364,9 @@ HTTP/1.1, 유닉스 소켓. 요청의 Host는 `maru`다.
 ## 시험
 
 브라우저(dev-fake)와 VM(desk-test)에서 확인한 범위와 날짜, 확인하다 바뀐 결정을 적는다.
+
+- 자동 시험(M2): 예제 백엔드는 `sdk/go/examples/*`의 Go 시험이 SDK의 `ServeContext`와 가짜 호스트 소켓(임시 유닉스 소켓)으로 본다(네트워크·실제 경로 없음, `probe`는 경로·연결 함수를 바꿔 끼운다). 서버 쪽은 `TestAddonSDKExamples`(실행 파일 없이 개발 디렉터리로 불러옴)와 `TestAddonSDKBackendExample`(`hello-backend`의 manifest 선언으로 가짜 백엔드가 `System.getInformation`·`PerfStats.get`·`/v1/apply`의 `PerfStats.set`을 omvfake까지 부름, 일반 사용자·단계 없음 거절), `addonpkg`의 `TestReadDirBackendWithoutExecutable`(실행 파일 없는 백엔드 패키지와 `dev/`), CLI 시험(`init --backend`, `dev/` 건너뛰기)이다
+- 아직 하지 않음(M2): 브라우저에서 `FAKEADDONS=examples`의 `hello-backend` 데이터와 쓰기 조작(호스트 확인 → 비밀번호 재확인 → 실행 → 데이터 다시 읽기, 일반 사용자에게는 성능 통계 칸이 없음, 백엔드를 멈추면 창에 연결 실패 문구), 실제 OMV에서 `PerfStats.set` 적용(사용자 확인), VM에서 `probe`의 네트워크 단계 4개(M3)
 
 - 2026-11-05, 크롬(Playwright, dev-fake, 개발 패키지 `sdk/testdata/dev-min`)
     - 샌드박스 프레임 문서에서 CSP `'self'`는 문서 주소의 출처로 풀린다. `script-src 'self'`가 `./_maru/sdk.js`와 패키지의 모듈 스크립트를 허용한다(모듈 로드는 `Access-Control-Allow-Origin: *`로 된다)

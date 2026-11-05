@@ -26,6 +26,10 @@
 //
 // MARU_DEV_NOTICES가 있으면 maru의 개발용 알림 출처가 읽는 가짜 알림 파일을 그 경로에 쓴다(notices.go).
 // FAKENOTICES로 시나리오(sample, none, many, rotate)를, FAKENOTICES_STEP으로 rotate 주기(기본 30s)를 고른다.
+//
+// FAKEOMV_EXTRA_RPC(콜론으로 나눈 파일 경로)가 있으면 그 파일들(애드온 패키지의 dev/fake-rpc.json, scripts/dev.sh가
+// MARU_DEV_ADDONS에서 모은다)에 적힌 메서드에 정해진 응답을 준다. 가짜 OMV가 구현한 메서드가 먼저다
+// (omvfake.ParseExtraRPC, extrarpc.go).
 package main
 
 import (
@@ -138,6 +142,14 @@ func main() {
 		log.Printf("fake apt index under %s (%d updates, scenario %s)", root, len(fakePackages), scenario)
 	}
 	srv.SetPluginData(pluginData)
+	if list := os.Getenv("FAKEOMV_EXTRA_RPC"); list != "" {
+		extra, err := loadExtraRPC(list, log.Printf)
+		if err != nil {
+			log.Fatalf("fake omv: FAKEOMV_EXTRA_RPC: %v", err)
+		}
+		srv.SetExtraRPC(extra)
+		log.Printf("fake omv: %d extra RPC methods from %s", len(extra), list)
+	}
 	if d := envDuration("FAKESMART_DELAY", 0); d > 0 {
 		srv.SetSmartDelay(d)
 		log.Printf("fake SMART detail RPCs answer after %v", d)

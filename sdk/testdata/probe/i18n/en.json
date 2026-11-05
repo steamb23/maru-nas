@@ -1,0 +1,19 @@
+{
+  "notice": "Test tool for Maru NAS development. Install it only on a test machine.",
+  "hint": "Tries, one by one, what an addon backend must not be able to do. The table shows only whether each attempt got through and the error class, never what was read. On a development server without the sandbox most rows get through.",
+  "network": "Network in the manifest:",
+  "lanAddress": "LAN address to try:",
+  "run": "Run the probe",
+  "running": "Running…",
+  "failed": "The probe failed: {{message}}",
+  "summary": "{{passed}} passed, {{failed}} failed",
+  "col.check": "Check",
+  "col.target": "Target",
+  "col.result": "Result",
+  "col.class": "Error class",
+  "col.expect": "Expected",
+  "col.verdict": "Verdict",
+  "verdict.pass": "Pass",
+  "verdict.fail": "Fail",
+  "verdict.info": "Not judged"
+}

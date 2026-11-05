@@ -138,17 +138,32 @@ go run .
 
 - `MARU_ADDON_SOCKET`: the socket the backend listens on. A leftover socket file nobody listens on is replaced; the
   socket is made mode 0600 and removed on exit. Unix socket paths are limited to 107 bytes
-- `MARU_ADDON_HOST`: maru's host socket for this package (installed backends use `/run/maru-host/host.sock`)
+- `MARU_ADDON_HOST`: maru's host socket for this package (installed backends, in a later version, will use
+  `/run/maru-host/host.sock`)
 - `MARU_ADDON_STATE`: optional, what `StateDir()` returns
 
-Installed backends are started by systemd socket activation (`LISTEN_FDS`, file descriptor 3) and need no
-variables. `Serve` stops gracefully on SIGTERM or SIGINT: it stops accepting connections and waits up to 60
-seconds for running requests, which keep their context until then. If requests are still running after that, it
+Installed backends (a later version) will be started by systemd socket activation (`LISTEN_FDS`, file descriptor 3)
+and need no variables. `Serve` stops gracefully on SIGTERM or SIGINT: it stops accepting connections and waits up to
+60 seconds for running requests, which keep their context until then. If requests are still running after that, it
 closes their connections (their context ends) and returns an error. A second SIGTERM or SIGINT during the wait (a
 second Ctrl+C) ends the process at once.
 
 For tests or custom setups, `ServeListener` serves on a listener you made, and `ServeContext` stops when a context
 ends instead of on a signal.
+
+## Examples
+
+- [`examples/hello-backend`](https://github.com/steamb23/maru-nas/tree/main/sdk/go/examples/hello-backend): the
+  backend of the example package
+  [`sdk/examples/hello-backend`](https://github.com/steamb23/maru-nas/tree/main/sdk/examples/hello-backend). Data read
+  through `Host.RPCInto`, a value kept in `StateDir()`, and an administrator action that changes an OMV setting with
+  `Host.Apply`
+- [`examples/probe`](https://github.com/steamb23/maru-nas/tree/main/sdk/go/examples/probe): a test tool, not an
+  example, that checks what an installed backend's sandbox blocks (`sdk/testdata/probe`)
+
+In a Maru NAS checkout, `make sdk-examples` builds both into their packages' `backend/` directories, and
+`FAKEADDONS=examples make dev-fake` starts the example backends with `go run`. `maru-addon init <dir> --backend`
+creates a new package with a backend module to start from.
 
 ## Using the module
 

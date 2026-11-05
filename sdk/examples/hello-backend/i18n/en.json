@@ -1,0 +1,21 @@
+{
+  "hostTitle": "This NAS",
+  "host": "The host name is {{name}}.",
+  "loading": "Reading from the backend.",
+  "version": "OMV {{version}}",
+  "requestsTitle": "Data requests the backend answered",
+  "requestsKept": "The backend keeps this count in its data directory. All users see the same count.",
+  "requestsMemory": "The backend keeps this count only in memory and starts over when it restarts. All users see the same count.",
+  "perfTitle": "OMV performance statistics",
+  "on": "On",
+  "off": "Off",
+  "perfHint": "While it is off, OMV records no performance graphs. Statistics already recorded are kept.",
+  "turnOff": "Turn off",
+  "turnOn": "Turn on",
+  "lastOn": "{{user}} turned it on at {{at}}.",
+  "lastOff": "{{user}} turned it off at {{at}}.",
+  "reload": "Reload",
+  "configDirty": "OMV has changes that are not applied yet. Apply or revert them in the OMV workbench first.",
+  "backendDown": "Could not connect to the backend. Check that the backend is running.",
+  "failed": "The request failed: {{message}}"
+}

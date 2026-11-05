@@ -17,6 +17,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -965,5 +966,117 @@ func TestBuiltinActionRejectsInput(t *testing.T) {
 	for _, body := range []string{`{"target":"ok","input":null}`, `{"target":"ok","input":{}}`} {
 		rec := b.raw(http.MethodPost, "/api/addons/jobs/actions/run", "application/json", []byte(body))
 		wantCode(t, rec, http.StatusBadRequest, api.ErrBadRequest)
+	}
+}
+
+// TestAddonSDKBackendExample은 SDK 예제 hello-backend(sdk/examples/hello-backend)를 개발 디렉터리로 불러, 예제
+// 백엔드(sdk/go/examples/hello-backend)가 하는 호출이 manifest의 선언과 가짜 OMV로 끝까지 되는지 본다. backend는
+// sdk/go를 import하지 않으므로 예제 백엔드 대신 같은 호스트 호출을 하는 작은 가짜 백엔드를 쓴다(실제 예제 백엔드는
+// sdk/go의 시험이 본다).
+func TestAddonSDKBackendExample(t *testing.T) {
+	dir, err := filepath.Abs("../../../sdk/examples/hello-backend")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// 가짜 백엔드가 부르는 메서드가 manifest의 선언과 어긋나지 않게 manifest를 직접 본다.
+	raw, err := os.ReadFile(filepath.Join(dir, "manifest.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var mf struct {
+		ID       string
+		Requires struct{ Admin bool }
+		RPC      struct{ Read, Write []string }
+		Actions  []struct {
+			Name           string
+			Admin, Confirm bool
+		}
+		Backend *struct{ Network []string }
+	}
+	if err := json.Unmarshal(raw, &mf); err != nil {
+		t.Fatal(err)
+	}
+	if mf.ID != "hello-backend" || mf.Requires.Admin || mf.Backend == nil || len(mf.Backend.Network) != 0 ||
+		!slices.Equal(mf.RPC.Read, []string{"System.getInformation", "PerfStats.get"}) || !slices.Equal(mf.RPC.Write, []string{"PerfStats.set"}) ||
+		len(mf.Actions) != 1 || mf.Actions[0].Name != "perfstats" || !mf.Actions[0].Admin || !mf.Actions[0].Confirm {
+		t.Fatalf("manifest = %+v", mf)
+	}
+
+	e := newBackendEnv(t, envOptions{devAddons: []string{dir}})
+	fb := &fakeAddonBackend{host: e.paths.Host(mf.ID)}
+	ln, err := net.Listen("unix", e.paths.Backend(mf.ID))
+	if err != nil {
+		t.Fatal(err)
+	}
+	srv := httptest.NewUnstartedServer(fb)
+	srv.Listener = ln
+	srv.Start()
+	t.Cleanup(srv.Close)
+	// 예제 백엔드처럼: 데이터는 System.getInformation과 관리자에게만 PerfStats.get, 조작은 /v1/apply의 PerfStats.set.
+	fb.set(func(w http.ResponseWriter, r *http.Request, host hostClient) {
+		if r.URL.Path == "/v1/data" {
+			reply := map[string]hostReply{"info": host.post("/v1/rpc", map[string]any{"service": "System", "method": "getInformation"})}
+			if r.Header.Get("X-Maru-Admin") == "1" {
+				reply["perf"] = host.post("/v1/rpc", map[string]any{"service": "PerfStats", "method": "get"})
+			} else {
+				// 일반 사용자 요청에서 부르면 OMV가 관리자 전용이라 거절한다(예제 백엔드가 r.Admin으로 가르는 이유).
+				reply["perfAsUser"] = host.post("/v1/rpc", map[string]any{"service": "PerfStats", "method": "get"})
+			}
+			writeBackendJSON(w, http.StatusOK, reply)
+			return
+		}
+		// fakeAddonBackend가 본문을 이미 읽어 두었다.
+		_, raw := fb.lastRequest()
+		var body struct{ Input struct{ Enable bool } }
+		json.Unmarshal([]byte(raw), &body)
+		writeBackendJSON(w, http.StatusOK, host.post("/v1/apply", map[string]any{"calls": []any{
+			map[string]any{"service": "PerfStats", "method": "set", "params": map[string]any{"enable": body.Input.Enable}},
+		}}))
+	})
+
+	admin := e.stepped("admin")
+	user := e.browser()
+	wantStatus(t, user.login("user", "user"), http.StatusOK)
+	for _, b := range []*browser{admin, user} {
+		if v := packageView(t, b.capabilities(), mf.ID); !v.Dev {
+			t.Errorf("hello-backend is not a development package: %+v", v)
+		}
+	}
+	data := func(b *browser) map[string]hostReply {
+		t.Helper()
+		return decode[map[string]hostReply](t, b.do(http.MethodGet, "/api/addons/hello-backend", nil))
+	}
+	d := data(admin)
+	if d["info"].Status != http.StatusOK || !strings.Contains(string(d["info"].Body), `"hostname":"fake-nas.local"`) ||
+		d["perf"].Status != http.StatusOK || !strings.Contains(string(d["perf"].Body), `"enable":true`) {
+		t.Fatalf("admin data = %+v", d)
+	}
+	d = data(user)
+	if d["info"].Status != http.StatusOK || d["perfAsUser"].Status == http.StatusOK {
+		t.Errorf("user data = %+v", d)
+	}
+
+	act := func(b *browser, enable bool) *httptest.ResponseRecorder {
+		return b.do(http.MethodPost, "/api/addons/hello-backend/actions/perfstats", map[string]any{"input": map[string]any{"enable": enable}})
+	}
+	// 관리자 조작이고, 쓰기를 선언한 패키지라 비밀번호 재확인이 필요하다.
+	wantCode(t, act(user, false), http.StatusForbidden, api.ErrAdminRequired)
+	plain := e.browser()
+	wantStatus(t, plain.login("admin", "admin"), http.StatusOK)
+	wantCode(t, act(plain, false), http.StatusForbidden, api.ErrSecurityRequired)
+
+	// 끄고 다시 켠다. 두 번째 적용이 되므로 첫 적용이 적용 대기를 남기지 않았다(남았으면 409 config_dirty).
+	for _, enable := range []bool{false, true} {
+		r := relayed(t, act(admin, enable))
+		if r.Status != http.StatusOK {
+			t.Fatalf("apply enable=%v = %+v", enable, r)
+		}
+		var ps struct{ Enable bool }
+		callJSON(t, e, "admin", "PerfStats", "get", &ps)
+		var dirty bool
+		callJSON(t, e, "admin", "Config", "isDirty", &dirty)
+		if ps.Enable != enable || dirty {
+			t.Errorf("after enable=%v: perfstats %v, dirty %v", enable, ps.Enable, dirty)
+		}
 	}
 }

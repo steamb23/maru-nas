@@ -1,0 +1,39 @@
+{
+  "$schema": "../../js/schema/manifest.schema.json",
+  "format": 1,
+  "id": "hello-backend",
+  "version": "0.1.0",
+  "sdk": 1,
+  "name": { "en": "Hello backend", "ko": "안녕 백엔드" },
+  "description": {
+    "en": "An example addon package with a Go backend: reads system information through it and lets an administrator turn OMV's performance statistics off and on.",
+    "ko": "Go 백엔드가 있는 예제 애드온 패키지입니다. 백엔드로 시스템 정보를 읽고, 관리자가 OMV 성능 통계를 끄고 켤 수 있습니다."
+  },
+  "author": { "name": "Maru NAS", "url": "https://github.com/steamb23/maru-nas" },
+  "icon": "icon.svg",
+  "views": {
+    "window": {
+      "entry": "window.html",
+      "defaultSize": { "width": 480, "height": 460 },
+      "minSize": { "width": 360, "height": 340 }
+    }
+  },
+  "rpc": {
+    "read": ["System.getInformation", "PerfStats.get"],
+    "write": ["PerfStats.set"]
+  },
+  "actions": [
+    {
+      "name": "perfstats",
+      "admin": true,
+      "confirm": true,
+      "timeoutSeconds": 300,
+      "label": { "en": "Change statistics", "ko": "통계 설정 바꾸기" },
+      "confirmText": {
+        "en": "Change OMV's performance statistics setting and apply it now? OMV starts or stops its statistics services. You can switch it back from this window.",
+        "ko": "OMV 성능 통계 설정을 바꾸고 바로 적용할까요? OMV가 통계 서비스를 켜거나 멈춥니다. 이 창에서 다시 되돌릴 수 있습니다."
+      }
+    }
+  ],
+  "backend": { "network": [] }
+}

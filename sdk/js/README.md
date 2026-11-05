@@ -15,6 +15,7 @@ This package contains:
 ```sh
 maru-addon init my-addon          # plain HTML and JavaScript, no build step
 maru-addon init my-addon --ts     # TypeScript + Vite; the package directory is my-addon/addon
+maru-addon init my-addon --backend  # adds a Go backend (my-addon/backend); the package directory is my-addon/addon
 maru-addon validate my-addon      # check a package directory or a .maru-addon file
 maru-addon pack my-addon          # check and pack into my-addon-0.1.0.maru-addon
 ```
@@ -27,8 +28,14 @@ with `MARU_DEV_ADDONS`.
 `pack` writes the same tar for the same files (sorted paths, zero timestamps and owners, fixed modes). The gzip
 bytes, and so the SHA-256 shown in the dashboard, can still differ between machines with different zlib versions.
 
+`--backend` combines with `--ts`. The backend is a Go module using the Go SDK
+([`sdk/go`](https://github.com/steamb23/maru-nas/tree/main/sdk/go)); build it into `addon/backend/linux-amd64` and
+`addon/backend/linux-arm64` before packing (the generated README has the commands). `pack` refuses a package that
+declares a backend but has no executable.
+
 Until the SDK is published to npm, use it from a checkout of the Maru NAS repository:
 `node sdk/js/cli/maru-addon.mjs <command>`. `init --ts` then points the project's `@maru-nas/addon-sdk`
-dependency at that checkout.
+dependency at that checkout, and `init --backend` points the backend's `go.mod` at the checkout's Go SDK with a
+`replace` directive.
 
 The developer guide is in the documentation: [Addon development](https://github.com/steamb23/maru-nas/blob/main/docs/en/addon-dev.md).

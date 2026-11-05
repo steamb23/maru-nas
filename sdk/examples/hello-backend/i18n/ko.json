@@ -1,0 +1,21 @@
+{
+  "hostTitle": "이 NAS",
+  "host": "호스트 이름은 {{name}}입니다.",
+  "loading": "백엔드에서 읽는 중입니다.",
+  "version": "OMV {{version}}",
+  "requestsTitle": "백엔드가 답한 데이터 요청",
+  "requestsKept": "백엔드가 데이터 디렉터리에 저장하는 수입니다. 모든 사용자가 같은 수를 봅니다.",
+  "requestsMemory": "백엔드 메모리에만 있는 수입니다. 백엔드를 다시 시작하면 처음부터 셉니다. 모든 사용자가 같은 수를 봅니다.",
+  "perfTitle": "OMV 성능 통계",
+  "on": "켜짐",
+  "off": "꺼짐",
+  "perfHint": "꺼 두면 OMV의 성능 그래프가 그동안 기록되지 않습니다. 이미 쌓인 기록은 지워지지 않습니다.",
+  "turnOff": "끄기",
+  "turnOn": "켜기",
+  "lastOn": "{{user}} 님이 {{at}}에 켰습니다.",
+  "lastOff": "{{user}} 님이 {{at}}에 껐습니다.",
+  "reload": "다시 읽기",
+  "configDirty": "OMV에 적용하지 않은 변경이 있습니다. OMV 워크벤치에서 먼저 적용하거나 되돌리세요.",
+  "backendDown": "백엔드에 연결하지 못했습니다. 백엔드가 실행 중인지 확인하세요.",
+  "failed": "요청이 실패했습니다: {{message}}"
+}

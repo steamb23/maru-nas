@@ -1,0 +1,42 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="./_maru/maru.css" />
+    <link rel="stylesheet" href="./style.css" />
+    <script src="./_maru/sdk.js"></script>
+  </head>
+  <body>
+    <main class="addon-window">
+      <p class="addon-banner" id="error" hidden></p>
+
+      <section class="addon-card">
+        <div class="addon-card-head"><span class="addon-card-title" id="host-title"></span></div>
+        <div id="host"></div>
+        <div class="addon-card-sub" id="version" hidden></div>
+      </section>
+
+      <section class="addon-card">
+        <div class="addon-card-head">
+          <span class="addon-card-title" id="requests-title"></span>
+          <span class="addon-card-value" id="requests"></span>
+        </div>
+        <div class="addon-card-sub" id="requests-hint"></div>
+      </section>
+
+      <!-- 관리자에게만 보인다(성능 통계는 관리자 전용 메서드로 읽는다). -->
+      <section class="addon-card" id="perf" hidden>
+        <div class="addon-card-head">
+          <span class="addon-card-title" id="perf-title"></span>
+          <span class="badge" id="perf-state"></span>
+        </div>
+        <div class="addon-card-sub" id="perf-hint"></div>
+        <div class="addon-card-sub" id="last-change" hidden></div>
+        <div class="perf-actions"><button type="button" class="addon-button primary" id="toggle"></button></div>
+      </section>
+
+      <div><button type="button" class="addon-button" id="reload"></button></div>
+    </main>
+    <script type="module" src="./window.js"></script>
+  </body>
+</html>
