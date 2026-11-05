@@ -22,7 +22,7 @@ const (
 	// AddonSocketDir는 백엔드 소켓 디렉터리다. 소켓은 <dir>/<id>.sock이다.
 	AddonSocketDir = "/run/maru-addon"
 	// AddonHostDir는 호스트 소켓 디렉터리다(root 소유 0755. maru.service의 root ExecStartPre와 백엔드 소켓 유닛이
-	// 만들고, maru.service의 ReadWritePaths가 maru에 쓰기를 연다). 소켓은 <dir>/<id>/host.sock이고, <id>는 백엔드 소켓
+	// 만들고, maru.service의 ReadWritePaths=-가 maru에 쓰기를 연다). 소켓은 <dir>/<id>/host.sock이고, <id>는 백엔드 소켓
 	// 유닛이 maru 서비스 사용자 소유로 만든다. 백엔드 유닛에는 <dir>/<id>만 /run/maru-host로 바인드된다.
 	AddonHostDir = "/run/maru-addon-host"
 	// AddonHostSocketName은 호스트 소켓 파일 이름이다.

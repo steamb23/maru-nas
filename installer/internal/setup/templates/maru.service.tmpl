@@ -26,9 +26,11 @@ RuntimeDirectoryPreserve=yes
 # Host sockets of addon backends. {{.AddonHostDir}}/<id> is bound into that package's
 # backend unit, so this user must not be able to replace <id> or anything above it:
 # the directory is root's (created here as root, before the sandbox is set up) and
-# each backend's socket unit creates <id> for this user.
+# each backend's socket unit creates <id> for this user. systemd sets up the mount
+# namespace for the "+" command too, so the path is optional ("-"); it exists by the
+# time ExecStart's namespace is set up.
 ExecStartPre=+/usr/bin/install -d -o root -g root -m 0755 {{.AddonHostDir}}
-ReadWritePaths={{.AddonHostDir}}
+ReadWritePaths=-{{.AddonHostDir}}
 {{- end}}
 
 NoNewPrivileges=yes
