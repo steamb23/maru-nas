@@ -1,0 +1,19 @@
+{
+  "notice": "마루 NAS 개발용 시험 도구입니다. 시험용 기기에만 설치하세요.",
+  "hint": "애드온 백엔드가 하지 못해야 하는 일을 하나씩 시도합니다. 표에는 시도가 닿았는지와 오류 종류만 보이고, 읽은 내용은 보이지 않습니다. 샌드박스가 없는 개발 서버에서는 대부분 닿습니다.",
+  "network": "manifest의 네트워크:",
+  "lanAddress": "시도할 LAN 주소:",
+  "run": "시험 실행",
+  "running": "실행 중…",
+  "failed": "시험이 실패했습니다: {{message}}",
+  "summary": "통과 {{passed}}개, 실패 {{failed}}개",
+  "col.check": "시험",
+  "col.target": "대상",
+  "col.result": "결과",
+  "col.class": "오류 종류",
+  "col.expect": "기대",
+  "col.verdict": "판정",
+  "verdict.pass": "통과",
+  "verdict.fail": "실패",
+  "verdict.info": "판정 안 함"
+}

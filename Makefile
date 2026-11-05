@@ -1,4 +1,4 @@
-.PHONY: dev dev-fake dev-pick types build build-frontend build-backend build-installer lint test check
+.PHONY: dev dev-fake dev-pick types build build-frontend build-backend build-installer sdk-examples lint test check
 
 # 대상 없이 make만 실행하면 빌드한다. 끝나지 않는 개발 서버(dev)가 기본이면
 # 대상 없이 make를 부르는 도구(GitHub CodeQL의 Go autobuild 등)가 멈춘다.
@@ -36,6 +36,23 @@ build-backend:
 # 설치기는 별도 Go 모듈(installer/)이다. install.sh도 같은 명령으로 빌드한다.
 build-installer:
 	cd installer && go build -trimpath -o ../bin/maru-install .
+
+# 예제·시험 애드온 패키지의 Go 백엔드(sdk/go/examples/<id>)를 정적 실행 파일(CGO_ENABLED=0)로 빌드해 그 UI 패키지
+# (sdk/examples/<id>, 없으면 sdk/testdata/<id>)의 backend/linux-amd64·linux-arm64에 둔다. 결과물은 커밋하지 않고
+# build에도 넣지 않는다. 개발 서버는 이것 없이도 백엔드 예제를 불러온다(FAKEADDONS=examples가 go run으로 띄운다).
+sdk-examples:
+	@set -e; for d in sdk/go/examples/*/; do \
+	  id=$$(basename "$$d"); ui=sdk/examples/$$id; \
+	  [ -f "$$ui/manifest.json" ] || ui=sdk/testdata/$$id; \
+	  if [ ! -f "$$ui/manifest.json" ]; then \
+	    echo "sdk-examples: no UI package for $$id (sdk/examples/$$id or sdk/testdata/$$id)" >&2; exit 1; \
+	  fi; \
+	  mkdir -p "$$ui/backend"; \
+	  for arch in amd64 arm64; do \
+	    echo "sdk-examples: $$ui/backend/linux-$$arch"; \
+	    (cd sdk/go && CGO_ENABLED=0 GOOS=linux GOARCH=$$arch go build -trimpath -o "../../$$ui/backend/linux-$$arch" "./examples/$$id"); \
+	  done; \
+	done
 
 lint:
 	@out=$$(cd backend && gofmt -l .); if [ -n "$$out" ]; then echo "gofmt 필요:"; echo "$$out"; exit 1; fi

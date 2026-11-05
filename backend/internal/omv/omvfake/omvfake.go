@@ -19,6 +19,7 @@
 //     메일을 보낸 것으로 센다(LoginMails).
 //   - 없는 메서드는 실제 OMV(rpc/rpc.inc)처럼 HTTP 404다.
 //   - SetVersion으로 옛 OMV 8 버전대의 응답을 흉내 낸다(Version).
+//   - SetExtraRPC로 구현하지 않은 메서드에 정해진 응답을 준다(extra.go, 개발 서버의 FAKEOMV_EXTRA_RPC).
 //
 // 실제 OMV보다 엄격한 점: User-Agent 검사를 Session.logout뿐 아니라 인증된 모든
 // 호출에서 한다. 백엔드가 고정 User-Agent를 지키는지 확인하기 위해서다.
@@ -166,6 +167,8 @@ type Server struct {
 	apt AptConfig
 	// smartDelay는 SMART 상세 RPC의 응답 지연(time.Duration)이다(smart.go의 SetSmartDelay). 잠금 밖에서 읽는다.
 	smartDelay atomic.Int64
+	// extra는 "소문자 서비스.메서드" → 개발용 추가 메서드의 응답이다(extra.go의 SetExtraRPC).
+	extra map[string]ExtraRPC
 }
 
 type session struct {
@@ -406,6 +409,10 @@ func (s *Server) handle(req *request, body rpcBody, touch bool) (any, *rpcError)
 		return s.execGetOutput(req.sess, body.Params)
 	}
 	if res, rerr, ok := s.handlePlugin(req.sess, body.Service, body.Method, body.Params); ok {
+		return res, rerr
+	}
+	// 개발용 추가 메서드는 구현한 메서드가 없을 때만 답한다(extra.go).
+	if res, rerr, ok := s.handleExtra(req.sess, body.Service, body.Method); ok {
 		return res, rerr
 	}
 	return nil, errStatus(http.StatusNotFound, "RPC service '"+body.Service+"' not found.")

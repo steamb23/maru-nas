@@ -1,0 +1,4 @@
+node_modules/
+addon/ui/
+addon/backend/
+*.maru-addon

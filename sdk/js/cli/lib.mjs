@@ -557,8 +557,29 @@ function titleOf(id) {
     .join(' ')
 }
 
+/** Go SDK 모듈 경로. */
+const GO_MODULE = 'github.com/steamb23/maru-nas/sdk/go'
+
+/**
+ * 새 백엔드 Go 모듈(<dir>/backend/go.mod)의 의존성 줄이다. Go SDK는 공개 전이라 저장소 체크아웃의 SDK면 replace로
+ * 그 sdk/go를 가리킨다(저장소 안이면 상대 경로, 밖이면 절대 경로). npm으로 받은 SDK면 비우고 README가 go get을 안내한다.
+ * @param {string} dir 새 패키지의 최상위 디렉터리(절대 경로)
+ * @returns {string}
+ */
+export function goModuleDeps(dir) {
+  if (!inCheckout()) return ''
+  const repo = resolve(SDK_ROOT, '..', '..')
+  const goSDK = resolve(SDK_ROOT, '..', 'go')
+  let path = relative(repo, dir).startsWith('..') ? goSDK : relative(join(dir, 'backend'), goSDK)
+  path = path.split('\\').join('/')
+  if (!path.startsWith('/') && !path.startsWith('.')) path = `./${path}`
+  return `\nrequire ${GO_MODULE} v0.0.0\n\n// The Go SDK is not published yet: build against the Maru NAS checkout this package was created from.\nreplace ${GO_MODULE} => ${path}\n`
+}
+
 /**
  * 템플릿 디렉터리를 복사하며 자리표시자를 바꾼다. _gitignore는 .gitignore로 바꾼다(npm이 .gitignore를 빼고 배포한다).
+ * _go.mod는 go.mod로 바꾼다(저장소 안에 자리표시자가 든 go.mod를 두지 않는다). 이미 있는 파일은 덮어쓴다(템플릿을
+ * 겹쳐 쓴다).
  * @param {string} from
  * @param {string} to
  * @param {Record<string, string>} vars
@@ -572,7 +593,7 @@ function copyTemplate(from, to, vars) {
     mkdirSync(dst, { recursive: true })
     for (const name of readdirSync(src).sort()) {
       const s = join(src, name)
-      const d = join(dst, name === '_gitignore' ? '.gitignore' : name)
+      const d = join(dst, name === '_gitignore' ? '.gitignore' : name === '_go.mod' ? 'go.mod' : name)
       if (lstatSync(s).isDirectory()) walk(s, d)
       else {
         let text = readFileSync(s, 'utf8')
@@ -587,13 +608,14 @@ function copyTemplate(from, to, vars) {
 }
 
 /**
- * 새 패키지 디렉터리를 만든다. 기본은 빌드 없는 JS, ts면 TypeScript + Vite 프로젝트다.
+ * 새 패키지 디렉터리를 만든다. 기본은 빌드 없는 JS, ts면 TypeScript + Vite 프로젝트다. backend면 Go 백엔드
+ * (<dir>/backend, Go 모듈)를 더하고 패키지 디렉터리는 <dir>/addon이다(패키지 최상위에는 go.mod·소스를 둘 수 없다).
+ * backend는 ts와 함께 쓸 수 있다.
  * @param {string} target
  * @param {{ id?: string, ts?: boolean, backend?: boolean }} [opts]
  * @returns {{ dir: string, id: string, files: string[], packageDir: string }}
  */
 export function init(target, opts = {}) {
-  if (opts.backend) throw new CliError('packages with a backend are not supported by this version of the SDK yet')
   const dir = resolve(target)
   if (existsSync(dir) && readdirSync(dir).length > 0) throw new CliError(`${target}: directory is not empty`)
   const schema = loadSchema()
@@ -602,8 +624,7 @@ export function init(target, opts = {}) {
   if (idProblems.length > 0) {
     throw new CliError(`${idProblems[0]}; pass --id <id> (lowercase letters, digits and '-', at most ${schema.properties.id.maxLength} characters)`)
   }
-  const kind = opts.ts ? 'ts' : 'plain'
-  const packageDir = opts.ts ? join(dir, 'addon') : dir
+  const packageDir = opts.ts || opts.backend ? join(dir, 'addon') : dir
   // 편집기가 쓰는 스키마 주소. TS 프로젝트는 설치한 SDK의 파일, 저장소 체크아웃 안이면 그 파일, 아니면 공개 주소다.
   const repo = resolve(SDK_ROOT, '..', '..')
   const insideRepo = inCheckout() && !relative(repo, packageDir).startsWith('..')
@@ -612,6 +633,7 @@ export function init(target, opts = {}) {
     : insideRepo
       ? relative(packageDir, join(SDK_ROOT, 'schema', 'manifest.schema.json'))
       : schema.$id
+  const goDeps = goModuleDeps(dir)
   const vars = {
     ID: id,
     NAME: titleOf(id),
@@ -621,7 +643,15 @@ export function init(target, opts = {}) {
     SDK_DEP: !inCheckout()
       ? `^${sdkPackage().version}`
       : `file:${(relative(repo, dir).startsWith('..') ? SDK_ROOT : relative(dir, SDK_ROOT)).split('\\').join('/')}`,
+    GO_DEPS: goDeps,
+    GO_SETUP: goDeps
+      ? 'The backend\'s `go.mod` points the Go SDK at the Maru NAS checkout this package was created from (a `replace` directive). Keep that checkout, or change the path, until the SDK is published.'
+      : `Before the first build, add the Go SDK to the backend's module: \`cd backend && go get ${GO_MODULE}@latest\`.`,
   }
-  const files = copyTemplate(join(here, 'templates', kind), dir, vars)
-  return { dir, id, files, packageDir }
+  // 템플릿을 차례로 겹쳐 쓴다. backend는 패키지 파일(manifest, 번역)과 Go 모듈, 뒤의 것은 보기와 README다.
+  const sets = opts.backend ? (opts.ts ? ['ts', 'backend', 'backend-ts'] : ['backend', 'backend-plain']) : [opts.ts ? 'ts' : 'plain']
+  /** @type {Set<string>} */
+  const files = new Set()
+  for (const set of sets) for (const f of copyTemplate(join(here, 'templates', set), dir, vars)) files.add(f)
+  return { dir, id, files: [...files].sort(), packageDir }
 }

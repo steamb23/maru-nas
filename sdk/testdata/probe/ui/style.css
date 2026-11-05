@@ -1,0 +1,43 @@
+/* 시험 도구의 입력 줄과 결과 표. 나머지 모양은 호스트가 주는 _maru/maru.css의 공통 클래스를 쓴다. */
+.probe-options {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+}
+
+.probe-options input[type='text'] {
+  width: 180px;
+  padding: 4px 8px;
+  border: 1px solid var(--window-border);
+  border-radius: 6px;
+  background: transparent;
+}
+
+.probe-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.probe-table th,
+.probe-table td {
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--window-border);
+  text-align: start;
+  vertical-align: top;
+}
+
+.probe-table td.target {
+  word-break: break-all;
+  color: var(--text-muted);
+}
+
+.probe-table td.fail {
+  color: light-dark(#b42318, #ffb4ab);
+  font-weight: 600;
+}
+
+.probe-table td.pass {
+  color: light-dark(#067647, #75e0a7);
+}

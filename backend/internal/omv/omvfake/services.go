@@ -7,9 +7,11 @@ import (
 	"slices"
 )
 
-// 서비스 설정과 적용. 형식은 OMV 8의 engined/rpc/{ssh,smb,nfs,rsyncd,config}.inc를 따른다.
+// 서비스 설정과 적용. 형식은 OMV 8의 engined/rpc/{ssh,smb,nfs,rsyncd,perfstats,config}.inc를 따른다.
 //
-//   - SSH.get, SMB.getSettings, NFS.getSettings, Rsyncd.getSettings (admin): 설정 객체. NFS는 shares도 준다
+//   - SSH.get, SMB.getSettings, NFS.getSettings, Rsyncd.getSettings, PerfStats.get (admin): 설정 객체. NFS는 shares도
+//     준다. PerfStats(성능 통계, conf.system.monitoring.perfstats)는 SDK 예제 hello-backend가 쓴다. 실제 OMV는 저장하면
+//     collectd·rrdcached·monit 모듈을 적용 대기로 두지만 가짜는 collectd 하나만 둔다
 //   - SSH.set 등 (admin): set 스키마의 속성이 모두 있어야 한다. 가짜 OMV는 모르는 속성도 거절한다(실제보다 엄격,
 //     백엔드가 get 결과를 그대로 넘기지 않는지 확인하기 위해서다). 저장하면 그 모듈을 적용 대기(dirty)로 표시한다
 //   - Config.isDirty (admin): 적용 대기 모듈이 있는지
@@ -27,6 +29,8 @@ var serviceRPC = map[string]struct {
 		"usesendfile", "aio", "timeserver", "winssupport", "winsserver", "homesenable", "homesbrowseable", "extraoptions"}},
 	"NFS":    {"nfs", "getSettings", "setSettings", []string{"enable", "versions"}},
 	"Rsyncd": {"rsyncd", "getSettings", "setSettings", []string{"enable", "port", "extraoptions"}},
+	// rpc.perfstats.set은 enable 하나다.
+	"PerfStats": {"collectd", "get", "set", []string{"enable"}},
 }
 
 // defaultServiceSettings는 모듈 이름 → 설정 객체(get 응답)다. enable은 DefaultPluginData의 Services와 맞춘다.
@@ -39,6 +43,8 @@ func defaultServiceSettings() map[string]map[string]any {
 			"homesenable": false, "homesbrowseable": true, "extraoptions": ""},
 		"nfs":    {"enable": false, "versions": []string{"3", "4", "4.1", "4.2"}, "shares": map[string]any{"share": []any{}}},
 		"rsyncd": {"enable": false, "port": 873, "extraoptions": ""},
+		// 성능 통계는 순정 OMV에서 켜져 있다(conf.system.monitoring.perfstats의 기본값).
+		"collectd": {"enable": true},
 	}
 }
 

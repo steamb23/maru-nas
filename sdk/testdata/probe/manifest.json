@@ -1,0 +1,31 @@
+{
+  "$schema": "../../js/schema/manifest.schema.json",
+  "format": 1,
+  "id": "probe",
+  "version": "0.1.0",
+  "sdk": 1,
+  "name": { "en": "Sandbox probe (test tool)", "ko": "샌드박스 시험 도구" },
+  "description": {
+    "en": "A Maru NAS test tool, not an example: tries what an addon backend must not be able to do and shows what its sandbox blocks.",
+    "ko": "예제가 아닌 마루 NAS 시험 도구입니다. 애드온 백엔드가 하지 못해야 하는 일을 시도해 샌드박스가 막는지 보입니다."
+  },
+  "author": { "name": "Maru NAS", "url": "https://github.com/steamb23/maru-nas" },
+  "icon": "icon.svg",
+  "views": {
+    "window": {
+      "entry": "window.html",
+      "defaultSize": { "width": 680, "height": 580 },
+      "minSize": { "width": 480, "height": 360 }
+    }
+  },
+  "requires": { "admin": true },
+  "actions": [
+    {
+      "name": "run",
+      "admin": true,
+      "timeoutSeconds": 60,
+      "label": { "en": "Run the probe", "ko": "시험 실행" }
+    }
+  ],
+  "backend": { "network": [] }
+}

@@ -361,7 +361,9 @@ func TestAddonPackageStorage(t *testing.T) {
 }
 
 // TestAddonSDKExamples는 SDK 예제(sdk/examples)를 개발 패키지로 불러, 보이는 사용자에게 capabilities에 들어가고
-// 보기 진입 파일과 선언한 읽기 RPC가 동작하는지 본다(FAKEADDONS=examples와 같은 경로).
+// 보기 진입 파일과 선언한 읽기 RPC가 동작하는지 본다(FAKEADDONS=examples와 같은 경로). 백엔드 예제는 실행 파일
+// (make sdk-examples) 없이도 불러와야 한다. 백엔드 예제의 OMV 읽기는 백엔드가 하므로(관리자 전용 메서드는 관리자
+// 요청에서만 부른다) 여기서는 프레임의 직접 읽기만 보고, 데이터·조작은 TestAddonSDKBackendExample이 본다.
 func TestAddonSDKExamples(t *testing.T) {
 	manifests, err := filepath.Glob("../../../sdk/examples/*/manifest.json")
 	if err != nil || len(manifests) == 0 {
@@ -396,6 +398,7 @@ func TestAddonSDKExamples(t *testing.T) {
 				Requires struct{ Admin bool }
 				RPC      struct{ Read []string }
 				Views    map[string]struct{ Entry string }
+				Backend  *struct{}
 			}
 			if err := json.Unmarshal(raw, &mf); err != nil {
 				t.Fatal(err)
@@ -412,6 +415,9 @@ func TestAddonSDKExamples(t *testing.T) {
 				if rec.Code != http.StatusOK {
 					t.Errorf("%s %s view (%s): status %d", mf.ID, name, view.Entry, rec.Code)
 				}
+			}
+			if mf.Backend != nil {
+				continue
 			}
 			for _, m := range mf.RPC.Read {
 				service, method, _ := strings.Cut(m, ".")

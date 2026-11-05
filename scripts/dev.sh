@@ -107,13 +107,28 @@ if [[ $fake == 1 ]]; then
   # 디스크 건강의 SMART 상세는 가짜 OMV가 답한다. FAKESMART_DELAY(예: 5s)면 잠든 디스크를 깨우는 것처럼 늦게 답한다.
 fi
 
-# 애드온 패키지: MARU_DEV_ADDONS(콜론으로 나눈 풀린 패키지 디렉터리)는 실제·가짜 OMV 모두 그대로 넘긴다.
+# 애드온 패키지: MARU_DEV_ADDONS(콜론으로 나눈 풀린 패키지 디렉터리)는 실제·가짜 OMV 모두 절대 경로로 바꿔 넘긴다.
 # FAKEADDONS=examples면 --fake일 때 sdk/examples의 예제를 그 뒤에 더한다(기본 none, 평소 개발 서버는 그대로).
 # 프레임의 _maru/ 파일(SDK 런타임)은 vite build --watch로 상태 디렉터리에 만든다(embed된 빌드는 개발 중에 없거나 오래됐다).
 if [[ $fake == 1 && ${FAKEADDONS:-none} == examples ]]; then
   for d in "$root"/sdk/examples/*/; do
     [[ -f "$d/manifest.json" ]] && MARU_DEV_ADDONS="${MARU_DEV_ADDONS:+$MARU_DEV_ADDONS:}${d%/}"
   done
+fi
+# maru와 가짜 OMV는 backend/에서 실행되므로 상대 경로를 그대로 넘기면 다른 곳을 가리킨다. 항목마다 이 스크립트를
+# 부른 디렉터리 기준의 절대 경로로 바꾸고, 디렉터리가 아닌 항목은 알리고 뺀다.
+if [[ -n ${MARU_DEV_ADDONS:-} ]]; then
+  IFS=: read -r -a addon_dirs <<<"$MARU_DEV_ADDONS"
+  abs_dirs=()
+  for d in "${addon_dirs[@]}"; do
+    [[ -n $d ]] || continue
+    if abs="$(CDPATH='' cd -- "$d" 2>/dev/null && pwd)"; then
+      abs_dirs+=("$abs")
+    else
+      echo "[dev] MARU_DEV_ADDONS: $d is not a directory, skipped" >&2
+    fi
+  done
+  MARU_DEV_ADDONS="$(IFS=:; echo "${abs_dirs[*]}")"
 fi
 if [[ -n ${MARU_DEV_ADDONS:-} ]]; then
   export MARU_DEV_ADDONS
@@ -122,6 +137,41 @@ fi
 # 애드온 패키지 백엔드는 실제·가짜 OMV 모두 개발 경로로 켠다. maru가 백엔드 패키지마다 상태 디렉터리의
 # addon-host/<id>.sock을 열고, 개발자가 MARU_ADDON_SOCKET=addon-dev/<id>.sock으로 띄운 백엔드에 붙는다.
 export MARU_DEV_ADDON_BACKENDS="${MARU_DEV_ADDON_BACKENDS:-1}"
+
+# 가짜 OMV에 없는 메서드(플러그인 RPC 등): MARU_DEV_ADDONS 디렉터리의 dev/fake-rpc.json을 모아 가짜 OMV에 넘긴다
+# (콜론으로 나눈 경로, 형식은 backend/internal/omv/omvfake/extra.go). 셸에서 준 FAKEOMV_EXTRA_RPC 뒤에 더한다.
+# 셸에서 준 상대 경로도 가짜 OMV(backend/에서 실행)가 같은 파일을 읽도록 부른 디렉터리 기준의 절대 경로로 바꾼다.
+# 디렉터리를 찾지 못한 항목은 그대로 두어 가짜 OMV가 읽지 못한 파일을 알리게 한다.
+if [[ -n ${FAKEOMV_EXTRA_RPC:-} ]]; then
+  IFS=: read -r -a rpc_files <<<"$FAKEOMV_EXTRA_RPC"
+  abs_files=()
+  for f in "${rpc_files[@]}"; do
+    [[ -n $f ]] || continue
+    if [[ $f != /* ]] && abs="$(CDPATH='' cd -- "$(dirname -- "$f")" 2>/dev/null && pwd)"; then
+      f="$abs/$(basename -- "$f")"
+    fi
+    abs_files+=("$f")
+  done
+  FAKEOMV_EXTRA_RPC="$(IFS=:; echo "${abs_files[*]}")"
+fi
+if [[ $fake == 1 && -n ${MARU_DEV_ADDONS:-} ]]; then
+  IFS=: read -r -a addon_dirs <<<"$MARU_DEV_ADDONS"
+  for d in "${addon_dirs[@]}"; do
+    [[ -n $d && -f "$d/dev/fake-rpc.json" ]] && FAKEOMV_EXTRA_RPC="${FAKEOMV_EXTRA_RPC:+$FAKEOMV_EXTRA_RPC:}$d/dev/fake-rpc.json"
+  done
+fi
+[[ -n ${FAKEOMV_EXTRA_RPC:-} ]] && export FAKEOMV_EXTRA_RPC
+
+# 예제 백엔드: FAKEADDONS=examples(가짜 OMV)이고 개발 백엔드가 켜져 있으면, sdk/examples/<id>마다 Go 백엔드
+# sdk/go/examples/<id>가 있으면 go run으로 띄운다(아래 setsid). MARU_DEV_ADDONS로 더한 패키지와 sdk/testdata의 시험
+# 패키지(probe)는 띄우지 않는다(개발자가 직접 띄운다, sdk/go/README.md의 "Development").
+example_backends=()
+if [[ $fake == 1 && ${FAKEADDONS:-none} == examples && $MARU_DEV_ADDON_BACKENDS == 1 ]]; then
+  for d in "$root"/sdk/examples/*/; do
+    id="$(basename "$d")"
+    [[ -f "$d/manifest.json" ]] && compgen -G "$root/sdk/go/examples/$id/*.go" >/dev/null && example_backends+=("$id")
+  done
+fi
 
 # 이미 떠 있는 서버가 있으면 시작하지 않는다. 일부만 떠서 다른 서버(예: 실제 OMV에 연결된
 # 백엔드)에 붙는 일을 막는다. Vite 포트(DEV_PORT)는 vite.config.ts의 server.port와 같은 기본값을 쓴다.
@@ -156,6 +206,22 @@ if [[ $fake == 1 ]]; then
   echo "[dev] fake omv: http://$FAKEOMV_LISTEN"
   (cd "$root/backend" && exec setsid go run ./cmd/fakeomv) &
   pids+=($!)
+fi
+
+if ((${#example_backends[@]})); then
+  # maru도 시작할 때 두 디렉터리를 0700으로 만들지만, 백엔드가 먼저 수신 소켓을 열 수 있게 여기서도 만든다
+  # (SDK는 소켓 디렉터리를 만들지 않는다). 데이터 디렉터리(MARU_ADDON_STATE)는 예제마다 하나다.
+  mkdir -p "$MARU_STATE_DIR/addon-dev" "$MARU_STATE_DIR/addon-host" "$MARU_STATE_DIR/addon-state"
+  chmod 0700 "$MARU_STATE_DIR/addon-dev" "$MARU_STATE_DIR/addon-host" "$MARU_STATE_DIR/addon-state"
+  for id in "${example_backends[@]}"; do
+    mkdir -p "$MARU_STATE_DIR/addon-state/$id"
+    chmod 0700 "$MARU_STATE_DIR/addon-state/$id"
+    echo "[dev] example backend: $id ($MARU_STATE_DIR/addon-dev/$id.sock)"
+    (cd "$root/sdk/go" && exec setsid env MARU_ADDON_SOCKET="$MARU_STATE_DIR/addon-dev/$id.sock" \
+      MARU_ADDON_HOST="$MARU_STATE_DIR/addon-host/$id.sock" MARU_ADDON_STATE="$MARU_STATE_DIR/addon-state/$id" \
+      go run "./examples/$id") &
+    pids+=($!)
+  done
 fi
 
 if [[ -n ${MARU_DEV_ADDON_SDK:-} && -f "$root/frontend/vite.sdk.config.ts" ]]; then

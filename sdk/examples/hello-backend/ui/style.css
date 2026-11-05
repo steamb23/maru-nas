@@ -1,0 +1,6 @@
+/* 예제 창의 상태 줄. 나머지 모양은 호스트가 주는 _maru/maru.css의 공통 클래스를 쓴다. */
+.perf-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
