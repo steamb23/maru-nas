@@ -27,10 +27,12 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: backend/go.mod
-          # 설치기는 별도 모듈이다(installer/go.mod의 go 버전은 backend/go.mod와 같게 둔다)
+          # 설치기는 별도 모듈이다(installer/go.mod의 go 버전은 backend/go.mod와 같게 둔다).
+          # 애드온 백엔드 SDK(sdk/go)도 별도 모듈이며 의존성이 없어 go.sum이 없다
           cache-dependency-path: |
             backend/go.sum
             installer/go.sum
+            sdk/go/go.mod
 
       - uses: actions/setup-node@v4
         with:

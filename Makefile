@@ -40,8 +40,11 @@ build-installer:
 lint:
 	@out=$$(cd backend && gofmt -l .); if [ -n "$$out" ]; then echo "gofmt 필요:"; echo "$$out"; exit 1; fi
 	@out=$$(cd installer && gofmt -l .); if [ -n "$$out" ]; then echo "gofmt 필요(installer):"; echo "$$out"; exit 1; fi
+	@out=$$(cd sdk/go && gofmt -l .); if [ -n "$$out" ]; then echo "gofmt 필요(sdk/go):"; echo "$$out"; exit 1; fi
 	cd backend && go vet ./...
 	cd installer && go vet ./...
+	# 애드온 백엔드 Go SDK(sdk/go)는 go 1.23 모듈이다. vet의 stdversion 검사가 1.23보다 새 표준 라이브러리 API를 잡는다.
+	cd sdk/go && go vet ./...
 	npm --prefix frontend run lint
 	# 애드온 SDK(sdk/js, 의존성 없음)는 프론트 도구로 검사한다. tsc는 tsconfig.app.json(src, types)과
 	# tsconfig.node.json(cli)의 include가 함께 본다.
@@ -53,6 +56,7 @@ lint:
 test:
 	cd backend && go test -count=1 ./...
 	cd installer && go test -count=1 ./...
+	cd sdk/go && go test -count=1 ./...
 	npm --prefix frontend test
 
 check: lint test

@@ -100,8 +100,8 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 | `make dev-fake` | `make dev`에 가짜 OMV(`127.0.0.1:8091`), 가짜 권한 도우미(상태 디렉터리의 `helper.sock`, 파일 연산은 `helper-root/` 아래만), 가짜 sshd(`127.0.0.1:8092`, 장난감 셸)를 함께 띄워 연결한다 |
 | `make dev-pick` | 워크트리와 OMV 연결(실제·가짜)을 번호로 골라 개발 서버를 띄운다(`scripts/dev-pick.sh`). 입력을 기다리므로 Claude는 쓰지 않는다 |
 | `make build` | 대상 없이 `make`만 실행해도 같다. 프론트 빌드 → `backend/internal/web/static/dist/` → `bin/maru` 단일 실행 파일, 권한 도우미 `bin/maru-helper`(`CGO_ENABLED=0`), 설치기 `bin/maru-install` |
-| `make lint` | `gofmt -l`, `go vet`(backend·installer 두 모듈), oxlint, `tsc -b` |
-| `make test` | `go test -count=1 ./...`(backend·installer 두 모듈. 모듈 밖 생성물 검사가 캐시로 통과하지 않게), `vitest run` |
+| `make lint` | `gofmt -l`, `go vet`(backend·installer·`sdk/go` 세 모듈), oxlint, `tsc -b` |
+| `make test` | `go test -count=1 ./...`(backend·installer·`sdk/go` 세 모듈. 모듈 밖 생성물 검사가 캐시로 통과하지 않게), `vitest run` |
 | `make check` | lint + test |
 | `make types` | Go 구조체에서 TS 다시 생성: `internal/api` → `src/api/types.gen.ts`, 내장 애드온 manifest → `src/addons/manifests.gen.ts`. 둘 중 하나라도 바꾸면 반드시 실행하고 생성물도 함께 커밋한다(manifest 생성물은 Go 테스트가 검사) |
 
