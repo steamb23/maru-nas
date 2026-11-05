@@ -26,7 +26,7 @@ func checkDocsOptionTable(t *testing.T, doc string) {
 		}
 	}
 	table := strings.Join(rows, "\n")
-	want := []string{"--upgrade", "--reinstall", "--no-build", "--uninstall", "--service-install", "--dry-run", "--upgrade-plan", "--upgrade-service", "--plain", "--lang", "--help"}
+	want := []string{"--upgrade", "--reinstall", "--no-build", "--uninstall", "--service-install", "--dry-run", "--upgrade-plan", "--upgrade-service", "--addon-sync", "--plain", "--lang", "--help"}
 	for _, s := range settings {
 		switch s.Flag {
 		case FlagNone:

@@ -43,9 +43,10 @@ Settings given as options are not asked. Given with an upgrade, only those setti
 
 ## Internal
 
-These options are used by upgrading from the dashboard. You never need to run them yourself.
+These options are used by upgrading from the dashboard and by addon backends. You never need to run them yourself.
 
 | Option | Description |
 |---|---|
 | `--upgrade-plan` | Only reads the existing installation and prints, as JSON, the settings an upgrade to this version must ask for and the reasons a manual reinstall is needed. It does not change the system. |
 | `--upgrade-service` | Handles one check or apply request of upgrading from the dashboard (root only). Run by the upgrade service (`maru-upgrade.service`). |
+| `--addon-sync` | Turns addon package backends on and off to match the packages installed in the settings app (root only). Run by the addon backend sync service (`maru-addons.service`) when [addon backends](install.md#addon-backends) are turned on. |
