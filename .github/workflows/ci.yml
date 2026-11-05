@@ -20,11 +20,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # 아이콘 서브모듈(vendor/icons/colloid)도 받는다. .gitmodules의 shallow 설정을 따른다
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: true
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version-file: backend/go.mod
           # 설치기는 별도 모듈이다(installer/go.mod의 go 버전은 backend/go.mod와 같게 둔다).
@@ -34,7 +34,7 @@ jobs:
             installer/go.sum
             sdk/go/go.mod
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -54,9 +54,9 @@ jobs:
   docs:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.13'
 
