@@ -83,7 +83,7 @@ OpenMediaVault 8(OMV 8) 위에 올리는, 시놀로지 DSM처럼 창·작업표�
 - **애드온 = manifest + provider + 보기(창, 위젯)**. 시스템 정보를 포함한 모든 기능을 같은 계약으로 만든다. 보기는 창과 바탕화면 위젯 중 하나 이상이며, 둘은 같은 provider·API를 쓰고 화면만 다르다
 - **위젯은 창 시스템과 분리한다**. 바탕화면 위 별도 레이어에 그리드 칸 단위로 붙이고, 창 저장소·창 컴포넌트에 위젯용 분기를 넣지 않는다. 공유는 provider, `/api/*`, `poller.ts`, 공통 훅까지만 한다
   - 그리드는 오른쪽 위 기준이고, 배치는 백엔드에 사용자별로 저장한다(`/api/preferences`). 추가·제거는 컨텍스트 메뉴(`shell/contextMenu.ts`)로 한다. 상세는 `.claude/docs/addons.md`의 "위젯 시스템"
-- `/api/rpc` 중계는 내장 manifest 허용 목록의 read 메서드만 통과시킨다. write는 애드온 조작(`POST /api/addons/{id}/actions/{action}`)으로만 부르며, 내장 조작은 대상을 검사하고 OMV 파라미터를 직접 만든다. 애드온 패키지의 조작은 패키지 백엔드가 파라미터를 만들므로, maru는 선언한 메서드만 통과시키고 금지 표(`internal/addons/packagerpc.go`)로 직접적인 root 경로를 막으며 실행할 때마다 단계 확인을 거친다(`.claude/docs/addon-packages.md`)
+- `/api/rpc` 중계는 내장 manifest 허용 목록의 read 메서드만 통과시킨다. write는 애드온 조작(`POST /api/addons/{id}/actions/{action}`)으로만 부르며, 내장 조작은 대상을 검사하고 OMV 파라미터를 직접 만든다. 애드온 패키지의 조작은 패키지 백엔드가 파라미터를 만들므로, maru는 선언한 메서드만 통과시키고 금지 표(`internal/addons/packagerpc.go`)로 직접적인 root 경로를 막으며 실행할 때마다 세션이 단계 확인을 거쳤는지 본다(`.claude/docs/addon-packages.md`)
 - 내장 애드온은 정적 목록으로 둔다(백엔드 `internal/addons/<id>/` + `internal/addons/builtin`, 프론트 `src/addons/<id>/` + `src/addons/registry.ts`). 컴파일 타임 타입(`AddonId`)을 유지하고 Go `plugin`은 쓰지 않는다. 프론트 보기를 처음 쓸 때 내려받는 것(`lazyView`)은 이 정적 목록 안의 지연 로딩이다. 저장소 밖 애드온은 애드온 패키지로만 더하며(런타임 등록, 샌드박스 iframe + 별도 프로세스), 내장 목록과 섞지 않는다
 - manifest 원본은 Go 구조체이고 프론트 목록(`manifests.gen.ts`)은 `make types`로 생성한다. 백엔드·프론트 id 일치는 Go 골든 테스트와 tsc(`Record<AddonId, …>`)가 검사한다
 - 플러그인 설치 여부는 `/usr/share/openmediavault/engined/rpc/<name>.inc`와 `/var/lib/dpkg/status`로 감지해 `/api/capabilities`로 내려준다
