@@ -140,7 +140,7 @@ What you look up while running Maru NAS after installation is on the [documentat
 | [Privileged helper](docs/en/helper.md) | The service that does the work needing user or root rights, and its security design |
 | [Security hardening mode](docs/en/security.md) | Password re-check and two-step verification (passkeys, authenticator apps, recovery codes), recovery |
 | [Passkey sign-in](docs/en/passkey-login.md) | Signing in with a passkey instead of a password, and its limits |
-| [Addon development](docs/en/addon-dev.md) | Building packages (manifest, screens, packing, security), the SDK and the `maru-addon` CLI |
+| [Addon development](docs/en/addon-dev.md) | Building packages (manifest, screens, backends, packing, security), the SDK and the `maru-addon` CLI |
 
 ## Contributing
 

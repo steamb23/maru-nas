@@ -38,7 +38,7 @@
 | `requires` | | `admin` (`true` shows the package to administrators only) and `plugins` (OMV plugins it needs) |
 | `rpc` | | `read` (OMV read methods to call) and `write` (write methods its actions call), up to 64 in total |
 | `actions` | | Action declarations (up to 32). They need a backend |
-| `backend` | | The backend declaration (`network`). This version does not install packages with a backend |
+| `backend` | | The backend declaration (`network`). See "Actions and backends" below |
 
 ## Texts
 
@@ -63,15 +63,15 @@
 
 ## OMV methods
 
-- Screens can call (`app.rpc`) only the methods in `rpc.read`. The format is `"Service.method"`, and duplicates are rejected.
+- Screens can call (`app.rpc`) only the methods in `rpc.read`. A backend can call them too, and during an action also the methods in `rpc.write`. The format is `"Service.method"`, and duplicates are rejected.
 - Check OMV service and method names and what they return in the OMV sources (`/usr/share/openmediavault/engined/rpc/*.inc`). Prefer methods that exist in every OMV 8 version (8.0 and later).
 - Some methods are not allowed for addon packages, such as running commands or scripts, installing packages and reading credentials ([Addon security](addon-security.md#methods-that-are-not-allowed)). A package that declares one is not installed.
 - Declaring as a write a method another addon declares as a read (or the other way around) makes the package "Not allowed".
-- `rpc.write` can only be used with actions, and actions need a backend. This version does not install backends, so write methods cannot be used yet either.
+- `rpc.write` can only be used with actions. Only the backend calls write methods, while it runs an action. Call methods that change OMV's configuration with `Host.Apply` so the change is applied instead of left pending ([Addon backends](addon-backend.md#calling-omv)).
 
 ## Actions and backends
 
-These fields are for a later version. For now only their format is checked, and packages with a backend are not installed.
+Actions run in the package's backend ([Addon backends](addon-backend.md)). In this version backends run only on the development server: installed dashboards accept packages with a backend, but show their apps as unavailable until a later version adds an install option that turns backends on.
 
 | Field | Contents |
 |---|---|
@@ -80,4 +80,10 @@ These fields are for a later version. For now only their format is checked, and 
 | `actions[].confirm` | Whether the dashboard asks before running it. If `true`, `confirmText` is required |
 | `actions[].timeoutSeconds` | The time for the whole action (1 to 600 seconds, 60 if omitted) |
 | `actions[].label`, `confirmText` | Texts per language (up to 40 and 300 characters) |
-| `backend.network` | Where the backend can connect: an empty array (no network), `"lan"`, `"loopback"` |
+| `backend.network` | Where the backend can connect: an empty array (no network), `"lan"`, `"loopback"`, or both |
+
+- `admin`: regular users cannot run the action. Make actions that change OMV settings administrator-only, because OMV applies configuration changes only for administrator sessions.
+- `confirm`: the dashboard's confirmation dialog, titled with the package name, appears every time the action runs. The screen cannot skip it.
+- If the package declares `rpc.write`, its actions also need a session that has confirmed the password again (or passed two-step verification, when the security policy for root elevation asks for it). If the session has not, the dashboard asks once before the first run, and the check lasts until the session ends ([Security hardening mode](security.md#security-policy)). Installing the package in the same session may already have done it.
+- `timeoutSeconds`: the action keeps running until it finishes or this time ends, even if the user closes the window.
+- `backend.network` takes effect when installed backends run in their sandbox ([Installed backends](addon-backend.md#installed-backends)). `"lan"` and `"loopback"` are shown as risks on the review screen ([Addon security](addon-security.md#what-the-dashboard-cannot-prevent)).

@@ -58,10 +58,13 @@ app.on('context', (ctx) => render(ctx))
 | `app.confirm({ message, title, confirmLabel, danger })` | 대시보드의 확인 대화상자. 확인하면 `true`. 제목은 "<패키지 이름> 애드온의 요청"이고 `title`은 문구 앞에 붙습니다 |
 | `app.notify(level, key, params)` | 대시보드 알림(토스트와 알림 센터). `level`은 `info`·`success`·`warning`·`error`, 문구는 번역 키입니다. 분당 3개까지. 알림을 누르면 패키지 창이 열립니다 |
 | `app.openWorkbench(route)` | OMV 워크벤치의 라우트를 이름 붙은 탭으로 엽니다(앞 슬래시 없이, 예: `storage/smart/devices`) |
-| `app.data(query)`, `app.action(name)`, `app.query(name)` | 패키지 백엔드의 데이터와 조작. 이후 버전에서 씁니다 |
+| `app.data(query)` | 패키지 백엔드의 데이터([애드온 백엔드](addon-backend.md)). `query`는 문자열 값의 객체(키 32개, 값 512자까지)이고 백엔드가 쿼리 문자열로 받습니다. 백엔드가 준 JSON(없으면 `null`)으로 끝납니다 |
+| `app.action(name, { target, input })` | manifest `actions`에 밝힌 조작을 백엔드에서 실행합니다. 사용자가 그 프레임을 방금 눌렀을 때만 받고(아래), 조작에 `confirm`이 있으면 대시보드가 먼저 묻습니다. `target`은 문자열(1024자까지), `input`은 JSON 객체(8KiB까지)입니다. 결과 없이 끝납니다 |
+| `app.query(name, { target, input })` | `app.action`처럼 조작을 실행하고 백엔드의 결과로 끝납니다. 사용자 조작이 필요 없으므로 창을 열 때 읽는 데 쓸 수 있습니다 |
 
 - 요청은 프레임마다 동시에 16개, 메시지 하나는 256KiB까지입니다. 그 밖의 요청은 1초에 50개까지 받습니다.
-- `confirm`과 `notify`는 창 보기에서만 씁니다.
+- `action`, `query`, `confirm`, `notify`는 창 보기에서만 씁니다.
+- 데이터 요청은 15초, 조작은 그 조작의 `timeoutSeconds`까지 기다립니다. 지금 버전에서 백엔드는 개발 서버에서만 돌고, 설치한 대시보드에서는 백엔드가 있는 패키지가 "쓸 수 없음"으로 보입니다.
 
 ## 창과 위젯
 
@@ -71,7 +74,7 @@ app.on('context', (ctx) => render(ctx))
 
 ## 사용자 조작이 필요한 요청
 
-`openWorkbench`(과 이후의 `action`)는 사용자가 그 프레임 안을 방금 눌렀을 때만 받습니다. 단추의 `click` 처리기 안에서 바로 부르세요.
+`action`과 `openWorkbench`는 사용자가 그 프레임 안을 방금 눌렀을 때만 받습니다. 단추의 `click` 처리기 안에서 바로 부르세요. `query`와 `data`는 사용자 조작이 필요 없습니다.
 
 - 프레임 안을 누르거나 Enter·Space 키를 누른 뒤 5초 안이어야 합니다.
 - 그 프레임에 포커스가 있고, 그 창이 맨 앞이고, 대화상자에 막혀 있지 않아야 합니다.
@@ -117,8 +120,20 @@ app.on('context', (ctx) => render(ctx))
 | `bridge_timeout`, `bridge_closed` | 대시보드가 답하지 않았거나 연결이 끊겼습니다 |
 | `rpc_forbidden` | manifest에 밝히지 않았거나 허용하지 않는 메서드입니다 |
 | `omv_error`, `omv_unavailable` | OMV가 오류를 돌려주었거나 OMV에 닿지 못했습니다 |
+| `addon_error` | 패키지 백엔드가 오류로 답했습니다(아래) |
+| `addon_no_backend` | 백엔드가 없는 패키지의 `data` |
+| `addon_backend_unavailable` | 백엔드가 떠 있지 않거나, 데이터 요청에 15초 안에 답하지 않았거나, 대시보드가 한꺼번에 처리하는 백엔드 요청이 너무 많습니다 |
+| `addon_backend_disabled`, `backend_unavailable` | 이 설치에서는 애드온 백엔드가 꺼져 있습니다 |
+| `action_timeout` | 조작이 `timeoutSeconds` 안에 끝나지 않았습니다 |
+| `action_busy` | 같은 대상의 같은 조작이 이미 진행 중입니다 |
+| `admin_required` | 관리자 전용 조작인데 사용자가 관리자가 아닙니다 |
+| `security_required` | OMV 쓰기를 선언한 패키지의 조작에서 사용자가 대시보드의 본인 확인을 마치지 않았습니다 |
 
 일반 사용자에게 관리자 전용 메서드를 부르면 OMV가 오류를 돌려줍니다. `context.admin`을 보고 부를지 정하세요.
+
+`addon_error`의 `message`는 백엔드 자신의 문구에서 제어 문자와 양방향 제어 문자를 지우고 300자로 자른 것이고, `addonCode`는 백엔드의 오류 코드(`config_dirty` 등)입니다. 이 문구를 보이거나 `addonCode`를 보고 화면 문구를 고르세요. 백엔드의 응답이 올바르지 않으면(비정상 종료, 정하지 않은 상태 등) `addonCode`가 없고 문구는 대시보드가 정한 짧은 영어 설명입니다. 그 밖의 코드에서 `message`는 실패한 요청을 나타내는 일반 문구 그대로이므로, 보일 내용은 `code`로 정하세요.
+
+본인 확인이 필요한 조작이면 대시보드가 자기 확인 창을 보이고 조작을 다시 보내므로, `security_required`는 사용자가 그 창을 취소했을 때만 옵니다.
 
 ## TypeScript와 Vite
 

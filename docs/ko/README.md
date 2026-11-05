@@ -38,7 +38,8 @@
 | [애드온 개발](addon-dev.md) | 동작 방식, 준비물, 빠른 시작, 개발 서버 |
 | [manifest](addon-manifest.md) | `manifest.json`의 모든 필드와 규칙 |
 | [화면 만들기](addon-frontend.md) | 진입 HTML, SDK API, 창과 위젯, 프레임의 제약, TypeScript + Vite |
+| [애드온 백엔드](addon-backend.md) | Go SDK, OMV 부르기, 다른 언어를 위한 프로토콜, 개발, 제약, 설치본 백엔드의 샌드박스 |
 | [묶기와 배포](addon-packaging.md) | 패키지 파일 구성과 한도, `maru-addon` CLI, 버전과 업데이트 |
-| [애드온 보안](addon-security.md) | 대시보드가 막는 것과 막지 못하는 것, 허용하지 않는 메서드 |
+| [애드온 보안](addon-security.md) | 대시보드가 막는 것과 막지 못하는 것, 허용하지 않는 메서드, 백엔드의 위험 |
 
 이 문서는 저장소의 `docs/ko/`에서 GitHub로 그대로 읽을 수 있고, [Zensical](https://zensical.org/)로 만든 [문서 사이트](https://steamb23.github.io/maru-nas/ko/)로도 볼 수 있습니다. 사이트는 보통 최신 릴리스(`stable`) 기준이고, 개발 중인 내용은 [`main`의 docs/ko/](https://github.com/steamb23/maru-nas/tree/main/docs/ko)에 먼저 반영됩니다. 릴리스 사이에는 사이트에 `main`의 문서가 먼저 올라가 있을 수 있습니다. 고치는 방법은 [CONTRIBUTING.ko.md](https://github.com/steamb23/maru-nas/blob/main/CONTRIBUTING.ko.md)의 "문서"에 있습니다.
