@@ -10,8 +10,8 @@ func stepUninstallConfirm(c *Context) error {
 	c.Info(L("Uninstalling "+serviceName, serviceName+" 제거"))
 	ok, err := c.confirm(prompt.Confirm{
 		ID: "uninstall",
-		Title: c.L("Stop the service and remove "+unitFile+", "+binDst+" and "+envFile+" (and the privileged helper if installed)?",
-			"서비스를 멈추고 "+unitFile+", "+binDst+", "+envFile+" 파일(설치했다면 권한 도우미도)을 지울까요?"),
+		Title: c.L("Stop the service and remove "+unitFile+", "+binDst+" and "+envFile+" (and the privileged helper and addon backends if installed)?",
+			"서비스를 멈추고 "+unitFile+", "+binDst+", "+envFile+" 파일(설치했다면 권한 도우미와 애드온 백엔드도)을 지울까요?"),
 	})
 	if err != nil {
 		return err

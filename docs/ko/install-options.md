@@ -39,6 +39,7 @@
 | `--elevate-group GROUP` | root 권한 상승에 `openmediavault-admin`과 함께 필요한 그룹입니다(기본값 `sudo`). `--helper`일 때만 씁니다. |
 | `--web-upgrade`, `--no-web-upgrade` | 대시보드에서 업그레이드하는 것을 허용하거나 허용하지 않습니다. `--helper`일 때만 씁니다([켜기](upgrade.md#켜기)). |
 | `--build-path PATH` | 대시보드에서 업그레이드할 때 빌드에 쓸 PATH입니다. 묻지 않으며, 일반 사용자로 `./install.sh`를 실행할 때마다 git·go·node·npm·make를 찾은 디렉터리로 정합니다. |
+| `--addon-backends`, `--no-addon-backends` | [애드온 패키지](addons.md)의 백엔드(서버에서 도는 프로그램)를 이 설치에서 실행하거나 실행하지 않습니다. 기본값은 실행하지 않는 것이며 묻지 않습니다. 한 번 켜면 이후 업그레이드와 `--reinstall`에서도 그대로이며, `--no-addon-backends`는 백엔드를 멈추고 그 구성을 지웁니다([애드온 백엔드](install.md#애드온-백엔드)). |
 
 ## 내부용
 

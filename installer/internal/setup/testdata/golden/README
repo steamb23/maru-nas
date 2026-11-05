@@ -2,7 +2,8 @@
 
 Go 설치기로 바꾸기 직전의 bash install.sh(커밋 28999d9)가 만든 설정 파일이다. Go 설치기가 같은 설정으로
 만드는 /etc/default/maru, /etc/default/maru-helper, maru.service, maru-helper.socket,
-maru-helper.service는 이 파일들과 바이트 단위로 같아야 한다(golden_test.go). 유일한 의도한 차이는
+maru-helper.service는 이 파일들과 바이트 단위로 같아야 한다(golden_test.go). 비교하는 파일 목록은 fake_test.go의
+configFiles다. 유일한 의도한 차이는
 레지스트리가 관리하지 않는 기존 MARU_* 줄을 파일 끝에 보존하는 것이며, 그런 줄이 있는 케이스는 여기에 두지 않는다.
 
 만든 방법: install.sh를 임시 디렉터리에 복사해 마지막 `main "$@"`를 지우고, env_get·terminal_settings가 읽는
@@ -30,6 +31,14 @@ ss·sleep을 셸 함수로 가로채 `main --service-install <args>`를 실행�
   helper-web-upgrade            helper-loopback + 대시보드에서 업그레이드(--web-upgrade, --build-path). bash install.sh에 없던
                                 설정이라 Go 설치기의 출력으로 만들었다. 다른 파일은 helper-loopback과 같고, 도우미 유닛에
                                 RuntimeDirectory 줄이, 새로 /etc/default/maru-upgrade와 maru-upgrade.service·.path가 생긴다
+  helper-addon-backends         helper-loopback + 애드온 백엔드(--addon-backends), 대시보드에서 업그레이드는 끔(설치기 복사본이
+                                애드온 백엔드 때문에만 설치된다). bash install.sh에 없던 설정이라 Go 설치기의 출력으로 만들었다.
+                                다른 파일은 helper-loopback과 같고, maru.service에 호스트 소켓 디렉터리를 root로 만들고 쓰기를
+                                여는 줄(ExecStartPre=+, ReadWritePaths)이 더해지며, 새로 백엔드 템플릿 8개(네트워크 단계 4개 ×
+                                소켓·서비스), maru-addons.path·.service,
+                                빈 동기화 결과(/var/lib/maru-addons/status.json, 가짜 시계의 시각)가 생긴다
 
 도우미를 설치하는 bash 케이스의 args 끝에는 --no-web-upgrade를 더했다(대시보드에서 업그레이드가 생긴 뒤 설정을 모두 준
 --service-install이 묻지 않게). 이 설정을 끄면 파일 출력은 bash와 같다.
+애드온 백엔드(--addon-backends)는 묻지 않는 설정이라 bash 케이스의 args에 더하지 않았다. 주지 않으면 새 설치는 끔이고,
+끈 설치의 파일 출력과 명령은 bash와 같다.

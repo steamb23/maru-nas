@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"regexp"
 	"slices"
 	"strings"
@@ -16,12 +17,13 @@ import (
 // 애드온 패키지 백엔드(.claude/docs/addon-packages.md의 "백엔드 프로세스")의 경로·파일 형식·검사 함수.
 // maru(백엔드 소켓에 붙고 호스트 소켓을 연다)와 설치기(유닛 템플릿, --addon-sync)가 함께 쓴다.
 
-// 운영 경로. 백엔드 소켓은 systemd 소켓 유닛이 만들고(SocketUser=maru, 0600), 호스트 소켓은 maru가 연다.
+// 운영 경로. 백엔드 소켓은 systemd 소켓 유닛이 만들고(SocketUser=maru 서비스 사용자, 0600), 호스트 소켓은 maru가 연다.
 const (
 	// AddonSocketDir는 백엔드 소켓 디렉터리다. 소켓은 <dir>/<id>.sock이다.
 	AddonSocketDir = "/run/maru-addon"
-	// AddonHostDir는 호스트 소켓 디렉터리다(maru.service의 RuntimeDirectory). 소켓은 <dir>/<id>/host.sock이고,
-	// 백엔드 유닛에는 <dir>/<id>만 /run/maru-host로 바인드된다.
+	// AddonHostDir는 호스트 소켓 디렉터리다(root 소유 0755. maru.service의 root ExecStartPre와 백엔드 소켓 유닛이
+	// 만들고, maru.service의 ReadWritePaths가 maru에 쓰기를 연다). 소켓은 <dir>/<id>/host.sock이고, <id>는 백엔드 소켓
+	// 유닛이 maru 서비스 사용자 소유로 만든다. 백엔드 유닛에는 <dir>/<id>만 /run/maru-host로 바인드된다.
 	AddonHostDir = "/run/maru-addon-host"
 	// AddonHostSocketName은 호스트 소켓 파일 이름이다.
 	AddonHostSocketName = "host.sock"
@@ -147,7 +149,8 @@ func ParseAddonBackends(data []byte) (AddonBackends, error) {
 	if err := dec.Decode(&b); err != nil {
 		return AddonBackends{}, fmt.Errorf("addon backends: %w", err)
 	}
-	if dec.More() {
+	// dec.More는 값 뒤에 붙은 ]·}를 놓치므로 다음 토큰이 끝인지 본다.
+	if _, err := dec.Token(); err != io.EOF {
 		return AddonBackends{}, errors.New("addon backends: trailing data")
 	}
 	if err := b.Validate(); err != nil {

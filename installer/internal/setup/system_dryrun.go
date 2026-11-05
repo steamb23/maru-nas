@@ -72,6 +72,18 @@ func (d *dryRunSystem) RemoveAll(path string) error {
 	return d.cmd("rm", "-rf", "--", path)
 }
 
+// TakeFile은 읽기만 하고 지우는 것은 보여 준다.
+func (d *dryRunSystem) TakeFile(path string, max int64) ([]byte, error) {
+	data, err := d.System.ReadNoFollow(path, max)
+	if rerr := d.RemoveAll(path); rerr != nil {
+		return nil, rerr
+	}
+	return data, err
+}
+
+// Lock은 잠그지 않는다(잠금 파일을 만들지 않고, 일반 사용자는 root 디렉터리에 만들 수도 없다).
+func (d *dryRunSystem) Lock(string, time.Duration) (func(), error) { return func() {}, nil }
+
 func (d *dryRunSystem) Run(name string, args ...string) error       { return d.cmd(name, args...) }
 func (d *dryRunSystem) RunQuiet(name string, args ...string) error  { return d.cmd(name, args...) }
 func (d *dryRunSystem) RunSilent(name string, args ...string) error { return d.cmd(name, args...) }

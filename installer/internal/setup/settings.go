@@ -14,6 +14,7 @@ var settings = Registry{
 	settingElevateGroup,
 	settingWebUpgrade,
 	settingBuildPath,
+	settingAddonBackends,
 	settingTerminal,
 }
 
@@ -31,5 +32,6 @@ const (
 	nameElevateGroup     = "elevate-group"
 	nameWebUpgrade       = "web-upgrade"
 	nameBuildPath        = "build-path"
+	nameAddonBackends    = "addon-backends"
 	nameTerminal         = "terminal"
 )

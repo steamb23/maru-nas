@@ -1,0 +1,20 @@
+# Written by maru install.sh
+[Unit]
+Description=Maru NAS addon backend socket %i (network: lan)
+
+[Socket]
+# maru connects here; the first connection starts maru-addon-lan@%i.service (the same name).
+ListenStream=/run/maru-addon/%i.sock
+# Only the maru service user can connect.
+SocketUser=maru
+SocketGroup=maru
+SocketMode=0600
+DirectoryMode=0755
+RemoveOnStop=yes
+# The host socket directory that the backend service binds. root creates it, so the
+# maru service user can only write inside <id>, never replace <id> itself.
+ExecStartPre=/usr/bin/install -d -o root -g root -m 0755 /run/maru-addon-host
+ExecStartPre=/usr/bin/install -d -o maru -g maru -m 0755 /run/maru-addon-host/%i
+
+[Install]
+WantedBy=sockets.target

@@ -81,10 +81,12 @@ If Maru NAS is already installed, it does not ask for settings and upgrades with
 | `/etc/default/maru`, `/etc/systemd/system/maru.service` | The [configuration](configuration.md) file and the systemd unit |
 | `/var/lib/maru` | The dashboard's own state: user settings (widget layout, shortcuts, screen settings), the administrators' global settings, uploaded wallpapers, sign-in methods of the security hardening mode |
 | `/usr/local/bin/maru-helper`, `/etc/default/maru-helper`, `maru-helper.socket` and `.service` | The [privileged helper](helper.md) (installed by default) |
-| `/usr/local/lib/maru/maru-install`, `/etc/default/maru-upgrade`, `maru-upgrade.service` and `.path` | When [upgrading from the dashboard](upgrade.md#upgrading-from-the-dashboard) is allowed |
+| `/etc/default/maru-upgrade`, `maru-upgrade.service` and `.path` | When [upgrading from the dashboard](upgrade.md#upgrading-from-the-dashboard) is allowed |
+| `maru-addon@.socket` and `.service` with the units of the same shape for each network permission, `maru-addons.path` and `.service`, `/var/lib/maru-addons` | When [addon backends](#addon-backends) are turned on |
+| `/usr/local/lib/maru/maru-install` | A root-owned copy of the installer that the two root services above run. When upgrading from the dashboard is allowed or addon backends are turned on |
 | `/var/lib/maru-upgrade` | The record of the installed version and commit, and the upgrade status |
 
-If you choose not to install the privileged helper or upgrading from the dashboard, what was installed before is removed.
+If you choose not to install the privileged helper or upgrading from the dashboard, or turn addon backends off, what was installed before is removed.
 
 ### Changing settings
 
@@ -96,6 +98,18 @@ It asks for every setting again, with the current settings as defaults.
 
 - If the settings change, the existing `/etc/default/maru` is backed up to `/etc/default/maru.bak-<time>`.
 - Lines the installer does not ask about are kept. Web terminal lines (`MARU_TERMINAL` and so on) keep their existing values, and other `MARU_*` lines you added by hand (for example `MARU_COOKIE_PATH`) move to the end of the file.
+
+### Addon backends
+
+[Addon packages](addons.md) can include a program that runs on the server (a backend). The install script does not install what runs backends by default and does not ask about it. To turn it on, run it with this option.
+
+```sh
+./install.sh --addon-backends
+```
+
+- If Maru NAS is already installed, it upgrades with the installed settings and turns backends on. Once turned on, they stay on in later upgrades and with `--reinstall`. The privileged helper is not required.
+- Each package's backend runs separately in a restricted environment (a sandbox). When you install or remove a package in the settings app, a root service (`maru-addons.service`) turns only that package's backend on or off.
+- To turn it off, run `./install.sh --no-addon-backends`. It stops the running backends and removes their units and the sync records (`/var/lib/maru-addons`). The data backends kept (`/var/lib/private/maru-addon`) is not deleted. But if you turn backends on again, which installation that data belongs to can no longer be confirmed, so a package's data is deleted before that package's backend starts again.
 
 ### Automation
 
@@ -123,5 +137,7 @@ If you run it as root (`sudo ./install.sh`, `sudo -i`, `su` and so on) and the r
 ```
 
 - It removes the services, executables and configuration. If the privileged helper and the dashboard upgrade service were installed, they are removed too, along with the installation record and the upgrade status (`/var/lib/maru-upgrade`).
-- `/var/lib/maru` and the service user are removed only after you confirm.
+- If addon backends were turned on, it stops the backends and removes their units and the sync records (`/var/lib/maru-addons`).
+- `/var/lib/maru`, the data addon backends kept (`/var/lib/private/maru-addon`) and the service user are removed only after you confirm.
+    - Even if you keep the backend data, after you install again and turn addon backends on, a package's data is deleted before that package's backend starts again. Keep it only if you will copy it by hand.
 - `/run/maru` is removed as well, so if you mounted this directory into a proxy container, recreate the proxy container after installing again.

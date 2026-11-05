@@ -1,0 +1,66 @@
+# Written by maru install.sh
+[Unit]
+Description=Maru NAS addon backend %i (no network)
+Requires=maru-addon@%i.socket
+After=maru-addon@%i.socket
+
+[Service]
+# Started by maru-addon@%i.socket when maru connects. The root sync (maru-addons.service)
+# enables and disables instances. The package's code runs as a dynamic user in this sandbox,
+# which must never be looser than maru.service.
+Type=simple
+ExecStart=/var/lib/maru/addons/%i/current/backend/run
+Restart=on-failure
+# The sync stops backends one at a time when it turns them off.
+TimeoutStopSec=15s
+DynamicUser=yes
+User=maru-a-%i
+# Backend data (STATE_DIRECTORY), kept across updates of the package.
+StateDirectory=maru-addon/%i
+UMask=0077
+
+# Under /run only this package's host socket directory (no D-Bus, resolved, avahi or other
+# filesystem sockets under /run anyone may connect to); under /var/lib/maru only this
+# package's files. root creates the host socket directory %i inside a root directory (see
+# the socket unit), so maru cannot swap it for another directory. /var/lib/maru/addons/%i
+# is in maru's state directory, so maru can; but ExecStart must resolve inside it, which
+# only works for a directory maru can already write.
+TemporaryFileSystem=/run:ro
+BindPaths=/run/maru-addon-host/%i:/run/maru-host
+TemporaryFileSystem=/var/lib/maru:ro
+BindReadOnlyPaths=/var/lib/maru/addons/%i
+ProtectHome=yes
+# Shared folders may be readable by other users; OMV and maru records are not for packages.
+InaccessiblePaths=-/srv -/export -/mnt -/media -/var/lib/openmediavault -/etc/openmediavault -/var/lib/maru-upgrade -/var/lib/maru-addons
+# Other processes are hidden; system-wide values such as /proc/meminfo stay readable.
+ProtectProc=invisible
+PrivateUsers=yes
+PrivateNetwork=yes
+RestrictAddressFamilies=AF_UNIX
+
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+ProtectSystem=strict
+PrivateTmp=yes
+PrivateDevices=yes
+# PrivateIPC does not cover POSIX shared memory, and the private /dev is expected to keep the
+# host's /dev/shm, which every service could then share; give each backend its own.
+TemporaryFileSystem=/dev/shm:mode=1777,nosuid,nodev,noexec
+PrivateIPC=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+
+MemoryMax=256M
+TasksMax=64
+CPUWeight=20

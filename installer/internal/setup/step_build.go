@@ -68,7 +68,7 @@ func requireBinary(c *Context) error {
 			return err
 		}
 	}
-	if webUpgradeWanted(c) {
+	if installerCopyWanted(c) {
 		if err := check(c.installerBinSrc()); err != nil {
 			return err
 		}

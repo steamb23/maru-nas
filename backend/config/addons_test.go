@@ -55,6 +55,9 @@ func TestParseAddonBackends(t *testing.T) {
 	if err != nil || len(b.Backends) != 1 || b.Backends[0].ID != "ups" || len(b.Purge) != 1 {
 		t.Fatalf("ParseAddonBackends(ok) = %+v, %v", b, err)
 	}
+	if _, err := ParseAddonBackends([]byte(ok + "\n")); err != nil {
+		t.Fatalf("ParseAddonBackends(ok + newline) = %v", err)
+	}
 	bad := map[string]string{
 		"format":          `{"format":2,"backends":[],"purge":[]}`,
 		"unknown field":   `{"format":1,"backends":[],"purge":[],"extra":1}`,
@@ -70,6 +73,8 @@ func TestParseAddonBackends(t *testing.T) {
 		"purge id":        `{"format":1,"backends":[],"purge":["../x"]}`,
 		"purge duplicate": `{"format":1,"backends":[],"purge":["a","a"]}`,
 		"trailing":        `{"format":1,"backends":[],"purge":[]} {}`,
+		"trailing ]":      `{"format":1,"backends":[],"purge":[]}]`,
+		"trailing }":      `{"format":1,"backends":[],"purge":[]}}`,
 		"too large":       `{"format":1,"backends":[],"purge":[]}` + strings.Repeat(" ", AddonBackendsMaxBytes),
 	}
 	for name, data := range bad {

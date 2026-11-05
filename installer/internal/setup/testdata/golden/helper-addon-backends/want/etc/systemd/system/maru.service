@@ -1,0 +1,47 @@
+# Written by maru install.sh
+[Unit]
+Description=Maru NAS dashboard for openmediavault
+After=network.target
+Wants=maru-helper.socket
+After=maru-helper.socket
+
+[Service]
+Type=simple
+User=maru
+Group=maru
+EnvironmentFile=/etc/default/maru
+ExecStart=/usr/local/bin/maru
+Restart=on-failure
+RestartSec=5
+
+# Per-user preferences (STATE_DIRECTORY is passed to maru)
+StateDirectory=maru
+# Unix socket directory. Preserve keeps the same directory across restarts so a
+# container bind mount of /run/maru keeps working.
+RuntimeDirectory=maru
+RuntimeDirectoryPreserve=yes
+
+# Host sockets of addon backends. /run/maru-addon-host/<id> is bound into that package's
+# backend unit, so this user must not be able to replace <id> or anything above it:
+# the directory is root's (created here as root, before the sandbox is set up) and
+# each backend's socket unit creates <id> for this user.
+ExecStartPre=+/usr/bin/install -d -o root -g root -m 0755 /run/maru-addon-host
+ReadWritePaths=/run/maru-addon-host
+
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+# PrivateDevices=yes would hide /dev/disk/by-label (filesystem labels); deny device access instead.
+DevicePolicy=closed
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictSUIDSGID=yes
+RestrictRealtime=yes
+LockPersonality=yes
+SystemCallArchitectures=native
+
+[Install]
+WantedBy=multi-user.target

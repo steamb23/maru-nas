@@ -40,6 +40,20 @@ type fakeSystem struct {
 	buildInfo map[string]*debug.BuildInfo
 	health    error
 	sleeps    int
+	// groupIDs는 GroupID가 돌려줄 그룹의 gid다. 없는 그룹은 찾지 못한 것이다.
+	groupIDs map[string]int
+	// fail은 실패시킬 명령(명령 기록 꼴)과 그 오류다. 기록한 뒤 실패하고, 아래 흉내도 내지 않는다.
+	fail map[string]error
+	// units면 systemctl enable --now·disable이 백엔드 소켓 인스턴스의 sockets.target.wants 링크를 만들고 지우고,
+	// enable --now·start가 그 유닛을 active로, stop이 이름을 준 유닛을 멈춘 것으로 바꾸며, systemctl clean --what=state가
+	// 백엔드 데이터를 지운다(root 동기화 시험).
+	units bool
+	// cleanKeeps면 units에서도 systemctl clean이 데이터를 지우지 않는다(성공했다고 하고 아무것도 지우지 않는 경우).
+	cleanKeeps bool
+	// onRun은 시스템을 바꾸는 명령을 기록한 뒤 부른다(시험이 실행 도중 파일을 바꾸거나 잠금을 확인한다).
+	onRun func(cmd string)
+	// keepRequests면 TakeFile이 요청을 지우지 못한 것처럼 errRequestKept로 감싼 오류를 돌려준다(파일은 그대로 둔다).
+	keepRequests bool
 }
 
 func newFake(t *testing.T) *fakeSystem {
@@ -57,6 +71,8 @@ func newFake(t *testing.T) *fakeSystem {
 		portsInUse: map[string]bool{},
 		buildInfo:  map[string]*debug.BuildInfo{},
 		outputs:    map[string]string{},
+		groupIDs:   map[string]int{},
+		fail:       map[string]error{},
 	}
 }
 
@@ -91,6 +107,13 @@ func (f *fakeSystem) record(name string, args ...string) {
 
 func (f *fakeSystem) Run(name string, args ...string) error {
 	f.record(name, args...)
+	line := commandLine(name, args)
+	if f.onRun != nil {
+		f.onRun(line)
+	}
+	if err, ok := f.fail[line]; ok {
+		return err
+	}
 	switch name {
 	case "useradd":
 		u := args[len(args)-1]
@@ -98,8 +121,47 @@ func (f *fakeSystem) Run(name string, args ...string) error {
 		f.groups[u] = u
 	case "userdel":
 		delete(f.users, args[len(args)-1])
+	case "systemctl":
+		if f.units {
+			f.systemctl(args)
+		}
 	}
 	return nil
+}
+
+// systemctl은 백엔드 인스턴스에 대한 systemctl의 파일 쪽 결과를 흉내 낸다(units). 소켓을 켜면 sockets.target.wants에
+// 템플릿을 가리키는 링크가 생기고 끄면 지워진다. clean --what=state는 DynamicUser의 StateDirectory(private 아래의
+// 디렉터리와 바깥의 링크)를 지운다.
+func (f *fakeSystem) systemctl(args []string) {
+	switch {
+	case len(args) == 3 && args[0] == "enable" && args[1] == "--now":
+		if unit, _, ok := strings.Cut(strings.TrimSuffix(args[2], ".socket"), "@"); ok && strings.HasSuffix(args[2], ".socket") {
+			_ = os.MkdirAll(f.path(addonWantsDir), 0o755)
+			_ = os.Symlink("/etc/systemd/system/"+unit+"@.socket", f.path(addonWantsDir+"/"+args[2]))
+			f.active[args[2]] = true
+		}
+	case len(args) == 2 && args[0] == "start":
+		f.active[args[1]] = true
+	case len(args) > 1 && args[0] == "stop":
+		for _, u := range args[1:] {
+			delete(f.active, u)
+		}
+	case len(args) == 2 && args[0] == "disable" && strings.HasSuffix(args[1], ".socket"):
+		_ = os.Remove(f.path(addonWantsDir + "/" + args[1]))
+	case len(args) == 3 && args[0] == "clean" && args[1] == "--what=state" && !f.cleanKeeps:
+		name, _ := strings.CutSuffix(args[2], ".service")
+		if _, id, ok := strings.Cut(name, "@"); ok {
+			_ = os.RemoveAll(f.path(addonPrivateDataDir + "/" + id))
+			_ = os.Remove(f.path(addonDataDir + "/" + id))
+		}
+	}
+}
+
+func (f *fakeSystem) TakeFile(p string, max int64) ([]byte, error) {
+	if f.keepRequests {
+		return nil, fmt.Errorf("%w: remove %s: read-only file system", errRequestKept, p)
+	}
+	return f.fsOps.TakeFile(p, max)
 }
 
 func (f *fakeSystem) RunQuiet(name string, args ...string) error  { return f.Run(name, args...) }
@@ -167,6 +229,11 @@ func (f *fakeSystem) HealthCheck(string) error              { return f.health }
 func (f *fakeSystem) Sleep(time.Duration)                   { f.sleeps++ }
 func (f *fakeSystem) Now() time.Time                        { return time.Date(2026, 10, 18, 9, 30, 0, 0, time.UTC) }
 func (f *fakeSystem) DryRun() bool                          { return false }
+
+func (f *fakeSystem) GroupID(name string) (int, bool, error) {
+	gid, ok := f.groupIDs[name]
+	return gid, ok, nil
+}
 
 // put은 가짜 루트에 파일을 만든다.
 func (f *fakeSystem) put(t *testing.T, path, content string, perm fs.FileMode) {
@@ -269,8 +336,8 @@ func newTestContext(t *testing.T, sys System, p prompt.Prompter, args ...string)
 }
 
 // configFiles는 설치기가 쓰는 설정 파일이다(골든 비교 대상).
-var configFiles = []string{envFile, helperEnvFile, unitFile, helperSocketUnit, helperServiceUnit,
-	config.UpgradeEnvFile, upgradeServiceUnit, upgradePathUnit}
+var configFiles = append([]string{envFile, helperEnvFile, unitFile, helperSocketUnit, helperServiceUnit,
+	config.UpgradeEnvFile, upgradeServiceUnit, upgradePathUnit, config.AddonSyncStatusFile}, addonUnitFiles()...)
 
 // compareTree는 가짜 루트의 설정 파일이 want 디렉터리(가짜 루트 기준 트리)와 같은지 본다.
 func compareTree(t *testing.T, f *fakeSystem, want string) {
