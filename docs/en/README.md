@@ -38,7 +38,8 @@ Maru NAS is a desktop-like web dashboard that runs on OpenMediaVault 8. If you a
 | [Addon development](addon-dev.md) | How it works, requirements, quick start, the development server |
 | [Manifest](addon-manifest.md) | Every field of `manifest.json` and its rules |
 | [Building screens](addon-frontend.md) | The entry HTML, the SDK API, windows and widgets, frame restrictions, TypeScript + Vite |
+| [Addon backends](addon-backend.md) | The Go SDK, calling OMV, the protocol for other languages, development, constraints, the sandbox of installed backends |
 | [Packing and distribution](addon-packaging.md) | Package file layout and limits, the `maru-addon` CLI, versions and updates |
-| [Addon security](addon-security.md) | What the dashboard prevents and what it cannot, methods that are not allowed |
+| [Addon security](addon-security.md) | What the dashboard prevents and what it cannot, methods that are not allowed, backend risks |
 
 You can read these pages on GitHub as they are in the repository's `docs/en/`, or on the [documentation site](https://steamb23.github.io/maru-nas/en/) built with [Zensical](https://zensical.org/). The site normally follows the latest release (`stable`), and work in progress shows up first in [docs/en/ on `main`](https://github.com/steamb23/maru-nas/tree/main/docs/en). Between releases, the site may already show the documentation of `main`. How to edit them is under "Documentation" in [CONTRIBUTING.md](https://github.com/steamb23/maru-nas/blob/main/CONTRIBUTING.md).

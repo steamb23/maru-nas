@@ -2,7 +2,7 @@
 
 Addon packages are addons built outside the Maru NAS repository. Like built-in apps they become windows in "All apps" and desktop widgets, and an administrator installs them by uploading a file (`.maru-addon`) in the Settings app. The dashboard does not restart.
 
-A package's screens run in a sandbox separate from the dashboard and can only make the OMV reads the package declared in advance. Still, package code is not code the dashboard has reviewed. Review the permissions and install packages only from authors you trust. How to build a package is in [Addon development](addon-dev.md).
+A package's screens run in a sandbox separate from the dashboard, and a package can only call the OMV methods it declared in advance. Still, package code is not code the dashboard has reviewed. Review the permissions and install packages only from authors you trust. How to build a package is in [Addon development](addon-dev.md).
 
 ## Installing
 
@@ -14,7 +14,8 @@ A package's screens run in a sandbox separate from the dashboard and can only ma
 - Package files can be up to 64 MiB. The reverse proxy's request body size limit must also be larger than that ([Proxy requirements](reverse-proxy.md#proxy-requirements)).
 - An uploaded file stays on the server for up to 30 minutes while you review it and is deleted if you do not install it.
 - Packages cannot be installed while the dashboard runs without a state directory (a development server, for example).
-- This version installs only packages without a backend (a program that runs on the server). Packages with a backend are rejected with "This dashboard does not support packages with a backend yet."
+- Packages with a backend (a program that runs on the server) can be installed, but this version does not run backends on installed dashboards. The review screen warns "Addon backends are turned off on this installation. You can install it, but it can't be used until backends are turned on." After installing, the app shows "This app can't be used because addon backends are turned off on this installation." and its widgets "Backend turned off". An install option that turns backends on comes in a later version.
+- A package with a backend that has no executable for this server's architecture is not installed ("The package has no backend for this server's architecture.").
 
 ## Reading the review screen
 
@@ -28,9 +29,10 @@ The name, description and author on the review screen are written by the package
 | OMV writes | OMV settings the package can change. If there are any, they are listed as a risk |
 | Actions | Operations the package can run (such as restarting a service) |
 | Backend | Whether the package includes a program that runs on the server |
-| Backend network | Where the backend can connect: "LAN" (other devices on this network), "Other services on this server (loopback)" |
+| Backend network | Where the backend can connect: "No network access", "LAN" (other devices on this network), "Other services on this server (loopback)" |
 
 - Always read the risks in the red box. OMV write permissions call for trust close to root (some settings an OMV administrator can change end up running commands as root).
+- For packages with a backend the risks also say that the backend is shared by all users (values read with an administrator's session may be shown to regular users), and, with network access, that "LAN" may reach the internet through the LAN's router or a proxy and that loopback reaches the other services on this server.
 - Uploading a new version of the same package shows "Review addon update" with the installed and new versions and the permission changes ("New", "Removed"). It tells you when the permissions widen.
 - Warnings at the top of the review screen tell you when the author changed, the version is older than the installed one, the version number is the same but the contents differ, or the file is the same as the installed one. They do not block installing.
 
@@ -73,5 +75,7 @@ Installed packages and the values users saved in them are in the dashboard's sta
 
 - Package screens cannot reach the dashboard's cookies, storage or other apps' screens, and cannot send network requests themselves. Some browser features (WebRTC, DNS prefetching) are not fully blocked, though, so assume that values shown in a package screen can reach its author.
 - The OMV values a package can read are limited to the "OMV reads" on the review screen, but it reads everything those methods return.
+- A package's actions that change OMV settings run with the signed-in user's OMV permissions. The dashboard asks for the password again (or two-step verification, if the security policy for root elevation requires it) once per session before the first of them, and the check lasts until the session ends.
+- A backend is shared by all users and can show regular users values it read with an administrator's session. Once installed backends run (a later version), a backend with "LAN" access can also reach Docker networks and, through the LAN's resolvers and proxies, the internet, and one with loopback access can reach OMV's web interface, SSH and the dashboard itself ([Addon security](addon-security.md#what-the-dashboard-cannot-prevent)).
 - The dashboard cannot stop a fake input form drawn inside a package window.
 - There are no signatures, catalog or automatic updates. Check where you got the file and its SHA-256.

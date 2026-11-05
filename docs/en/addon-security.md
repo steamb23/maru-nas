@@ -13,15 +13,24 @@ The dashboard works on the assumption that package code is not trusted. This pag
 ### Requests to the dashboard
 
 - A request is handled only in the name of the package that loaded the frame. Writing another package's id in a message has no effect.
-- Requests that need a user action (opening the workbench, and actions later) are accepted only right after the user pressed that frame. Widgets can only make read requests.
+- `app.action` and opening the workbench are accepted only right after the user pressed that frame. `app.query` runs the same actions without that, so give actions that change something `confirm`, and `admin` when only administrators should run them. Widgets can only make read requests.
 - Request size, the number of requests at once and the request rate are limited ([Building screens](addon-frontend.md#api)).
 - Confirmation dialogs, notifications and title bars the dashboard shows for a package carry the package name and an "Addon package" mark.
 
 ### OMV calls
 
-- Packages call only the methods declared in the manifest's `rpc.read`. The dashboard makes the call with the signed-in user's OMV session, so the OMV session ID never reaches the package and the package cannot go beyond that user's OMV permissions.
+- Screens call only the methods declared in the manifest's `rpc.read`, and backends only those in `rpc.read` and, while they run an action, `rpc.write`. The dashboard makes the call with the signed-in user's OMV session, so the OMV session ID never reaches the package and the package cannot go beyond that user's OMV permissions.
 - The general RPC relay the built-in addons use does not pass package methods.
-- OMV writes are made only by actions (a later version), and actions of packages that declare writes ask the user to confirm their identity every time they run.
+- OMV writes are made only by the backend while it runs an action. The dashboard checks the action's administrator flag and shows its confirmation dialog (if the action has `confirm`) before the request reaches the backend, every time.
+- Actions of packages that declare OMV writes also need a session that has confirmed the password again (or passed two-step verification, when the security policy for root elevation asks for it), even when the security policy is off. The dashboard asks once per session, and the check lasts until the session ends. A stolen session cookie alone is not enough to make a package write to OMV.
+
+### Backends
+
+- The dashboard never runs a package's executable itself. In this version backends run only on the development server; installed backends come in a later version and will run in a sandbox of their own ([Addon backends](addon-backend.md#installed-backends)).
+- Backends never get the OMV session ID, passwords, dashboard cookies or root. They call OMV through the dashboard's host socket with a call token made for each request. The token works only until that request ends and only on that package's host socket, so a backend cannot call OMV on its own or with another package's rights.
+- The host socket runs only declared methods (only reads during data requests) and checks the table of methods that are not allowed again. Applying configuration is refused while OMV has pending changes, so a package never deploys changes someone else made.
+- Backend answers pass only as JSON with a fixed set of statuses. Error codes are checked, messages are stripped of control and bidirectional control characters and cut to 300 characters, and response headers are dropped. A backend cannot sign users out or imitate the dashboard's error codes, and its messages appear only inside its own frame, not in the dashboard's dialogs or notifications.
+- Every action is recorded in the server log with the user, package, action, target and result.
 
 ### Methods that are not allowed
 
@@ -41,7 +50,7 @@ This table blocks only the direct paths. OMV writes that are not in it (extra op
 
 ### Installation and storage
 
-- Only OMV administrators install packages, and installing, updating and turning a package back on ask for the password again (and a security method, if one is registered).
+- Only OMV administrators install packages, and installing, updating and turning a package back on ask for the password again (and a security method, if one is registered). Packages with OMV writes, a backend or network access also need the check their write actions need.
 - Package files are checked for paths, formats and sizes, unpacked separately and then moved into place. File permissions from the archive are not used.
 - The values a package saves per user are kept separately per package and user. A package that was removed and installed again (possibly another author's package with the same id) cannot read the earlier values.
 
@@ -51,6 +60,11 @@ This table blocks only the direct paths. OMV writes that are not in it (extra op
 - Fake input forms: the dashboard cannot tell a password field drawn inside a package window apart. The dashboard tells users it never asks for a password inside a package window.
 - Values from declared methods: declaring `System.getInformation` reads its whole result, including values OMV gives only to administrators when an administrator opens it.
 - The author's identity: there are no signatures. Administrators check where they got the file and its SHA-256.
+- A shared backend: one backend serves every user. It can show values it read with an administrator's session to regular users, and the data it keeps is shared by everyone. It also sees the results of its declared methods for every user who uses the package.
+- The backend network of installed backends (a later version), as the manifest's `backend.network` grants it:
+    - `lan` reaches the devices on the LAN, and through the LAN's DNS resolvers and proxies it can reach the internet. Docker's networks on this server normally use the same private range (172.16.0.0/12), so their containers are reachable too.
+    - `loopback` reaches every service on this server that listens on loopback: OMV's web server, sshd and the dashboard's own listener (where a backend could try passwords), and the local DNS resolver.
+    - With either grant the backend shares the server's network namespace, so it can also reach abstract Unix sockets there (such as those of container tools).
 
 ## What authors should do
 
@@ -58,4 +72,7 @@ This table blocks only the direct paths. OMV writes that are not in it (extra op
 - Handle administrator-only values by checking `context.admin`. Do not leave administrator values in regular users' screens.
 - Do not ask for passwords, tokens or OMV account information in your screens or keep them in saved values.
 - Put strings OMV returned (host names, shared folder names and so on) and user input into the page with `textContent`, not `innerHTML`. Even inside the frame they can break another user's screen.
-- Do not build features that reach external services. Screens cannot reach the network, and Maru NAS is meant for the local network only.
+- In a backend, decide what to return from each request's user and administrator flag. Do not keep values read with an administrator's session to return them to regular users, and do not keep users' secrets in the data directory.
+- Check an action's `target` and `input` in the backend before putting them into OMV parameters. Make actions that change OMV settings administrator-only with `confirm`, and apply them with `Host.Apply`.
+- Ask for no network unless the backend needs it, and explain `lan` or `loopback` in the README. Never log the call token.
+- Do not build features that reach external services. Screens cannot reach the network, backends have no grant for the internet, and Maru NAS is meant for the local network only.

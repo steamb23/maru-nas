@@ -140,7 +140,7 @@ git pull
 | [권한 도우미](docs/ko/helper.md) | 사용자 권한·root 권한이 필요한 일을 맡는 서비스와 그 보안 설계 |
 | [보안 강화 모드](docs/ko/security.md) | 비밀번호 재확인과 2차 인증(패스키, 인증 앱, 복구 코드), 복구 |
 | [패스키로 로그인](docs/ko/passkey-login.md) | 비밀번호 없이 패스키로 로그인하기와 그 한계 |
-| [애드온 개발](docs/ko/addon-dev.md) | 패키지 만들기(manifest, 화면, 묶기, 보안), SDK와 `maru-addon` CLI |
+| [애드온 개발](docs/ko/addon-dev.md) | 패키지 만들기(manifest, 화면, 백엔드, 묶기, 보안), SDK와 `maru-addon` CLI |
 
 ## 기여하기
 

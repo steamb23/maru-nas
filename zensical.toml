@@ -42,6 +42,7 @@ nav = [
     "addon-dev.md",
     "addon-manifest.md",
     "addon-frontend.md",
+    "addon-backend.md",
     "addon-packaging.md",
     "addon-security.md",
   ] },

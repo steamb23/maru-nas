@@ -58,10 +58,13 @@ app.on('context', (ctx) => render(ctx))
 | `app.confirm({ message, title, confirmLabel, danger })` | The dashboard's confirmation dialog, `true` if confirmed. Its title is "Request from the <package name> addon", and `title` goes in front of the message |
 | `app.notify(level, key, params)` | A dashboard notification (toast and notification center). `level` is `info`, `success`, `warning` or `error`, and the text is a translation key. Up to 3 per minute. Clicking it opens the package window |
 | `app.openWorkbench(route)` | Opens an OMV workbench route in the named tab (no leading slash, for example `storage/smart/devices`) |
-| `app.data(query)`, `app.action(name)`, `app.query(name)` | Data and actions of the package backend, for a later version |
+| `app.data(query)` | Data from the package backend ([Addon backends](addon-backend.md)). `query` is an object of strings (up to 32 keys, 512 characters each) that the backend receives as the query string. Resolves with the backend's JSON (`null` if there is none) |
+| `app.action(name, { target, input })` | Runs an action declared in the manifest's `actions` in the backend. Accepted only right after the user pressed the frame (below), and the dashboard asks first if the action has `confirm`. `target` is a string (up to 1024 characters) and `input` a JSON object (up to 8 KiB). Resolves with nothing |
+| `app.query(name, { target, input })` | Runs an action like `app.action` and resolves with the backend's result. It does not need a user action, so a window can use it to read when it opens |
 
 - Each frame can have 16 requests waiting at once, and a message can be up to 256 KiB. Other requests are accepted up to 50 per second.
-- `confirm` and `notify` work only in window views.
+- `action`, `query`, `confirm` and `notify` work only in window views.
+- Data requests wait up to 15 seconds and actions up to their `timeoutSeconds`. In this version backends run only on the development server; on installed dashboards a package with a backend shows as unavailable.
 
 ## Windows and widgets
 
@@ -71,7 +74,7 @@ app.on('context', (ctx) => render(ctx))
 
 ## Requests that need a user action
 
-`openWorkbench` (and `action` later) is accepted only right after the user pressed inside that frame. Call it directly in a button's `click` handler.
+`action` and `openWorkbench` are accepted only right after the user pressed inside that frame. Call them directly in a button's `click` handler. `query` and `data` do not need a user action.
 
 - It must be within 5 seconds of a press inside the frame or an Enter or Space key.
 - The frame must have focus, its window must be in front and not blocked by a dialog.
@@ -117,8 +120,20 @@ Failed requests reject with a `MaruError` (`status`, `code`, `addonCode`, `messa
 | `bridge_timeout`, `bridge_closed` | The dashboard did not answer, or the connection was lost |
 | `rpc_forbidden` | The method is not declared in the manifest or is not allowed |
 | `omv_error`, `omv_unavailable` | OMV returned an error, or OMV could not be reached |
+| `addon_error` | The package backend answered with an error (below) |
+| `addon_no_backend` | `data` in a package without a backend |
+| `addon_backend_unavailable` | The backend is not running, did not answer a data request within 15 seconds, or the dashboard is handling too many backend requests at once |
+| `addon_backend_disabled`, `backend_unavailable` | Addon backends are turned off on this installation |
+| `action_timeout` | The action did not finish within its `timeoutSeconds` |
+| `action_busy` | Another run of the same action with the same target is in progress |
+| `admin_required` | The action is administrator-only and the user is not an administrator |
+| `security_required` | The user did not complete the dashboard's identity check for an action of a package that declares OMV writes |
 
 OMV returns an error when a regular user calls an administrator-only method. Check `context.admin` before calling one.
+
+For `addon_error`, `message` is the backend's own message, with control and bidirectional control characters removed and cut to 300 characters, and `addonCode` is the backend's error code (such as `config_dirty`). Show the message or pick your own text by `addonCode`. When the backend's answer was not valid (a crash, an unexpected status), there is no `addonCode` and the message is a short English description from the dashboard. For every other code, `message` stays a generic description of the failed request, so decide what to show by `code`.
+
+If an action needs the identity check, the dashboard shows its own dialog and runs the action again, so `security_required` arrives only when the user cancels it.
 
 ## TypeScript and Vite
 
