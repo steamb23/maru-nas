@@ -58,6 +58,10 @@ type Context struct {
 	uninstallUser  string
 	// upgradePathChanged는 대시보드 업그레이드의 경로 유닛을 새로 쓰거나 바꿨는지다(다시 시작할지).
 	upgradePathChanged bool
+	// addonPathChanged는 애드온 백엔드 동기화의 경로 유닛을 새로 쓰거나 바꿨는지다(다시 시작할지).
+	addonPathChanged bool
+	// addonChanged는 네트워크 단계(유닛 템플릿 이름)별로 백엔드 템플릿을 바꿨는지다(켜진 인스턴스를 다시 시작할지).
+	addonChanged map[string]addonTemplateChange
 }
 
 // L은 현재 언어의 문구다.
@@ -189,6 +193,8 @@ type Installed struct {
 	HelperServiceExists bool
 	// UpgradeEnv는 /etc/default/maru-upgrade다(대시보드에서 업그레이드). nil이면 없다(꺼져 있다).
 	UpgradeEnv *EnvFile
+	// AddonBackends는 애드온 백엔드의 동기화 디렉터리(config.AddonSyncDir)가 있는지다(켜져 있다).
+	AddonBackends bool
 }
 
 // readInstalled는 기존 설치를 읽는다.
@@ -211,6 +217,7 @@ func readInstalled(sys System) (*Installed, error) {
 	if fi, err := sys.Stat(helperServiceUnit); err == nil && fi.Mode().IsRegular() {
 		inst.HelperServiceExists = true
 	}
+	inst.AddonBackends = dirExists(sys, config.AddonSyncDir)
 	return inst, nil
 }
 
@@ -218,4 +225,10 @@ func readInstalled(sys System) (*Installed, error) {
 func exists(sys System, path string) bool {
 	fi, err := sys.Stat(path)
 	return err == nil && fi.Mode().IsRegular()
+}
+
+// dirExists는 디렉터리가 있는지다(bash의 [[ -d ]]).
+func dirExists(sys System, path string) bool {
+	fi, err := sys.Stat(path)
+	return err == nil && fi.IsDir()
 }

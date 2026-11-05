@@ -35,6 +35,13 @@ type System interface {
 	ReadFile(path string) ([]byte, error)
 	Stat(path string) (fs.FileInfo, error)
 	ReadDir(path string) ([]fs.DirEntry, error)
+	// ReadNoFollow는 다른 계정이 쓸 수 있는 파일을 읽는다. 마지막 구성 요소가 심볼릭 링크면 따라가지 않고, 일반 파일만
+	// max 바이트까지 읽는다(FIFO에서 멈추지 않게 O_NONBLOCK). dry-run에서도 실제로 읽는다.
+	ReadNoFollow(path string, max int64) ([]byte, error)
+	// TakeFile은 요청 파일을 ReadNoFollow처럼 읽고 내용과 상관없이 지운다(경로 유닛의 PathExists=가 다시 실행하지
+	// 않게). 없으면 fs.ErrNotExist다. 일반 파일이 아니면 따라가지 않고 통째로 지운 뒤 오류다. 지우지 못하면
+	// errRequestKept로 감싼 오류다.
+	TakeFile(path string, max int64) ([]byte, error)
 	// ReadBuildInfo는 Go 실행 파일에 들어 있는 빌드 정보(커밋 등)를 읽는다. dry-run에서도 실제로 읽는다.
 	ReadBuildInfo(path string) (*debug.BuildInfo, error)
 	// WriteFile은 path를 root:root 소유로 원자적으로(같은 디렉터리의 임시 파일 → 이름 바꾸기) 쓴다.
@@ -48,6 +55,10 @@ type System interface {
 	Remove(path string) error
 	// RemoveAll은 rm -rf다.
 	RemoveAll(path string) error
+	// Lock은 path(없으면 0600으로 만든다. 디렉터리는 있어야 한다)에 배타 잠금(flock)을 잡는다. 다른 쪽이 잡고 있으면 wait
+	// 동안 기다린다. 잡은 뒤 path가 그 파일을 그대로 가리키는지 다시 본다(그 사이에 지우고 다시 만들었으면 새 파일을
+	// 다시 잡는다). 돌려준 함수가 잠금을 푼다. dry-run은 잠그지 않는다.
+	Lock(path string, wait time.Duration) (unlock func(), err error)
 
 	// Run은 시스템을 바꾸는 명령을 실행한다. 출력을 그대로 보여 준다.
 	Run(name string, args ...string) error
@@ -74,6 +85,8 @@ type System interface {
 	PrimaryGroup(name string) (string, error)
 	// GroupExists는 그룹이 있는지다.
 	GroupExists(name string) (bool, error)
+	// GroupID는 그룹의 gid를 NSS까지 보고 찾는다(getent group). 없으면 false다.
+	GroupID(name string) (int, bool, error)
 	// FileOwner는 파일 소유자다(UID, 계정 이름과 홈). 이름을 찾을 수 없으면 이름은 uid 숫자다.
 	FileOwner(path string) (Account, error)
 
@@ -106,6 +119,10 @@ func (f fsOps) ReadFile(p string) ([]byte, error)       { return os.ReadFile(f.p
 func (f fsOps) Stat(p string) (fs.FileInfo, error)      { return os.Stat(f.path(p)) }
 func (f fsOps) ReadDir(p string) ([]fs.DirEntry, error) { return os.ReadDir(f.path(p)) }
 func (f fsOps) RemoveAll(p string) error                { return os.RemoveAll(f.path(p)) }
+func (f fsOps) ReadNoFollow(p string, max int64) ([]byte, error) {
+	return readNoFollow(f.path(p), max)
+}
+func (f fsOps) TakeFile(p string, max int64) ([]byte, error) { return takeFile(f.path(p), max) }
 func (f fsOps) ReadBuildInfo(p string) (*debug.BuildInfo, error) {
 	return buildinfo.ReadFile(f.path(p))
 }
@@ -137,6 +154,42 @@ func (f fsOps) Remove(p string) error {
 		return err
 	}
 	return nil
+}
+
+func (f fsOps) Lock(p string, wait time.Duration) (func(), error) {
+	path := f.path(p)
+	deadline := time.Now().Add(wait)
+	for {
+		file, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|syscall.O_NOFOLLOW|syscall.O_CLOEXEC, 0o600)
+		if err != nil {
+			return nil, fmt.Errorf("lock %s: %w", p, err)
+		}
+		for {
+			err = syscall.Flock(int(file.Fd()), syscall.LOCK_EX|syscall.LOCK_NB)
+			if !errors.Is(err, syscall.EWOULDBLOCK) && !errors.Is(err, syscall.EINTR) {
+				break
+			}
+			if time.Now().After(deadline) {
+				file.Close()
+				return nil, fmt.Errorf("lock %s: still held by another process after %s", p, wait)
+			}
+			time.Sleep(100 * time.Millisecond)
+		}
+		if err != nil {
+			file.Close()
+			return nil, fmt.Errorf("lock %s: %w", p, err)
+		}
+		held, herr := file.Stat()
+		now, nerr := os.Lstat(path)
+		if herr == nil && nerr == nil && os.SameFile(held, now) {
+			return func() { file.Close() }, nil
+		}
+		// 기다리는 동안 다른 쪽이 잠금 파일(또는 디렉터리)을 지웠다. 다시 연다(디렉터리가 없으면 위에서 오류로 끝난다).
+		file.Close()
+		if time.Now().After(deadline) {
+			return nil, fmt.Errorf("lock %s: the lock file kept changing", p)
+		}
+	}
 }
 
 func (f fsOps) CopyFile(src, dst string) error {
@@ -307,8 +360,17 @@ func (s *realSystem) LookupUser(name string) (Account, bool, error) {
 		}
 		return Account{}, false, fmt.Errorf("getent passwd %s: %w", name, err)
 	}
+	return passwdAccount(name, out)
+}
+
+// passwdAccount는 찾은 계정의 getent passwd 출력을 읽는다. 읽지 못한 줄을 "계정 없음"으로 보면 계정이 있는지 확인하는
+// 쪽(애드온 백엔드의 고정 계정 확인 등)이 통과하므로 오류다.
+func passwdAccount(name string, out []byte) (Account, bool, error) {
 	a, ok := parsePasswd(strings.TrimSpace(string(out)))
-	return a, ok, nil
+	if !ok {
+		return Account{}, false, fmt.Errorf("getent passwd %s: unexpected output", name)
+	}
+	return a, true, nil
 }
 
 // parsePasswd는 /etc/passwd 형식 한 줄을 읽는다.
@@ -317,7 +379,7 @@ func parsePasswd(line string) (Account, bool) {
 	if len(f) < 7 {
 		return Account{}, false
 	}
-	uid, err := strconv.Atoi(f[2])
+	uid, err := parseID(f[2])
 	if err != nil {
 		return Account{}, false
 	}
@@ -342,6 +404,32 @@ func (s *realSystem) GroupExists(name string) (bool, error) {
 		return false, nil
 	}
 	return false, fmt.Errorf("getent group %s: %w", name, err)
+}
+
+func (s *realSystem) GroupID(name string) (int, bool, error) {
+	out, err := exec.Command("getent", "group", name).Output()
+	if err != nil {
+		var ee *exec.ExitError
+		if errors.As(err, &ee) && ee.ExitCode() == 2 {
+			return 0, false, nil
+		}
+		return 0, false, fmt.Errorf("getent group %s: %w", name, err)
+	}
+	gid, ok := parseGroupID(strings.TrimSpace(string(out)))
+	if !ok {
+		return 0, false, fmt.Errorf("getent group %s: unexpected output", name)
+	}
+	return gid, true, nil
+}
+
+// parseGroupID는 /etc/group 형식 한 줄(이름:비밀번호:gid:구성원)의 gid다.
+func parseGroupID(line string) (int, bool) {
+	f := strings.Split(line, ":")
+	if len(f) < 3 {
+		return 0, false
+	}
+	gid, err := parseID(f[2])
+	return gid, err == nil
 }
 
 // PortInUse는 그 주소에 잠깐 수신해 본다. 주소가 이미 쓰이고 있으면(EADDRINUSE) true다.

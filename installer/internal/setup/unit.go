@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"embed"
 	"fmt"
+	"path"
 	"text/template"
 	"time"
 
@@ -30,6 +31,16 @@ type unitData struct {
 
 	UpgradeName, UpgradeInstallerDst, UpgradeEnvFile, UpgradeCheckRequest, UpgradeApplyRequest string
 	UpgradeRequestDirName, UpgradeTimeout                                                      string
+
+	// 애드온 백엔드(--addon-backends). AddonBackends면 maru 유닛에 호스트 소켓 디렉터리(root가 만들고 maru가 그 안의
+	// <id>/에만 쓴다)를 더한다.
+	AddonBackends                                            bool
+	AddonHostDir, AddonUnitHostDir, AddonSocketDir           string
+	AddonExec, AddonsDir, AddonUserPrefix, AddonStateDirName string
+	StateDir, UpgradeStateDir, AddonSyncDir, AddonSyncName   string
+	AddonSyncRequest, AddonBackendsFile, AddonSyncTimeout    string
+	// Tier는 백엔드 템플릿을 그리는 네트워크 단계다(addonTierData가 채운다. 다른 유닛에서는 비어 있다).
+	Tier addonTier
 }
 
 func (c *Context) unitData() unitData {
@@ -55,6 +66,22 @@ func (c *Context) unitData() unitData {
 		UpgradeApplyRequest:   upgradeApplyRequest,
 		UpgradeRequestDirName: upgradeRequestDirName,
 		UpgradeTimeout:        systemdSpan(config.UpgradeServiceTimeout),
+
+		AddonBackends:     addonBackendsWanted(c),
+		AddonHostDir:      config.AddonHostDir,
+		AddonUnitHostDir:  path.Dir(config.AddonUnitHostSocket),
+		AddonSocketDir:    config.AddonSocketDir,
+		AddonExec:         path.Join(config.InstalledStateDir, config.AddonsDirName, "%i", config.AddonCurrentLink, config.AddonBackendExec),
+		AddonsDir:         path.Join(config.InstalledStateDir, config.AddonsDirName),
+		AddonUserPrefix:   config.AddonUnitUserPrefix,
+		AddonStateDirName: config.AddonStateDirName,
+		StateDir:          stateDir,
+		UpgradeStateDir:   config.UpgradeStateDir,
+		AddonSyncDir:      config.AddonSyncDir,
+		AddonSyncName:     config.AddonSyncName,
+		AddonSyncRequest:  addonSyncRequest,
+		AddonBackendsFile: path.Join(stateDir, config.AddonBackendsFile),
+		AddonSyncTimeout:  systemdSpan(addonSyncTimeout),
 	}
 }
 

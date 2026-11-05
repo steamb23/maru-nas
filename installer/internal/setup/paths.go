@@ -28,8 +28,9 @@ const (
 	upgradeName        = "maru-upgrade"
 	upgradeServiceUnit = "/etc/systemd/system/maru-upgrade.service"
 	upgradePathUnit    = "/etc/systemd/system/maru-upgrade.path"
-	// upgradeInstallerDst는 업그레이드 서비스가 실행하는 root 소유 설치기 복사본이다(저장소 안의 실행 파일을 root로
-	// 실행하지 않게). 설치할 때마다 지금 설치기로 바꾼다.
+	// upgradeInstallerDst는 root 서비스(업그레이드 서비스, 애드온 백엔드의 root 동기화)가 실행하는 root 소유 설치기
+	// 복사본이다(저장소 안의 실행 파일을 root로 실행하지 않게). 둘 중 하나라도 켜면 설치할 때마다 지금 설치기로 바꾸고,
+	// 둘 다 끄면 지운다(step_installer_copy.go).
 	upgradeInstallerDir = "/usr/local/lib/maru"
 	upgradeInstallerDst = upgradeInstallerDir + "/maru-install"
 	// upgradeCheckRequest는 maru가 자기 상태 디렉터리(StateDirectory=maru)에 남기는 확인 요청이다.
@@ -37,13 +38,29 @@ const (
 	// upgradeApplyRequest는 도우미의 upgrade.apply가 쓰는 적용 요청이다. 그 디렉터리는 도우미 유닛의 RuntimeDirectory=다.
 	upgradeApplyRequest   = config.UpgradeRequestDir + "/" + config.UpgradeApplyRequestName
 	upgradeRequestDirName = "maru-upgrade"
+
+	// 애드온 백엔드(--addon-backends). 경로·형식은 backend/config(addons.go, addons_units.go)에 있다.
+	addonSyncPathUnit    = "/etc/systemd/system/" + config.AddonSyncName + ".path"
+	addonSyncServiceUnit = "/etc/systemd/system/" + config.AddonSyncName + ".service"
+	// addonSyncRequest는 maru가 원하는 상태를 쓴 뒤 자기 상태 디렉터리에 남기는 동기화 요청이다(경로 유닛이 지켜본다).
+	addonSyncRequest = stateDir + "/" + config.AddonSyncRequest
+	// addonBackendsFile은 maru가 자기 상태 디렉터리에 쓰는 원하는 상태다(root 동기화가 읽기만 한다).
+	addonBackendsFile = stateDir + "/" + config.AddonBackendsFile
+	// addonDataDir·addonPrivateDataDir는 백엔드 데이터다(StateDirectory=maru-addon/<id>, DynamicUser=yes라 systemd가
+	// private 아래에 두고 바깥에 심볼릭 링크를 둔다). --no-addon-backends는 남기고, 제거는 확인을 받은 뒤 지운다.
+	addonDataDir        = "/var/lib/" + config.AddonStateDirName
+	addonPrivateDataDir = "/var/lib/private/" + config.AddonStateDirName
+	// addonWantsDir는 소켓 유닛을 켜면(WantedBy=sockets.target) systemctl이 인스턴스 링크를 두는 곳이다. 기록을 잃어도
+	// 켜진 인스턴스를 끌 수 있게 끌 때 이 디렉터리도 본다.
+	addonWantsDir = "/etc/systemd/system/sockets.target.wants"
 )
 
 // 저장소 안의 경로(저장소 루트 기준).
 const (
 	binSrcRel       = "bin/maru"
 	helperBinSrcRel = "bin/maru-helper"
-	// installerBinSrcRel은 설치기 자신이다(install.sh가 빌드한다). 대시보드에서 업그레이드를 켜면 root 소유로 복사한다.
+	// installerBinSrcRel은 설치기 자신이다(install.sh가 빌드한다). 대시보드에서 업그레이드나 애드온 백엔드를 켜면 root
+	// 소유로 복사한다(upgradeInstallerDst).
 	installerBinSrcRel = "bin/maru-install"
 	distIndexRel       = "backend/internal/web/static/dist/index.html"
 	iconsRel           = "vendor/icons/colloid"

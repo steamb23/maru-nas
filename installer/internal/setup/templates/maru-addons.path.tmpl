@@ -1,0 +1,12 @@
+# Written by maru install.sh
+[Unit]
+Description=Maru NAS addon backend sync requests
+
+[Path]
+# A sync request that maru leaves in its state directory after writing the
+# backends it wants ({{.AddonBackendsFile}}).
+PathExists={{.AddonSyncRequest}}
+Unit={{.AddonSyncName}}.service
+
+[Install]
+WantedBy=paths.target

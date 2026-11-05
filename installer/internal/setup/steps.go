@@ -15,10 +15,14 @@ var installSteps = []Step{
 	{Name: "maru-binary", Phase: PhaseRoot, Run: stepInstallBinary},
 	{Name: "helper", Phase: PhaseRoot, Run: stepHelper},
 	{Name: "web-upgrade", Phase: PhaseRoot, Run: stepWebUpgrade},
+	{Name: "addon-backends", Phase: PhaseRoot, Run: stepAddonBackends},
+	// 두 root 서비스가 함께 쓰는 설치기 복사본. 끌 때는 복사본을 실행하는 유닛을 먼저 멈춘 뒤 지운다.
+	{Name: "installer-copy", Phase: PhaseRoot, Run: stepInstallerCopy},
 	{Name: "env", Phase: PhaseRoot, Run: stepEnv},
 	{Name: "unit", Phase: PhaseRoot, Run: stepUnit},
 	{Name: "daemon-reload", Phase: PhaseRoot, Run: stepDaemonReload},
 	{Name: "web-upgrade-path", Phase: PhaseRoot, When: webUpgradeWanted, Run: stepWebUpgradePath},
+	{Name: "addon-backends-path", Phase: PhaseRoot, When: addonBackendsWanted, Run: stepAddonBackendsPath},
 	// maru가 시작할 때 도우미에 연결하므로 도우미 소켓을 먼저 연다.
 	{Name: "helper-socket", Phase: PhaseRoot, When: helperWanted, Run: stepHelperSocket},
 	{Name: "start", Phase: PhaseRoot, Run: stepStart},
@@ -34,10 +38,14 @@ var uninstallSteps = []Step{
 	{Name: "confirm", Phase: PhaseRoot, Run: stepUninstallConfirm},
 	{Name: "stop", Phase: PhaseRoot, Run: stepStop},
 	{Name: "web-upgrade", Phase: PhaseRoot, Run: removeWebUpgrade},
+	// maru.service를 지우고 daemon-reload하는 files 단계보다 먼저 백엔드 유닛을 끈다.
+	{Name: "addon-backends", Phase: PhaseRoot, Run: removeAddonBackends},
+	{Name: "installer-copy", Phase: PhaseRoot, Run: removeInstallerCopy},
 	{Name: "helper", Phase: PhaseRoot, Run: removeHelper},
 	{Name: "files", Phase: PhaseRoot, Run: stepRemoveFiles},
 	{Name: "runtime-dir", Phase: PhaseRoot, Run: stepRemoveRuntimeDir},
 	{Name: "state-dir", Phase: PhaseRoot, Run: stepRemoveStateDir},
+	{Name: "addon-data", Phase: PhaseRoot, Run: stepRemoveAddonData},
 	{Name: "user", Phase: PhaseRoot, Run: stepRemoveUser},
 	{Name: "proxy-note", Phase: PhaseRoot, Run: stepProxyNote},
 }

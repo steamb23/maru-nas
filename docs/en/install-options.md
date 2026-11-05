@@ -39,6 +39,7 @@ Settings given as options are not asked. Given with an upgrade, only those setti
 | `--elevate-group GROUP` | The group required, together with `openmediavault-admin`, for root elevation (default `sudo`). Used only with `--helper`. |
 | `--web-upgrade`, `--no-web-upgrade` | Allows or disallows upgrading from the dashboard. Used only with `--helper` ([Turning it on](upgrade.md#turning-it-on)). |
 | `--build-path PATH` | The PATH for builds when upgrading from the dashboard. It is not asked: every time a regular user runs `./install.sh`, it is set to the directories where git, go, node, npm and make were found. |
+| `--addon-backends`, `--no-addon-backends` | Runs, or does not run, the backends (programs that run on the server) of [addon packages](addons.md) on this installation. Off by default and never asked. Once turned on, it stays on in later upgrades and with `--reinstall`; `--no-addon-backends` stops the backends and removes what runs them ([Addon backends](install.md#addon-backends)). |
 
 ## Internal
 

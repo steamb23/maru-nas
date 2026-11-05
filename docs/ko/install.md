@@ -81,10 +81,12 @@ cd maru-nas
 | `/etc/default/maru`, `/etc/systemd/system/maru.service` | [설정](configuration.md) 파일과 systemd 유닛 |
 | `/var/lib/maru` | 대시보드 자신의 상태: 사용자 설정(위젯 배치, 바로가기, 화면 설정), 관리자의 전역 설정, 올린 배경 이미지, 보안 강화 모드의 인증 수단 |
 | `/usr/local/bin/maru-helper`, `/etc/default/maru-helper`, `maru-helper.socket`·`.service` | [권한 도우미](helper.md)(기본으로 설치) |
-| `/usr/local/lib/maru/maru-install`, `/etc/default/maru-upgrade`, `maru-upgrade.service`·`.path` | [대시보드에서 업그레이드](upgrade.md#대시보드에서-업그레이드)를 허용했을 때 |
+| `/etc/default/maru-upgrade`, `maru-upgrade.service`·`.path` | [대시보드에서 업그레이드](upgrade.md#대시보드에서-업그레이드)를 허용했을 때 |
+| `maru-addon@.socket`·`.service`와 네트워크 권한별 같은 꼴의 유닛, `maru-addons.path`·`.service`, `/var/lib/maru-addons` | [애드온 백엔드](#애드온-백엔드)를 켰을 때 |
+| `/usr/local/lib/maru/maru-install` | 위 두 root 서비스가 실행하는 설치기의 root 소유 복사본. 대시보드에서 업그레이드를 허용했거나 애드온 백엔드를 켰을 때 |
 | `/var/lib/maru-upgrade` | 설치한 버전·커밋 기록과 업그레이드 상태 |
 
-권한 도우미나 대시보드에서 업그레이드를 설치하지 않기로 하면 이전에 설치한 것을 지웁니다.
+권한 도우미나 대시보드에서 업그레이드를 설치하지 않기로 하거나 애드온 백엔드를 끄면 이전에 설치한 것을 지웁니다.
 
 ### 설정 바꾸기
 
@@ -96,6 +98,18 @@ cd maru-nas
 
 - 설정이 바뀌면 기존 `/etc/default/maru`는 `/etc/default/maru.bak-<시각>`으로 백업됩니다.
 - 설치기가 묻지 않는 줄은 남깁니다. 웹 터미널 줄(`MARU_TERMINAL` 등)은 기존 값을 옮기고, 손으로 넣은 다른 `MARU_*` 줄(예: `MARU_COOKIE_PATH`)은 파일 끝으로 옮깁니다.
+
+### 애드온 백엔드
+
+[애드온 패키지](addons.md)에는 서버에서 도는 프로그램(백엔드)이 들어 있을 수 있습니다. 설치 스크립트는 백엔드를 실행하는 구성을 기본으로 설치하지 않고 묻지도 않습니다. 켜려면 이 옵션을 주어 실행합니다.
+
+```sh
+./install.sh --addon-backends
+```
+
+- 이미 설치되어 있으면 설치된 설정으로 업그레이드하면서 켭니다. 한 번 켜면 이후 업그레이드와 `--reinstall`에서도 켜진 채로 둡니다. 권한 도우미가 없어도 됩니다.
+- 백엔드는 패키지마다 따로 제한된 환경(샌드박스)에서 돕니다. 설정 앱에서 패키지를 설치하거나 지우면 root 서비스(`maru-addons.service`)가 그 패키지의 백엔드만 켜고 끕니다.
+- 끄려면 `./install.sh --no-addon-backends`를 실행합니다. 켜진 백엔드를 멈추고 유닛과 동기화 기록(`/var/lib/maru-addons`)을 지웁니다. 백엔드가 남긴 데이터(`/var/lib/private/maru-addon`)는 지우지 않습니다. 다만 다시 켜면 그 데이터가 어느 설치의 것인지 확인할 수 없으므로, 패키지의 백엔드를 다시 켜기 전에 그 패키지의 데이터를 지웁니다.
 
 ### 자동화
 
@@ -123,5 +137,7 @@ root로 실행했는데(`sudo ./install.sh`, `sudo -i`, `su` 등) 저장소의 �
 ```
 
 - 서비스, 실행 파일, 설정을 지웁니다. 권한 도우미와 대시보드 업그레이드 서비스를 설치했다면 함께 지우고, 설치 기록과 업그레이드 상태(`/var/lib/maru-upgrade`)도 지웁니다.
-- `/var/lib/maru`와 서비스 사용자는 확인을 받은 뒤에만 지웁니다.
+- 애드온 백엔드를 켰다면 백엔드를 멈추고 유닛과 동기화 기록(`/var/lib/maru-addons`)을 지웁니다.
+- `/var/lib/maru`, 애드온 백엔드가 남긴 데이터(`/var/lib/private/maru-addon`), 서비스 사용자는 확인을 받은 뒤에만 지웁니다.
+    - 백엔드 데이터를 남겨 두어도, 다시 설치해 애드온 백엔드를 켜면 패키지의 백엔드를 다시 켜기 전에 그 패키지의 데이터를 지웁니다. 데이터를 손으로 옮겨 둘 때만 남겨 두세요.
 - `/run/maru`도 지워지므로, 컨테이너 프록시에 이 디렉터리를 마운트해 두었다면 다시 설치한 뒤 프록시 컨테이너를 다시 만들어야 합니다.

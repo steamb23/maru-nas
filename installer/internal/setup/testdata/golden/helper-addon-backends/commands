@@ -1,0 +1,14 @@
+systemctl is-active --quiet maru.service
+install -o root -g root -m 0755 /repo/bin/maru /usr/local/bin/maru
+install -o root -g root -m 0755 /repo/bin/maru-helper /usr/local/bin/maru-helper
+install -o root -g root -m 0755 /repo/bin/maru-install /usr/local/lib/maru/maru-install
+systemctl daemon-reload
+systemctl enable maru-addons.path
+systemctl restart maru-addons.path
+systemctl enable --now maru-helper.socket
+systemctl is-active --quiet maru-helper.service
+systemctl enable maru.service
+systemctl is-active --quiet maru.service
+systemctl start maru.service
+systemctl is-active --quiet maru.service
+systemctl is-active --quiet maru-helper.socket

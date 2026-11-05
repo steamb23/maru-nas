@@ -319,8 +319,13 @@ func readNoFollow(path string, max int64) ([]byte, error) {
 	return io.ReadAll(io.LimitReader(f, max+1))
 }
 
+// errRequestKept는 takeFile이 요청 파일을 지우지 못했다는 뜻이다(읽기 오류와 나눈다). 요청이 남아 있으면 경로 유닛이
+// 서비스를 곧바로 다시 시작한다.
+var errRequestKept = errors.New("the request could not be removed")
+
 // takeFile은 요청 파일을 max 바이트까지 읽고 지운다(경로 유닛의 PathExists=가 다시 실행하지 않게, 내용과 상관없이
-// 지운다). 없으면 fs.ErrNotExist다. 일반 파일이 아니면(디렉터리 등) 따라가지 않고 통째로 지운 뒤 오류다.
+// 지운다). 없으면 fs.ErrNotExist다. 일반 파일이 아니면(디렉터리 등) 따라가지 않고 통째로 지운 뒤 오류다. 지우지 못하면
+// errRequestKept로 감싼 오류다.
 func takeFile(path string, max int64) ([]byte, error) {
 	fi, err := os.Lstat(path)
 	if err != nil {
@@ -334,7 +339,7 @@ func takeFile(path string, max int64) ([]byte, error) {
 		derr = os.Remove(path)
 	}
 	if derr != nil && !errors.Is(derr, fs.ErrNotExist) {
-		return nil, derr
+		return nil, fmt.Errorf("%w: %w", errRequestKept, derr)
 	}
 	return data, rerr
 }

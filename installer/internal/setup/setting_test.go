@@ -94,6 +94,11 @@ func TestSettingValidation(t *testing.T) {
 		{settingWebUpgrade, "no", nil, true},
 		{settingWebUpgrade, "", nil, false},
 
+		{settingAddonBackends, "yes", nil, true},
+		{settingAddonBackends, "no", nil, true},
+		{settingAddonBackends, "", nil, false},
+		{settingAddonBackends, "true", nil, false},
+
 		{settingBuildPath, "/usr/local/go/bin:/home/alice/.nvm/versions/node/v22.12.0/bin:/usr/bin:/bin", nil, true},
 		{settingBuildPath, "/usr/bin", nil, true},
 		{settingBuildPath, "", nil, false},
@@ -127,10 +132,10 @@ func TestRegistryRoundtrip(t *testing.T) {
 	for _, v := range []Values{
 		{nameUser: "maru", nameListen: "0.0.0.0:8090", nameAllowNonLoopback: "true", nameOMVURL: "http://127.0.0.1:8001",
 			nameSmartRefreshAt: "03:30", nameWorkbenchURL: "", namePublicOrigin: "", nameHelper: "yes", nameElevateGroup: "wheel",
-			nameWebUpgrade: "yes", nameBuildPath: "/usr/local/go/bin:/usr/bin:/bin"},
+			nameWebUpgrade: "yes", nameBuildPath: "/usr/local/go/bin:/usr/bin:/bin", nameAddonBackends: "no"},
 		{nameUser: "dash", nameListen: "unix:/run/maru/maru.sock", nameOMVURL: "http://127.0.0.1",
 			nameSmartRefreshAt: "00:00", nameWorkbenchURL: "https://nas.example.lan/a b", namePublicOrigin: "https://desk.example.lan",
-			nameHelper: "no"},
+			nameHelper: "no", nameAddonBackends: "yes"},
 	} {
 		args := settings.stage2Args(v)
 		_, got, err := parseArgs(settings, args)
@@ -145,7 +150,8 @@ func TestRegistryRoundtrip(t *testing.T) {
 	seen := map[string]bool{}
 	for _, v := range []Values{
 		{nameUser: "u", nameListen: "l", nameAllowNonLoopback: "true", nameOMVURL: "o", nameSmartRefreshAt: "s",
-			nameWorkbenchURL: "", namePublicOrigin: "", nameHelper: "yes", nameElevateGroup: "g", nameWebUpgrade: "yes", nameBuildPath: "/bin"},
+			nameWorkbenchURL: "", namePublicOrigin: "", nameHelper: "yes", nameElevateGroup: "g", nameWebUpgrade: "yes", nameBuildPath: "/bin",
+			nameAddonBackends: "yes"},
 	} {
 		for _, a := range settings.stage2Args(v) {
 			seen[strings.TrimPrefix(a, "--")] = true
@@ -184,6 +190,7 @@ func TestParseArgs(t *testing.T) {
 		{"--user"}, {"--user", ""}, {"--user="}, {"--lang", "fr"}, {"--upgrade=1"}, {"--helper=yes"}, {"--bogus"},
 		{"extra"}, {"-x"}, {"--upgrade", "--uninstall"}, {"--terminal"}, {"--"},
 		{"--upgrade", "--reinstall"}, {"--reinstall", "--uninstall"}, {"--reinstall=1"},
+		{"--addon-backends=yes"},
 	} {
 		if _, _, err := parseArgs(settings, bad); err == nil {
 			t.Errorf("%q accepted", bad)
@@ -199,7 +206,7 @@ func TestUsageListsEverySetting(t *testing.T) {
 				t.Errorf("%s usage misses %s", lang, s.flagSpec())
 			}
 		}
-		for _, o := range []string{"--upgrade", "--reinstall", "--no-build", "--uninstall", "--service-install", "--dry-run", "--plain", "--lang en|ko", "--help"} {
+		for _, o := range []string{"--upgrade", "--reinstall", "--no-build", "--uninstall", "--service-install", "--dry-run", "--plain", "--lang en|ko", "--help", "--upgrade-service"} {
 			if !strings.Contains(u, o) {
 				t.Errorf("%s usage misses %s", lang, o)
 			}
@@ -241,7 +248,7 @@ func TestLoadInstalled(t *testing.T) {
 	c := &Context{Lang: "en", Sys: f, Installed: inst, Values: Values{nameUser: "given"}}
 	settings.load(c)
 	want := Values{nameUser: "given", nameListen: "0.0.0.0:8090", nameAllowNonLoopback: "true", nameOMVURL: "http://127.0.0.1:8001",
-		nameWorkbenchURL: "", nameHelper: "yes", nameElevateGroup: "wheel", nameWebUpgrade: "no"}
+		nameWorkbenchURL: "", nameHelper: "yes", nameElevateGroup: "wheel", nameWebUpgrade: "no", nameAddonBackends: "no"}
 	if !maps.Equal(c.Values, want) {
 		t.Errorf("loaded %v", c.Values)
 	}
@@ -276,6 +283,8 @@ func TestPromptDefaults(t *testing.T) {
 		settingWorkbenchURL: "", settingPublicOrigin: "https://desk.example.lan", settingHelper: "no", settingElevateGroup: "sudo",
 		// 기존 설치에 /etc/default/maru-upgrade가 없으므로 꺼 둔 것이다.
 		settingWebUpgrade: "no",
+		// 동기화 디렉터리가 없으므로 애드온 백엔드도 꺼 둔 것이다.
+		settingAddonBackends: "no",
 	} {
 		if got := s.defaultValue(c); got != want {
 			t.Errorf("%s default %q, want %q", s.Name, got, want)

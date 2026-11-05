@@ -17,9 +17,10 @@ func stepWebUpgrade(c *Context) error {
 	return removeWebUpgrade(c)
 }
 
-// installWebUpgrade는 root 소유 설치기 복사본, /etc/default/maru-upgrade, 경로·서비스 유닛을 쓴다. 업그레이드 서비스는
-// 저장소 안의 실행 파일이 아니라 이 복사본을 root로 실행한다. 설치할 때마다(대시보드에서 업그레이드한 설치 포함) 지금
-// 설치기로 바꾸므로, 다음 업그레이드는 이번에 설치한 버전의 업그레이드 서비스가 진행한다.
+// installWebUpgrade는 /etc/default/maru-upgrade와 경로·서비스 유닛을 쓴다. 업그레이드 서비스는 저장소 안의 실행 파일이
+// 아니라 root 소유 설치기 복사본을 root로 실행한다. 복사본은 애드온 백엔드의 root 동기화와 함께 쓰므로 따로 설치한다
+// (stepInstallerCopy). 설치할 때마다(대시보드에서 업그레이드한 설치 포함) 지금 설치기로 바꾸므로, 다음 업그레이드는
+// 이번에 설치한 버전의 업그레이드 서비스가 진행한다.
 func installWebUpgrade(c *Context) error {
 	path := c.Values.Get(nameBuildPath)
 	var missing []string
@@ -31,10 +32,6 @@ func installWebUpgrade(c *Context) error {
 	if len(missing) > 0 {
 		c.Warn(L("not found in the build PATH for upgrading from the dashboard: "+strings.Join(missing, ", ")+" (PATH="+path+"). Checks will ask for a manual upgrade until they are installed there; to use another PATH, run "+c.entry()+" again as the repository owner or pass --build-path.",
 			"대시보드에서 업그레이드의 빌드 PATH에서 찾을 수 없습니다: "+strings.Join(missing, ", ")+" (PATH="+path+"). 설치하기 전에는 확인할 때 수동 업그레이드로 안내합니다. 다른 PATH를 쓰려면 저장소 소유자 계정으로 "+c.entry()+" 를 다시 실행하거나 --build-path를 주세요."))
-	}
-	c.Info(L("Installing "+upgradeInstallerDst+" (dashboard upgrade)", upgradeInstallerDst+" 설치(대시보드 업그레이드)"))
-	if err := c.Sys.InstallFile(c.installerBinSrc(), upgradeInstallerDst, 0o755); err != nil {
-		return err
 	}
 	if err := c.writeConfig(config.UpgradeEnvFile, c.Reg.renderEnv(c, UpgradeEnv, c.Installed.UpgradeEnv), true); err != nil {
 		return err
@@ -83,10 +80,11 @@ func stepWebUpgradePath(c *Context) error {
 	return c.Sys.Run("systemctl", "restart", unit)
 }
 
-// removeWebUpgrade는 대시보드에서 업그레이드를 끈다. 경로 유닛을 멈추고 유닛, 설치기 복사본, 설정 파일, 남은 요청과
-// 상태 파일을 지운다. 없으면 아무것도 하지 않는다. 돌고 있는 업그레이드 서비스는 멈추지 않는다(설치 중에 끊지 않게).
+// removeWebUpgrade는 대시보드에서 업그레이드를 끈다. 경로 유닛을 멈추고 유닛, 설정 파일, 남은 요청과 상태 파일을
+// 지운다. 없으면 아무것도 하지 않는다. 돌고 있는 업그레이드 서비스는 멈추지 않는다(설치 중에 끊지 않게). 설치기 복사본은
+// 애드온 백엔드도 쓰므로 여기서 지우지 않는다(stepInstallerCopy, removeInstallerCopy).
 func removeWebUpgrade(c *Context) error {
-	files := []string{upgradePathUnit, upgradeServiceUnit, upgradeInstallerDst, config.UpgradeEnvFile}
+	files := []string{upgradePathUnit, upgradeServiceUnit, config.UpgradeEnvFile}
 	found := false
 	for _, f := range files {
 		found = found || exists(c.Sys, f)
@@ -99,12 +97,6 @@ func removeWebUpgrade(c *Context) error {
 	_ = c.Sys.RunSilent("systemctl", "disable", "--now", upgradeName+".path")
 	for _, f := range append(files, upgradeCheckRequest, config.UpgradeStatusFile) {
 		if err := c.Sys.Remove(f); err != nil {
-			return err
-		}
-	}
-	// 복사본 디렉터리는 비었을 때만 지운다.
-	if entries, err := c.Sys.ReadDir(upgradeInstallerDir); err == nil && len(entries) == 0 {
-		if err := c.Sys.Remove(upgradeInstallerDir); err != nil {
 			return err
 		}
 	}
