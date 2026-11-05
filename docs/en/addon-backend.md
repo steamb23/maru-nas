@@ -352,6 +352,7 @@ Each backend runs in a sandbox of its own:
 systemd enforces these limits. The points below can depend on the server's setup, so check what is blocked on your server with the test package [probe](https://github.com/steamb23/maru-nas/tree/main/sdk/testdata/probe) (a test tool for administrators, not an example):
 
 - The address limits apply only if the kernel and systemd support IP address filtering.
+- A TCP connection to a blocked address is not refused: it waits without an answer until it times out (the filter drops the packets). Sending UDP fails at once with `EPERM`. Give connections a short timeout.
 - System files under `/run` are hidden, so on a server that keeps its DNS configuration under `/run`, even a backend with network access may fail to resolve host names. Connect by IP address in that case.
 
 ### Data and removal

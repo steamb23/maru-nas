@@ -373,7 +373,7 @@ func addonIDUnits(id string) []string {
 // 상관없이 같으므로 네트워크 없는 단계의 서비스 이름으로 지운다. systemctl clean은 이름을 준 유닛이 멈췄는지만 보므로,
 // 기록·링크와 상관없이 그 id의 모든 단계 인스턴스를 먼저 멈춘다(손으로 시작한 다른 단계가 그 데이터를 쓰는 채로 지우지
 // 않게). 데이터가 없으면 아무것도 하지 않는다(돌고 있는 서비스는 시작할 때 StateDirectory를 만들었으므로 데이터가 있다.
-// hasAddonData가 그것을 두 경로 중 하나로 보는지는 테스트 VM에서 확인한다). 지운 뒤에도
+// 테스트 VM에서 private 아래의 디렉터리와 바깥 링크가 모두 생기고 clean이 둘 다 지웠다). 지운 뒤에도
 // 남아 있으면 실패다(다른 설치의 데이터가 남은 채로 켜지 않게). 기록과 맞지 않는 인스턴스를 멈추지 못한 id는 지우지 않는다.
 func (s *addonSyncer) clean(id string) error {
 	if err, ok := s.cleanErr[id]; ok {
@@ -586,8 +586,8 @@ func hasAddonData(sys System, id string) bool {
 
 // checkAddonAccount는 백엔드의 동적 사용자 이름(config.AddonUnitUserPrefix + id)으로 고정 계정·그룹이 있는지 NSS로
 // 본다. systemd는 같은 이름의 계정이 이미 있으면 동적 사용자를 만들지 않고 그 계정으로 실행한다(그 계정의 파일에
-// 닿는다). 도는 동안의 동적 사용자는 동적 범위(config.AddonDynamicUIDMin~Max)로 보일 것으로 보고(동기화 유닛 안의
-// getent가 nss-systemd로 보는지는 테스트 VM에서 확인한다) 범위 밖일 때만 거절한다.
+// 닿는다). 도는 동안의 동적 사용자는 동적 범위(config.AddonDynamicUIDMin~Max)로 보이므로 범위 밖일 때만 거절한다(테스트
+// VM에서 도는 백엔드가 있는 동기화가 이 확인에 걸리지 않았다).
 func checkAddonAccount(sys System, id string) error {
 	name := config.AddonUnitUserPrefix + id
 	a, ok, err := sys.LookupUser(name)
