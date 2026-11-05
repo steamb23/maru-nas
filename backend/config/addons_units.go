@@ -30,7 +30,7 @@ const (
 
 // systemd가 DynamicUser=yes 유닛에 주는 uid 범위(systemd의 DYNAMIC_UID_MIN·DYNAMIC_UID_MAX)다. 운영의 호스트 소켓(0666)은
 // 받은 연결의 상대 uid(SO_PEERCRED)가 0이거나 이 범위일 때만 받는다. 백엔드 유닛은 PrivateUsers=yes라서 유닛 안에서는
-// 다른 uid로 보이지만, 커널이 maru에 주는 uid는 이 범위의 실제 uid일 것으로 본다(테스트 VM에서 확인한다).
+// 다른 uid로 보이지만, 커널이 maru에 주는 uid는 이 범위의 실제 uid다(2026-11-05 테스트 VM, systemd 257).
 const (
 	AddonDynamicUIDMin = 61184
 	AddonDynamicUIDMax = 65519

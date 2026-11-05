@@ -107,8 +107,8 @@ func InstalledBackendPaths() BackendPaths {
 // 백엔드가 다른 패키지의 호스트 소켓에 닿지 못하는 것은 유닛의 /run에 자기 디렉터리만 있어서이고, 다른 애드온의 토큰은
 // 그 소켓에서 거부된다.
 //
-// 가정: 백엔드 유닛은 PrivateUsers=yes라 자기 사용자 이름공간 안에서 돌지만, maru(호스트 이름공간)가 SO_PEERCRED로 보는
-// uid는 호스트 쪽 동적 uid로 옮겨진 값일 것으로 본다. VM에서 확인한다(.claude/docs/addon-packages.md의 "호스트 소켓").
+// 백엔드 유닛은 PrivateUsers=yes라 자기 사용자 이름공간 안에서 돌지만, maru(호스트 이름공간)가 SO_PEERCRED로 보는 uid는
+// 호스트 쪽 동적 uid다(2026-11-05 테스트 VM, .claude/docs/addon-packages.md의 "시험").
 func InstalledHostPeer(uid int) bool {
 	return uid == 0 || (uid >= config.AddonDynamicUIDMin && uid <= config.AddonDynamicUIDMax)
 }
