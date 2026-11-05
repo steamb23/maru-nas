@@ -252,10 +252,11 @@
 
 ### root 동기화
 
-- maru가 `<state>/addon-backends.json`(원하는 상태: `{format, backends:[{id, version, rev, network}], purge:[]}`)을 쓰고 `<state>/addon-sync.json`(요청)을 남긴다. 대기 중인 요청이 있으면 다시 쓰지 않고, 1분이 넘게 처리되지 않으면 관리자 페이지에 "동기화 멈춤"을 보인다
+- maru가 `<state>/addon-backends.json`(원하는 상태: `{format, backends:[{id, version, rev, instance, network}], purge:[]}`, `config.ParseAddonBackends`)을 쓰고 `<state>/addon-sync.json`(요청, 내용은 `config.AddonSyncRequestBody`이고 동기화는 있는지만 본다)을 남긴다. 대기 중인 요청이 있으면 다시 쓰지 않고, 1분이 넘게 처리되지 않으면 관리자 페이지에 "동기화 멈춤"을 보인다
+- `instance`는 패키지 기록의 `installUID`다(업데이트해도 같고 지웠다가 다시 설치하면 바뀐다). 동기화는 같은 id의 백엔드 데이터가 기록상 다른 인스턴스의 것이면 켜기 전에 지운다(`clean --what=state`). 지웠다가 다시 설치한 패키지와 같은 id의 다른 작성자가 이전 데이터를 읽지 못하게 하려는 것이고, 사용자별 저장값(`installUID`에 묶음)과 같은 규칙이다
 - `maru-addons.path`(`PathExists`) → `maru-addons.service`(root oneshot, `StartLimitIntervalSec=0`) → `/usr/local/lib/maru/maru-install --addon-sync`
 - 동기화는 요청을 `O_NOFOLLOW|O_NONBLOCK` + `IsRegular`로 읽고 지운다. 원하는 상태는 64KiB, 엄격한 스키마(id·rev·네트워크 열거값·32개)다. 자기 기록(`/var/lib/maru-addons/state.json`)과 비교해 `enable|disable --now`, `try-restart`(rev가 바뀜), 이전 단계 끄기 + 새 단계 켜기(네트워크가 바뀜), `clean --what=state`(purge, 같은 id가 backends에 있으면 무시)만 한다. 끝나면 원하는 상태의 해시를 다시 보고 3번까지 맞춘다
-- 결과는 `/var/lib/maru-addons/status.json`(0644, `updatedAt`, 항목별 상태·오류)이다. 실패해도 0으로 끝낸다. maru는 status가 지운 것을 확인한 purge 항목을 원하는 상태에서 뺀다
+- 결과는 `/var/lib/maru-addons/status.json`(0644, `config.AddonSyncStatus`: `updatedAt`, 맞춘 원하는 상태 파일의 `digest`(`config.AddonBackendsDigest`), 항목별 상태·오류, 지운 `purged`, 전체 실패 `error`)이다. 실패해도 0으로 끝낸다. maru는 status가 지운 것을 확인한 purge 항목을 원하는 상태에서 빼고, 자기가 쓴 파일의 digest와 비교해 반영되었는지 안다. maru는 `config.ParseAddonSyncStatus`(64KiB)로 읽는다
 - root는 패키지 파일을 읽지 않는다. id 정규식이 `systemctl` 인자 주입을 막는다
 
 ### maru ↔ 백엔드
@@ -366,7 +367,8 @@ HTTP/1.1, 유닉스 소켓. 요청의 Host는 `maru`다.
 브라우저(dev-fake)와 VM(desk-test)에서 확인한 범위와 날짜, 확인하다 바뀐 결정을 적는다.
 
 - 자동 시험(M2): 예제 백엔드는 `sdk/go/examples/*`의 Go 시험이 SDK의 `ServeContext`와 가짜 호스트 소켓(임시 유닉스 소켓)으로 본다(네트워크·실제 경로 없음, `probe`는 경로·연결 함수를 바꿔 끼운다). 서버 쪽은 `TestAddonSDKExamples`(실행 파일 없이 개발 디렉터리로 불러옴)와 `TestAddonSDKBackendExample`(`hello-backend`의 manifest 선언으로 가짜 백엔드가 `System.getInformation`·`PerfStats.get`·`/v1/apply`의 `PerfStats.set`을 omvfake까지 부름, 일반 사용자·단계 없음 거절), `addonpkg`의 `TestReadDirBackendWithoutExecutable`(실행 파일 없는 백엔드 패키지와 `dev/`), CLI 시험(`init --backend`, `dev/` 건너뛰기)이다
-- 아직 하지 않음(M2): 브라우저에서 `FAKEADDONS=examples`의 `hello-backend` 데이터와 쓰기 조작(호스트 확인 → 비밀번호 재확인 → 실행 → 데이터 다시 읽기, 일반 사용자에게는 성능 통계 칸이 없음, 백엔드를 멈추면 창에 연결 실패 문구), 실제 OMV에서 `PerfStats.set` 적용(사용자 확인), VM에서 `probe`의 네트워크 단계 4개(M3)
+- 2026-11-05, 크롬(Playwright, dev-fake, `FAKEADDONS=examples`의 `hello-backend`와 그 개발 백엔드): 관리자에게 백엔드 데이터(호스트 이름, OMV 버전, 요청 수, 성능 통계)가 보인다. 조작은 호스트 확인 → 비밀번호 재확인(`security_required` → 단계 확인 창 → 다시 보냄) → 적용 → 데이터 다시 읽기 순이고, 같은 세션의 다음 조작은 확인만 묻는다. 단계 확인을 취소하면 아무것도 바꾸지 않는다(예제는 이 경우를 취소로 보고 문구를 띄우지 않는다). 가짜 OMV에 적용 대기가 있으면 `addonCode` `config_dirty` 문구가 보이고 설정은 그대로다. 백엔드를 멈추면 `addon_backend_unavailable` 문구가 보인다. 일반 사용자에게는 버전·성능 통계 칸이 없고 조작 API는 403 `admin_required`다. 서버 로그에는 조작마다 감사 로그 한 줄이 남고 토큰은 남지 않는다
+- 아직 하지 않음: 실제 OMV에서 `PerfStats.set` 적용(사용자 확인), VM에서 `probe`의 네트워크 단계 4개(M3)
 
 - 2026-11-05, 크롬(Playwright, dev-fake, 개발 패키지 `sdk/testdata/dev-min`)
     - 샌드박스 프레임 문서에서 CSP `'self'`는 문서 주소의 출처로 풀린다. `script-src 'self'`가 `./_maru/sdk.js`와 패키지의 모듈 스크립트를 허용한다(모듈 로드는 `Access-Control-Allow-Origin: *`로 된다)
