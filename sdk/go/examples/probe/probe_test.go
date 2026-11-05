@@ -58,7 +58,8 @@ func TestClassify(t *testing.T) {
 		{nil, resultReachable, "ok"},
 		{&fs.PathError{Op: "open", Path: "/x", Err: syscall.ENOENT}, resultBlocked, "ENOENT"},
 		{&fs.PathError{Op: "open", Path: "/x", Err: syscall.EACCES}, resultBlocked, "EACCES"},
-		// IPAddressDeny(cgroup BPF)는 connect가 EPERM, RestrictAddressFamilies는 socket이 EAFNOSUPPORT다.
+		// RestrictAddressFamilies는 socket이 EAFNOSUPPORT다. IPAddressDeny는 TCP connect를 시간 초과로 만들고(UDP 보내기가
+		// EPERM이다, TestTCPTimeoutConfirmedByUDP) connect 자체의 EPERM도 막힌 것으로 본다.
 		{dialErr(syscall.EPERM), resultBlocked, "EPERM"},
 		{&net.OpError{Op: "dial", Err: os.NewSyscallError("socket", syscall.EAFNOSUPPORT)}, resultBlocked, "EAFNOSUPPORT"},
 		// 상대가 거절했다면 패킷은 닿았다.
@@ -336,5 +337,29 @@ func TestHandler(t *testing.T) {
 	if got := rows(rep); got["state-site"].Result != resultReachable || got["state-site"].Verdict != verdictFail ||
 		got["public"].Class != "EPERM" || len(rep.Network) != 1 {
 		t.Errorf("report = %+v", rep)
+	}
+}
+
+// TestTCPTimeoutConfirmedByUDP는 TCP 연결이 시간 초과일 때 같은 주소로 보낸 UDP가 EPERM이면(IPAddressDeny) 막힌 것으로,
+// 아니면 그대로 시간 초과로 보는지 본다.
+func TestTCPTimeoutConfirmedByUDP(t *testing.T) {
+	c := check{ID: "public", Kind: kindTCP, Target: "1.1.1.1:443"}
+	for _, tc := range []struct {
+		udp         error
+		result, cls string
+	}{
+		{dialErr(syscall.EPERM), resultBlocked, "udp_EPERM"},
+		{nil, resultTimeout, "timeout"},
+		{dialErr(syscall.ENETUNREACH), resultTimeout, "timeout"},
+	} {
+		e := fakeEnv("", nil, func(network, _ string) error {
+			if network == "udp" {
+				return tc.udp
+			}
+			return &net.OpError{Op: "dial", Err: timeoutErr{}}
+		}, procHeader)
+		if r, cl := e.try(context.Background(), c); r != tc.result || cl != tc.cls {
+			t.Errorf("udp %v: %s %s, want %s %s", tc.udp, r, cl, tc.result, tc.cls)
+		}
 	}
 }

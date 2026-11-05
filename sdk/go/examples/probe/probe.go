@@ -26,7 +26,8 @@ const (
 	// (ECONNREFUSED는 패킷이 상대에게 닿았다는 뜻이라 막힌 것이 아니다).
 	resultReachable = "reachable"
 	// resultBlocked는 막혔다는 뜻이다: 경로가 없거나(ENOENT, 숨긴 /run 등) 권한이 없다(EACCES, InaccessiblePaths),
-	// 주소 계열이 막혔다(EAFNOSUPPORT, RestrictAddressFamilies), IP가 막혔다(EPERM, IPAddressDeny), 호스트 소켓이
+	// 주소 계열이 막혔다(EAFNOSUPPORT, RestrictAddressFamilies), IP가 막혔다(IPAddressDeny. TCP는 시간 초과가 되므로
+	// 같은 주소로 보낸 UDP 데이터그램의 EPERM으로 가린다, udp_EPERM), 호스트 소켓이
 	// 토큰 없는 호출을 거절했다(401 call_invalid).
 	resultBlocked = "blocked"
 	// resultTimeout은 제한 시간 안에 답이 없었다는 뜻이다(방화벽이 버림, 없는 주소). 샌드박스가 막은 것과 구별한다.
@@ -113,7 +114,8 @@ type row struct {
 	Kind   string `json:"kind"`
 	Target string `json:"target"`
 	Result string `json:"result"`
-	// Class는 오류 종류(ENOENT, EPERM 등 errno 이름, timeout, call_invalid, http_<상태>, none_visible) 또는 ok다.
+	// Class는 오류 종류(ENOENT, EPERM 등 errno 이름, timeout, udp_EPERM, call_invalid, http_<상태>, none_visible) 또는
+	// ok다.
 	Class string `json:"class"`
 	// Expect는 이 네트워크 권한에서 기대하는 결과(blocked, reachable)다. 판정하지 않는 행은 비어 있다.
 	Expect  string `json:"expect,omitempty"`
@@ -259,7 +261,13 @@ func (e env) try(ctx context.Context, c check) (result, class string) {
 		if c.Target == "" {
 			return resultSkipped, "no_address"
 		}
-		return e.connect(ctx, "tcp", c.Target)
+		result, class := e.connect(ctx, "tcp", c.Target)
+		// IPAddressDeny(cgroup BPF)는 TCP SYN을 조용히 버려 connect가 시간 초과로 끝난다(2026-11-05 테스트 VM,
+		// systemd 257). 같은 필터는 UDP 데이터그램을 보낼 때 EPERM을 돌려주므로, 시간 초과가 이 필터 때문인지 가린다.
+		if result == resultTimeout && e.udpDenied(ctx, c.Target) {
+			return resultBlocked, "udp_EPERM"
+		}
+		return result, class
 	case kindAbstract:
 		data, err := e.procNetUnix()
 		if err != nil {
@@ -286,6 +294,21 @@ func (e env) connect(ctx context.Context, network, address string) (string, stri
 		conn.Close()
 	}
 	return classify(err)
+}
+
+// udpDenied는 address로 1바이트 UDP 데이터그램 하나를 보내 보고, 보내기가 EPERM(IPAddressDeny)으로 거절됐는지
+// 돌려준다. 답은 기다리지 않는다.
+func (e env) udpDenied(ctx context.Context, address string) bool {
+	ctx, cancel := context.WithTimeout(ctx, e.timeout)
+	defer cancel()
+	conn, err := e.dial(ctx, "udp", address)
+	if err != nil {
+		return errors.Is(err, syscall.EPERM)
+	}
+	defer conn.Close()
+	conn.SetWriteDeadline(time.Now().Add(e.timeout))
+	_, err = conn.Write([]byte{0})
+	return errors.Is(err, syscall.EPERM)
 }
 
 // hostWithoutToken은 호스트 소켓의 /v1/rpc를 호출 토큰 없이 부른다. 401 call_invalid면 막힌 것이다. 응답 본문은

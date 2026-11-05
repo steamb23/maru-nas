@@ -27,8 +27,10 @@ attempt got through and the error class; nothing that was read is returned or lo
 Results:
 
 - `blocked`: the path is missing or hidden (`ENOENT`, `ENOTDIR`), access was denied (`EACCES`), the address family
-  is not allowed (`EAFNOSUPPORT`, from `RestrictAddressFamilies=`), the IP address is denied (`EPERM`, from
-  `IPAddressDeny=`), or the host socket refused the call (`call_invalid`)
+  is not allowed (`EAFNOSUPPORT`, from `RestrictAddressFamilies=`), the IP address is denied (`udp_EPERM`, from
+  `IPAddressDeny=`), or the host socket refused the call (`call_invalid`). `IPAddressDeny=` silently drops the TCP
+  connection attempt, so when a TCP row times out the probe sends one UDP datagram to the same address; the filter
+  refuses that with `EPERM`
 - `reachable`: the file or directory was opened, the socket accepted the connection, or a TCP connection was
   made or refused by the other side (`ECONNREFUSED` means the packet arrived)
 - `timeout`: no answer in 2 seconds (a firewall dropping packets, an address nobody uses). This is not a sandbox
