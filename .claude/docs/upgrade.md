@@ -21,6 +21,7 @@
 ## 구성
 
 - 업그레이드 서비스: root로 한 번씩 도는 systemd 유닛(`maru-upgrade.service`)과, 요청 파일을 지켜보는 `maru-upgrade.path`다. 업그레이드하면 maru와 권한 도우미가 모두 다시 시작되므로 둘 밖에서 돈다. 실행 파일은 저장소 안의 것이 아니라, 설치할 때 root 소유로 복사해 둔 설치기(`/usr/local/lib/maru/maru-install`)다
+  - 이 복사본은 애드온 백엔드의 root 동기화(`maru-addons.service`의 `--addon-sync`)도 실행한다. 대시보드에서 업그레이드와 애드온 백엔드 중 하나라도 켜져 있으면 설치할 때마다 지금 설치기로 바꾸고, 둘 다 꺼야 지운다(`.claude/rules/installer.md`의 "업그레이드 서비스"). 그래서 업그레이드가 끝나면 두 서비스 모두 다음 실행부터 새 버전으로 돈다
 - git과 빌드는 저장소 소유자 권한으로 내려서 실행한다. 저장소에서 빌드한 코드를 root로 실행하는 것은 마지막 설치 단계(새 설치기의 `--service-install --upgrade`)뿐이며, sudo로 2단계를 실행하는 것과 같다
 - 설치 기록: 설치기는 수동 설치를 포함해 설치할 때마다 버전과 커밋을 `/var/lib/maru-upgrade/installed.json`에 남긴다. `Version` 상수는 설치기도 읽을 수 있게 공개 패키지 `backend/config`에 있다
 - 상태 파일: maru는 저장소를 볼 수 없으므로(`ProtectHome=yes`), 서비스가 진행과 결과를 `status.json`에 쓰고 maru는 그 파일을 읽기만 한다. 이 파일은 maru가 다시 시작되어도 남는다
