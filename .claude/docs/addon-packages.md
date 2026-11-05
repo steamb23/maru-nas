@@ -6,6 +6,7 @@
 - 관리자가 설정 앱의 "애드온" 페이지에서 파일을 올리고, 선언한 권한을 검토해 승인한다. 재시작하지 않는다
 - 코드 이름은 모두 `addonpkg`다(백엔드 `internal/addonpkg`, 프론트 `src/addonpkg/`, 앱 종류 `'addonpkg'`, 번역 `addonPackages.*`, API 타입 `AddonPackage*`). `packages`는 시스템 업데이트 애드온이 쓰고 있다
 - SDK(`sdk/`)는 MIT다(`sdk/LICENSE`). 대시보드 본체는 GPL-3.0 그대로이며, SDK가 대시보드와 함께 쓰는 파일(`sdk/js/src/protocol.ts`, `tokens.css`, `maru.css`)도 원본은 `sdk/` 안에 있다
+    - Go 모듈(`sdk/go`)에는 `sdk/LICENSE`의 사본 `sdk/go/LICENSE`(링크가 아닌 일반 파일)를 둔다. 하위 폴더 모듈에 `LICENSE`가 없으면 `go` 명령이 모듈 압축 파일에 저장소 루트의 `LICENSE`(GPL-3.0)를 넣기 때문이다. 두 파일이 같은지와 모듈 안 Go 소스(예제 포함, `testdata` 제외) 첫 줄의 `// SPDX-License-Identifier: MIT`는 `sdk/go`의 `TestLicense`가 검사한다
 
 ## 구성
 
