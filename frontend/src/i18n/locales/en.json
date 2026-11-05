@@ -715,14 +715,15 @@
     "requiredPlugins": "Required plugins: {{plugins}}",
     "helperMissing": "This app can't be used because the privileged helper isn't set up.",
     "helperMissingDetail": "This app works with files using the signed-in user's permissions through the privileged helper. It becomes available once an administrator installs the privileged helper with the install script.",
-    "backendUnavailable": "This app can't be used because addon backends are turned off on this installation."
+    "backendUnavailable": "This app can't be used because its addon backend is turned off or couldn't be turned on.",
+    "backendUnavailableDetail": "Administrators turn addon backends on by running ./install.sh --addon-backends in the repository over SSH, and can check the backend status on the Addons page of the Settings app."
   },
   "widgets": {
     "label": "Widgets",
     "disconnected": "Disconnected",
     "pluginMissing": "Plugin required",
     "adminRequired": "Administrators only",
-    "backendUnavailable": "Backend turned off",
+    "backendUnavailable": "Backend unavailable",
     "open": "Open",
     "remove": "Remove widget",
     "add": "Add widget",
@@ -1096,7 +1097,7 @@
       "unknown": "The request failed.",
       "job_busy": "A task is already running.",
       "apt_locked": "Another package task is running. Try again in a moment.",
-      "backend_unavailable": "This can't run because addon backends are turned off on this installation."
+      "backend_unavailable": "This can't run because the addon backend is turned off or couldn't be turned on."
     }
   },
   "sidebar": {
@@ -1586,6 +1587,7 @@
       "uninstallTitle": "Remove addon",
       "uninstallMessage": "Remove the {{name}} addon? Users' shortcuts and widget placements are kept and come back if you install it again.",
       "purge": "Also delete the data saved by its backend",
+      "purgeHint": "If you leave this unchecked, the data stays on the server, but the old backend data is deleted if you install the same package again.",
       "state": {
         "invalid": "Invalid",
         "incompatible": "Incompatible",
@@ -1605,13 +1607,14 @@
         "rpc_kind": "It declares a method as a write that another addon declares as a read, or the other way around.",
         "reserved_id": "It uses an id reserved by the dashboard.",
         "invalid": "Its addon declaration did not pass the checks.",
+        "too_many_backends": "Up to 32 packages with a backend can be turned on. Turn off or remove a backend package you don't use, then try again.",
         "unknown": "It cannot be used for an unknown reason."
       },
       "risk": {
         "omv_write": "It can change OMV settings. OMV administrator access is close to root, so install it only if you trust the author that much.",
         "backend": "It includes a program (backend) that runs on this server.",
         "backend_shared_data": "The backend is shared by all users. Values read with an administrator's session may be shown to regular users.",
-        "net_lan": "The backend can connect to other devices on the LAN. Through the LAN's router or a proxy it may also reach the internet.",
+        "net_lan": "The backend can connect to other devices on the LAN and to the services this server offers on its LAN address (the OMV web UI, SSH, SMB and so on). Through the LAN's router or a proxy it may also reach the internet.",
         "net_loopback": "The backend can connect to other services on this server (the OMV web UI, SSH and so on).",
         "unknown": "It has a risk this dashboard does not recognize."
       },
@@ -1620,7 +1623,7 @@
         "downgrade": "This version is older than the installed one.",
         "reinstall": "It has the same version number as the installed one, but different contents.",
         "same_digest": "It is the same file as the installed package.",
-        "backends_disabled": "Addon backends are turned off on this installation. You can install it, but it can't be used until backends are turned on."
+        "backends_disabled": "Addon backends are turned off on this installation. You can install it, but it can't be used until you turn backends on by running ./install.sh --addon-backends in the repository over SSH."
       },
       "review": {
         "title": "Review addon installation",
@@ -1673,7 +1676,8 @@
         "readonly": "Development packages cannot be changed here.",
         "busy": "An action of this addon is in progress. Try again after it finishes.",
         "notFound": "The package was not found. The list has been reloaded.",
-        "notConfirmed": "Identity confirmation was not completed."
+        "notConfirmed": "Identity confirmation was not completed.",
+        "purgeFull": "Too many backend data removals are waiting. Try again after the backend sync finishes, or remove the package and keep its data."
       },
       "done": {
         "installed": "Installed the {{name}} addon.",
@@ -1681,6 +1685,28 @@
         "enabled": "Turned on the {{name}} addon.",
         "disabled": "Turned off the {{name}} addon.",
         "uninstalled": "Removed the {{name}} addon."
+      },
+      "backend": {
+        "title": "Addon backends",
+        "desc": "Packages with a backend run it on the server, each in a sandbox of its own.",
+        "off": "Addon backends are turned off on this installation. To use packages with a backend, run the command below in the repository over SSH.",
+        "dev": "This is a development server. Backends are the development backends you start yourself.",
+        "syncedAt": "Last synced: {{time}}",
+        "neverSynced": "Not synced yet.",
+        "pending": "Applying backend changes. Packages marked Pending can't use their backend until this finishes.",
+        "notApplied": "Some backend changes are not applied yet. Sync again.",
+        "stalled": "The sync request hasn't been picked up for over a minute. The backend setup may be broken; run the command below again in the repository over SSH.",
+        "syncFailed": "The last sync failed.",
+        "fileError": "The dashboard couldn't read or write the sync files.",
+        "failedCount_one": "{{count}} backend couldn't be turned on. See the list above for the reason.",
+        "failedCount_other": "{{count}} backends couldn't be turned on. See the list above for the reasons.",
+        "syncAgain": "Sync again",
+        "requested": "Backend sync requested.",
+        "failed": "The backend couldn't be turned on.",
+        "failedBadge": "Backend failed",
+        "pendingBadge": "Pending",
+        "running": "On (starts on the first request)",
+        "state": "Backend status"
       }
     }
   },

@@ -129,6 +129,9 @@ const (
 	ErrAddonBackendUnavailable = "addon_backend_unavailable"
 	// ErrAddonBackendDisabled는 이 설치에서 패키지 백엔드가 꺼져 있다는 뜻이다(설치기 설정).
 	ErrAddonBackendDisabled = "addon_backend_disabled"
+	// ErrAddonPurgeFull은 지울 백엔드 데이터가 root 동기화의 한 번 분량만큼 밀려 있어 데이터 지우기를 고른 제거를 받지
+	// 않았다는 뜻이다(패키지는 그대로다). 동기화가 앞의 것을 지운 뒤 다시 한다.
+	ErrAddonPurgeFull = "addon_purge_full"
 	// ErrBackendUnavailable은 capability 이유(ReasonBackendUnavailable)가 오류 코드로 쓰일 때다(패키지 RPC·프레임).
 	ErrBackendUnavailable = ReasonBackendUnavailable
 )
@@ -137,7 +140,7 @@ const (
 type ErrorResponse struct {
 	Error string `json:"error"`
 	// Code는 화면에서 분기할 때 쓰는 오류 종류다. 없을 수 있다.
-	Code string `json:"code,omitempty" tstype:"'invalid_credentials' | 'rate_limited' | 'challenge_failed' | 'challenge_expired' | 'omv_unavailable' | 'unauthorized' | 'bad_request' | 'rpc_forbidden' | 'admin_required' | 'plugin_missing' | 'omv_error' | 'action_busy' | 'action_failed' | 'action_timeout' | 'config_dirty' | 'image_too_large' | 'unsupported_image' | 'profile_readonly' | 'helper_unavailable' | 'helper_reauth' | 'elevation_failed' | 'elevation_not_allowed' | 'elevation_required' | 'terminal_disabled' | 'security_required' | 'factor_failed' | 'manage_required' | 'passkey_unavailable' | 'passkey_uv_unsupported' | 'security_unavailable' | 'passkey_login_unknown' | 'passkey_login_expired' | 'passkey_login_stale' | 'upgrade_disabled' | 'upgrade_busy' | 'upgrade_outdated' | 'not_found' | 'permission_denied' | 'outside_roots' | 'file_exists' | 'not_dir' | 'is_dir' | 'not_regular' | 'no_space' | 'read_only' | 'helper_busy' | 'transfer_timeout' | 'listing_expired' | 'sort_pending' | 'not_empty' | 'cross_device' | 'root_folder' | 'no_trash' | 'share_read_only' | 'job_busy' | 'apt_locked' | 'no_changelog' | 'download_failed' | 'smart_unsupported' | 'addon_invalid' | 'addon_too_large' | 'addons_unavailable' | 'upload_expired' | 'addon_readonly' | 'addon_no_backend' | 'addon_error' | 'addon_backend_unavailable' | 'addon_backend_disabled' | 'backend_unavailable'"`
+	Code string `json:"code,omitempty" tstype:"'invalid_credentials' | 'rate_limited' | 'challenge_failed' | 'challenge_expired' | 'omv_unavailable' | 'unauthorized' | 'bad_request' | 'rpc_forbidden' | 'admin_required' | 'plugin_missing' | 'omv_error' | 'action_busy' | 'action_failed' | 'action_timeout' | 'config_dirty' | 'image_too_large' | 'unsupported_image' | 'profile_readonly' | 'helper_unavailable' | 'helper_reauth' | 'elevation_failed' | 'elevation_not_allowed' | 'elevation_required' | 'terminal_disabled' | 'security_required' | 'factor_failed' | 'manage_required' | 'passkey_unavailable' | 'passkey_uv_unsupported' | 'security_unavailable' | 'passkey_login_unknown' | 'passkey_login_expired' | 'passkey_login_stale' | 'upgrade_disabled' | 'upgrade_busy' | 'upgrade_outdated' | 'not_found' | 'permission_denied' | 'outside_roots' | 'file_exists' | 'not_dir' | 'is_dir' | 'not_regular' | 'no_space' | 'read_only' | 'helper_busy' | 'transfer_timeout' | 'listing_expired' | 'sort_pending' | 'not_empty' | 'cross_device' | 'root_folder' | 'no_trash' | 'share_read_only' | 'job_busy' | 'apt_locked' | 'no_changelog' | 'download_failed' | 'smart_unsupported' | 'addon_invalid' | 'addon_too_large' | 'addons_unavailable' | 'upload_expired' | 'addon_readonly' | 'addon_no_backend' | 'addon_error' | 'addon_backend_unavailable' | 'addon_backend_disabled' | 'addon_purge_full' | 'backend_unavailable'"`
 	// RetryAfterSeconds는 rate_limited일 때 다시 시도할 수 있기까지 남은 초다.
 	RetryAfterSeconds int `json:"retryAfterSeconds,omitempty"`
 	// Required는 security_required일 때 거쳐야 하는 단계다.

@@ -71,7 +71,7 @@
 
 ## Actions and backends
 
-Actions run in the package's backend ([Addon backends](addon-backend.md)). In this version backends run only on the development server: installed dashboards accept packages with a backend, but show their apps as unavailable until a later version adds an install option that turns backends on.
+Actions run in the package's backend ([Addon backends](addon-backend.md)). Installed dashboards run backends only when an administrator has turned addon backends on. Other installations accept packages with a backend, but show their apps as unavailable.
 
 | Field | Contents |
 |---|---|
@@ -86,4 +86,4 @@ Actions run in the package's backend ([Addon backends](addon-backend.md)). In th
 - `confirm`: the dashboard's confirmation dialog, titled with the package name, appears every time the action runs. The screen cannot skip it.
 - If the package declares `rpc.write`, its actions also need a session that has confirmed the password again (or passed two-step verification, when the security policy for root elevation asks for it). If the session has not, the dashboard asks once before the first run, and the check lasts until the session ends ([Security hardening mode](security.md#security-policy)). Installing the package in the same session may already have done it.
 - `timeoutSeconds`: the action keeps running until it finishes or this time ends, even if the user closes the window.
-- `backend.network` takes effect when installed backends run in their sandbox ([Installed backends](addon-backend.md#installed-backends)). `"lan"` and `"loopback"` are shown as risks on the review screen ([Addon security](addon-security.md#what-the-dashboard-cannot-prevent)).
+- `backend.network` applies to the sandbox installed backends run in ([Installed backends](addon-backend.md#installed-backends)). `"lan"` and `"loopback"` are shown as risks on the review screen ([Addon security](addon-security.md#what-the-dashboard-cannot-prevent)).

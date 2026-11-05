@@ -2,8 +2,8 @@
 
 A package can include a backend: a program that runs on the server next to the dashboard. The package's screens call it with `app.data()`, `app.action()` and `app.query()`, and the backend can call the OMV methods the manifest declares through the dashboard. Use a backend when a package needs OMV writes (actions), combines several OMV calls into one answer, keeps data on the server or reads system files such as `/proc`.
 
-> [!WARNING]
-> In this version, backends run only on the development server. A dashboard installed with `install.sh` accepts packages with a backend, but the review screen warns "Addon backends are turned off on this installation. You can install it, but it can't be used until backends are turned on.", and the app shows "This app can't be used because addon backends are turned off on this installation." (widgets show "Backend turned off"). An install option that turns backends on comes in a later version ([Installed backends](#installed-backends)).
+> [!NOTE]
+> A dashboard installed with `install.sh` runs backends only when an administrator has turned addon backends on (`./install.sh --addon-backends`). Other installations accept packages with a backend, but their apps and widgets show as unavailable ([Installed backends](#installed-backends)).
 
 ## How it works
 
@@ -43,7 +43,7 @@ package screen   app.data(), app.action(), app.query()
 }
 ```
 
-- `backend` marks the package as having a backend. `network` says where it may connect once installed backends run in a sandbox; an empty array means no network.
+- `backend` marks the package as having a backend. `network` says where an installed backend may connect from inside its sandbox; an empty array means no network ([Sandbox](#sandbox)).
 - `actions` and `rpc.write` need a backend. The fields are described in [Manifest](addon-manifest.md#actions-and-backends).
 - Put the executables in the package as `backend/linux-amd64` and `backend/linux-arm64` ([Packing and distribution](addon-packaging.md#files)).
 
@@ -160,7 +160,7 @@ If the user's OMV session has ended, the host answers `unauthorized` and the das
 
 ### Data directory
 
-`maruaddon.StateDir()` is the backend's own data directory, or an empty string if there is none. Every user shares it, and an administrator can delete it when removing the package. Keep files small and write them atomically (a temporary file, then rename).
+`maruaddon.StateDir()` is the backend's own data directory, or an empty string if there is none. Every user shares it, it survives updates, and an administrator can delete it when removing the package. A package that was removed and installed again starts with an empty directory ([Data and removal](#data-and-removal)). Keep files small and write them atomically (a temporary file, then rename).
 
 ## Protocol for other languages
 
@@ -205,7 +205,7 @@ The dashboard does not pass the backend's response headers to the browser, and i
 
 ### The host socket
 
-HTTP/1.1 on a Unix socket, with `Host: maru`. Installed backends will reach it at `/run/maru-host/host.sock`; on the development server its path is in `MARU_ADDON_HOST`. Each backend sees only its own host socket.
+HTTP/1.1 on a Unix socket, with `Host: maru`. Installed backends reach it at `/run/maru-host/host.sock`; on the development server its path is in `MARU_ADDON_HOST`. Each backend sees only its own host socket.
 
 Every request is a `POST` with `Content-Type: application/json` and `X-Maru-Call: <the token of the request being handled>`. Bodies are at most 64 KiB and are read strictly (unknown fields are an error).
 
@@ -237,7 +237,7 @@ Errors are `{"error": message, "code": code}`.
 
 ### Process environment
 
-| Item | Installed backends (a later version) | Development server |
+| Item | Installed backends | Development server |
 |---|---|---|
 | Socket to listen on | Socket activation: `LISTEN_FDS=1`, `LISTEN_PID` is the backend's process ID, the socket is file descriptor 3 | `MARU_ADDON_SOCKET` names the socket path. Create it with mode 0600 and remove it on exit. Replace a leftover socket file only when connecting to it is refused (nobody listens); treat any other file, or a socket another process listens on, as an error |
 | Host socket | `/run/maru-host/host.sock` | `MARU_ADDON_HOST` |
@@ -245,7 +245,7 @@ Errors are `{"error": message, "code": code}`.
 
 - On SIGTERM, stop accepting connections, finish the running requests and exit.
 - Write logs to standard error. Never log the `X-Maru-Call` header.
-- On the development server, the backend's log is in the terminal you started it in (for the examples, the `make dev-fake` terminal). When a data request or action fails, the dashboard's log (the development server's terminal) also records the package id and the error code. Installed backends (a later version) will log to the systemd journal, which root and members of the `adm` group can read with `journalctl`.
+- On the development server, the backend's log is in the terminal you started it in (for the examples, the `make dev-fake` terminal). When a data request or action fails, the dashboard's log (the development server's terminal) also records the package id and the error code. Installed backends log to the systemd journal ([Logs](#logs)).
 
 ## Development
 
@@ -281,7 +281,7 @@ For each development package with a backend, the dashboard opens a host socket a
 5. Build the executables ([Building](#building)) and pack `addon/` with `maru-addon pack`. Packing refuses a package that declares a backend but has no executable.
 
 - Unix socket paths can be at most 107 bytes. If the state directory's path is long (for example when `MARU_STATE_DIR` points deep inside a git worktree), the SDK refuses to start; set a shorter `MARU_STATE_DIR`.
-- The backend runs as your user on the development server, without the sandbox installed backends will have. Check what it needs against [Installed backends](#installed-backends).
+- The backend runs as your user on the development server, without the sandbox of installed backends. Check what it needs against [Sandbox](#sandbox).
 
 ### Examples and the fake OMV
 
@@ -304,19 +304,37 @@ For each development package with a backend, the dashboard opens a host socket a
 ## Constraints
 
 - **Executables**: `backend/linux-amd64` and `backend/linux-arm64`, each a 64-bit Linux ELF for that architecture of up to 64 MiB. Build them statically. A package is installed only if it has the executable for the server's architecture ("The package has no backend for this server's architecture."), so ship both.
-- **Time**: data requests get 15 seconds and actions their `timeoutSeconds`, at most 600 seconds. Work that takes longer cannot be done in this version.
+- **Time**: data requests get 15 seconds and actions their `timeoutSeconds`, at most 600 seconds. Work that takes longer cannot be done.
 - **OMV only during a request**: the call token is valid only while the dashboard's request runs, so a backend cannot call OMV on its own (at start-up, from a timer or after the answer). Work that needs no OMV, such as reading `/proc` or its own files, it can do at any time.
 - **One backend for all users**: every user's requests go to the same process, possibly at the same time. Decide what to return from each request's user and administrator flag, and do not keep values read with an administrator's session to return them to regular users. The data directory is shared too.
-- **Screens are unchanged**: the screens still cannot reach the network. Only the backend can connect, and only where `backend.network` allows once installed backends run in their sandbox.
+- **Screens are unchanged**: the screens still cannot reach the network. Only the backend can connect, and an installed backend only where `backend.network` allows.
 
 ## Installed backends
 
-In this version, dashboards installed with `install.sh` do not run backends. Packages with a backend can be installed, but their apps and widgets show as unavailable (see the warning at the top of this page). Try backends on the development server.
+A dashboard installed with `install.sh` runs package backends only when an administrator has turned addon backends on. Other installations can still install packages with a backend, but the review screen warns about it and their apps and widgets show as unavailable.
 
-A later version adds an install option that turns installed backends on. Each backend will then run in its own sandbox. The plan is as follows and can still change before then:
+### Turning them on and off
 
-- A system user of its own that exists only while the backend runs, without root or any other privilege. The backend starts on the first request and is restarted if it fails.
+- An administrator runs `./install.sh --addon-backends` in the repository over SSH ([Installation](install.md#addon-backends), [Install options](install-options.md)). It is off by default and the install script does not ask. Once on, it stays on through later upgrades and `--reinstall`.
+- To turn them off, run `./install.sh --no-addon-backends`. Every running backend stops. Backend data is not deleted, but if you turn backends on again, which installation that data belongs to can no longer be confirmed, so a package's data is deleted before that package's backend starts again.
+- The install script restarts the dashboard, so every user signs in again.
+
+### How backends are turned on
+
+- The dashboard never runs a backend program itself. Whenever a package is installed, turned on or off, or removed, it writes the list of backends to keep on into its state directory, and a sync service running as root turns backends on and off to match that list. The sync service does not read package files; it treats the list as untrusted input and checks its format strictly.
+- A backend that is on starts on its first request and is restarted if it fails. An update restarts it with the new version.
+- After an install, update or reinstall, the dashboard sends the backend no requests until the sync result shows that this version of this installation is on. Until then data requests and actions fail with 503 `addon_backend_unavailable`, so a request never reaches a backend left over from an earlier installation or version of the same id.
+- Up to 32 packages with a backend can be turned on. Development packages don't count.
+- The last sync result is on the "Addons" page of the Settings app. A backend that could not be turned on gets a "Backend failed" badge and the reason in the package list, and its app shows as unavailable ([Addon packages](addons.md#addon-backends)).
+
+### Sandbox
+
+Each backend runs in a sandbox of its own:
+
+- A system user of its own that exists only while the backend runs, without root or any other privilege.
 - Its own package files, read-only, and its own data directory. It cannot reach the dashboard's state (users' settings, security records, other packages), OMV's configuration, shared folders and data disks (`/srv`, `/export`, `/mnt`, `/media`) or home folders (`/home`). `/run` holds only its host socket, so system services' sockets such as D-Bus are not reachable. Other processes are hidden.
+- The dashboard checks which user connected to a host socket and closes the connection unless it comes from root or from the dynamic system users that backends run as, so ordinary local accounts on this server cannot use host sockets. A backend cannot reach another package's host socket either, because its `/run` holds only its own.
+- Its own `/tmp` and shared memory (`/dev/shm`).
 - Memory up to 256 MiB, up to 64 tasks (processes and threads), and a low CPU priority.
 - Writable memory cannot be made executable, so runtimes that compile code while they run (JIT compilers) do not work. A statically built program (Go, Rust, C) does.
 - No devices, no kernel tunables and no clock changes, and only the system calls ordinary services use.
@@ -331,4 +349,19 @@ A later version adds an install option that turns installed backends on. Each ba
 
     Other addresses, the internet included, are blocked. There is no grant for the internet. The risks of `lan` and `loopback` are in [Addon security](addon-security.md#what-the-dashboard-cannot-prevent).
 
-The test package [probe](https://github.com/steamb23/maru-nas/tree/main/sdk/testdata/probe) checks what an installed backend's sandbox blocks. It is a test tool for the later version that turns backends on, not an example.
+systemd enforces these limits. The points below can depend on the server's setup, so check what is blocked on your server with the test package [probe](https://github.com/steamb23/maru-nas/tree/main/sdk/testdata/probe) (a test tool for administrators, not an example):
+
+- The address limits apply only if the kernel and systemd support IP address filtering.
+- System files under `/run` are hidden, so on a server that keeps its DNS configuration under `/run`, even a backend with network access may fail to resolve host names. Connect by IP address in that case.
+
+### Data and removal
+
+- The data directory is `/var/lib/private/maru-addon/<id>`, readable only by root. The backend sees it as `STATE_DIRECTORY`.
+- Updating (installing a new file with the same id) and turning a package off keep the data. Turning addon backends off for the installation keeps it as well, but it is deleted when you turn them on again (see "Turning them on and off" above).
+- If you choose "Also delete the data saved by its backend" when removing a package, the sync service deletes the data.
+- If you don't, the data stays on the server until a package with the same id is installed again, which deletes it before the backend is turned on. This keeps a reinstalled package (possibly another author's package with the same id) from reading the old data, the same rule as for per-user values.
+
+### Logs
+
+- What a backend writes to standard output and standard error goes to the systemd journal. Root and members of the `adm` group read it with `journalctl -u 'maru-addon*@<id>.service'`.
+- When a data request or action fails, the dashboard's log (`journalctl -u maru`) also records the package id and the error code.

@@ -4,12 +4,14 @@ import (
 	"archive/tar"
 	"bytes"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
 	"testing"
 	"time"
 
+	"maru/backend/config"
 	"maru/backend/internal/addons"
 	"maru/backend/internal/api"
 )
@@ -231,6 +233,55 @@ func TestManagerBackendPackages(t *testing.T) {
 	defer p.Discard()
 	if slices.Contains(p.Warnings, WarnBackendsDisabled) {
 		t.Errorf("warnings with backends enabled = %v", p.Warnings)
+	}
+}
+
+// 백엔드가 있는 설치본은 config.AddonBackendsMax개까지 켤 수 있다(root 동기화의 원하는 상태가 그만큼만 받는다).
+func TestManagerBackendLimit(t *testing.T) {
+	m := newManager(t, Options{BackendsEnabled: true})
+	withID := func(id string) []byte {
+		return pack(t, append(basic(manifestJSON(t, func(mf map[string]any) {
+			mf["id"] = id
+			mf["backend"] = map[string]any{"network": []string{}}
+		})), entry{name: "backend/linux-amd64", typ: tar.TypeReg, body: fakeELF(0x3e)}))
+	}
+	for i := 0; i < config.AddonBackendsMax; i++ {
+		install(t, m, withID(fmt.Sprintf("pkg%02d", i)))
+	}
+	var rj *RejectError
+	if _, err := m.Prepare(bytes.NewReader(withID("onemore"))); !errors.As(err, &rj) || rj.Code != ReasonTooManyBackends {
+		t.Fatalf("backend package over the limit: %v", err)
+	}
+	// 같은 id의 업데이트와 백엔드가 없는 패키지는 받는다.
+	install(t, m, withID("pkg00"))
+	install(t, m, archive(t, func(mf map[string]any) { mf["id"] = "plain" }))
+	// 하나를 끄면 자리가 나고, 다시 켜려면 자리가 있어야 한다.
+	if _, err := m.SetEnabled("pkg01", false); err != nil {
+		t.Fatal(err)
+	}
+	install(t, m, withID("onemore"))
+	if _, err := m.SetEnabled("pkg01", true); !errors.As(err, &rj) || rj.Code != ReasonTooManyBackends {
+		t.Errorf("enabling over the limit: %v", err)
+	}
+}
+
+// 기록을 지운 뒤에는 제거가 끝난 것이다. 파일을 지우지 못해도 오류로 돌려주지 않는다(부르는 쪽이 뒤의 일을 이어 한다).
+func TestManagerUninstallKeepsGoing(t *testing.T) {
+	if os.Getuid() == 0 {
+		t.Skip("root ignores directory permissions")
+	}
+	m := newManager(t, Options{})
+	install(t, m, archive(t, nil))
+	dir := filepath.Join(m.opt.Store.Dir(), "hello")
+	if err := os.Chmod(dir, 0o500); err != nil {
+		t.Fatal(err)
+	}
+	defer os.Chmod(dir, 0o755)
+	if err := m.Uninstall("hello"); err != nil {
+		t.Errorf("Uninstall with undeletable files: %v", err)
+	}
+	if _, ok := m.Status("hello"); ok {
+		t.Error("package still listed")
 	}
 }
 

@@ -55,10 +55,15 @@ type BackendPaths struct {
 	Backend func(id string) string
 	// Host는 id 백엔드가 OMV를 부를 호스트 소켓 경로다. maru가 연다.
 	Host func(id string) string
-	// HostDirMode가 0이 아니면 호스트 소켓의 디렉터리를 이 권한으로 만든다(운영 <AddonHostDir>/<id>/, 0755).
-	HostDirMode fs.FileMode
+	// HostDirFromUnit이면 호스트 소켓의 디렉터리(운영 <AddonHostDir>/<id>/)를 백엔드의 소켓 유닛이 만든다. 상위
+	// 디렉터리는 root 소유라 maru는 <id>/를 만들거나 바꾸지 못하고(유닛이 바인드하는 원본을 maru가 다른 곳으로 돌리지
+	// 못하게), 그 안에 소켓만 연다. 디렉터리가 아직 없으면 소켓을 열지 않고 나중에 다시 본다.
+	HostDirFromUnit bool
 	// HostMode는 호스트 소켓 파일의 권한이다(운영 0666, 개발 0600).
 	HostMode fs.FileMode
+	// HostPeer가 있으면 호스트 소켓에 붙은 연결의 uid(SO_PEERCRED)가 이 함수를 통과해야 받는다. 받지 않은 연결은
+	// 동시 연결 칸을 쓰기 전에 닫는다. nil이면 보지 않는다(개발 경로는 0600이라 같은 uid만 붙는다).
+	HostPeer func(uid int) bool
 }
 
 // 개발 경로(MARU_DEV_ADDON_BACKENDS): 상태 디렉터리 안. 백엔드는 개발자가 MARU_ADDON_SOCKET·MARU_ADDON_HOST로 띄운다.
@@ -81,16 +86,31 @@ func DevBackendPaths(stateDir string) BackendPaths {
 
 // InstalledBackendPaths는 운영 경로다(백엔드 소켓 config.AddonSocketDir/<id>.sock, 호스트 소켓
 // config.AddonHostDir/<id>/host.sock). 유닛 안에는 config.AddonHostDir/<id>만 바인드되고 백엔드는 유닛의 동적 uid로
-// 돌므로 호스트 소켓은 0666이다(토큰이 권한이다). 설치기의 --addon-backends(M3) 전에는 쓰지 않는다.
+// 돌므로 호스트 소켓은 0666이고(토큰이 권한이다), 연결한 uid가 InstalledHostPeer를 통과해야 한다. <id>/는 백엔드의
+// 소켓 유닛이 maru 사용자 소유로 만든다(HostDirFromUnit). 설치기의 --addon-backends가 켠 설치에서만 쓴다(cmd/maru의
+// 운영 감지).
 func InstalledBackendPaths() BackendPaths {
 	return BackendPaths{
 		Backend: func(id string) string { return filepath.Join(config.AddonSocketDir, id+".sock") },
 		Host: func(id string) string {
 			return filepath.Join(config.AddonHostDir, id, config.AddonHostSocketName)
 		},
-		HostDirMode: 0o755,
-		HostMode:    0o666,
+		HostDirFromUnit: true,
+		HostMode:        0o666,
+		HostPeer:        InstalledHostPeer,
 	}
+}
+
+// InstalledHostPeer는 운영 호스트 소켓에 붙어도 되는 uid인지다: root와 systemd 동적 사용자 범위
+// (config.AddonDynamicUIDMin~Max). 그 밖의 로컬 계정(로그인한 사용자, 동적 사용자가 아닌 서비스)은 소켓이 0666이어도
+// 연결하자마자 닫혀 동시 연결 칸을 쥐지 못한다. 동적 사용자로 도는 다른 서비스(다른 패키지의 백엔드 포함)는 통과한다.
+// 백엔드가 다른 패키지의 호스트 소켓에 닿지 못하는 것은 유닛의 /run에 자기 디렉터리만 있어서이고, 다른 애드온의 토큰은
+// 그 소켓에서 거부된다.
+//
+// 가정: 백엔드 유닛은 PrivateUsers=yes라 자기 사용자 이름공간 안에서 돌지만, maru(호스트 이름공간)가 SO_PEERCRED로 보는
+// uid는 호스트 쪽 동적 uid로 옮겨진 값일 것으로 본다. VM에서 확인한다(.claude/docs/addon-packages.md의 "호스트 소켓").
+func InstalledHostPeer(uid int) bool {
+	return uid == 0 || (uid >= config.AddonDynamicUIDMin && uid <= config.AddonDynamicUIDMax)
 }
 
 // ValidBackendQuery는 브라우저가 보낸 쿼리 문자열을 백엔드 요청 줄에 그대로 넣어도 되는지다. 상한 안이고 출력 가능한

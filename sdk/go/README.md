@@ -138,12 +138,12 @@ go run .
 
 - `MARU_ADDON_SOCKET`: the socket the backend listens on. A leftover socket file nobody listens on is replaced; the
   socket is made mode 0600 and removed on exit. Unix socket paths are limited to 107 bytes
-- `MARU_ADDON_HOST`: maru's host socket for this package (installed backends, in a later version, will use
-  `/run/maru-host/host.sock`)
+- `MARU_ADDON_HOST`: maru's host socket for this package (installed backends use `/run/maru-host/host.sock`)
 - `MARU_ADDON_STATE`: optional, what `StateDir()` returns
 
-Installed backends (a later version) will be started by systemd socket activation (`LISTEN_FDS`, file descriptor 3)
-and need no variables. `Serve` stops gracefully on SIGTERM or SIGINT: it stops accepting connections and waits up to
+Installed backends (on installations where an administrator turned addon backends on with
+`./install.sh --addon-backends`) are started by systemd socket activation (`LISTEN_FDS`, file descriptor 3) and need no
+variables; `StateDir()` returns systemd's `STATE_DIRECTORY` and the log goes to the systemd journal. `Serve` stops gracefully on SIGTERM or SIGINT: it stops accepting connections and waits up to
 60 seconds for running requests, which keep their context until then. If requests are still running after that, it
 closes their connections (their context ends) and returns an error. A second SIGTERM or SIGINT during the wait (a
 second Ctrl+C) ends the process at once.

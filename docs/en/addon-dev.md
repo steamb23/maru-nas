@@ -11,7 +11,7 @@ The SDK (`sdk/`) is MIT licensed. The dashboard itself is GPL-3.0, but you can d
 - Screens can call only the OMV RPC methods declared in `rpc.read` of `manifest.json`, and backends can also call those in `rpc.write` while they run an action. The calls run with the signed-in user's OMV permissions, so regular users only get what OMV gives regular users.
 - A small value (JSON up to 64 KiB) can be saved per user.
 - A package can include a backend: a program that runs on the server, answers the screens' data requests and actions, and calls OMV through the dashboard, including the OMV writes of actions ([Addon backends](addon-backend.md)).
-- In this version backends run only on the development server. Installed dashboards accept packages with a backend but show their apps as unavailable until a later version adds an install option that turns backends on.
+- Installed dashboards run backends only when an administrator has turned addon backends on (`./install.sh --addon-backends`). On other installations, the apps of packages with a backend show as unavailable.
 
 ## Requirements
 

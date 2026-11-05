@@ -75,6 +75,38 @@ type AddonPackagesResponse struct {
 	MaxUploadBytes int64 `json:"maxUploadBytes"`
 	// SDK는 이 대시보드의 SDK 수준이다.
 	SDK int `json:"sdk"`
+	// Backends는 패키지 백엔드의 상태다(켜져 있는지, 설치본이면 root 동기화의 상태).
+	Backends AddonBackendSync `json:"backends"`
+}
+
+// AddonBackendSync는 패키지 백엔드의 상태다(GET /api/site/addons의 backends, POST /api/site/addons/sync의 응답).
+type AddonBackendSync struct {
+	// Enabled는 이 설치에서 패키지 백엔드가 켜져 있는지다(설치기 --addon-backends, 개발 서버의 개발 백엔드).
+	Enabled bool `json:"enabled"`
+	// Managed는 root 동기화가 백엔드 유닛을 켜고 끄는지다(설치본). 개발 백엔드는 개발자가 띄우므로 false다. 아래
+	// 필드는 Managed일 때만 뜻이 있다.
+	Managed bool `json:"managed"`
+	// Pending은 동기화 요청을 root 동기화가 아직 가져가지 않았거나, 가져간 뒤 아직 결과를 쓰지 않았다는 뜻이다(요청한 뒤
+	// 1분까지). Stalled는 요청이 1분 넘게 남아 있다는 뜻이다(경로 유닛이 돌지 않는다).
+	Pending bool `json:"pending"`
+	Stalled bool `json:"stalled"`
+	// Applied는 마지막 동기화 결과가 지금 원하는 상태를 맞췄는지다(동기화 전체가 실패한 결과는 아니다).
+	Applied bool `json:"applied"`
+	// SyncedAt은 마지막 동기화 결과의 시각이다(동기화 전체가 실패한 결과 포함). 아직 동기화하지 않았으면 없다.
+	SyncedAt *time.Time `json:"syncedAt,omitempty"`
+	// Error는 마지막 동기화가 전체 실패한 이유다(root 동기화가 쓴 영어 문구).
+	Error string `json:"error,omitempty"`
+	// FileError는 대시보드가 동기화 결과를 읽거나 원하는 상태·요청을 쓰지 못한 이유다(영어).
+	FileError string `json:"fileError,omitempty"`
+}
+
+// AddonPackageBackend는 백엔드 패키지 하나의 동기화 상태다. root 동기화가 관리하는 설치에서 켜 둔 설치본에만 있다.
+type AddonPackageBackend struct {
+	// State는 running(동기화가 지금 rev·설치의 유닛을 켬. 첫 요청 때 시작한다), failed(켜지 못함, 대시보드가 원하는
+	// 상태에 넣지 못함), pending(아직 반영을 확인하지 못함. 그동안 데이터·조작은 503 addon_backend_unavailable)이다.
+	State string `json:"state" tstype:"'running' | 'failed' | 'pending'"`
+	// Error는 failed의 이유다(root 동기화가 쓴 영어 문구).
+	Error string `json:"error,omitempty"`
 }
 
 // AddonPackageStatus는 관리자 목록의 패키지 하나다.
@@ -99,6 +131,8 @@ type AddonPackageStatus struct {
 	UpdatedAt   *time.Time        `json:"updatedAt,omitempty"`
 	Permissions *AddonPermissions `json:"permissions,omitempty"`
 	Icon        string            `json:"icon,omitempty"`
+	// Backend는 백엔드의 동기화 상태다(AddonPackageBackend).
+	Backend *AddonPackageBackend `json:"backend,omitempty"`
 }
 
 // AddonPermissions는 패키지가 선언한 권한 요약이다(검토 화면).

@@ -6,7 +6,7 @@
 import type { ParseKeys } from 'i18next'
 import { localizedText } from '../addonpkg/catalog'
 import { ApiError } from '../api/client'
-import type { AddonPackageStatus } from '../api/types.gen'
+import type { AddonBackendSync, AddonPackageStatus } from '../api/types.gen'
 
 type Level = 'password' | 'twoFactor'
 
@@ -15,9 +15,9 @@ export function packageTitle(p: Pick<AddonPackageStatus, 'id' | 'name'>, lang: s
   return localizedText(p.name, lang) || p.id
 }
 
-// needsAttention은 켜 두었지만 쓰지 못하는 패키지인지다(목록 앞에 둔다).
-export function needsAttention(p: Pick<AddonPackageStatus, 'state'>): boolean {
-  return p.state === 'rejected' || p.state === 'invalid'
+// needsAttention은 켜 두었지만 쓰지 못하는 패키지인지다(목록 앞에 둔다). 백엔드를 켜지 못한 패키지도 포함한다.
+export function needsAttention(p: Pick<AddonPackageStatus, 'state' | 'backend'>): boolean {
+  return p.state === 'rejected' || p.state === 'invalid' || p.backend?.state === 'failed'
 }
 
 // sortPackages는 쓰지 못하는 패키지를 앞에, 나머지는 이름순으로 둔다.
@@ -42,6 +42,61 @@ export function stateBadgeKey(p: Pick<AddonPackageStatus, 'state' | 'reason'>): 
   return null
 }
 
+// backendBadgeKey는 백엔드 동기화 상태의 배지다(root 동기화가 관리하는 설치의 켜 둔 백엔드 패키지만 상태가 있다).
+// 켜짐(running)은 배지가 없다.
+export function backendBadgeKey(p: Pick<AddonPackageStatus, 'backend'>): ParseKeys | null {
+  if (p.backend?.state === 'failed') return 'settings.addons.backend.failedBadge'
+  if (p.backend?.state === 'pending') return 'settings.addons.backend.pendingBadge'
+  return null
+}
+
+// failedBackends는 백엔드를 켜지 못한 패키지 수다.
+export function failedBackends(list: readonly Pick<AddonPackageStatus, 'backend'>[]): number {
+  return list.filter((p) => p.backend?.state === 'failed').length
+}
+
+// SyncNotice는 백엔드 섹션의 안내 하나다. command면 아래에 ./install.sh --addon-backends 명령을 보인다. detail은
+// 백엔드가 준 영어 설명이다.
+export interface SyncNotice {
+  key: ParseKeys
+  tone?: 'error'
+  params?: Record<string, number>
+  detail?: string
+  command?: boolean
+}
+
+// ADDON_BACKENDS_COMMAND는 백엔드를 켜는(망가진 설정을 고치는) 설치 명령이다. 번역하지 않는다.
+export const ADDON_BACKENDS_COMMAND = './install.sh --addon-backends'
+
+// syncNotices는 백엔드 섹션의 안내다. failed는 백엔드를 켜지 못한 패키지 수다. 꺼진 설치는 켜는 방법, 개발 서버는
+// 개발 백엔드라는 안내만 보인다. 동기화 상태 문구(멈춤, 대기, 반영 안 됨)는 하나만 보이고 오류는 따로 덧붙인다.
+export function syncNotices(sync: AddonBackendSync, failed: number): SyncNotice[] {
+  if (!sync.enabled) return [{ key: 'settings.addons.backend.off', command: true }]
+  if (!sync.managed) return [{ key: 'settings.addons.backend.dev' }]
+  const out: SyncNotice[] = []
+  if (sync.stalled) out.push({ key: 'settings.addons.backend.stalled', tone: 'error', command: true })
+  else if (sync.pending) out.push({ key: 'settings.addons.backend.pending' })
+  else if (!sync.applied && !sync.error && !sync.fileError) out.push({ key: 'settings.addons.backend.notApplied' })
+  if (sync.error) out.push({ key: 'settings.addons.backend.syncFailed', tone: 'error', detail: sync.error })
+  if (sync.fileError) out.push({ key: 'settings.addons.backend.fileError', tone: 'error', detail: sync.fileError })
+  if (failed > 0) out.push({ key: 'settings.addons.backend.failedCount', tone: 'error', params: { count: failed } })
+  return out
+}
+
+// canRequestSync는 "다시 동기화"를 누를 수 있는지다. 아직 가져가지 않은 요청이 있으면 막고, 멈춘 요청은 다시 쓸 수 있다.
+export function canRequestSync(sync: AddonBackendSync): boolean {
+  return sync.managed && !(sync.pending && !sync.stalled)
+}
+
+// SYNC_POLL_MS는 동기화 요청이 처리되기를 기다리는 동안 목록을 다시 받는 간격이다.
+export const SYNC_POLL_MS = 3000
+
+// shouldPollSync는 동기화 결과를 기다리는 중이라 목록을 다시 받아야 하는지다(멈춘 요청은 기다리지 않는다). pending은
+// 동기화가 요청을 가져간 뒤 결과를 쓰기 전(요청한 뒤 1분까지)에도 참이다.
+export function shouldPollSync(sync: AddonBackendSync | undefined): boolean {
+  return !!sync && sync.managed && sync.pending && !sync.stalled
+}
+
 const REASON_KEYS: Record<string, ParseKeys> = {
   archive_invalid: 'settings.addons.reason.archive_invalid',
   too_large: 'settings.addons.reason.too_large',
@@ -55,6 +110,7 @@ const REASON_KEYS: Record<string, ParseKeys> = {
   rpc_kind: 'settings.addons.reason.rpc_kind',
   reserved_id: 'settings.addons.reason.reserved_id',
   invalid: 'settings.addons.reason.invalid',
+  too_many_backends: 'settings.addons.reason.too_many_backends',
 }
 
 // reasonKey는 패키지를 받지 않거나 쓰지 못하는 이유 문구다.
@@ -149,6 +205,8 @@ export function addonError(err: unknown, maxMiB: number): AddonError {
       return { key: 'settings.addons.errors.readonly' }
     case 'action_busy':
       return { key: 'settings.addons.errors.busy' }
+    case 'addon_purge_full':
+      return { key: 'settings.addons.errors.purgeFull' }
     case 'not_found':
       return { key: 'settings.addons.errors.notFound' }
     case 'manage_required':

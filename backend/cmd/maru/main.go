@@ -90,7 +90,7 @@ func main() {
 	helper := connectHelper(o.helperSocket)
 
 	builtins := builtin.New(deps)
-	addonHost := devAddonBackends(o.stateDir)
+	addonHost, addonSync := addonBackends(o.stateDir)
 	packages := newPackages(builtins, o.stateDir, plugins, addonHost != nil)
 
 	handler := server.NewServer(server.Config{
@@ -100,6 +100,7 @@ func main() {
 		Addons:       builtins,
 		Packages:     packages,
 		AddonHost:    addonHost,
+		AddonSync:    addonSync,
 		AddonSDK:     addonSDK(),
 		Plugins:      plugins,
 		Prefs:        store,
@@ -138,7 +139,7 @@ func main() {
 		<-ctx.Done()
 		// 작업 감시를 멈추고 진행 기록을 남긴다. OMV 쪽 작업은 계속 돌고, 다시 시작하면 이어 지켜본다.
 		jobManager.Close()
-		// 애드온 호스트 소켓을 닫는다(소켓 파일도 지워진다). Shutdown을 부르면 Serve가 바로 돌아와 main이 끝나므로 먼저 닫는다.
+		// 애드온 호스트 소켓을 닫는다(소켓 파일도 지워진다. 운영 경로의 패키지별 디렉터리는 남긴다). Shutdown을 부르면 Serve가 바로 돌아와 main이 끝나므로 먼저 닫는다.
 		handler.Close()
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()

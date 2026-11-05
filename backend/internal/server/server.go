@@ -76,6 +76,10 @@ type Config struct {
 	// (백엔드 패키지는 capability backend_unavailable, 데이터·조작은 503 addon_backend_disabled). 설정하면 백엔드
 	// 패키지마다 호스트 소켓을 열므로 NewServer로 만들고 끝낼 때 Close한다. Packages의 BackendsEnabled와 같아야 한다.
 	AddonHost *addonpkg.BackendPaths
+	// AddonSync는 운영 백엔드의 root 동기화 파일 위치다(설치기 --addon-backends가 켠 설치). 있으면 레지스트리가 바뀔
+	// 때마다 원하는 상태를 쓰고 동기화를 요청하며, 관리자 페이지가 동기화 결과를 보인다. nil이면 쓰지 않는다(백엔드가
+	// 꺼진 설치, 개발 서버의 개발 백엔드). AddonHost가 있을 때만 쓴다.
+	AddonSync *addonpkg.SyncPaths
 	// AddonSDK는 애드온 프레임에 주는 SDK 런타임(sdk.js, maru.css)이 든 파일 시스템이다. nil이면 404다.
 	AddonSDK fs.FS
 	// Plugins가 nil이면 아무 플러그인도 설치되지 않은 것으로 본다.
@@ -152,6 +156,8 @@ type handler struct {
 	backends  *addonpkg.BackendClient
 	hosts     *addonHosts
 	hostCalls *hostCalls
+	// sync는 운영 백엔드의 root 동기화다(Config.AddonSync, addon_sync.go). 없으면 nil이다.
+	sync *addonpkg.Sync
 	// backendDataTimeout은 패키지 데이터 요청의 시간 제한이다(테스트에서 줄인다).
 	backendDataTimeout time.Duration
 	// about은 실행 파일의 버전·빌드 정보다. 실행 중에 바뀌지 않으므로 시작할 때 한 번 읽는다.
@@ -320,8 +326,13 @@ func NewServer(cfg Config) *Server {
 		if cfg.AddonHost != nil {
 			h.backends = addonpkg.NewBackendClient(cfg.AddonHost.Backend)
 			h.hosts = newAddonHosts(h, *cfg.AddonHost)
-			// 지금 레지스트리로 한 번 맞추고, 바뀔 때마다 다시 맞춘다.
-			cfg.Packages.OnChange(h.hosts.reconcile)
+			if cfg.AddonSync != nil {
+				h.sync = addonpkg.NewSync(*cfg.AddonSync, cfg.Now, cfg.Packages.Active)
+			}
+			// 지금 레지스트리로 한 번 맞추고(시작할 때의 첫 동기화 요청도 여기서 나간다), 바뀔 때마다 다시 맞춘다.
+			cfg.Packages.OnChange(h.packagesChanged)
+		} else if cfg.AddonSync != nil {
+			log.Printf("addon packages: backend sync paths without backend paths are ignored")
 		}
 	}
 	return &Server{Handler: h.routes(), h: h}

@@ -64,7 +64,7 @@ app.on('context', (ctx) => render(ctx))
 
 - 요청은 프레임마다 동시에 16개, 메시지 하나는 256KiB까지입니다. 그 밖의 요청은 1초에 50개까지 받습니다.
 - `action`, `query`, `confirm`, `notify`는 창 보기에서만 씁니다.
-- 데이터 요청은 15초, 조작은 그 조작의 `timeoutSeconds`까지 기다립니다. 지금 버전에서 백엔드는 개발 서버에서만 돌고, 설치한 대시보드에서는 백엔드가 있는 패키지가 "쓸 수 없음"으로 보입니다.
+- 데이터 요청은 15초, 조작은 그 조작의 `timeoutSeconds`까지 기다립니다. 애드온 백엔드를 켜지 않은 설치에서는 백엔드가 있는 패키지가 "쓸 수 없음"으로 보입니다.
 
 ## 창과 위젯
 
@@ -122,8 +122,8 @@ app.on('context', (ctx) => render(ctx))
 | `omv_error`, `omv_unavailable` | OMV가 오류를 돌려주었거나 OMV에 닿지 못했습니다 |
 | `addon_error` | 패키지 백엔드가 오류로 답했습니다(아래) |
 | `addon_no_backend` | 백엔드가 없는 패키지의 `data` |
-| `addon_backend_unavailable` | 백엔드가 떠 있지 않거나, 데이터 요청에 15초 안에 답하지 않았거나, 대시보드가 한꺼번에 처리하는 백엔드 요청이 너무 많습니다 |
-| `addon_backend_disabled`, `backend_unavailable` | 이 설치에서는 애드온 백엔드가 꺼져 있습니다 |
+| `addon_backend_unavailable` | 백엔드가 떠 있지 않거나, 데이터 요청에 15초 안에 답하지 않았거나, 설치·업데이트한 뒤 백엔드 동기화가 아직 켜지 않았거나, 대시보드가 한꺼번에 처리하는 백엔드 요청이 너무 많습니다 |
+| `addon_backend_disabled`, `backend_unavailable` | 이 설치에서는 애드온 백엔드가 꺼져 있거나, 이 패키지의 백엔드를 켜지 못했습니다 |
 | `action_timeout` | 조작이 `timeoutSeconds` 안에 끝나지 않았습니다 |
 | `action_busy` | 같은 대상의 같은 조작이 이미 진행 중입니다 |
 | `admin_required` | 관리자 전용 조작인데 사용자가 관리자가 아닙니다 |

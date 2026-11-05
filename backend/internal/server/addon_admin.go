@@ -149,12 +149,16 @@ func (h *handler) requireElevated(w http.ResponseWriter, s auth.Session, sum add
 // addonPackages는 관리자의 패키지 목록이다(GET /api/site/addons).
 func (h *handler) addonPackages(w http.ResponseWriter, _ *http.Request, _ auth.Session) {
 	resp := api.AddonPackagesResponse{Packages: []api.AddonPackageStatus{}, MaxUploadBytes: addonpkg.DefaultLimits.Compressed, SDK: api.AddonSDKLevel}
+	var ss *addonpkg.SyncState
+	resp.Backends, ss = h.backendSync()
 	if h.Packages != nil {
 		list, err := h.Packages.List()
 		resp.IndexError = err != nil
 		resp.CanInstall = h.Packages.CanInstall()
 		for _, st := range list {
-			resp.Packages = append(resp.Packages, packageStatus(st))
+			p := packageStatus(st)
+			p.Backend = packageBackendState(st, ss)
+			resp.Packages = append(resp.Packages, p)
 		}
 	}
 	writeJSON(w, http.StatusOK, resp)
@@ -367,7 +371,9 @@ func (h *handler) setAddonEnabled(w http.ResponseWriter, r *http.Request, s auth
 }
 
 // uninstallAddon은 패키지를 지운다(DELETE /api/site/addons/{id}). 바로가기·위젯 배치는 남는다(다시 설치하면 돌아온다).
-// ?purge=1이면 패키지 백엔드의 데이터도 지운다(관리 창 필요). DELETE는 다른 출처에서 preflight 없이 보낼 수 없다.
+// ?purge=1이면 root 동기화가 패키지 백엔드의 데이터도 지우게 한다(관리 창 필요). 고르지 않으면 데이터는 다시 설치하거나
+// 지우기를 고를 때까지 남고, 다시 설치하면 설치 인스턴스가 바뀌어 동기화가 켜기 전에 지운다. DELETE는 다른 출처에서
+// preflight 없이 보낼 수 없다.
 func (h *handler) uninstallAddon(w http.ResponseWriter, r *http.Request, s auth.Session) {
 	var req struct{ Purge bool }
 	req.Purge = r.URL.Query().Get("purge") == "1"
@@ -383,11 +389,28 @@ func (h *handler) uninstallAddon(w http.ResponseWriter, r *http.Request, s auth.
 		writeError(w, http.StatusConflict, api.ErrActionBusy, "an action of this addon is in progress")
 		return
 	}
+	// 백엔드가 없는 패키지는 지울 백엔드 데이터가 없다(동기화가 없는 유닛을 정리하지 않게). manifest를 읽지 못한
+	// 패키지도 백엔드가 있었는지 모르므로 넣지 않는다(다시 설치하면 설치 인스턴스가 바뀌어 동기화가 지운다).
+	cur, _ := h.Packages.Status(id)
+	hasBackend := cur != nil && !cur.Dev && cur.Manifest != nil && cur.Manifest.HasBackend()
+	purge := req.Purge && hasBackend
+	// 지울 목록이 원하는 상태 파일에 다 들어가지 않으면 제거하기 전에 거절한다(넣지 못한 purge를 잃지 않게).
+	if purge && h.sync != nil && h.sync.PurgeFull(id) {
+		log.Printf("addon: user=%q action=uninstall id=%s purge=true result=%s", s.Username, id, api.ErrAddonPurgeFull)
+		writeError(w, http.StatusConflict, api.ErrAddonPurgeFull, "too many backend data removals are waiting for the backend sync")
+		return
+	}
 	if err := h.Packages.Uninstall(id); err != nil {
 		h.writeAddonRejected(w, s, "uninstall", id, err)
 		return
 	}
-	log.Printf("addon: user=%q action=uninstall id=%s purge=%t result=ok", s.Username, id, req.Purge)
+	// 제거가 레지스트리를 바꿀 때(OnChange) 원하는 상태에서 백엔드가 빠졌다. purge는 그 뒤에 더한다(제거가 실패하면
+	// 켜져 있는 id에 purge가 남지 않게).
+	if purge {
+		purge = h.purgeBackend(id)
+	}
+	// purge는 실제로 지울 목록에 넣었는지다(고르지 않음, 백엔드 없음, 동기화 없는 설치는 false).
+	log.Printf("addon: user=%q action=uninstall id=%s purge=%t result=ok", s.Username, id, purge)
 	w.WriteHeader(http.StatusNoContent)
 }
 
