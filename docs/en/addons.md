@@ -14,7 +14,7 @@ A package's screens run in a sandbox separate from the dashboard, and a package 
 - Package files can be up to 64 MiB. The reverse proxy's request body size limit must also be larger than that ([Proxy requirements](reverse-proxy.md#proxy-requirements)).
 - An uploaded file stays on the server for up to 30 minutes while you review it and is deleted if you do not install it.
 - Packages cannot be installed while the dashboard runs without a state directory (a development server, for example).
-- Packages with a backend (a program that runs on the server) can be installed, but this version does not run backends on installed dashboards. The review screen warns "Addon backends are turned off on this installation. You can install it, but it can't be used until backends are turned on." After installing, the app shows "This app can't be used because addon backends are turned off on this installation." and its widgets "Backend turned off". An install option that turns backends on comes in a later version.
+- Packages with a backend (a program that runs on the server) can be used only on installations with addon backends turned on (see "Addon backends" below). Other installations can still install them, but the review screen shows a warning that starts with "Addon backends are turned off on this installation.", and after installing, the app shows "This app can't be used because its addon backend is turned off or couldn't be turned on." and its widgets "Backend unavailable".
 - A package with a backend that has no executable for this server's architecture is not installed ("The package has no backend for this server's architecture.").
 
 ## Reading the review screen
@@ -32,21 +32,36 @@ The name, description and author on the review screen are written by the package
 | Backend network | Where the backend can connect: "No network access", "LAN" (other devices on this network), "Other services on this server (loopback)" |
 
 - Always read the risks in the red box. OMV write permissions call for trust close to root (some settings an OMV administrator can change end up running commands as root).
-- For packages with a backend the risks also say that the backend is shared by all users (values read with an administrator's session may be shown to regular users), and, with network access, that "LAN" may reach the internet through the LAN's router or a proxy and that loopback reaches the other services on this server.
+- For packages with a backend the risks also say that the backend is shared by all users (values read with an administrator's session may be shown to regular users), and, with network access, that "LAN" also reaches the services this server offers on its LAN address and may reach the internet through the LAN's router or a proxy, and that loopback reaches the other services on this server.
 - Uploading a new version of the same package shows "Review addon update" with the installed and new versions and the permission changes ("New", "Removed"). It tells you when the permissions widen.
 - Warnings at the top of the review screen tell you when the author changed, the version is older than the installed one, the version number is the same but the contents differ, or the file is the same as the installed one. They do not block installing.
+
+## Addon backends
+
+A package with a backend uses a program that runs on the server, each package in a sandbox of its own. A dashboard installed with the install script does not run backends by default.
+
+- Turning them on: run `./install.sh --addon-backends` in the repository over SSH ([Installation](install.md#addon-backends)). Turn them off with `./install.sh --no-addon-backends`. Once on, they stay on through upgrades.
+- Once they are on, whenever a package is installed, turned on or off, or removed, the dashboard writes the list of backends to keep on, and a sync service running as root turns backends on and off to match it. The dashboard never runs a backend program itself.
+- The "Addon backends" section at the bottom of the "Addons" page in the Settings app shows when the last sync ran and its state.
+    - A backend that could not be turned on gets a "Backend failed" badge and the reason in the package list, and its app shows as unavailable. Fix the cause and press "Sync again" to try again. "Sync again" also restarts a backend that stopped after exiting repeatedly.
+    - A package whose change has not been applied yet gets a "Pending" badge, which usually goes away within a few seconds. Until then its backend takes no requests, so its app and widgets may show an error.
+    - If a sync request is not picked up for over a minute, the sync service is not running; run `./install.sh --addon-backends` again in the repository over SSH.
+- Up to 32 packages with a backend can be turned on. Installing or turning on one more is refused ("Up to 32 packages with a backend can be turned on. Turn off or remove a backend package you don't use, then try again."). Development packages don't count.
+- Backend logs are in `journalctl -u 'maru-addon*@<id>.service'`, readable by root and the `adm` group. What the sandbox blocks is in [Addon backends](addon-backend.md#installed-backends).
 
 ## Updates
 
 - Uploading a package file with the same id updates the package. Updates go through the same confirmation as installs.
-- Package windows and widgets users have open reload with the new version the next time the dashboard fetches the app list.
-- There are no automatic updates. Upgrading the dashboard leaves installed packages as they are.
+- Package windows and widgets users have open reload with the new version the next time the dashboard fetches the app list. The backend restarts with the new version and keeps its data.
+- There are no automatic updates. Upgrading the dashboard leaves installed packages as they are and does not rebuild them.
 
 ## Turning packages off and removing them
 
 - Use the switch in the list of installed addons to turn a package off or on. Turning it off removes it from every user's apps and desktop, and open windows change to "Unavailable addon".
 - Turning a package back on goes through the same confirmation (password) as installing. Turning it off does not ask.
-- "Remove" deletes the package files. For packages with a backend you choose whether to also delete the data its backend saved (this needs the identity confirmation).
+- "Remove" deletes the package files. For packages with a backend you choose whether to also delete the data its backend saved (this needs the identity confirmation). If you don't, the data stays on the server until the same package is installed again, which deletes it. A reinstalled package cannot read the earlier backend data.
+    - If many data deletions are already waiting for the backend sync, removing with data deletion is refused and the package stays ("Too many backend data removals are waiting. Try again after the backend sync finishes, or remove the package and keep its data.").
+- Turning a package off also stops its backend, and the backend data is kept.
 - Users' shortcuts and widget placements are kept when you turn a package off or remove it, and come back when you turn it on or install it again. Values users saved in a package are not shown after a reinstall (a newly installed package cannot read the earlier data).
 - Development packages loaded by a development server ("Development" badge) cannot be turned off or removed here ([Addon development](addon-dev.md)).
 
@@ -69,13 +84,13 @@ Packages with an "Invalid", "Incompatible", "Conflict" or "Not allowed" badge in
 
 ## Backing up packages
 
-Installed packages and the values users saved in them are in the dashboard's state directory (`/var/lib/maru`). Backing up that directory as in [State directory and backups](configuration.md#state-directory-and-backups) includes them.
+Installed packages and the values users saved in them are in the dashboard's state directory (`/var/lib/maru`). Backing up that directory as in [State directory and backups](configuration.md#state-directory-and-backups) includes them. The data backends saved is outside the state directory, in `/var/lib/private/maru-addon/<id>`; back it up separately as root.
 
 ## Risks and limitations
 
 - Package screens cannot reach the dashboard's cookies, storage or other apps' screens, and cannot send network requests themselves. Some browser features (WebRTC, DNS prefetching) are not fully blocked, though, so assume that values shown in a package screen can reach its author.
 - The OMV values a package can read are limited to the "OMV reads" on the review screen, but it reads everything those methods return.
 - A package's actions that change OMV settings run with the signed-in user's OMV permissions. The dashboard asks for the password again (or two-step verification, if the security policy for root elevation requires it) once per session before the first of them, and the check lasts until the session ends.
-- A backend is shared by all users and can show regular users values it read with an administrator's session. Once installed backends run (a later version), a backend with "LAN" access can also reach Docker networks and, through the LAN's resolvers and proxies, the internet, and one with loopback access can reach OMV's web interface, SSH and the dashboard itself ([Addon security](addon-security.md#what-the-dashboard-cannot-prevent)).
+- A backend is shared by all users and can show regular users values it read with an administrator's session. A backend with "LAN" access can also reach the services this server offers on its LAN address (OMV's web interface, SSH, SMB and so on), Docker networks and, through the LAN's resolvers and proxies, the internet, and one with loopback access can reach OMV's web interface, SSH and the dashboard itself ([Addon security](addon-security.md#what-the-dashboard-cannot-prevent)).
 - The dashboard cannot stop a fake input form drawn inside a package window.
 - There are no signatures, catalog or automatic updates. Check where you got the file and its SHA-256.

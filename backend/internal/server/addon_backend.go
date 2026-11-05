@@ -21,17 +21,22 @@ const maxPackageActionBody = 16 << 10
 // backendsEnabled는 이 설치에서 패키지 백엔드가 켜져 있는지다(Config.AddonHost).
 func (h *handler) backendsEnabled() bool { return h.backends != nil }
 
-// backendDisabled는 id가 백엔드 패키지인데 백엔드가 꺼져 있는지다(capability backend_unavailable).
+// backendDisabled는 id가 백엔드 패키지인데 그 백엔드를 쓸 수 없는지다(capability backend_unavailable): 이 설치에서
+// 백엔드가 꺼져 있거나, 마지막 root 동기화 결과가 그 패키지의 지금 rev를 켜지 못했다. 아직 반영되지 않은 것은 쓸 수
+// 없는 것으로 보지 않는다(연결이 503 addon_backend_unavailable로 실패한다).
 func (h *handler) backendDisabled(id string) bool {
-	if h.backendsEnabled() || h.Packages == nil {
+	if h.Packages == nil {
 		return false
 	}
 	p, ok := h.Packages.Get(id)
-	return ok && p.Manifest.HasBackend()
+	if !ok || !p.Manifest.HasBackend() {
+		return false
+	}
+	return !h.backendsEnabled() || h.backendFailed(p)
 }
 
-// packageCapability는 addons.Capability에 패키지 백엔드 상태를 더한다. 백엔드가 꺼진 설치에서 백엔드 패키지는
-// backend_unavailable이다(역할·플러그인 조건을 먼저 본다).
+// packageCapability는 addons.Capability에 패키지 백엔드 상태를 더한다. 백엔드가 꺼진 설치와 동기화가 켜지 못한
+// 백엔드 패키지는 backend_unavailable이다(역할·플러그인 조건을 먼저 본다).
 func (h *handler) packageCapability(a addons.Addon, admin bool) api.AddonCapability {
 	c := addons.Capability(a, h.Plugins.Plugins(), admin)
 	if c.Available && a.Kind == addons.KindPackage && h.backendDisabled(a.Manifest.ID) {
@@ -39,6 +44,20 @@ func (h *handler) packageCapability(a addons.Addon, admin bool) api.AddonCapabil
 	}
 	return c
 }
+
+// backendReady는 백엔드 p로 요청을 보내도 되는지다. 운영에서는 root 동기화가 지금 rev·설치 인스턴스의 유닛을 켠 것을
+// 결과로 확인하기 전(pending)에는 보내지 않는다. 그 소켓은 아직 이전 설치(같은 id의 다른 패키지)나 이전 rev의 유닛이
+// 쥐고 있을 수 있어, 새 패키지의 토큰이 이전 코드로 가거나 이전 데이터로 새 코드가 시작되지 않게 한다. 호스트 소켓을
+// 열지 못했어도 보내지 않는다(운영에서는 백엔드의 소켓 유닛이 그 디렉터리를 만든 뒤에 열린다).
+func (h *handler) backendReady(p *addonpkg.Installed) bool {
+	if state, _ := h.backendState(p); state != addonpkg.BackendRunning {
+		return false
+	}
+	return h.hosts.ensure(p.ID)
+}
+
+// errBackendNotReady는 backendReady가 아닐 때의 응답 문구다(503 addon_backend_unavailable).
+const errBackendNotReady = "addon backend is not ready (waiting for the backend sync)"
 
 // packageBackend는 데이터·조작을 보낼 백엔드 패키지다. 백엔드가 없으면 404 addon_no_backend, 이 설치에서 백엔드가
 // 꺼져 있으면 503 addon_backend_disabled를 쓴다.
@@ -66,7 +85,8 @@ func (h *handler) packageBackend(w http.ResponseWriter, a addons.Addon) (*addonp
 // 넘긴다(2KiB까지). 백엔드는 읽기 토큰으로 선언한 읽기 메서드만 부를 수 있다. 백엔드가 없는 패키지는 OMV 읽기를
 // POST /api/addons/{id}/rpc로 한다.
 func (h *handler) packageData(w http.ResponseWriter, r *http.Request, s auth.Session, a addons.Addon) {
-	if _, ok := h.packageBackend(w, a); !ok {
+	p, ok := h.packageBackend(w, a)
+	if !ok {
 		return
 	}
 	id := a.Manifest.ID
@@ -76,6 +96,10 @@ func (h *handler) packageData(w http.ResponseWriter, r *http.Request, s auth.Ses
 	}
 	if !addonpkg.ValidBackendQuery(r.URL.RawQuery) {
 		writeError(w, http.StatusBadRequest, api.ErrBadRequest, "invalid query")
+		return
+	}
+	if !h.backendReady(p) {
+		writeError(w, http.StatusServiceUnavailable, api.ErrAddonBackendUnavailable, errBackendNotReady)
 		return
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), h.backendDataTimeout)
@@ -100,7 +124,8 @@ func (h *handler) packageData(w http.ResponseWriter, r *http.Request, s auth.Ses
 
 // packageAction은 애드온 패키지의 조작(POST /api/addons/{id}/actions/{action})이다. 본문의 대상·입력을 백엔드의
 // POST /v1/actions/{name}으로 넘긴다. 확인 순서는 내장 조작과 같다: 백엔드 있음·켜짐 → capability → decl.Admin →
-// 쓰기를 선언한 패키지면 단계 확인 → 진행 중 표시 → WithoutCancel + manifest의 시간 제한 → 감사 로그.
+// 쓰기를 선언한 패키지면 단계 확인 → 진행 중 표시 → WithoutCancel + manifest의 시간 제한 → 반영 확인(backendReady) →
+// 감사 로그.
 // 백엔드는 쓰기 토큰으로 선언한 읽기·쓰기 메서드와 /v1/apply를 부를 수 있다.
 func (h *handler) packageAction(w http.ResponseWriter, r *http.Request, s auth.Session, a addons.Addon, decl api.ActionDecl) {
 	p, ok := h.packageBackend(w, a)
@@ -142,14 +167,18 @@ func (h *handler) packageAction(w http.ResponseWriter, r *http.Request, s auth.S
 	ctx, cancel := context.WithTimeout(context.WithoutCancel(r.Context()), packageActionTimeout(p, name))
 	defer cancel()
 	caller := &rpcCaller{h: h, s: s, addon: id, clientIP: clientIP(r), writes: true}
-	call, done, ok := h.packageCall(ctx, r, s, id, hostWrite, caller)
 	var rep addonpkg.BackendReply
-	if ok {
-		rep = h.backends.Action(ctx, id, name, req.Target, req.Input, call)
-		done()
+	if h.backendReady(p) {
+		if call, done, ok := h.packageCall(ctx, r, s, id, hostWrite, caller); ok {
+			rep = h.backends.Action(ctx, id, name, req.Target, req.Input, call)
+			done()
+		} else {
+			rep = addonpkg.BackendReply{Status: http.StatusServiceUnavailable, Code: api.ErrAddonBackendUnavailable,
+				Message: "too many addon backend calls"}
+		}
 	} else {
 		rep = addonpkg.BackendReply{Status: http.StatusServiceUnavailable, Code: api.ErrAddonBackendUnavailable,
-			Message: "too many addon backend calls"}
+			Message: errBackendNotReady}
 	}
 
 	result := "ok"

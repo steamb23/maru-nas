@@ -25,6 +25,7 @@ export function AddonUnavailable({ reason, plugins, compact = false }: Props) {
           <p className="selectable">{t('addons.requiredPlugins', { plugins: plugins.join(', ') })}</p>
         )}
         {reason === 'helper_missing' && !compact && <p>{t('addons.helperMissingDetail')}</p>}
+        {reason === 'backend_unavailable' && !compact && <p>{t('addons.backendUnavailableDetail')}</p>}
       </div>
     </div>
   )

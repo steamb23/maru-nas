@@ -26,7 +26,9 @@ The dashboard works on the assumption that package code is not trusted. This pag
 
 ### Backends
 
-- The dashboard never runs a package's executable itself. In this version backends run only on the development server; installed backends come in a later version and will run in a sandbox of their own ([Addon backends](addon-backend.md#installed-backends)).
+- The dashboard never runs a package's executable itself. Installed backends run only on installations where an administrator has turned addon backends on, as systemd units that a sync service running as root turns on, each in a sandbox of its own ([Addon backends](addon-backend.md#installed-backends)). The sync service does not read package files, and it treats the list the dashboard writes as untrusted input and checks it strictly.
+- Each backend runs as a dynamic system user of its own and cannot reach the dashboard's state outside its own package files and data directory, OMV's configuration, shared folders, home folders or system services' sockets. A package that was removed and installed again cannot read the earlier backend data.
+- A host socket checks which user connected and closes the connection unless it comes from root or from the dynamic system users that backends run as, so ordinary local accounts on this server cannot use host sockets. A backend's `/run` holds only its own package's host socket.
 - Backends never get the OMV session ID, passwords, dashboard cookies or root. They call OMV through the dashboard's host socket with a call token made for each request. The token works only until that request ends and only on that package's host socket, so a backend cannot call OMV on its own or with another package's rights.
 - The host socket runs only declared methods (only reads during data requests) and checks the table of methods that are not allowed again. Applying configuration is refused while OMV has pending changes, so a package never deploys changes someone else made.
 - Backend answers pass only as JSON with a fixed set of statuses. Error codes are checked, messages are stripped of control and bidirectional control characters and cut to 300 characters, and response headers are dropped. A backend cannot sign users out or imitate the dashboard's error codes, and its messages appear only inside its own frame, not in the dashboard's dialogs or notifications.
@@ -61,8 +63,8 @@ This table blocks only the direct paths. OMV writes that are not in it (extra op
 - Values from declared methods: declaring `System.getInformation` reads its whole result, including values OMV gives only to administrators when an administrator opens it.
 - The author's identity: there are no signatures. Administrators check where they got the file and its SHA-256.
 - A shared backend: one backend serves every user. It can show values it read with an administrator's session to regular users, and the data it keeps is shared by everyone. It also sees the results of its declared methods for every user who uses the package.
-- The backend network of installed backends (a later version), as the manifest's `backend.network` grants it:
-    - `lan` reaches the devices on the LAN, and through the LAN's DNS resolvers and proxies it can reach the internet. Docker's networks on this server normally use the same private range (172.16.0.0/12), so their containers are reachable too.
+- The backend network of installed backends, as the manifest's `backend.network` grants it:
+    - `lan` reaches the devices on the LAN, and through the LAN's DNS resolvers and proxies it can reach the internet. This server's own LAN address is a private address too, so it also reaches the services this server offers on the LAN (OMV's web server, sshd, SMB, the dashboard behind a reverse proxy, ports published by containers). Docker's networks on this server normally use the same private range (172.16.0.0/12), so their containers, and this server's services on the Docker bridge address, are reachable too.
     - `loopback` reaches every service on this server that listens on loopback: OMV's web server, sshd and the dashboard's own listener (where a backend could try passwords), and the local DNS resolver.
     - With either grant the backend shares the server's network namespace, so it can also reach abstract Unix sockets there (such as those of container tools).
 

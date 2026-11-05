@@ -67,5 +67,5 @@ Until the SDK is published to npm, run it from a checkout of the Maru NAS reposi
 
 - Publish the `.maru-addon` file and its SHA-256 together somewhere it can be downloaded (GitHub releases and so on). The dashboard has no package catalog, signatures or automatic updates.
 - In the README, list the OMV methods the package reads and why, the plugins it needs and the OMV versions it supports. Administrators compare them with the review screen.
-- For a package with a backend, also explain what the backend does, which OMV settings its actions change, why it needs `lan` or `loopback` if it asks for them, and what it keeps in its data directory. Mention that installed dashboards run backends only from a later version on.
+- For a package with a backend, also explain what the backend does, which OMV settings its actions change, why it needs `lan` or `loopback` if it asks for them, and what it keeps in its data directory. Mention that installed dashboards run backends only when an administrator has turned addon backends on (`./install.sh --addon-backends`).
 - Any license is fine. Keep the notice of code you copied from the SDK (MIT).

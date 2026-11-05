@@ -56,6 +56,6 @@ MARU_ADDON_SOCKET=<state>/addon-dev/probe.sock MARU_ADDON_HOST=<state>/addon-hos
 
 To check a sandbox, build it with `make sdk-examples`, pack it with
 `node sdk/js/cli/maru-addon.mjs pack sdk/testdata/probe`, and install it on a test machine whose installation has
-addon backends turned on (the installer option comes in a later version; until then installed backends do not run).
+addon backends turned on (`./install.sh --addon-backends`).
 Repeat with `backend.network` set to `[]`, `["lan"]`, `["loopback"]` and `["lan", "loopback"]` (change the version
 each time so the dashboard installs it as an update).

@@ -1,8 +1,10 @@
 import type {
   AboutResponse,
   ActionRequest,
+  AddonBackendSync,
   AddonCapability,
   AddonEnabledRequest,
+  AddonPackageBackend,
   AddonPackageStatus,
   AddonPackagesResponse,
   AddonPendingInstall,
@@ -203,6 +205,7 @@ const ERROR_CODES: readonly ErrorCode[] = [
   'addon_error',
   'addon_backend_unavailable',
   'addon_backend_disabled',
+  'addon_purge_full',
   'backend_unavailable',
 ]
 
@@ -606,7 +609,26 @@ function isAddonPackageStatus(v: unknown): v is AddonPackageStatus {
     isOptional(v.installedAt, isStr) &&
     isOptional(v.updatedAt, isStr) &&
     isOptional(v.icon, isStr) &&
-    isOptional(v.permissions, isAddonPermissions)
+    isOptional(v.permissions, isAddonPermissions) &&
+    isOptional(v.backend, isAddonPackageBackend)
+  )
+}
+
+function isAddonPackageBackend(v: unknown): v is AddonPackageBackend {
+  return isObj(v) && isOneOf(v.state, ['running', 'failed', 'pending'] as const) && isOptional(v.error, isStr)
+}
+
+function isAddonBackendSync(v: unknown): v is AddonBackendSync {
+  return (
+    isObj(v) &&
+    isBool(v.enabled) &&
+    isBool(v.managed) &&
+    isBool(v.pending) &&
+    isBool(v.stalled) &&
+    isBool(v.applied) &&
+    isOptional(v.syncedAt, isStr) &&
+    isOptional(v.error, isStr) &&
+    isOptional(v.fileError, isStr)
   )
 }
 
@@ -617,7 +639,8 @@ function isAddonPackagesResponse(v: unknown): v is AddonPackagesResponse {
     isBool(v.canInstall) &&
     isBool(v.indexError) &&
     isNum(v.maxUploadBytes) &&
-    isNum(v.sdk)
+    isNum(v.sdk) &&
+    isAddonBackendSync(v.backends)
   )
 }
 
@@ -683,6 +706,14 @@ export async function setAddonPackageEnabled(id: string, enabled: boolean): Prom
   const body: AddonEnabledRequest = { enabled }
   const data = await (await request('PUT', `/site/addons/${encodeURIComponent(id)}`, { body })).json()
   if (!isAddonPackageStatus(data)) throw new Error('/site/addons: unexpected response shape')
+  return data
+}
+
+// requestAddonSync는 패키지 백엔드의 root 동기화를 다시 요청한다(POST /api/site/addons/sync). 아직 가져가지 않은 요청이
+// 있으면 새로 쓰지 않는다. 응답은 목록의 backends와 같다.
+export async function requestAddonSync(): Promise<AddonBackendSync> {
+  const data = await postJSON('/site/addons/sync')
+  if (!isAddonBackendSync(data)) throw new Error('/site/addons/sync: unexpected response shape')
   return data
 }
 

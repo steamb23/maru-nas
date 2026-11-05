@@ -20,6 +20,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"syscall"
 	"time"
 	"unicode/utf8"
 
@@ -44,8 +45,9 @@ const (
 	// hostBodyTimeout은 처리기가 시작한 뒤 본문을 읽는 시간 제한이다. 처리기가 오래 도는 요청(rpc-bg)이 있어 서버의
 	// ReadTimeout은 쓰지 않는다(ReadTimeout이 지나면 처리 중인 요청의 문맥이 끝난다).
 	hostBodyTimeout = 5 * time.Second
-	// hostMaxConns는 소켓 하나의 동시 연결 수다. 넘으면 연결을 받지 않고 기다리게 한다(소켓이 0666이라 토큰 없는
-	// 연결도 들어온다).
+	// hostMaxConns는 소켓 하나의 동시 연결 수다. 넘으면 연결을 받지 않고 기다리게 한다(운영 소켓은 0666이라 토큰 없는
+	// 연결도 들어온다). 연결한 uid 확인(BackendPaths.HostPeer)에서 거절한 연결은 칸을 차지하지 않는다. 칸이 모두 차
+	// 있으면 거절할 연결도 받기 전이라 커널 대기열에서 칸이 날 때까지 기다린다.
 	hostMaxConns = 16
 	// hostMaxRequests는 애드온 하나의 동시 요청 수다. 넘으면 429 busy다.
 	hostMaxRequests = 8
@@ -184,6 +186,8 @@ type addonHosts struct {
 	open   map[string]*hostSocket
 	closed bool
 	wg     sync.WaitGroup
+	// failed는 열지 못한 소켓의 마지막 이유다(같은 이유를 다시 로그에 남기지 않는다).
+	failed map[string]string
 }
 
 // hostSocket은 애드온 하나의 호스트 소켓이다.
@@ -194,14 +198,14 @@ type hostSocket struct {
 }
 
 // close는 소켓을 닫는다. http.Server.Close는 Serve가 아직 리스너를 받기 전이면 그 리스너를 닫지 않으므로 직접도
-// 닫는다(닫으면 소켓 파일이 바로 지워진다).
+// 닫는다(닫으면 소켓 파일이 바로 지워진다. 운영 경로의 <id>/ 디렉터리는 남긴다, listen 참고).
 func (s *hostSocket) close() {
 	s.srv.Close()
 	s.ln.Close()
 }
 
 func newAddonHosts(h *handler, paths addonpkg.BackendPaths) *addonHosts {
-	a := &addonHosts{h: h, paths: paths, open: map[string]*hostSocket{}}
+	a := &addonHosts{h: h, paths: paths, open: map[string]*hostSocket{}, failed: map[string]string{}}
 	a.bgInterval.Store(int64(addons.BgPollInterval))
 	return a
 }
@@ -228,19 +232,52 @@ func (a *addonHosts) reconcile() {
 			log.Printf("addon %s: host socket closed", id)
 		}
 	}
-	for id := range want {
-		if _, ok := a.open[id]; ok {
-			continue
+	for id := range a.failed {
+		if !want[id] {
+			delete(a.failed, id)
 		}
-		s, err := a.listen(id)
-		if err != nil {
-			// 다음 레지스트리 변경 때 다시 연다.
-			log.Printf("addon %s: host socket: %v", id, err)
-			continue
-		}
-		a.open[id] = s
-		log.Printf("addon %s: host socket %s", id, s.path)
 	}
+	for id := range want {
+		// 열지 못하면 다음 레지스트리 변경이나 그 백엔드로 보내는 요청(ensure) 때 다시 연다.
+		a.openLocked(id)
+	}
+}
+
+// ensure는 id의 호스트 소켓이 열려 있게 한다(백엔드로 요청을 보내기 전). 운영 경로는 백엔드의 소켓 유닛이 디렉터리를
+// 만든 뒤에야 열 수 있으므로 레지스트리가 바뀔 때 열지 못했을 수 있다. 지금 레지스트리에 없는 패키지는 열지 않는다
+// (제거와 겹치면 reconcile이 닫는다).
+func (a *addonHosts) ensure(id string) bool {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	if a.closed {
+		return false
+	}
+	if _, ok := a.open[id]; ok {
+		return true
+	}
+	if p, ok := a.h.Packages.Get(id); !ok || !p.Manifest.HasBackend() {
+		return false
+	}
+	return a.openLocked(id)
+}
+
+// openLocked는 id의 소켓이 없으면 연다. 열지 못한 이유는 바뀔 때만 로그에 남긴다. a.mu를 쥐고 부른다.
+func (a *addonHosts) openLocked(id string) bool {
+	if _, ok := a.open[id]; ok {
+		return true
+	}
+	s, err := a.listen(id)
+	if err != nil {
+		if msg := err.Error(); a.failed[id] != msg {
+			a.failed[id] = msg
+			log.Printf("addon %s: host socket: %v", id, err)
+		}
+		return false
+	}
+	delete(a.failed, id)
+	a.open[id] = s
+	log.Printf("addon %s: host socket %s", id, s.path)
+	return true
 }
 
 // close는 모든 호스트 소켓을 닫는다. 그 뒤의 reconcile은 아무것도 하지 않는다.
@@ -266,15 +303,23 @@ func (a *addonHosts) socketPath(id string) (string, bool) {
 	return s.path, true
 }
 
+// listen은 id의 호스트 소켓을 연다. 운영 경로(HostDirFromUnit)의 <AddonHostDir>/<id>/는 백엔드의 소켓 유닛이 만들고
+// maru는 만들지도 지우지도 않는다(상위 디렉터리가 root 소유다). 백엔드 유닛이 그 디렉터리를 /run/maru-host로 바인드하므로
+// maru가 다시 시작해도 디렉터리는 그대로이고, 남은 소켓 파일은 아무도 받지 않으므로 listenUnixSocket이 지우고 같은
+// 디렉터리에 새로 연다.
 func (a *addonHosts) listen(id string) (*hostSocket, error) {
 	path := a.paths.Host(id)
-	if mode := a.paths.HostDirMode; mode != 0 {
+	if a.paths.HostDirFromUnit {
 		dir := filepath.Dir(path)
-		if err := os.MkdirAll(dir, mode); err != nil {
+		fi, err := os.Lstat(dir)
+		if errors.Is(err, fs.ErrNotExist) {
+			return nil, fmt.Errorf("%s does not exist yet (the backend socket unit creates it when the sync enables it)", dir)
+		}
+		if err != nil {
 			return nil, err
 		}
-		if err := os.Chmod(dir, mode); err != nil {
-			return nil, err
+		if !fi.IsDir() {
+			return nil, fmt.Errorf("%s is not a directory", dir)
 		}
 	}
 	ln, err := listenUnixSocket(path, a.paths.HostMode)
@@ -286,6 +331,11 @@ func (a *addonHosts) listen(id string) (*hostSocket, error) {
 		ReadHeaderTimeout: hostReadHeaderTimeout,
 		MaxHeaderBytes:    hostMaxHeaderBytes,
 		IdleTimeout:       hostIdleTimeout,
+	}
+	// 연결한 uid 확인은 받은 연결에 바로 한다(limitListener가 잡은 칸 하나로 받기를 되풀이하며, 받지 않은 연결은 칸을
+	// 더 쓰지 않고 닫힌다).
+	if allow := a.paths.HostPeer; allow != nil {
+		ln = &peerListener{Listener: ln, id: id, allow: allow}
 	}
 	limited := newLimitListener(ln, hostMaxConns)
 	a.wg.Add(1)
@@ -324,6 +374,75 @@ func listenUnixSocket(path string, mode fs.FileMode) (net.Listener, error) {
 		return nil, err
 	}
 	return ln, nil
+}
+
+// peerListener는 연결한 프로세스의 uid(SO_PEERCRED)가 allow를 통과한 연결만 돌려준다. 나머지는 받자마자 닫고 다음
+// 연결을 기다린다. 거절은 로그를 남기되 소켓마다 peerLogEvery에 한 번만 남긴다(연결을 계속 다시 맺는 클라이언트가
+// 로그를 채우지 않게).
+type peerListener struct {
+	net.Listener
+	id    string
+	allow func(uid int) bool
+
+	mu      sync.Mutex
+	lastLog time.Time
+	dropped int
+}
+
+// peerLogEvery는 거절 로그의 간격이다.
+const peerLogEvery = time.Minute
+
+func (l *peerListener) Accept() (net.Conn, error) {
+	for {
+		c, err := l.Listener.Accept()
+		if err != nil {
+			return nil, err
+		}
+		uid, err := peerUID(c)
+		if err == nil && l.allow(uid) {
+			return c, nil
+		}
+		l.logRejected(uid, err)
+		c.Close()
+	}
+}
+
+func (l *peerListener) logRejected(uid int, err error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.dropped++
+	if now := time.Now(); now.Sub(l.lastLog) >= peerLogEvery {
+		if err != nil {
+			log.Printf("addon %s: host socket: closed a connection (%d since the last report): peer credentials: %v", l.id, l.dropped, err)
+		} else {
+			log.Printf("addon %s: host socket: closed a connection from uid %d (%d since the last report)", l.id, uid, l.dropped)
+		}
+		l.lastLog, l.dropped = now, 0
+	}
+}
+
+// peerUID는 유닉스 소켓 연결 상대 프로세스의 uid(SO_PEERCRED)다. 커널이 connect 때 기록한 값이라 위조할 수 없다
+// (internal/helper/daemon의 peerUID와 같다).
+func peerUID(c net.Conn) (int, error) {
+	sc, ok := c.(syscall.Conn)
+	if !ok {
+		return -1, errors.New("not a socket connection")
+	}
+	raw, err := sc.SyscallConn()
+	if err != nil {
+		return -1, err
+	}
+	var cred *syscall.Ucred
+	var serr error
+	if err := raw.Control(func(fd uintptr) {
+		cred, serr = syscall.GetsockoptUcred(int(fd), syscall.SOL_SOCKET, syscall.SO_PEERCRED)
+	}); err != nil {
+		return -1, err
+	}
+	if serr != nil {
+		return -1, serr
+	}
+	return int(cred.Uid), nil
 }
 
 // limitListener는 동시 연결을 n개로 묶는다. 가득 차면 Accept가 연결이 닫힐 때까지 기다린다.

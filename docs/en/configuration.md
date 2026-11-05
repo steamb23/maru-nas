@@ -32,6 +32,9 @@ The workbench address (`-workbench-url`), the SMART check time (`-smart-refresh-
 
 - Sessions live only in the backend's memory, so every user must sign in again after the backend restarts.
 - `/var/lib/maru` holds only the dashboard's own state and has nothing to do with the OMV configuration. Copying this directory along with your backups keeps user settings, global settings, uploaded wallpapers, sign-in methods of the security hardening mode, installed [addon packages](addons.md) and the values users saved in them.
+    - Addon packages are in `addons/` (installed packages and the install record) and `addon-data/` (the values users saved in packages).
+    - On installations with [addon backends](addons.md#addon-backends) turned on, there are also `addon-backends.json` (the list of backends to keep on) and `addon-sync.json` (a sync request, gone once it is picked up). The dashboard rewrites the backend list from the installed packages, so without a backup only a backend data deletion that has not been processed yet is lost.
+- The data addon backends saved is outside the state directory, in `/var/lib/private/maru-addon/<id>`, readable only by root. Back it up separately as root if you need it.
 - The sign-in method records contain authenticator app secrets, so protect the backups too ([Design and limitations](security.md#design-and-limitations)).
 
 ## Opening the OMV Workbench

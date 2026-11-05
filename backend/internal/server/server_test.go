@@ -61,6 +61,31 @@ func (c *clock) Add(d time.Duration) {
 	c.t = c.t.Add(d)
 }
 
+// syncBuffer는 잠금으로 감싼 로그 버퍼다. 서버 고루틴(호스트 소켓의 accept 등)이 log로 쓰는 동안 시험이 읽어도
+// 경합 탐지기가 잡지 않게 한다(소켓이 닫혀 EOF가 오는 것은 동기화가 아니다).
+type syncBuffer struct {
+	mu  sync.Mutex
+	buf bytes.Buffer
+}
+
+func (b *syncBuffer) Write(p []byte) (int, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.Write(p)
+}
+
+func (b *syncBuffer) String() string {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.String()
+}
+
+func (b *syncBuffer) Len() int {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.Len()
+}
+
 // env는 백엔드 핸들러 + 실제 omv.Client + 가짜 OMV(omvfake)를 묶은 테스트 환경이다.
 type env struct {
 	t     *testing.T
@@ -69,7 +94,7 @@ type env struct {
 	omvTS *httptest.Server
 	clk   *clock
 	store *auth.Store
-	logs  *bytes.Buffer
+	logs  *syncBuffer
 	// helper는 envOptions.helper일 때 띄운 가짜 권한 도우미다.
 	helper *helperfake.Server
 	// sshd, terminal은 envOptions.terminal일 때 띄운 가짜 sshd와 웹 터미널 접속이다.
@@ -84,6 +109,8 @@ type env struct {
 	packages *addonpkg.Manager
 	// srv는 NewServer가 만든 서버다(애드온 호스트 소켓을 연 핸들러 상태를 본다).
 	srv *Server
+	// stateDir는 envOptions.packages일 때 패키지 저장소(<stateDir>/addons)를 둔 임시 상태 디렉터리다.
+	stateDir string
 }
 
 type envOptions struct {
@@ -136,6 +163,8 @@ type envOptions struct {
 	addonSDK  fs.FS
 	// addonHost는 Config.AddonHost다(패키지 백엔드를 켠다). 정리할 때 서버를 닫는다.
 	addonHost *addonpkg.BackendPaths
+	// addonSync는 Config.AddonSync다(운영 백엔드의 root 동기화 파일). 시계는 env의 시계다.
+	addonSync *addonpkg.SyncPaths
 }
 
 func newEnv(t *testing.T, o envOptions) *env {
@@ -173,7 +202,7 @@ func newEnv(t *testing.T, o envOptions) *env {
 		client = o.wrapOMV(client)
 	}
 
-	logs := &bytes.Buffer{}
+	logs := &syncBuffer{}
 	prev := log.Writer()
 	log.SetOutput(logs)
 	t.Cleanup(func() { log.SetOutput(prev) })
@@ -234,13 +263,15 @@ func newEnv(t *testing.T, o envOptions) *env {
 		o.notify.Now = clk.Now
 	}
 	var packages *addonpkg.Manager
+	var stateDir string
 	if o.packages || len(o.devAddons) > 0 {
 		if o.addons == nil {
 			o.addons, _ = addons.NewRegistry()
 		}
 		opt := addonpkg.Options{Arch: "amd64", DevDirs: o.devAddons, Now: clk.Now, BackendsEnabled: o.addonHost != nil}
 		if o.packages {
-			opt.Store = addonpkg.NewStore(filepath.Join(t.TempDir(), "addons"))
+			stateDir = t.TempDir()
+			opt.Store = addonpkg.NewStore(filepath.Join(stateDir, "addons"))
 		}
 		if p, ok := o.plugins.(addonpkg.PluginTable); ok {
 			opt.Plugins = p
@@ -256,6 +287,7 @@ func newEnv(t *testing.T, o envOptions) *env {
 		Addons:            o.addons,
 		Packages:          packages,
 		AddonHost:         o.addonHost,
+		AddonSync:         o.addonSync,
 		AddonSDK:          o.addonSDK,
 		Plugins:           o.plugins,
 		Prefs:             o.prefs,
@@ -283,7 +315,7 @@ func newEnv(t *testing.T, o envOptions) *env {
 	t.Cleanup(srv.Close)
 	return &env{t: t, h: srv, fake: fake, omvTS: ts, clk: clk, store: store, logs: logs, helper: fakeHelper,
 		sshd: sshd, terminal: manager, upgradeRoot: upgradeRoot, upgradeState: upgradeState, security: o.security,
-		packages: packages, srv: srv}
+		packages: packages, srv: srv, stateDir: stateDir}
 }
 
 // browser는 쿠키를 보관하는 간이 브라우저다.

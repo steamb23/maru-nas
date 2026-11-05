@@ -637,6 +637,60 @@ export interface AddonPackagesResponse {
    * SDK는 이 대시보드의 SDK 수준이다.
    */
   sdk: number /* int */;
+  /**
+   * Backends는 패키지 백엔드의 상태다(켜져 있는지, 설치본이면 root 동기화의 상태).
+   */
+  backends: AddonBackendSync;
+}
+/**
+ * AddonBackendSync는 패키지 백엔드의 상태다(GET /api/site/addons의 backends, POST /api/site/addons/sync의 응답).
+ */
+export interface AddonBackendSync {
+  /**
+   * Enabled는 이 설치에서 패키지 백엔드가 켜져 있는지다(설치기 --addon-backends, 개발 서버의 개발 백엔드).
+   */
+  enabled: boolean;
+  /**
+   * Managed는 root 동기화가 백엔드 유닛을 켜고 끄는지다(설치본). 개발 백엔드는 개발자가 띄우므로 false다. 아래
+   * 필드는 Managed일 때만 뜻이 있다.
+   */
+  managed: boolean;
+  /**
+   * Pending은 동기화 요청을 root 동기화가 아직 가져가지 않았거나, 가져간 뒤 아직 결과를 쓰지 않았다는 뜻이다(요청한 뒤
+   * 1분까지). Stalled는 요청이 1분 넘게 남아 있다는 뜻이다(경로 유닛이 돌지 않는다).
+   */
+  pending: boolean;
+  stalled: boolean;
+  /**
+   * Applied는 마지막 동기화 결과가 지금 원하는 상태를 맞췄는지다(동기화 전체가 실패한 결과는 아니다).
+   */
+  applied: boolean;
+  /**
+   * SyncedAt은 마지막 동기화 결과의 시각이다(동기화 전체가 실패한 결과 포함). 아직 동기화하지 않았으면 없다.
+   */
+  syncedAt?: any /* time.Time */;
+  /**
+   * Error는 마지막 동기화가 전체 실패한 이유다(root 동기화가 쓴 영어 문구).
+   */
+  error?: string;
+  /**
+   * FileError는 대시보드가 동기화 결과를 읽거나 원하는 상태·요청을 쓰지 못한 이유다(영어).
+   */
+  fileError?: string;
+}
+/**
+ * AddonPackageBackend는 백엔드 패키지 하나의 동기화 상태다. root 동기화가 관리하는 설치에서 켜 둔 설치본에만 있다.
+ */
+export interface AddonPackageBackend {
+  /**
+   * State는 running(동기화가 지금 rev·설치의 유닛을 켬. 첫 요청 때 시작한다), failed(켜지 못함, 대시보드가 원하는
+   * 상태에 넣지 못함), pending(아직 반영을 확인하지 못함. 그동안 데이터·조작은 503 addon_backend_unavailable)이다.
+   */
+  state: 'running' | 'failed' | 'pending';
+  /**
+   * Error는 failed의 이유다(root 동기화가 쓴 영어 문구).
+   */
+  error?: string;
 }
 /**
  * AddonPackageStatus는 관리자 목록의 패키지 하나다.
@@ -666,6 +720,10 @@ export interface AddonPackageStatus {
   updatedAt?: any /* time.Time */;
   permissions?: AddonPermissions;
   icon?: string;
+  /**
+   * Backend는 백엔드의 동기화 상태다(AddonPackageBackend).
+   */
+  backend?: AddonPackageBackend;
 }
 /**
  * AddonPermissions는 패키지가 선언한 권한 요약이다(검토 화면).
@@ -1323,6 +1381,11 @@ export const ErrAddonBackendUnavailable = "addon_backend_unavailable";
  */
 export const ErrAddonBackendDisabled = "addon_backend_disabled";
 /**
+ * ErrAddonPurgeFull은 지울 백엔드 데이터가 root 동기화의 한 번 분량만큼 밀려 있어 데이터 지우기를 고른 제거를 받지
+ * 않았다는 뜻이다(패키지는 그대로다). 동기화가 앞의 것을 지운 뒤 다시 한다.
+ */
+export const ErrAddonPurgeFull = "addon_purge_full";
+/**
  * ErrBackendUnavailable은 capability 이유(ReasonBackendUnavailable)가 오류 코드로 쓰일 때다(패키지 RPC·프레임).
  */
 export const ErrBackendUnavailable = ReasonBackendUnavailable;
@@ -1334,7 +1397,7 @@ export interface ErrorResponse {
   /**
    * Code는 화면에서 분기할 때 쓰는 오류 종류다. 없을 수 있다.
    */
-  code?: 'invalid_credentials' | 'rate_limited' | 'challenge_failed' | 'challenge_expired' | 'omv_unavailable' | 'unauthorized' | 'bad_request' | 'rpc_forbidden' | 'admin_required' | 'plugin_missing' | 'omv_error' | 'action_busy' | 'action_failed' | 'action_timeout' | 'config_dirty' | 'image_too_large' | 'unsupported_image' | 'profile_readonly' | 'helper_unavailable' | 'helper_reauth' | 'elevation_failed' | 'elevation_not_allowed' | 'elevation_required' | 'terminal_disabled' | 'security_required' | 'factor_failed' | 'manage_required' | 'passkey_unavailable' | 'passkey_uv_unsupported' | 'security_unavailable' | 'passkey_login_unknown' | 'passkey_login_expired' | 'passkey_login_stale' | 'upgrade_disabled' | 'upgrade_busy' | 'upgrade_outdated' | 'not_found' | 'permission_denied' | 'outside_roots' | 'file_exists' | 'not_dir' | 'is_dir' | 'not_regular' | 'no_space' | 'read_only' | 'helper_busy' | 'transfer_timeout' | 'listing_expired' | 'sort_pending' | 'not_empty' | 'cross_device' | 'root_folder' | 'no_trash' | 'share_read_only' | 'job_busy' | 'apt_locked' | 'no_changelog' | 'download_failed' | 'smart_unsupported' | 'addon_invalid' | 'addon_too_large' | 'addons_unavailable' | 'upload_expired' | 'addon_readonly' | 'addon_no_backend' | 'addon_error' | 'addon_backend_unavailable' | 'addon_backend_disabled' | 'backend_unavailable';
+  code?: 'invalid_credentials' | 'rate_limited' | 'challenge_failed' | 'challenge_expired' | 'omv_unavailable' | 'unauthorized' | 'bad_request' | 'rpc_forbidden' | 'admin_required' | 'plugin_missing' | 'omv_error' | 'action_busy' | 'action_failed' | 'action_timeout' | 'config_dirty' | 'image_too_large' | 'unsupported_image' | 'profile_readonly' | 'helper_unavailable' | 'helper_reauth' | 'elevation_failed' | 'elevation_not_allowed' | 'elevation_required' | 'terminal_disabled' | 'security_required' | 'factor_failed' | 'manage_required' | 'passkey_unavailable' | 'passkey_uv_unsupported' | 'security_unavailable' | 'passkey_login_unknown' | 'passkey_login_expired' | 'passkey_login_stale' | 'upgrade_disabled' | 'upgrade_busy' | 'upgrade_outdated' | 'not_found' | 'permission_denied' | 'outside_roots' | 'file_exists' | 'not_dir' | 'is_dir' | 'not_regular' | 'no_space' | 'read_only' | 'helper_busy' | 'transfer_timeout' | 'listing_expired' | 'sort_pending' | 'not_empty' | 'cross_device' | 'root_folder' | 'no_trash' | 'share_read_only' | 'job_busy' | 'apt_locked' | 'no_changelog' | 'download_failed' | 'smart_unsupported' | 'addon_invalid' | 'addon_too_large' | 'addons_unavailable' | 'upload_expired' | 'addon_readonly' | 'addon_no_backend' | 'addon_error' | 'addon_backend_unavailable' | 'addon_backend_disabled' | 'addon_purge_full' | 'backend_unavailable';
   /**
    * RetryAfterSeconds는 rate_limited일 때 다시 시도할 수 있기까지 남은 초다.
    */

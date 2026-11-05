@@ -25,8 +25,9 @@ const indexVersion = 1
 // stagingPrefix는 설치 중인 패키지를 푸는 디렉터리 이름의 앞부분이다.
 const stagingPrefix = ".staging-"
 
-// currentLink는 지금 rev를 가리키는 심볼릭 링크 이름이다.
-const currentLink = "current"
+// currentLink는 지금 rev를 가리키는 심볼릭 링크 이름이다. 백엔드 유닛의 ExecStart가 같은 이름을 쓰므로 원본은
+// backend/config에 있다.
+const currentLink = config.AddonCurrentLink
 
 // ValidRev는 rev가 저장 디렉터리 이름 형식인지다(<version>-<sha256 앞 8자>, 개발 패키지는 dev-<해시>).
 // 백엔드 동기화(설치기)도 같은 규칙을 쓰므로 원본은 backend/config에 있다.
@@ -192,7 +193,7 @@ func (s *Store) Commit(st *Staging, id, rev, arch string) error {
 	return s.setCurrent(id, rev)
 }
 
-// placeBackend는 arch의 실행 파일을 backend/run으로 옮기고 나머지 실행 파일을 지운다. 백엔드가 없으면 그대로다.
+// placeBackend는 arch의 실행 파일을 backend/run(config.AddonBackendExec, 백엔드 유닛의 ExecStart)으로 옮기고 나머지 실행 파일을 지운다. 백엔드가 없으면 그대로다.
 func placeBackend(root *os.Root, arch string) error {
 	entries, err := fs.ReadDir(root.FS(), "backend")
 	if errors.Is(err, fs.ErrNotExist) {
@@ -204,10 +205,10 @@ func placeBackend(root *os.Root, arch string) error {
 	for _, e := range entries {
 		name := "backend/" + e.Name()
 		if e.Name() == "linux-"+arch {
-			if err := root.Rename(name, "backend/run"); err != nil {
+			if err := root.Rename(name, config.AddonBackendExec); err != nil {
 				return err
 			}
-			if err := root.Chmod("backend/run", 0o755); err != nil {
+			if err := root.Chmod(config.AddonBackendExec, 0o755); err != nil {
 				return err
 			}
 			continue

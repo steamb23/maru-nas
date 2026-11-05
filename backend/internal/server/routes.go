@@ -125,6 +125,7 @@ func (h *handler) routes() *http.ServeMux {
 	mux.HandleFunc("POST /api/site/addons/uploads", drainRejected(h.requireAdmin(h.uploadAddon)))
 	mux.HandleFunc("POST /api/site/addons/uploads/{pid}/install", h.requireAdmin(h.installAddon))
 	mux.HandleFunc("DELETE /api/site/addons/uploads/{pid}", h.requireAdmin(h.discardUpload))
+	mux.HandleFunc("POST /api/site/addons/sync", h.requireAdmin(h.syncAddonBackends))
 	mux.HandleFunc("PUT /api/site/addons/{id}", h.requireAdmin(h.setAddonEnabled))
 	mux.HandleFunc("DELETE /api/site/addons/{id}", h.requireAdmin(h.uninstallAddon))
 	mux.HandleFunc("POST /api/site/files/trash", h.requireAdmin(h.prepareSiteTrash))

@@ -1,6 +1,6 @@
 // The package's backend. During development you start it by hand; once the package is installed on a dashboard with
-// addon backends turned on (a later version), systemd starts it by socket activation. The dashboard never runs it
-// itself: it forwards the frontend's app.data() and app.action() to the backend's socket. See README.md.
+// addon backends turned on, systemd starts it by socket activation. The dashboard never runs it itself: it forwards
+// the frontend's app.data() and app.action() to the backend's socket. See README.md.
 package main
 
 import (

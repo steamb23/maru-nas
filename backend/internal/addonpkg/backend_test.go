@@ -245,12 +245,12 @@ func TestBackendClientFailures(t *testing.T) {
 func TestBackendPaths(t *testing.T) {
 	dev := DevBackendPaths("/state")
 	if dev.Backend("hello") != "/state/addon-dev/hello.sock" || dev.Host("hello") != "/state/addon-host/hello.sock" ||
-		dev.HostMode != 0o600 || dev.HostDirMode != 0 {
+		dev.HostMode != 0o600 || dev.HostDirFromUnit || dev.HostPeer != nil {
 		t.Errorf("dev paths = %s %s %v", dev.Backend("hello"), dev.Host("hello"), dev.HostMode)
 	}
 	prod := InstalledBackendPaths()
 	if prod.Backend("hello") != "/run/maru-addon/hello.sock" || prod.Host("hello") != "/run/maru-addon-host/hello/host.sock" ||
-		prod.HostMode != 0o666 || prod.HostDirMode != 0o755 {
+		prod.HostMode != 0o666 || !prod.HostDirFromUnit || prod.HostPeer == nil {
 		t.Errorf("installed paths = %s %s", prod.Backend("hello"), prod.Host("hello"))
 	}
 }

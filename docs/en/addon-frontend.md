@@ -64,7 +64,7 @@ app.on('context', (ctx) => render(ctx))
 
 - Each frame can have 16 requests waiting at once, and a message can be up to 256 KiB. Other requests are accepted up to 50 per second.
 - `action`, `query`, `confirm` and `notify` work only in window views.
-- Data requests wait up to 15 seconds and actions up to their `timeoutSeconds`. In this version backends run only on the development server; on installed dashboards a package with a backend shows as unavailable.
+- Data requests wait up to 15 seconds and actions up to their `timeoutSeconds`. On installations without addon backends turned on, a package with a backend shows as unavailable.
 
 ## Windows and widgets
 
@@ -122,8 +122,8 @@ Failed requests reject with a `MaruError` (`status`, `code`, `addonCode`, `messa
 | `omv_error`, `omv_unavailable` | OMV returned an error, or OMV could not be reached |
 | `addon_error` | The package backend answered with an error (below) |
 | `addon_no_backend` | `data` in a package without a backend |
-| `addon_backend_unavailable` | The backend is not running, did not answer a data request within 15 seconds, or the dashboard is handling too many backend requests at once |
-| `addon_backend_disabled`, `backend_unavailable` | Addon backends are turned off on this installation |
+| `addon_backend_unavailable` | The backend is not running, did not answer a data request within 15 seconds, has not been turned on by the backend sync yet after an install or update, or the dashboard is handling too many backend requests at once |
+| `addon_backend_disabled`, `backend_unavailable` | Addon backends are turned off on this installation, or this package's backend could not be turned on |
 | `action_timeout` | The action did not finish within its `timeoutSeconds` |
 | `action_busy` | Another run of the same action with the same target is in progress |
 | `admin_required` | The action is administrator-only and the user is not an administrator |

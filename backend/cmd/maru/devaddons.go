@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"io/fs"
 	"log"
 	"os"
@@ -8,6 +9,7 @@ import (
 	"runtime"
 	"strings"
 
+	"maru/backend/config"
 	"maru/backend/internal/addonpkg"
 	"maru/backend/internal/addons"
 	"maru/backend/internal/web"
@@ -23,16 +25,48 @@ const envDevAddonSDK = "MARU_DEV_ADDON_SDK"
 
 // envDevAddonBackends는 개발 전용 환경 변수다. 1이면 애드온 패키지 백엔드를 개발 경로로 켠다: maru가 백엔드 패키지마다
 // <state>/addon-host/<id>.sock(0600)을 열고, 개발자가 띄운 백엔드의 <state>/addon-dev/<id>.sock에 붙는다
-// (.claude/docs/addon-packages.md의 "켜짐과 꺼짐"). 상태 디렉터리가 있어야 한다. 플래그·가동 설정·설치기에는 넣지
-// 않는다(운영 백엔드는 설치기 설정 --addon-backends가 켠다).
+// (.claude/docs/addon-packages.md의 "켜짐과 꺼짐"). 상태 디렉터리가 있어야 한다. 운영 감지보다 먼저 본다. 플래그·가동
+// 설정·설치기에는 넣지 않는다(운영 백엔드는 설치기 설정 --addon-backends가 켠다).
 const envDevAddonBackends = "MARU_DEV_ADDON_BACKENDS"
 
-// devAddonBackends는 개발 백엔드의 경로다. 꺼져 있거나 상태 디렉터리가 없으면 nil이다(백엔드 꺼짐). 운영 백엔드
-// (config.AddonSyncStatusFile)는 설치기가 켜는 M3까지 쓰지 않는다.
-func devAddonBackends(stateDir string) *addonpkg.BackendPaths {
-	if os.Getenv(envDevAddonBackends) != "1" {
-		return nil
+// addonBackends는 이 실행에서 패키지 백엔드를 켤 경로와 root 동기화 파일 위치다(.claude/docs/addon-packages.md의
+// "켜짐과 꺼짐"). 개발 환경 변수(MARU_DEV_ADDON_BACKENDS=1)가 먼저이고, 그때는 동기화가 없다(개발자가 백엔드를 띄운다).
+// 아니면 설치기의 --addon-backends가 켠 설치인지 본다. 둘 다 아니면 nil, nil(백엔드 꺼짐)이다. 시작할 때 한 번 본다.
+func addonBackends(stateDir string) (*addonpkg.BackendPaths, *addonpkg.SyncPaths) {
+	if os.Getenv(envDevAddonBackends) == "1" {
+		return devAddonBackends(stateDir), nil
 	}
+	return installedAddonBackends(stateDir, config.InstalledStateDir, config.AddonSyncStatusFile)
+}
+
+// installedAddonBackends는 운영 백엔드의 경로다. 상태 디렉터리가 설치한 상태 디렉터리(installedDir, 백엔드 유닛과 경로
+// 유닛이 이 경로를 쓴다)이고 동기화 결과(statusFile)가 일반 파일이면 켠다. 설치기가 백엔드를 켤 때 maru를 다시 시작하기
+// 전에 빈 결과를 써 두므로, 결과가 있으면 켜진 설치다. 개발 서버의 상태 디렉터리(.dev-state)는 이 경로가 아니라 운영
+// 파일을 쓰지 않는다.
+func installedAddonBackends(stateDir, installedDir, statusFile string) (*addonpkg.BackendPaths, *addonpkg.SyncPaths) {
+	if stateDir == "" || filepath.Clean(stateDir) != installedDir {
+		return nil, nil
+	}
+	fi, err := os.Lstat(statusFile)
+	if err != nil {
+		if !errors.Is(err, fs.ErrNotExist) {
+			log.Printf("addon backends: %v; backends stay disabled", err)
+		}
+		return nil, nil
+	}
+	if !fi.Mode().IsRegular() {
+		log.Printf("addon backends: %s is not a regular file; backends stay disabled", statusFile)
+		return nil, nil
+	}
+	paths := addonpkg.InstalledBackendPaths()
+	sync := addonpkg.InstalledSyncPaths(stateDir)
+	sync.Status = statusFile
+	log.Printf("addon backends: on (%s)", statusFile)
+	return &paths, &sync
+}
+
+// devAddonBackends는 개발 백엔드의 경로다. 상태 디렉터리가 없으면 nil이다(백엔드 꺼짐).
+func devAddonBackends(stateDir string) *addonpkg.BackendPaths {
 	if stateDir == "" {
 		log.Printf("addon backends: %s needs a state directory; backends stay disabled", envDevAddonBackends)
 		return nil
@@ -59,7 +93,7 @@ func devAddonBackends(stateDir string) *addonpkg.BackendPaths {
 func newPackages(base *addons.Registry, stateDir string, plugins addonpkg.PluginTable, backends bool) *addonpkg.Manager {
 	opt := addonpkg.Options{Arch: runtime.GOARCH, Plugins: plugins, BackendsEnabled: backends}
 	if stateDir != "" {
-		opt.Store = addonpkg.NewStore(filepath.Join(stateDir, "addons"))
+		opt.Store = addonpkg.NewStore(filepath.Join(stateDir, config.AddonsDirName))
 	}
 	if dirs := os.Getenv(envDevAddons); dirs != "" {
 		for _, d := range strings.Split(dirs, ":") {

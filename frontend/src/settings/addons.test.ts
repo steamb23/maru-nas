@@ -1,16 +1,21 @@
 import { describe, expect, it } from 'vitest'
 import { ApiError } from '../api/client'
-import type { AddonPackageStatus } from '../api/types.gen'
+import type { AddonBackendSync, AddonPackageStatus } from '../api/types.gen'
 import en from '../i18n/locales/en.json'
 import {
   addonError,
   authStep,
+  backendBadgeKey,
+  canRequestSync,
+  failedBackends,
   mib,
   packageTitle,
   reasonKey,
   riskKeys,
+  shouldPollSync,
   sortPackages,
   stateBadgeKey,
+  syncNotices,
   warningKeys,
   withChanges,
 } from './addons'
@@ -84,6 +89,7 @@ describe('문구 키', () => {
     'rpc_kind',
     'reserved_id',
     'invalid',
+    'too_many_backends',
   ]
 
   it('백엔드의 이유 코드마다 문구가 있다', () => {
@@ -155,6 +161,12 @@ describe('addonError', () => {
     expect(addonError(new ApiError(413, 'x'), 64).key).toBe('settings.addons.errors.tooLarge')
   })
 
+  it('지울 백엔드 데이터가 밀려 거절한 제거는 그 문구다', () => {
+    const e = addonError(new ApiError(409, 'x', 'addon_purge_full'), 64)
+    expect(e).toEqual({ key: 'settings.addons.errors.purgeFull' })
+    expect(keyExists(e.key)).toBe(true)
+  })
+
   it('그 밖의 오류는 일반 문구다', () => {
     expect(addonError(new ApiError(500, 'x'), 64).key).toBe('settings.addons.errors.failed')
     expect(addonError(new TypeError('network'), 64).key).toBe('settings.addons.errors.failed')
@@ -166,5 +178,81 @@ describe('mib', () => {
   it('MiB 정수로 내린다', () => {
     expect(mib(64 * 1024 * 1024)).toBe(64)
     expect(mib(64 * 1024 * 1024 - 1)).toBe(63)
+  })
+})
+
+function sync(over: Partial<AddonBackendSync> = {}): AddonBackendSync {
+  return { enabled: true, managed: true, pending: false, stalled: false, applied: true, ...over }
+}
+
+// pluralKeyExists는 복수형 키(<키>_other)까지 본다.
+function pluralKeyExists(key: string): boolean {
+  return keyExists(key) || keyExists(key + '_other')
+}
+
+describe('백엔드 동기화', () => {
+  it('백엔드를 켜지 못한 패키지는 앞에 두고 배지를 붙인다', () => {
+    const failed = pkg({ id: 'b', name: { en: 'B' }, backend: { state: 'failed', error: 'enable failed' } })
+    const sorted = sortPackages([pkg({ id: 'a', name: { en: 'A' } }), failed], 'en')
+    expect(sorted.map((p) => p.id)).toEqual(['b', 'a'])
+    expect(backendBadgeKey(failed)).toBe('settings.addons.backend.failedBadge')
+    expect(backendBadgeKey(pkg({ id: 'c', backend: { state: 'pending' } }))).toBe('settings.addons.backend.pendingBadge')
+    expect(backendBadgeKey(pkg({ id: 'd', backend: { state: 'running' } }))).toBeNull()
+    expect(backendBadgeKey(pkg({ id: 'e' }))).toBeNull()
+    expect(failedBackends([failed, pkg({ id: 'a' }), pkg({ id: 'c', backend: { state: 'pending' } })])).toBe(1)
+  })
+
+  it('꺼진 설치는 켜는 명령, 개발 서버는 개발 안내만 보인다', () => {
+    expect(syncNotices(sync({ enabled: false, managed: false }), 0)).toEqual([{ key: 'settings.addons.backend.off', command: true }])
+    expect(syncNotices(sync({ managed: false }), 3).map((n) => n.key)).toEqual(['settings.addons.backend.dev'])
+  })
+
+  it('맞춰진 설치는 안내가 없다', () => {
+    expect(syncNotices(sync(), 0)).toEqual([])
+  })
+
+  it('멈춤은 명령과 함께 오류로, 대기와 반영 안 됨은 하나만 보인다', () => {
+    expect(syncNotices(sync({ pending: true, stalled: true, applied: false }), 0)).toEqual([
+      { key: 'settings.addons.backend.stalled', tone: 'error', command: true },
+    ])
+    expect(syncNotices(sync({ pending: true, applied: false }), 0).map((n) => n.key)).toEqual(['settings.addons.backend.pending'])
+    expect(syncNotices(sync({ applied: false }), 0).map((n) => n.key)).toEqual(['settings.addons.backend.notApplied'])
+  })
+
+  it('동기화 오류와 파일 오류는 영어 설명과 함께, 실패한 백엔드는 수와 함께 보인다', () => {
+    const notices = syncNotices(sync({ applied: false, error: 'invalid id', fileError: 'read sync status: EACCES' }), 2)
+    expect(notices).toEqual([
+      { key: 'settings.addons.backend.syncFailed', tone: 'error', detail: 'invalid id' },
+      { key: 'settings.addons.backend.fileError', tone: 'error', detail: 'read sync status: EACCES' },
+      { key: 'settings.addons.backend.failedCount', tone: 'error', params: { count: 2 } },
+    ])
+  })
+
+  it('문구 키가 모두 있다', () => {
+    const all = [
+      sync({ enabled: false, managed: false }),
+      sync({ managed: false }),
+      sync({ pending: true, stalled: true }),
+      sync({ pending: true }),
+      sync({ applied: false }),
+      sync({ error: 'x', fileError: 'y' }),
+    ].flatMap((s) => syncNotices(s, 1))
+    for (const n of all) expect(pluralKeyExists(n.key), n.key).toBe(true)
+    for (const k of ['settings.addons.backend.failedBadge', 'settings.addons.backend.pendingBadge']) expect(keyExists(k), k).toBe(true)
+  })
+
+  it('다시 동기화는 가져가지 않은 요청이 있으면 막고, 멈춘 요청은 다시 쓸 수 있다', () => {
+    expect(canRequestSync(sync())).toBe(true)
+    expect(canRequestSync(sync({ pending: true }))).toBe(false)
+    expect(canRequestSync(sync({ pending: true, stalled: true }))).toBe(true)
+    expect(canRequestSync(sync({ managed: false }))).toBe(false)
+  })
+
+  it('요청을 기다리는 동안만 다시 받는다', () => {
+    expect(shouldPollSync(sync({ pending: true }))).toBe(true)
+    expect(shouldPollSync(sync({ pending: true, stalled: true }))).toBe(false)
+    expect(shouldPollSync(sync())).toBe(false)
+    expect(shouldPollSync(sync({ pending: true, managed: false }))).toBe(false)
+    expect(shouldPollSync(undefined)).toBe(false)
   })
 })

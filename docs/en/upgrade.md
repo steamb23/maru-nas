@@ -19,6 +19,12 @@ When Maru NAS is already installed, `./install.sh` builds and installs with the 
 - In scripts, use `./install.sh --upgrade`. It upgrades without confirmation and fails if nothing is installed.
 - If standard input is not a terminal, it upgrades without offering the choice. If a setting must be asked, it lists those options and stops, so give them as options or run again with `--reinstall`.
 
+### Addon packages and upgrades
+
+- Upgrading keeps the installed [addon packages](addons.md) and their data, and does not rebuild the packages. The same goes for upgrading from the dashboard.
+- On installations with [addon backends](addons.md#addon-backends) turned on, they stay on after an upgrade. If the new version changes the backend units, running backends restart.
+- New versions keep supporting packages made for earlier SDK levels, so installed packages keep working after an upgrade. A package that needs a higher SDK level than the current version supports cannot be installed; upgrade to a version that supports that level first. The other way around, if you go back to an earlier version, packages that need an SDK level it does not support become "Incompatible" and are not used ([Packages that cannot be used](addons.md#packages-that-cannot-be-used)).
+
 ## Upgrading from the dashboard
 
 Instead of running `git pull` and `./install.sh` over SSH, an administrator upgrades on the "Update" page of the Settings app. It looks for a new version in the local git repository used for the installation, builds it as the repository owner, and installs it as root.

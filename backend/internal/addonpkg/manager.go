@@ -14,6 +14,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"maru/backend/config"
 	"maru/backend/internal/addonpkg/format"
 	"maru/backend/internal/addons"
 )
@@ -429,13 +430,26 @@ type RejectError struct{ addons.Rejection }
 
 func (e *RejectError) Error() string { return e.Code + ": " + e.Detail }
 
-// wouldAccept는 지금 받은 패키지(같은 id는 빼고)에 mf를 더했을 때 레지스트리가 받는지 본다.
+// ReasonTooManyBackends는 백엔드가 있는 설치본을 config.AddonBackendsMax개보다 많이 켤 수 없다는 거부 코드다(root
+// 동기화의 원하는 상태가 그만큼만 받는다). 개발 패키지는 세지 않는다.
+const ReasonTooManyBackends = "too_many_backends"
+
+// wouldAccept는 지금 받은 패키지(같은 id는 빼고)에 mf를 더했을 때 레지스트리가 받는지 본다. 백엔드 패키지는 켜 둔
+// 백엔드 설치본의 수도 본다.
 func (m *Manager) wouldAccept(mf *format.Manifest) error {
 	var list []addons.Addon
+	backends := 0
 	for _, p := range m.Active() {
 		if p.ID != mf.ID {
 			list = append(list, ToAddon(p.Manifest))
+			if !p.Dev && p.Manifest.HasBackend() {
+				backends++
+			}
 		}
+	}
+	if mf.HasBackend() && backends >= config.AddonBackendsMax {
+		return &RejectError{addons.Rejection{ID: mf.ID, Code: ReasonTooManyBackends,
+			Detail: fmt.Sprintf("at most %d packages with a backend can be enabled", config.AddonBackendsMax)}}
 	}
 	list = append(list, ToAddon(mf))
 	_, rejected := addons.Extend(m.base, list)
@@ -538,7 +552,9 @@ func (m *Manager) SetEnabled(id string, on bool) (*Status, error) {
 	return m.statusLocked(id), nil
 }
 
-// Uninstall은 패키지 파일과 설치 기록을 지운다.
+// Uninstall은 설치 기록과 패키지 파일을 지운다. 기록을 지우고 레지스트리를 바꾼 뒤에는 제거가 끝난 것이므로(부르는
+// 쪽은 그 뒤의 일, 백엔드 데이터 지우기 등을 이어 한다) 파일을 지우지 못하면 로그만 남긴다. 기록이 없으므로 남은 파일은
+// 목록·레지스트리에 나오지 않는다.
 func (m *Manager) Uninstall(id string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -562,7 +578,10 @@ func (m *Manager) Uninstall(id string) error {
 		return err
 	}
 	m.reloadLocked()
-	return store.Remove(id)
+	if err := store.Remove(id); err != nil {
+		log.Printf("addon %s: remove package files: %v", id, err)
+	}
+	return nil
 }
 
 // Status는 관리자 목록의 id 항목이다.

@@ -3,6 +3,8 @@
 //
 // 패키지가 준 문구(이름, 설명, 작성자)는 평문으로만 그리고 패키지 배지를 붙인다. 아이콘은 <img>로만 그린다.
 // 설치·켜기는 관리 창(manage_required)과, 쓰기·백엔드가 있으면 단계 확인(security_required)을 거친 뒤 다시 보낸다.
+// 백엔드 섹션은 패키지 백엔드가 켜졌는지와 root 동기화의 상태를 보이고 다시 동기화를 요청한다(설계는
+// .claude/docs/addon-packages.md의 "root 동기화"). 요청이 처리되기를 기다리는 동안 목록을 다시 받는다.
 import type { ParseKeys } from 'i18next'
 import { createRef, type ReactNode, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -14,32 +16,46 @@ import {
   discardAddonUpload,
   fetchAddonPackages,
   installAddonUpload,
+  requestAddonSync,
   setAddonPackageEnabled,
   uninstallAddonPackage,
   uploadAddonPackage,
 } from '../api/client'
-import type { AddonPackageStatus, AddonPackagesResponse, AddonPendingInstall, AddonPermissionsDiff } from '../api/types.gen'
+import type {
+  AddonBackendSync,
+  AddonPackageStatus,
+  AddonPackagesResponse,
+  AddonPendingInstall,
+  AddonPermissionsDiff,
+} from '../api/types.gen'
 import { useLanguage } from '../i18n'
 import { IconImage } from '../icons/IconImage'
 import { requestManage, requestStepUp } from '../security/stepUpDialog'
 import { type Dialogs, useDialogs } from '../shell/dialogPresets'
 import { MessageButtons } from '../shell/MessageDialog'
 import {
+  ADDON_BACKENDS_COMMAND,
   type AddonError,
   MAX_AUTH_ROUNDS,
   type PermissionItem,
+  SYNC_POLL_MS,
   addonError,
   authStep,
+  backendBadgeKey,
+  canRequestSync,
+  failedBackends,
   mib,
   packageTitle,
   reasonKey,
   riskKeys,
+  shouldPollSync,
   sortPackages,
   stateBadgeKey,
+  syncNotices,
   warningKeys,
   withChanges,
 } from './addons'
-import { SettingsCard, SettingsNotice, SettingsRow, SettingsSection, Switch } from './controls'
+import { CommandBlock, SettingsCard, SettingsNotice, SettingsRow, SettingsSection, Switch } from './controls'
 
 type LoadState = { status: 'loading' } | { status: 'error' } | { status: 'ready'; data: AddonPackagesResponse }
 
@@ -85,6 +101,17 @@ export function AddonsPage({ active }: WindowViewProps) {
       // 다음에 페이지가 보일 때 다시 받는다.
     }
   }
+
+  // 동기화 결과를 기다리는 동안 목록을 다시 받는다. 받기가 끝날 때마다(실패해도) pollTick이 바뀌어 다음 차례를 건다.
+  const [pollTick, setPollTick] = useState(0)
+  const polling = active && shouldPollSync(data?.backends)
+  useEffect(() => {
+    if (!polling) return
+    const timer = window.setTimeout(() => {
+      void reload().finally(() => setPollTick((n) => n + 1))
+    }, SYNC_POLL_MS)
+    return () => window.clearTimeout(timer)
+  }, [polling, pollTick])
 
   // withAuth는 요청을 보내고, 관리 창·단계 확인이 모자라다는 거절이면 확인한 뒤 다시 보낸다. 취소하면 null이다.
   const withAuth = async <T,>(task: () => Promise<T>): Promise<T | null> => {
@@ -166,6 +193,23 @@ export function AddonsPage({ active }: WindowViewProps) {
     })
   }
 
+  // onSync는 root 동기화를 다시 요청한다(실패한 백엔드를 다시 켜 보거나 멈춘 요청을 다시 쓴다).
+  const onSync = async () => {
+    if (busy) return
+    setBusy(true)
+    setError(null)
+    setDone(null)
+    try {
+      const backends = await requestAddonSync()
+      setLoad((prev) => (prev.status === 'ready' ? { status: 'ready', data: { ...prev.data, backends } } : prev))
+      setDone({ key: 'settings.addons.backend.requested', name: '' })
+    } catch (err) {
+      setError(addonError(err, maxMiB))
+    } finally {
+      setBusy(false)
+    }
+  }
+
   const onDetails = (p: AddonPackageStatus) =>
     void dialogs.open<true>({
       title: t('settings.addons.details.title'),
@@ -238,9 +282,53 @@ export function AddonsPage({ active }: WindowViewProps) {
               </SettingsCard>
             )}
           </SettingsSection>
+
+          <BackendSection sync={data.backends} failed={failedBackends(data.packages)} busy={busy} onSync={() => void onSync()} />
         </>
       )}
     </>
+  )
+}
+
+// BackendSection은 패키지 백엔드 상태다: 꺼진 설치는 켜는 명령, 설치본은 마지막 동기화 시각과 상태·오류, 다시 동기화.
+function BackendSection({
+  sync,
+  failed,
+  busy,
+  onSync,
+}: {
+  sync: AddonBackendSync
+  failed: number
+  busy: boolean
+  onSync: () => void
+}) {
+  const { t } = useTranslation()
+  const lang = useLanguage()
+  const notices = syncNotices(sync, failed)
+  return (
+    <SettingsSection title={t('settings.addons.backend.title')} description={t('settings.addons.backend.desc')}>
+      {sync.managed && (
+        <p className="settings-hint">
+          {sync.syncedAt
+            ? t('settings.addons.backend.syncedAt', { time: formatDateTime(sync.syncedAt, lang) })
+            : t('settings.addons.backend.neverSynced')}
+        </p>
+      )}
+      {notices.map((n) => (
+        <SettingsNotice key={n.key} tone={n.tone}>
+          {t(n.key, n.params)}
+          {n.detail && <span className="addons-pkg-detail selectable">{n.detail}</span>}
+        </SettingsNotice>
+      ))}
+      {notices.some((n) => n.command) && <CommandBlock text={ADDON_BACKENDS_COMMAND} />}
+      {sync.managed && (
+        <div className="settings-actions">
+          <button type="button" className="addon-button" disabled={busy || !canRequestSync(sync)} onClick={onSync}>
+            {t('settings.addons.backend.syncAgain')}
+          </button>
+        </div>
+      )}
+    </SettingsSection>
   )
 }
 
@@ -261,8 +349,17 @@ function PackageRow({
   const lang = useLanguage()
   const name = packageTitle(pkg, lang)
   const badge = stateBadgeKey(pkg)
+  const backendBadge = backendBadgeKey(pkg)
   const problem = pkg.state === 'rejected' || pkg.state === 'invalid'
-  const description = problem ? t(reasonKey(pkg.reason)) : localizedText(pkg.description, lang)
+  let description: ReactNode = problem ? t(reasonKey(pkg.reason)) : localizedText(pkg.description, lang)
+  if (!problem && pkg.backend?.state === 'failed') {
+    description = (
+      <>
+        {t('settings.addons.backend.failed')}
+        {pkg.backend.error && <span className="addons-pkg-detail selectable">{pkg.backend.error}</span>}
+      </>
+    )
+  }
   return (
     <SettingsRow
       label={
@@ -272,6 +369,11 @@ function PackageRow({
           {pkg.version && <span className="addons-pkg-version">{pkg.version}</span>}
           {pkg.dev && <span className="settings-badge">{t('settings.addons.dev')}</span>}
           {badge && <span className="settings-badge addons-pkg-problem">{t(badge)}</span>}
+          {backendBadge && (
+            <span className={pkg.backend?.state === 'failed' ? 'settings-badge addons-pkg-problem' : 'settings-badge'}>
+              {t(backendBadge)}
+            </span>
+          )}
         </span>
       }
       description={description || undefined}
@@ -389,10 +491,13 @@ function UninstallBody({
     <>
       <div className="modal-message">{t('settings.addons.uninstallMessage', { name })}</div>
       {backend && (
-        <label className="addons-pkg-check">
-          <input type="checkbox" onChange={(e) => onPurgeChange(e.currentTarget.checked)} />
-          <span>{t('settings.addons.purge')}</span>
-        </label>
+        <>
+          <label className="addons-pkg-check">
+            <input type="checkbox" onChange={(e) => onPurgeChange(e.currentTarget.checked)} />
+            <span>{t('settings.addons.purge')}</span>
+          </label>
+          <p className="settings-hint">{t('settings.addons.purgeHint')}</p>
+        </>
       )}
     </>
   )
@@ -528,6 +633,18 @@ function PackageSummary({
           <PermRow label={t('settings.addons.details.updatedAt')}>{formatDateTime(pkg.updatedAt, lang)}</PermRow>
         )}
         {mode === 'details' && pkg.dev && <PermRow label={t('settings.addons.dev')}>{t('settings.addons.details.devNote')}</PermRow>}
+        {mode === 'details' && pkg.backend && (
+          <PermRow label={t('settings.addons.backend.state')}>
+            {t(
+              pkg.backend.state === 'running'
+                ? 'settings.addons.backend.running'
+                : pkg.backend.state === 'failed'
+                  ? 'settings.addons.backend.failed'
+                  : 'settings.addons.backend.pendingBadge',
+            )}
+            {pkg.backend.error && <span className="addons-pkg-detail selectable">{pkg.backend.error}</span>}
+          </PermRow>
+        )}
       </dl>
     </div>
   )

@@ -38,5 +38,5 @@ npm run pack
 ```
 
 `maru-addon pack` refuses a package that declares a backend but has no executable. Installed packages' backends run
-only on installations with addon backends turned on, which comes in a later version; until then a package with a
-backend installs from Settings → Addons but its app is shown as unavailable, so try it on the development server.
+only on installations where an administrator turned addon backends on (`./install.sh --addon-backends`); elsewhere a
+package with a backend installs from Settings → Addons but its app is shown as unavailable.
