@@ -50,7 +50,7 @@ func TestAddonUnitPrefix(t *testing.T) {
 }
 
 func TestParseAddonBackends(t *testing.T) {
-	ok := `{"format":1,"backends":[{"id":"ups","version":"1.0.0","rev":"1.0.0-0123abcd","network":["lan"]}],"purge":["old"]}`
+	ok := `{"format":1,"backends":[{"id":"ups","version":"1.0.0","rev":"1.0.0-0123abcd","instance":"0123456789abcdef0123456789abcdef","network":["lan"]}],"purge":["old"]}`
 	b, err := ParseAddonBackends([]byte(ok))
 	if err != nil || len(b.Backends) != 1 || b.Backends[0].ID != "ups" || len(b.Purge) != 1 {
 		t.Fatalf("ParseAddonBackends(ok) = %+v, %v", b, err)
@@ -58,13 +58,15 @@ func TestParseAddonBackends(t *testing.T) {
 	bad := map[string]string{
 		"format":          `{"format":2,"backends":[],"purge":[]}`,
 		"unknown field":   `{"format":1,"backends":[],"purge":[],"extra":1}`,
-		"entry field":     `{"format":1,"backends":[{"id":"a","version":"1.0.0","rev":"1.0.0-0123abcd","network":[],"user":"root"}],"purge":[]}`,
-		"id":              `{"format":1,"backends":[{"id":"a;b","version":"1.0.0","rev":"1.0.0-0123abcd","network":[]}],"purge":[]}`,
-		"duplicate":       `{"format":1,"backends":[{"id":"a","version":"1.0.0","rev":"1.0.0-0123abcd","network":[]},{"id":"a","version":"1.0.0","rev":"1.0.0-0123abcd","network":[]}],"purge":[]}`,
+		"entry field":     `{"format":1,"backends":[{"id":"a","version":"1.0.0","rev":"1.0.0-0123abcd","instance":"0123456789abcdef0123456789abcdef","network":[],"user":"root"}],"purge":[]}`,
+		"id":              `{"format":1,"backends":[{"id":"a;b","version":"1.0.0","rev":"1.0.0-0123abcd","instance":"0123456789abcdef0123456789abcdef","network":[]}],"purge":[]}`,
+		"duplicate":       `{"format":1,"backends":[{"id":"a","version":"1.0.0","rev":"1.0.0-0123abcd","instance":"0123456789abcdef0123456789abcdef","network":[]},{"id":"a","version":"1.0.0","rev":"1.0.0-0123abcd","instance":"0123456789abcdef0123456789abcdef","network":[]}],"purge":[]}`,
 		"rev":             `{"format":1,"backends":[{"id":"a","version":"1.0.0","rev":"../x","network":[]}],"purge":[]}`,
 		"rev version":     `{"format":1,"backends":[{"id":"a","version":"1.0.0","rev":"2.0.0-0123abcd","network":[]}],"purge":[]}`,
-		"network":         `{"format":1,"backends":[{"id":"a","version":"1.0.0","rev":"1.0.0-0123abcd","network":["internet"]}],"purge":[]}`,
-		"network twice":   `{"format":1,"backends":[{"id":"a","version":"1.0.0","rev":"1.0.0-0123abcd","network":["lan","lan"]}],"purge":[]}`,
+		"network":         `{"format":1,"backends":[{"id":"a","version":"1.0.0","rev":"1.0.0-0123abcd","instance":"0123456789abcdef0123456789abcdef","network":["internet"]}],"purge":[]}`,
+		"instance":        `{"format":1,"backends":[{"id":"a","version":"1.0.0","rev":"1.0.0-0123abcd","instance":"XYZ","network":[]}],"purge":[]}`,
+		"no instance":     `{"format":1,"backends":[{"id":"a","version":"1.0.0","rev":"1.0.0-0123abcd","network":[]}],"purge":[]}`,
+		"network twice":   `{"format":1,"backends":[{"id":"a","version":"1.0.0","rev":"1.0.0-0123abcd","instance":"0123456789abcdef0123456789abcdef","network":["lan","lan"]}],"purge":[]}`,
 		"purge id":        `{"format":1,"backends":[],"purge":["../x"]}`,
 		"purge duplicate": `{"format":1,"backends":[],"purge":["a","a"]}`,
 		"trailing":        `{"format":1,"backends":[],"purge":[]} {}`,
@@ -81,5 +83,32 @@ func TestParseAddonBackends(t *testing.T) {
 	}
 	if err := many.Validate(); err == nil {
 		t.Error("Validate accepted more than AddonBackendsMax purge entries")
+	}
+}
+
+func TestParseAddonSyncStatus(t *testing.T) {
+	ok := `{"format":1,"updatedAt":"2026-11-05T00:00:00Z","digest":"ab","backends":[{"id":"ups","rev":"1.0.0-0123abcd","unit":"maru-addon@ups.socket","state":"enabled"}],"purged":["old"],"later":true}`
+	st, err := ParseAddonSyncStatus([]byte(ok))
+	if err != nil || len(st.Backends) != 1 || st.Backends[0].State != AddonBackendEnabled || len(st.Purged) != 1 {
+		t.Fatalf("ParseAddonSyncStatus(ok) = %+v, %v", st, err)
+	}
+	bad := map[string]string{
+		"format":    `{"format":2}`,
+		"id":        `{"format":1,"backends":[{"id":"a;b"}]}`,
+		"purged":    `{"format":1,"purged":["../x"]}`,
+		"json":      `{"format":1`,
+		"too large": `{"format":1}` + strings.Repeat(" ", AddonSyncStatusMaxBytes),
+	}
+	for name, data := range bad {
+		if _, err := ParseAddonSyncStatus([]byte(data)); err == nil {
+			t.Errorf("%s: ParseAddonSyncStatus accepted %.80s", name, data)
+		}
+	}
+}
+
+func TestAddonBackendsDigest(t *testing.T) {
+	// sha256("")
+	if got := AddonBackendsDigest(nil); got != "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" {
+		t.Fatalf("AddonBackendsDigest(nil) = %s", got)
 	}
 }
