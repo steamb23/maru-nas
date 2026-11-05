@@ -72,6 +72,10 @@ type Config struct {
 	Addons *addons.Registry
 	// Packages는 애드온 패키지다(설치본, 개발본). 기준 레지스트리는 Addons와 같아야 한다. nil이면 패키지를 쓰지 않는다.
 	Packages *addonpkg.Manager
+	// AddonHost는 애드온 패키지 백엔드의 소켓 위치다(백엔드 소켓, 호스트 소켓). nil이면 이 설치에서 백엔드가 꺼져 있다
+	// (백엔드 패키지는 capability backend_unavailable, 데이터·조작은 503 addon_backend_disabled). 설정하면 백엔드
+	// 패키지마다 호스트 소켓을 열므로 NewServer로 만들고 끝낼 때 Close한다. Packages의 BackendsEnabled와 같아야 한다.
+	AddonHost *addonpkg.BackendPaths
 	// AddonSDK는 애드온 프레임에 주는 SDK 런타임(sdk.js, maru.css)이 든 파일 시스템이다. nil이면 404다.
 	AddonSDK fs.FS
 	// Plugins가 nil이면 아무 플러그인도 설치되지 않은 것으로 본다.
@@ -143,6 +147,13 @@ type handler struct {
 	uiTokens *uiTokens
 	// uploads는 검토를 기다리는 애드온 패키지다(addon_admin.go).
 	uploads *pendingUploads
+	// backends는 패키지 백엔드 클라이언트, hosts는 백엔드 패키지마다 연 호스트 소켓이다(addon_host.go). 둘 다
+	// Config.AddonHost가 있을 때만 있다. hostCalls는 호스트 소켓의 호출 토큰이다.
+	backends  *addonpkg.BackendClient
+	hosts     *addonHosts
+	hostCalls *hostCalls
+	// backendDataTimeout은 패키지 데이터 요청의 시간 제한이다(테스트에서 줄인다).
+	backendDataTimeout time.Duration
 	// about은 실행 파일의 버전·빌드 정보다. 실행 중에 바뀌지 않으므로 시작할 때 한 번 읽는다.
 	about api.AboutResponse
 	// over는 웹에서 덮어쓴 가동 설정이다(site.go).
@@ -171,8 +182,31 @@ type handler struct {
 	passkeyUnlocks  *security.Ephemeral[passkeyUnlock]
 }
 
-// New는 루트 핸들러를 반환한다. /api/ 밖의 요청은 cfg.Static이 처리한다.
-func New(cfg Config) http.Handler {
+// Server는 NewServer가 만든 루트 핸들러와 종료 처리다.
+type Server struct {
+	http.Handler
+	h *handler
+}
+
+// Close는 애드온 호스트 소켓을 닫는다(Config.AddonHost). 처리 중인 호스트 요청도 끊긴다. 그 밖의 정리(작업 기록 등)는
+// 각 설정의 주인이 한다.
+func (s *Server) Close() {
+	h := s.h
+	if h.hosts == nil {
+		return
+	}
+	// 더 이상 레지스트리 변경을 받지 않게 한 뒤(진행 중인 reconcile이 끝날 때까지 기다린다) 소켓을 닫는다.
+	h.Packages.OnChange(nil)
+	h.hosts.close()
+}
+
+// New는 루트 핸들러를 반환한다. /api/ 밖의 요청은 cfg.Static이 처리한다. 애드온 호스트 소켓(Config.AddonHost)을
+// 쓰면 닫을 수 있게 NewServer를 쓴다.
+func New(cfg Config) http.Handler { return NewServer(cfg).Handler }
+
+// NewServer는 루트 핸들러를 만든다. Config.AddonHost가 있으면 백엔드 패키지마다 호스트 소켓을 열고, 레지스트리가
+// 바뀔 때마다 맞춘다(Close로 닫는다).
+func NewServer(cfg Config) *Server {
 	if cfg.Sessions == nil {
 		cfg.Sessions = auth.NewStore()
 	}
@@ -241,6 +275,9 @@ func New(cfg Config) http.Handler {
 		loginCeremonies: security.NewEphemeral[loginCeremony](challengeTTL),
 		passkeyUnlocks:  security.NewEphemeral[passkeyUnlock](passkeyUnlockTTL),
 		files:           files.NewCache(),
+		hostCalls:       newHostCalls(),
+		// 패키지 데이터 요청의 시간 제한(.claude/docs/addon-packages.md의 "maru ↔ 백엔드").
+		backendDataTimeout: addonpkg.BackendDataTimeout,
 	}
 	h.files.Now = cfg.Now
 	for _, l := range []*auth.Limiter{h.terminalLimiter, h.securityLimiter} {
@@ -264,6 +301,7 @@ func New(cfg Config) http.Handler {
 	cfg.Sessions.OnRemove = func(s auth.Session) {
 		h.uiTokens.removeSession(s.ID)
 		h.uploads.removeSession(s.ID)
+		h.hostCalls.removeSession(s.ID)
 		if cfg.Helper != nil {
 			h.closeHelper(s.HelperTicket)
 		}
@@ -275,7 +313,18 @@ func New(cfg Config) http.Handler {
 	if cfg.Helper != nil {
 		cfg.Sessions.OnRemovePending = func(p auth.Pending) { h.closeHelper(p.HelperTicket) }
 	}
-	return h.routes()
+	if cfg.Packages != nil {
+		if cfg.Packages.BackendsEnabled() != (cfg.AddonHost != nil) {
+			log.Printf("addon packages: backend setting of the package manager does not match the server")
+		}
+		if cfg.AddonHost != nil {
+			h.backends = addonpkg.NewBackendClient(cfg.AddonHost.Backend)
+			h.hosts = newAddonHosts(h, *cfg.AddonHost)
+			// 지금 레지스트리로 한 번 맞추고, 바뀔 때마다 다시 맞춘다.
+			cfg.Packages.OnChange(h.hosts.reconcile)
+		}
+	}
+	return &Server{Handler: h.routes(), h: h}
 }
 
 func (h *handler) system(w http.ResponseWriter, _ *http.Request, _ auth.Session) {
@@ -296,6 +345,12 @@ func (h *handler) capabilities(w http.ResponseWriter, _ *http.Request, s auth.Se
 		h.Packages.RescanDev()
 	}
 	resp := h.addons().Capabilities(h.Plugins.Plugins(), s.Admin)
+	// 이 설치에서 백엔드가 꺼져 있으면 백엔드 패키지는 쓸 수 없다(backend_unavailable).
+	for i, c := range resp.Addons {
+		if c.Available && h.backendDisabled(c.ID) {
+			resp.Addons[i] = api.AddonCapability{ID: c.ID, Reason: api.ReasonBackendUnavailable, Sources: []string{}}
+		}
+	}
 	resp.AddonPackages = h.packageViews(s)
 	resp.WorkbenchURL = h.workbenchURL()
 	resp.Helper = h.Helper != nil

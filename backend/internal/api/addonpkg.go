@@ -142,7 +142,7 @@ type AddonPendingInstall struct {
 	// Installed는 같은 id의 설치본이 있으면 그 상태다(업데이트).
 	Installed *AddonPackageStatus   `json:"installed,omitempty"`
 	Diff      *AddonPermissionsDiff `json:"diff,omitempty"`
-	// Warnings는 author_changed, downgrade, reinstall, same_digest다.
+	// Warnings는 author_changed, downgrade, reinstall, same_digest, backends_disabled다.
 	Warnings []string `json:"warnings"`
 }
 

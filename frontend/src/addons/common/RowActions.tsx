@@ -15,6 +15,7 @@ const ERROR_KEYS: Partial<Record<ActionErrorCode, ParseKeys>> = {
   config_dirty: 'actions.error.config_dirty',
   admin_required: 'actions.error.admin_required',
   plugin_missing: 'actions.error.plugin_missing',
+  backend_unavailable: 'actions.error.backend_unavailable',
   omv_error: 'actions.error.omv_error',
   omv_unavailable: 'actions.error.omv_error',
 }

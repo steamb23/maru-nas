@@ -35,8 +35,6 @@ const (
 	ReasonArchMissing = "arch_missing"
 	// ReasonBackend는 백엔드 실행 파일이 이름과 맞는 ELF가 아니라는 뜻이다.
 	ReasonBackend = "backend_invalid"
-	// ReasonBackendUnsupported는 이 빌드가 아직 패키지 백엔드를 지원하지 않는다는 뜻이다.
-	ReasonBackendUnsupported = "backend_unsupported"
 )
 
 // Error는 패키지를 받지 않은 이유다. Detail은 로그·관리자 화면용 영어 문장이다.

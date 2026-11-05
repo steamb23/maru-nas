@@ -49,7 +49,6 @@ const REASON_KEYS: Record<string, ParseKeys> = {
   incompatible: 'settings.addons.reason.incompatible',
   arch_missing: 'settings.addons.reason.arch_missing',
   backend_invalid: 'settings.addons.reason.backend_invalid',
-  backend_unsupported: 'settings.addons.reason.backend_unsupported',
   conflict_builtin: 'settings.addons.reason.conflict_builtin',
   conflict_package: 'settings.addons.reason.conflict_package',
   rpc_denied: 'settings.addons.reason.rpc_denied',
@@ -86,6 +85,7 @@ const WARNING_KEYS: Record<string, ParseKeys> = {
   downgrade: 'settings.addons.warning.downgrade',
   reinstall: 'settings.addons.warning.reinstall',
   same_digest: 'settings.addons.warning.same_digest',
+  backends_disabled: 'settings.addons.warning.backends_disabled',
 }
 
 // warningKeys는 검토 화면의 경고 문구다. 모르는 코드는 뺀다(경고는 설치를 막지 않는다).

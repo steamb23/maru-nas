@@ -83,6 +83,8 @@ type RPCMethods struct {
 const (
 	ReasonPluginMissing = "plugin_missing"
 	ReasonAdminRequired = "admin_required"
+	// ReasonBackendUnavailable은 애드온 패키지의 백엔드를 쓸 수 없다는 뜻이다(이 설치에서 백엔드가 꺼져 있음).
+	ReasonBackendUnavailable = "backend_unavailable"
 )
 
 // CapabilitiesResponse는 GET /api/capabilities의 응답이다. 플러그인 설치 상태와
@@ -108,7 +110,7 @@ type AddonCapability struct {
 	ID        string `json:"id"`
 	Available bool   `json:"available"`
 	// Reason은 쓸 수 없는 이유다. Available이면 없다.
-	Reason string `json:"reason,omitempty" tstype:"'plugin_missing' | 'admin_required'"`
+	Reason string `json:"reason,omitempty" tstype:"'plugin_missing' | 'admin_required' | 'backend_unavailable'"`
 	// Sources는 쓸 수 있는 provider 이름이다(우선순위 순서).
 	Sources []string `json:"sources"`
 }
@@ -126,6 +128,9 @@ type RPCRequest struct {
 type ActionRequest struct {
 	// Target은 조작 대상이다(컨테이너 이름, 서비스 이름 등). 형식은 애드온이 검사한다.
 	Target string `json:"target"`
+	// Input은 애드온 패키지 조작의 입력이다(JSON 객체 또는 null, 8KiB까지). 패키지 백엔드에 그대로 넘긴다.
+	// 내장 애드온 조작은 받지 않는다(있으면 400).
+	Input json.RawMessage `json:"input,omitempty" tstype:"unknown"`
 }
 
 // AddonSources는 애드온 데이터 응답(GET /api/addons/{id})에 공통으로 담는 출처 정보다.

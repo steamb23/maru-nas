@@ -45,9 +45,10 @@ type Options struct {
 	Arch string
 	// Plugins가 있으면 받은 패키지가 밝힌 플러그인 표를 넘긴다.
 	Plugins PluginTable
-	// BackendsSupported가 false면 백엔드 패키지를 받지 않는다(backend_unsupported).
-	BackendsSupported bool
-	Now               func() time.Time
+	// BackendsEnabled는 이 설치에서 패키지 백엔드가 켜져 있는지다. 꺼져 있어도 백엔드 패키지를 설치할 수 있고,
+	// 검토 대기에 경고(WarnBackendsDisabled)를 붙인다. 서버의 Config.AddonHost와 같은 값이어야 한다.
+	BackendsEnabled bool
+	Now             func() time.Time
 }
 
 // Installed는 레지스트리에 들어간 패키지 하나다.
@@ -97,6 +98,8 @@ type Manager struct {
 
 	mu    sync.Mutex
 	state atomic.Pointer[state]
+	// onChange는 레지스트리를 바꾼 뒤 부르는 함수다(OnChange, m.mu를 쥔 채로 부른다).
+	onChange func()
 }
 
 // NewManager는 패키지를 불러온 Manager를 만든다. 불러오다 실패한 패키지는 목록에 이유와 함께 남고
@@ -115,6 +118,18 @@ func NewManager(base *addons.Registry, opt Options) *Manager {
 	m.reloadLocked()
 	m.mu.Unlock()
 	return m
+}
+
+// OnChange는 레지스트리를 바꿀 때마다(설치, 켜기·끄기, 제거, 다시 불러오기) fn을 부르게 한다. 등록할 때도 한 번
+// 부른다. fn은 Manager의 잠금을 쥔 채로 불리므로 차례대로 불리고, 잠금 없이 읽는 메서드(Registry, Get, Active)만
+// 써야 한다(잠그는 메서드를 부르면 멈춘다). 서버가 백엔드 패키지마다 호스트 소켓을 맞추는 데 쓴다.
+func (m *Manager) OnChange(fn func()) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.onChange = fn
+	if fn != nil {
+		fn()
+	}
 }
 
 // Registry는 내장 애드온과 받은 패키지를 모두 담은 지금 레지스트리다.
@@ -198,12 +213,6 @@ func (m *Manager) reloadLocked() {
 			continue
 		}
 		st.devRevs[dir] = p.DevRev()
-		if err := m.checkBackend(p.Manifest); err != nil {
-			s.ID = p.Manifest.ID
-			s.State, s.Reason, s.Detail = StateInvalid, err.Reason, err.Detail
-			st.list = append(st.list, s)
-			continue
-		}
 		sum := Summarize(p.Manifest)
 		s.ID, s.Version, s.Rev, s.Manifest, s.Summary = p.Manifest.ID, p.Manifest.Version, p.DevRev(), p.Manifest, &sum
 		cands = append(cands, candidate{
@@ -230,11 +239,6 @@ func (m *Manager) reloadLocked() {
 			mf, langs, err := loadInstalled(s.Dir)
 			if err == nil && mf.ID != r.ID {
 				err = fail(ReasonManifest, "manifest id %q does not match the record %q", mf.ID, r.ID)
-			}
-			if err == nil {
-				if berr := m.checkBackend(mf); berr != nil {
-					err = berr
-				}
 			}
 			if err != nil {
 				s.State, s.Reason, s.Detail = StateInvalid, reasonOf(err), err.Error()
@@ -284,15 +288,13 @@ func (m *Manager) reloadLocked() {
 		m.opt.Plugins.SetExtra(plugins)
 	}
 	m.state.Store(st)
+	if m.onChange != nil {
+		m.onChange()
+	}
 }
 
-// checkBackend는 이 빌드가 백엔드 패키지를 받을 수 있는지 본다.
-func (m *Manager) checkBackend(mf *format.Manifest) *Error {
-	if mf.HasBackend() && !m.opt.BackendsSupported {
-		return fail(ReasonBackendUnsupported, "package backends are not supported by this build")
-	}
-	return nil
-}
+// BackendsEnabled는 이 설치에서 패키지 백엔드가 켜져 있는지다(Options.BackendsEnabled).
+func (m *Manager) BackendsEnabled() bool { return m.opt.BackendsEnabled }
 
 // loadInstalled는 설치한 rev 디렉터리의 manifest와 번역 언어를 읽는다(설치할 때 모두 검사했다).
 func loadInstalled(dir string) (*format.Manifest, []string, error) {
@@ -365,6 +367,9 @@ const (
 	WarnDowngrade     = "downgrade"
 	WarnReinstall     = "reinstall"
 	WarnSameDigest    = "same_digest"
+	// WarnBackendsDisabled는 백엔드 패키지인데 이 설치에서 백엔드가 꺼져 있다는 뜻이다. 설치는 되지만 켜기 전까지
+	// 데이터·조작을 쓸 수 없다(capability backend_unavailable).
+	WarnBackendsDisabled = "backends_disabled"
 )
 
 // Discard는 대기를 버린다(스테이징 디렉터리를 지운다).
@@ -386,15 +391,14 @@ func (m *Manager) Prepare(r io.Reader) (*Pending, error) {
 		st.Discard()
 		return nil, err
 	}
-	if err := m.checkBackend(p.Manifest); err != nil {
-		st.Discard()
-		return nil, err
-	}
 	if err := m.wouldAccept(p.Manifest); err != nil {
 		st.Discard()
 		return nil, err
 	}
 	pend := &Pending{Package: p, Summary: Summarize(p.Manifest), CreatedAt: m.opt.Now(), staging: st}
+	if p.Manifest.HasBackend() && !m.opt.BackendsEnabled {
+		pend.Warnings = append(pend.Warnings, WarnBackendsDisabled)
+	}
 	for _, s := range m.state.Load().list {
 		if s.ID != p.Manifest.ID || s.Dev {
 			continue

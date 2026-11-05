@@ -375,9 +375,12 @@ func TestAddonSDKExamples(t *testing.T) {
 		}
 		dirs = append(dirs, abs)
 	}
+	// make dev-fake처럼 백엔드를 켠다(백엔드 예제는 백엔드가 꺼져 있으면 쓸 수 없다). 백엔드 프로세스는 띄우지 않는다.
+	paths := backendPaths(shortSocketDir(t))
 	e := newEnv(t, envOptions{
 		devAddons: dirs,
 		addonSDK:  fstest.MapFS{"sdk.js": {Data: []byte("globalThis.maru={}")}, "maru.css": {Data: []byte(":root{}")}},
+		addonHost: &paths,
 	})
 	for _, who := range []string{"admin", "user"} {
 		b := e.browser()

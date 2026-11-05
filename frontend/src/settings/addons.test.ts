@@ -78,7 +78,6 @@ describe('문구 키', () => {
     'incompatible',
     'arch_missing',
     'backend_invalid',
-    'backend_unsupported',
     'conflict_builtin',
     'conflict_package',
     'rpc_denied',
@@ -105,8 +104,8 @@ describe('문구 키', () => {
   })
 
   it('경고 코드마다 문구가 있고, 모르는 코드는 뺀다', () => {
-    const keys = warningKeys(['author_changed', 'downgrade', 'reinstall', 'same_digest', 'other'])
-    expect(keys).toHaveLength(4)
+    const keys = warningKeys(['author_changed', 'downgrade', 'reinstall', 'same_digest', 'backends_disabled', 'other'])
+    expect(keys).toHaveLength(5)
     for (const k of keys) expect(keyExists(k), k).toBe(true)
   })
 })

@@ -33,7 +33,10 @@ paths:
 - 프로필(`GET·PUT /api/profile`)은 로그인한 사용자 자신만 다룬다. 관리자는 `UserMgmt.getUser(자기 이름)`, 일반 사용자는 `getUserByContext`로 읽고, SSH 키·uid 등은 넘기지 않는다. OMV의 설명 칸(comment, GECOS)은 워크벤치가 "Tags"로 쓰므로 쉼표로 나눈 태그로 주고받는다. 저장은 보내지 않은 값을 지금 값으로 채워 보내며, 관리자는 `ApplyChange`로 적용까지, 일반 사용자는 적용 대기로 남긴다. 시스템 계정·수정 금지 계정은 409 `profile_readonly`
 - 프로필 사진은 배경 이미지와 같은 이미지 저장소의 사용자 자리(`prefs.UserAvatar`)이고 상한은 2MiB다(브라우저가 512px로 잘라 줄여 보낸다)
 - 레지스트리는 `h.addons()`로 얻는다(애드온 패키지가 있으면 `addonpkg.Manager`가 교체한 레지스트리). `/api/rpc` 중계만 내장 레지스트리(`Config.Addons`)를 본다. 패키지(`addons.KindPackage`)는 Go 구현이 없으므로 `addonData`·`addonAction`이 `Fetch`·`Run`을 보기 전에 종류로 갈라 `packageData`·`packageAction`으로 보낸다(`.claude/rules/addon-packages.md`)
-- 개발 서버: `MARU_DEV_ADDONS`(콜론으로 나눈 풀린 패키지 디렉터리)와 `MARU_DEV_ADDON_SDK`(프레임의 `_maru/` 파일 디렉터리)는 개발 전용 환경 변수다. 플래그·가동 설정 목록·설치기 레지스트리에 넣지 않는다(`cmd/maru/devaddons.go`)
+  - `packageData`·`packageAction`은 패키지 백엔드로 프록시한다(`internal/server/addon_backend.go`, 백엔드 소켓 클라이언트는 `addonpkg.BackendClient`). 내장 조작과 같은 순서(capability, `decl.Admin`, 쓰기를 선언한 패키지의 단계 확인, `inflight`, `WithoutCancel` + manifest 시간 제한, 감사 로그)를 지키고, 내장 조작 본문의 `input`은 400으로 거절한다
+  - 패키지 capability는 `h.packageCapability`로 본다(백엔드가 꺼진 설치에서 백엔드 패키지는 `backend_unavailable`)
+  - 백엔드 패키지의 호스트 소켓(`internal/server/addon_host.go`)은 `Config.AddonHost`가 있을 때만 열고, 레지스트리가 바뀔 때마다(`Manager.OnChange`) 맞춘다. 그래서 `AddonHost`를 쓰는 곳은 `NewServer`로 만들고 끝낼 때 `Server.Close`를 부른다(`New`는 핸들러만 돌려준다). 서버 테스트의 `newEnv`는 정리할 때 닫는다
+- 개발 서버: `MARU_DEV_ADDONS`(콜론으로 나눈 풀린 패키지 디렉터리), `MARU_DEV_ADDON_SDK`(프레임의 `_maru/` 파일 디렉터리), `MARU_DEV_ADDON_BACKENDS`(1이면 패키지 백엔드를 개발 경로 `<state>/addon-dev`·`<state>/addon-host`로 켠다, 상태 디렉터리 필요, `scripts/dev.sh`가 `make dev`·`make dev-fake` 모두에 넣는다)는 개발 전용 환경 변수다. 플래그·가동 설정 목록·설치기 레지스트리에 넣지 않는다(`cmd/maru/devaddons.go`)
 - 내장 애드온의 현황 데이터는 `Addon.Fetch` → `GET /api/addons/{id}`로 준다. provider는 `Request.RPC`(그 애드온이 선언한 메서드만, `updatelastaccess=false`)로 OMV를 부르고, 일부 출처 실패는 응답의 `failedSources`에 담는다(`.claude/docs/addons.md`의 "애드온 데이터 API")
 - `Smart.getList`는 대기 중인 디스크를 깨운다. 주기적으로 부르지 말고 `smart.Cache`를 거친다(온도는 `Peek`만)
 - OMV가 매번 프로세스를 실행하는 느린 읽기 RPC(`Services.getStatus`, `Compose.getContainers`)는 `addons.SharedCache`로 세션 사이에 짧게(5초) 함께 쓴다. 결과가 사용자와 무관한 RPC에만 쓰고, `Request.Refresh`면 건너뛰며, 상태를 바꾸는 조작은 끝난 뒤(실패해도) `Invalidate`한다
@@ -95,6 +98,7 @@ paths:
 
 ## 테스트
 
+- 패키지 백엔드 시험은 `envOptions{addonHost}`와 짧은 임시 디렉터리(`os.MkdirTemp("", "mab")`, 유닉스 소켓 경로 한도 108바이트)의 가짜 백엔드를 쓴다(`internal/server/addon_backend_test.go`)
 - 서버 테스트는 `internal/server/server_test.go`의 `newEnv`·`browser`를 쓴다. `omvfake`를 `httptest`로 띄우고 실제 `omv.Client`와 서버 핸들러를 연결한다. 도우미가 필요하면 `envOptions{helper: true}`가 `helperfake`를 임시 소켓에 띄워 실제 `client.Client`로 연결한다. `files: true`면 그 가짜 디스크를 파일 탐색기의 디스크로 둔다
 - 시계는 주입한다. OMV 세션 만료는 `omvfake.Expire(user)`로 흉내 낸다
 - 옛 OMV 8 버전의 응답은 `omvfake.SetVersion`(`Version82`, `Version81`, `Version80`)으로 흉내 낸다. 버전마다 RPC가 다른 기능은 해당 버전대도 테스트한다(`auth-omv.md`의 "OMV 8 버전별 차이")

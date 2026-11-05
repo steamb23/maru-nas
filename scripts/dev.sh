@@ -119,6 +119,9 @@ if [[ -n ${MARU_DEV_ADDONS:-} ]]; then
   export MARU_DEV_ADDONS
   export MARU_DEV_ADDON_SDK="${MARU_DEV_ADDON_SDK:-$MARU_STATE_DIR/addon-sdk}"
 fi
+# 애드온 패키지 백엔드는 실제·가짜 OMV 모두 개발 경로로 켠다. maru가 백엔드 패키지마다 상태 디렉터리의
+# addon-host/<id>.sock을 열고, 개발자가 MARU_ADDON_SOCKET=addon-dev/<id>.sock으로 띄운 백엔드에 붙는다.
+export MARU_DEV_ADDON_BACKENDS="${MARU_DEV_ADDON_BACKENDS:-1}"
 
 # 이미 떠 있는 서버가 있으면 시작하지 않는다. 일부만 떠서 다른 서버(예: 실제 OMV에 연결된
 # 백엔드)에 붙는 일을 막는다. Vite 포트(DEV_PORT)는 vite.config.ts의 server.port와 같은 기본값을 쓴다.

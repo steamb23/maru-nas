@@ -42,10 +42,11 @@ function packageName(ctx: RequestContext): string {
 }
 
 // toBridgeError는 실패를 프레임에 넘길 값으로 바꾼다. 대시보드 API 오류는 상태와 코드를, 그 밖은 메시지만 준다.
+// 패키지 백엔드의 오류(addon_error)는 백엔드가 준 문구를 메시지로 준다.
 export function toBridgeError(err: unknown): BridgeError {
   if (err instanceof BridgeFailure) return err.error
   if (err instanceof ApiError) {
-    return { status: err.status, code: err.code, addonCode: err.addonCode, message: err.message }
+    return { status: err.status, code: err.code, addonCode: err.addonCode, message: err.addonMessage ?? err.message }
   }
   return { status: 0, message: err instanceof Error ? err.message : String(err) }
 }
@@ -66,11 +67,11 @@ async function runAction(ctx: RequestContext, p: RequestParams['action']): Promi
     if (!ok) throw new BridgeFailure({ status: 0, code: BRIDGE_CODES.cancelled, message: 'cancelled' })
   }
   try {
-    return await runAddonPackageAction(ctx.pkg.id, p.name, p.target ?? '', p.input)
+    return await runAddonPackageAction(ctx.pkg.id, p.name, p.target ?? '', p.input, { lang: ctx.language })
   } catch (err) {
     if (err instanceof ApiError && err.code === 'security_required' && ctx.scope) {
       const st = await requestStepUp(ctx.scope, { level: err.required })
-      if (st) return runAddonPackageAction(ctx.pkg.id, p.name, p.target ?? '', p.input)
+      if (st) return runAddonPackageAction(ctx.pkg.id, p.name, p.target ?? '', p.input, { lang: ctx.language })
     }
     throw err
   }
@@ -85,7 +86,7 @@ export async function handleRequest<M extends RequestMethod>(
   const id = ctx.pkg.id
   switch (method) {
     case 'data':
-      return fetchAddonPackageData(id, (params as RequestParams['data']).query ?? {})
+      return fetchAddonPackageData(id, (params as RequestParams['data']).query ?? {}, { lang: ctx.language })
     case 'rpc': {
       const p = params as RequestParams['rpc']
       return addonPackageRPC(id, p.service, p.method, p.params)
