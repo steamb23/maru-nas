@@ -19,6 +19,8 @@ const (
 	ActionUpgradePlan
 	// ActionUpgradeService는 대시보드에서 업그레이드의 확인·적용 요청 하나를 처리한다(upgrade_service.go, root).
 	ActionUpgradeService
+	// ActionAddonSync는 애드온 백엔드의 원하는 상태에 맞춰 백엔드 유닛을 켜고 끈다(addon_sync.go, maru-addons.service, root).
+	ActionAddonSync
 )
 
 // Options는 설정이 아닌 명령줄 옵션이다.
@@ -45,7 +47,8 @@ func (e *usageError) Error() string { return e.msg }
 func parseArgs(reg Registry, args []string) (Options, Values, error) {
 	var opts Options
 	values := Values{}
-	// actions는 받은 동작 옵션(--uninstall, --service-install, --upgrade-plan, --upgrade-service)이다. 하나만 받는다.
+	// actions는 받은 동작 옵션(--uninstall, --service-install, --upgrade-plan, --upgrade-service, --addon-sync)이다.
+	// 하나만 받는다.
 	actions := 0
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
@@ -104,6 +107,9 @@ func parseArgs(reg Registry, args []string) (Options, Values, error) {
 		case "upgrade-service":
 			err, opts.Action = noValue(), ActionUpgradeService
 			actions++
+		case "addon-sync":
+			err, opts.Action = noValue(), ActionAddonSync
+			actions++
 		case "lang":
 			if opts.Lang, err = value(false); err == nil && opts.Lang != "en" && opts.Lang != "ko" {
 				err = &usageError{"--lang must be en or ko"}
@@ -135,11 +141,13 @@ func parseArgs(reg Registry, args []string) (Options, Values, error) {
 	}
 	switch {
 	case actions > 1:
-		return opts, nil, &usageError{"--uninstall, --service-install, --upgrade-plan and --upgrade-service cannot be used together"}
+		return opts, nil, &usageError{"--uninstall, --service-install, --upgrade-plan, --upgrade-service and --addon-sync cannot be used together"}
 	case (opts.Upgrade || opts.Reinstall) && opts.Action == ActionUpgradePlan:
 		return opts, nil, &usageError{"--upgrade-plan cannot be used with --upgrade or --reinstall"}
 	case opts.Action == ActionUpgradeService && (opts.Upgrade || opts.Reinstall || opts.DryRun || len(values) > 0):
 		return opts, nil, &usageError{"--upgrade-service takes no other options"}
+	case opts.Action == ActionAddonSync && (opts.Upgrade || opts.Reinstall || opts.DryRun || opts.NoBuild || len(values) > 0):
+		return opts, nil, &usageError{"--addon-sync takes no other options"}
 	case opts.Upgrade && opts.Reinstall:
 		return opts, nil, &usageError{"--upgrade and --reinstall cannot be used together"}
 	case opts.Upgrade && opts.Action == ActionUninstall:
@@ -154,7 +162,7 @@ func parseArgs(reg Registry, args []string) (Options, Values, error) {
 func usage(reg Registry, lang, name string) string {
 	var b strings.Builder
 	if lang == "ko" {
-		fmt.Fprintf(&b, "사용법: %s [--upgrade | --reinstall] [--no-build | --uninstall | --service-install | --upgrade-plan | --upgrade-service] [설정 옵션] [--lang en|ko]\n\n", name)
+		fmt.Fprintf(&b, "사용법: %s [--upgrade | --reinstall] [--no-build | --uninstall | --service-install | --upgrade-plan | --upgrade-service | --addon-sync] [설정 옵션] [--lang en|ko]\n\n", name)
 		b.WriteString(`  (옵션 없음)        설정을 묻고 빌드한 뒤 설치합니다. 이미 설치되어 있으면 설치된 설정으로 업그레이드합니다
                      (기존 설치에 없는 설정만 묻고, 요약 뒤에 업그레이드·설정 바꾸기·취소를 고릅니다)
                      설치 단계에서 필요하면 sudo를 사용합니다
@@ -170,6 +178,8 @@ func usage(reg Registry, lang, name string) string {
                      JSON으로 출력합니다(대시보드에서 업그레이드용)
   --upgrade-service  대시보드에서 업그레이드의 확인·적용 요청을 처리합니다(root 전용). maru-upgrade.service가
                      실행하므로 직접 실행하지 않습니다
+  --addon-sync       maru가 원하는 애드온 백엔드에 맞춰 백엔드 유닛을 켜고 끕니다(root 전용). maru-addons.service가
+                     실행하므로 직접 실행하지 않습니다
   --plain            TUI 대신 줄 단위로 묻습니다
   --lang en|ko       안내 문구 언어(기본값은 로캘에 따름)
   -h, --help         이 도움말을 보여 줍니다
@@ -180,7 +190,7 @@ func usage(reg Registry, lang, name string) string {
 		b.WriteString("\n일반 사용자는 sudo 없이 실행하세요. 빌드는 그 사용자로 하고, 설치 단계만 sudo로 실행합니다.\n")
 		return b.String()
 	}
-	fmt.Fprintf(&b, "Usage: %s [--upgrade | --reinstall] [--no-build | --uninstall | --service-install | --upgrade-plan | --upgrade-service] [settings] [--lang en|ko]\n\n", name)
+	fmt.Fprintf(&b, "Usage: %s [--upgrade | --reinstall] [--no-build | --uninstall | --service-install | --upgrade-plan | --upgrade-service | --addon-sync] [settings] [--lang en|ko]\n\n", name)
 	b.WriteString(`  (no option)        ask for settings, build, then install. If maru is already installed, upgrade with the
                      installed settings (only missing settings are asked; after the summary choose
                      Upgrade, Change settings or Cancel). Uses sudo for the install step when needed
@@ -196,6 +206,8 @@ func usage(reg Registry, lang, name string) string {
                      reasons for a manual reinstall when upgrading to this version (for the dashboard upgrade)
   --upgrade-service  handle a check or upgrade request from the dashboard (root only). maru-upgrade.service
                      runs it; do not run it yourself
+  --addon-sync       enable and disable addon backend units to match the backends maru wants (root only).
+                     maru-addons.service runs it; do not run it yourself
   --plain            ask line by line instead of the TUI
   --lang en|ko       language of the messages (default: from the locale)
   -h, --help         show this help
