@@ -131,7 +131,7 @@
 - 경고: `author_changed`, `downgrade`, `reinstall`, `same_digest`, `backends_disabled`(백엔드 패키지인데 이 설치에서 백엔드가 꺼져 있음, `Options.BackendsEnabled`)
 - 보증 수준
     - 설치·업데이트·다시 켜기: 관리 창(`requireManage`, 비밀번호와 등록한 수단). 쓰기·백엔드·네트워크가 있는 패키지는 거기에 아래 쓰기 조작과 같은 단계도 필요하다
-    - 쓰기를 선언한 패키지의 조작: 실행할 때마다 최소 `password`(세션 중 비밀번호 재확인). root 권한 상승 정책(`policy.Elevation`)이 `twoFactor`면 `twoFactor`. 정책이 기본 `off`일 때 빼앗은 관리자 쿠키만으로 패키지의 OMV 쓰기가 되지 않게 하려는 것이다. 모자라면 403 `security_required`
+    - 쓰기를 선언한 패키지의 조작: 실행할 때마다 세션이 최소 `password`(세션 중 비밀번호 재확인)인지 본다. 확인은 세션마다 한 번이고 세션이 끝날 때까지 남는다(`Session.Assurance`는 올라가기만 하고 따로 만료가 없다). root 권한 상승 정책(`policy.Elevation`)이 `twoFactor`면 `twoFactor`. 정책이 기본 `off`일 때 빼앗은 관리자 쿠키만으로 패키지의 OMV 쓰기가 되지 않게 하려는 것이다. 모자라면 403 `security_required`
     - 끄기는 확인하지 않는다(기능을 줄이기만 한다). 제거는 파일만 지우고, 백엔드 데이터 지우기는 따로 고르며 관리 창이 필요하다
 
 ## API

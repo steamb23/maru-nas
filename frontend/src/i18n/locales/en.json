@@ -1636,7 +1636,7 @@
         "notWidens": "This update does not widen any permission.",
         "added": "New",
         "removed": "Removed",
-        "writeSteps": "Actions that change OMV settings ask you to confirm your identity every time they run."
+        "writeSteps": "Actions that change OMV settings ask you to confirm your identity the first time they run in a session. The confirmation lasts until the session ends."
       },
       "perm": {
         "users": "Available to",
