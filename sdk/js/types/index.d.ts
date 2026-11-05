@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
 // npm 패키지 @maru-nas/addon-sdk의 타입 진입점. 런타임은 패키지에 넣지 않는다(호스트가 프레임에 _maru/sdk.js로 준다).
-/// <reference path="./global.d.ts" />
+// 전역 maru(global.d.ts의 declare global)를 이 진입점을 쓰는 프로젝트에 함께 싣는다.
+import './global'
 export * from './api'

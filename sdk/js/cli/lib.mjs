@@ -578,8 +578,8 @@ export function goModuleDeps(dir) {
 
 /**
  * 템플릿 디렉터리를 복사하며 자리표시자를 바꾼다. _gitignore는 .gitignore로 바꾼다(npm이 .gitignore를 빼고 배포한다).
- * _go.mod는 go.mod로 바꾼다(저장소 안에 자리표시자가 든 go.mod를 두지 않는다). 이미 있는 파일은 덮어쓴다(템플릿을
- * 겹쳐 쓴다).
+ * 이름 끝의 .tmpl은 뗀다(go.mod.tmpl, main.go.tmpl: 저장소 안에 자리표시자가 든 go.mod나 모듈 밖 Go 소스를 두지 않아
+ * Go 도구와 코드 검사가 템플릿을 Go 코드로 읽지 않는다). 이미 있는 파일은 덮어쓴다(템플릿을 겹쳐 쓴다).
  * @param {string} from
  * @param {string} to
  * @param {Record<string, string>} vars
@@ -593,7 +593,7 @@ function copyTemplate(from, to, vars) {
     mkdirSync(dst, { recursive: true })
     for (const name of readdirSync(src).sort()) {
       const s = join(src, name)
-      const d = join(dst, name === '_gitignore' ? '.gitignore' : name === '_go.mod' ? 'go.mod' : name)
+      const d = join(dst, name === '_gitignore' ? '.gitignore' : name.endsWith('.tmpl') ? name.slice(0, -'.tmpl'.length) : name)
       if (lstatSync(s).isDirectory()) walk(s, d)
       else {
         let text = readFileSync(s, 'utf8')
