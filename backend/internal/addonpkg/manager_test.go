@@ -174,12 +174,6 @@ func TestManagerPrepareRejects(t *testing.T) {
 	}))); !errors.As(err, &rj) || rj.Code != addons.RejectRPCDenied {
 		t.Errorf("denied rpc: %v", err)
 	}
-	var e *Error
-	data := pack(t, append(basic(manifestJSON(t, func(mf map[string]any) { mf["backend"] = map[string]any{"network": []string{}} })),
-		entry{name: "backend/linux-amd64", typ: tar.TypeReg, body: fakeELF(0x3e)}))
-	if _, err := m.Prepare(bytes.NewReader(data)); !errors.As(err, &e) || e.Reason != ReasonBackendUnsupported {
-		t.Errorf("backend: %v", err)
-	}
 	// 실패한 대기는 스테이징을 남기지 않는다.
 	entries, _ := os.ReadDir(m.opt.Store.Dir())
 	for _, en := range entries {
@@ -189,13 +183,79 @@ func TestManagerPrepareRejects(t *testing.T) {
 	}
 	// 메서드 종류가 먼저 설치한 패키지와 다르면 받지 않는다.
 	install(t, m, archive(t, func(mf map[string]any) { mf["rpc"] = map[string]any{"read": []string{"Foo.get"}} }))
-	if _, err := m.Prepare(bytes.NewReader(archive(t, func(mf map[string]any) {
+	conflict := pack(t, append(basic(manifestJSON(t, func(mf map[string]any) {
 		mf["id"] = "other"
 		mf["rpc"] = map[string]any{"write": []string{"Foo.get"}}
 		mf["actions"] = []any{map[string]any{"name": "go"}}
 		mf["backend"] = map[string]any{"network": []string{}}
-	}))); err == nil {
-		t.Error("kind conflict accepted")
+	})), entry{name: "backend/linux-amd64", typ: tar.TypeReg, body: fakeELF(0x3e)}))
+	if _, err := m.Prepare(bytes.NewReader(conflict)); !errors.As(err, &rj) || rj.Code != addons.RejectRPCKind {
+		t.Errorf("kind conflict: %v", err)
+	}
+}
+
+// backendArchive는 백엔드가 있는 패키지 압축 파일이다.
+func backendArchive(t *testing.T) []byte {
+	t.Helper()
+	return pack(t, append(basic(manifestJSON(t, func(mf map[string]any) {
+		mf["backend"] = map[string]any{"network": []string{}}
+		mf["actions"] = []any{map[string]any{"name": "go"}}
+	})), entry{name: "backend/linux-amd64", typ: tar.TypeReg, body: fakeELF(0x3e)}))
+}
+
+func TestManagerBackendPackages(t *testing.T) {
+	// 백엔드가 꺼진 설치에서도 백엔드 패키지를 설치할 수 있고, 검토 대기에 경고가 붙는다.
+	m := newManager(t, Options{})
+	p, err := m.Prepare(bytes.NewReader(backendArchive(t)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Contains(p.Warnings, WarnBackendsDisabled) {
+		t.Errorf("warnings = %v", p.Warnings)
+	}
+	if _, err := m.Install(p, "admin"); err != nil {
+		t.Fatal(err)
+	}
+	if inst, ok := m.Get("hello"); !ok || !inst.Manifest.HasBackend() {
+		t.Fatalf("backend package not active: %+v %v", inst, ok)
+	}
+	if m.BackendsEnabled() {
+		t.Error("BackendsEnabled without the option")
+	}
+
+	on := newManager(t, Options{BackendsEnabled: true})
+	p, err = on.Prepare(bytes.NewReader(backendArchive(t)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer p.Discard()
+	if slices.Contains(p.Warnings, WarnBackendsDisabled) {
+		t.Errorf("warnings with backends enabled = %v", p.Warnings)
+	}
+}
+
+func TestManagerOnChange(t *testing.T) {
+	m := newManager(t, Options{})
+	var calls []int
+	m.OnChange(func() { calls = append(calls, len(m.Active())) })
+	if len(calls) != 1 || calls[0] != 0 {
+		t.Fatalf("calls after register = %v", calls)
+	}
+	install(t, m, archive(t, nil))
+	if _, err := m.SetEnabled("hello", false); err != nil {
+		t.Fatal(err)
+	}
+	if err := m.Uninstall("hello"); err != nil {
+		t.Fatal(err)
+	}
+	// 설치하면 레지스트리에 들어간 뒤에 불린다. 끄기·제거는 빠진 뒤에 불린다.
+	if !slices.Equal(calls, []int{0, 1, 0, 0}) {
+		t.Errorf("calls = %v", calls)
+	}
+	m.OnChange(nil)
+	m.Reload()
+	if len(calls) != 4 {
+		t.Errorf("called after OnChange(nil): %v", calls)
 	}
 }
 

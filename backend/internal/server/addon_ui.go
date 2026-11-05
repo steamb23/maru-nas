@@ -9,8 +9,6 @@ import (
 	"regexp"
 	"slices"
 	"strings"
-
-	"maru/backend/internal/addons"
 )
 
 // addonFrameCSP는 애드온 프레임 파일의 CSP다. sandbox allow-scripts로 불투명 출처가 되어 대시보드·OMV의 쿠키와
@@ -83,7 +81,7 @@ func (h *handler) addonUI(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a, ok := h.addons().Get(g.addon)
-	if !ok || !addons.Capability(a, h.Plugins.Plugins(), s.Admin).Available {
+	if !ok || !h.packageCapability(a, s.Admin).Available {
 		notFound()
 		return
 	}

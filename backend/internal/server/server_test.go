@@ -82,6 +82,8 @@ type env struct {
 	security security.Store
 	// packages는 envOptions.packages·devAddons일 때의 애드온 패키지 관리자다.
 	packages *addonpkg.Manager
+	// srv는 NewServer가 만든 서버다(애드온 호스트 소켓을 연 핸들러 상태를 본다).
+	srv *Server
 }
 
 type envOptions struct {
@@ -132,6 +134,8 @@ type envOptions struct {
 	packages  bool
 	devAddons []string
 	addonSDK  fs.FS
+	// addonHost는 Config.AddonHost다(패키지 백엔드를 켠다). 정리할 때 서버를 닫는다.
+	addonHost *addonpkg.BackendPaths
 }
 
 func newEnv(t *testing.T, o envOptions) *env {
@@ -234,7 +238,7 @@ func newEnv(t *testing.T, o envOptions) *env {
 		if o.addons == nil {
 			o.addons, _ = addons.NewRegistry()
 		}
-		opt := addonpkg.Options{Arch: "amd64", DevDirs: o.devAddons, Now: clk.Now}
+		opt := addonpkg.Options{Arch: "amd64", DevDirs: o.devAddons, Now: clk.Now, BackendsEnabled: o.addonHost != nil}
 		if o.packages {
 			opt.Store = addonpkg.NewStore(filepath.Join(t.TempDir(), "addons"))
 		}
@@ -243,7 +247,7 @@ func newEnv(t *testing.T, o envOptions) *env {
 		}
 		packages = addonpkg.NewManager(o.addons, opt)
 	}
-	h := New(Config{
+	srv := NewServer(Config{
 		System:            o.system,
 		Static:            static,
 		OMV:               client,
@@ -251,6 +255,7 @@ func newEnv(t *testing.T, o envOptions) *env {
 		Limiter:           lim,
 		Addons:            o.addons,
 		Packages:          packages,
+		AddonHost:         o.addonHost,
 		AddonSDK:          o.addonSDK,
 		Plugins:           o.plugins,
 		Prefs:             o.prefs,
@@ -275,9 +280,10 @@ func newEnv(t *testing.T, o envOptions) *env {
 		FailDelay:         o.failDelay,
 		Now:               clk.Now,
 	})
-	return &env{t: t, h: h, fake: fake, omvTS: ts, clk: clk, store: store, logs: logs, helper: fakeHelper,
+	t.Cleanup(srv.Close)
+	return &env{t: t, h: srv, fake: fake, omvTS: ts, clk: clk, store: store, logs: logs, helper: fakeHelper,
 		sshd: sshd, terminal: manager, upgradeRoot: upgradeRoot, upgradeState: upgradeState, security: o.security,
-		packages: packages}
+		packages: packages, srv: srv}
 }
 
 // browser는 쿠키를 보관하는 간이 브라우저다.

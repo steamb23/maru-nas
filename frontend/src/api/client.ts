@@ -200,6 +200,10 @@ const ERROR_CODES: readonly ErrorCode[] = [
   'upload_expired',
   'addon_readonly',
   'addon_no_backend',
+  'addon_error',
+  'addon_backend_unavailable',
+  'addon_backend_disabled',
+  'backend_unavailable',
 ]
 
 export type RequiredLevel = NonNullable<ErrorResponse['required']>
@@ -214,8 +218,10 @@ export class ApiError extends Error {
   // reason, detail은 addon_invalid일 때 패키지를 받지 않은 이유 코드와 영어 설명이다(관리자 화면).
   readonly reason?: string
   readonly detail?: string
-  // addonCode는 패키지 백엔드가 준 오류 코드다(addon_error).
+  // addonCode, addonMessage는 패키지 백엔드가 준 오류 코드와 문구다(addon_error). 문구는 서버가 정리한 것이며 그 패키지의
+  // 프레임에만 넘기고 호스트 화면에는 보이지 않는다.
   readonly addonCode?: string
+  readonly addonMessage?: string
 
   constructor(
     status: number,
@@ -223,7 +229,7 @@ export class ApiError extends Error {
     code?: ErrorCode,
     retryAfterSeconds?: number,
     required?: RequiredLevel,
-    extra: { reason?: string; detail?: string; addonCode?: string } = {},
+    extra: ApiErrorExtra = {},
   ) {
     super(message)
     this.name = 'ApiError'
@@ -234,8 +240,19 @@ export class ApiError extends Error {
     this.reason = extra.reason
     this.detail = extra.detail
     this.addonCode = extra.addonCode
+    this.addonMessage = extra.addonMessage
   }
 }
+
+interface ApiErrorExtra {
+  reason?: string
+  detail?: string
+  addonCode?: string
+  addonMessage?: string
+}
+
+// ADDON_MESSAGE_MAX는 패키지 백엔드 오류 문구의 상한(글자)이다. 서버(addonpkg.Translate)와 같다.
+const ADDON_MESSAGE_MAX = 300
 
 // 로그인되지 않음·세션 만료(401)를 받으면 부르는 함수. 로그인 화면으로 보내는 데 쓴다.
 let onUnauthorized: (() => void) | null = null
@@ -254,7 +271,7 @@ async function toApiError(path: string, res: Response): Promise<ApiError> {
   let code: ErrorCode | undefined
   let retryAfter: number | undefined
   let required: RequiredLevel | undefined
-  const extra: { reason?: string; detail?: string; addonCode?: string } = {}
+  const extra: ApiErrorExtra = {}
   try {
     const body: unknown = await res.json()
     if (isObj(body)) {
@@ -264,6 +281,9 @@ async function toApiError(path: string, res: Response): Promise<ApiError> {
       if (isStr(body.reason) && /^[a-z_]{1,40}$/.test(body.reason)) extra.reason = body.reason
       if (isStr(body.detail)) extra.detail = body.detail.slice(0, 1000)
       if (isStr(body.addonCode) && /^[a-z][a-z0-9_]{0,31}$/.test(body.addonCode)) extra.addonCode = body.addonCode
+      if (body.code === 'addon_error' && isStr(body.error) && body.error !== '') {
+        extra.addonMessage = Array.from(body.error).slice(0, ADDON_MESSAGE_MAX).join('')
+      }
     }
   } catch {
     // JSON이 아닌 오류 응답(프록시 502 페이지 등)
@@ -282,6 +302,8 @@ interface RequestOptions {
   authRequest?: boolean
   // range가 있으면 Range 머리로 보낸다(GET만, 미리보기의 텍스트 앞부분).
   range?: string
+  // lang이 있으면 X-Maru-Lang 머리로 보낸다(애드온 패키지 백엔드가 받는 대시보드 화면 언어).
+  lang?: string
 }
 
 async function request(
@@ -289,21 +311,24 @@ async function request(
   path: string,
   opts: RequestOptions = {},
 ): Promise<Response> {
+  const headers: Record<string, string> = {}
   const init: RequestInit = { method, signal: opts.signal, credentials: 'same-origin' }
   if (opts.image) {
     // 이미지 올리기만 원시 이미지 본문을 받는다(다른 출처의 폼은 이 형식을 보낼 수 없다).
-    init.headers = { 'Content-Type': opts.image.type }
+    headers['Content-Type'] = opts.image.type
     init.body = opts.image
   } else if (opts.raw) {
-    init.headers = { 'Content-Type': 'application/octet-stream' }
+    headers['Content-Type'] = 'application/octet-stream'
     init.body = opts.raw
   } else if (method === 'POST' || method === 'PUT') {
     // 백엔드는 본문이 있는 요청에 application/json만 받는다(CSRF 보조 장치).
-    init.headers = { 'Content-Type': 'application/json' }
+    headers['Content-Type'] = 'application/json'
     init.body = JSON.stringify(opts.body ?? {})
   } else if (opts.range) {
-    init.headers = { Range: opts.range }
+    headers.Range = opts.range
   }
+  if (opts.lang) headers['X-Maru-Lang'] = opts.lang
+  if (Object.keys(headers).length > 0) init.headers = headers
   const res = await fetch(`${API_BASE}${path}`, init)
   if (!res.ok) {
     const err = await toApiError(path, res)
@@ -368,7 +393,7 @@ export function isLoginResponse(v: unknown): v is LoginResponse {
   return false
 }
 
-const CAPABILITY_REASONS: readonly NonNullable<AddonCapability['reason']>[] = ['plugin_missing', 'admin_required']
+const CAPABILITY_REASONS: readonly NonNullable<AddonCapability['reason']>[] = ['plugin_missing', 'admin_required', 'backend_unavailable']
 
 function isAddonCapability(v: unknown): v is AddonCapability {
   return (
@@ -469,11 +494,25 @@ function addonPath(id: string, rest = ''): string {
   return `/addons/${encodeURIComponent(id)}${rest}`
 }
 
-// fetchAddonPackageData는 패키지 백엔드의 데이터다(GET /api/addons/{id}).
-export async function fetchAddonPackageData(id: string, query: Record<string, string>, signal?: AbortSignal): Promise<unknown> {
+// AddonPackageRequestOptions는 패키지 백엔드로 가는 요청(데이터, 조작)의 선택 값이다. lang은 대시보드 화면 언어이며
+// 백엔드가 X-Maru-Lang으로 받는다(지원하지 않는 값이면 서버가 en으로 바꾼다).
+export interface AddonPackageRequestOptions {
+  signal?: AbortSignal
+  lang?: string
+}
+
+// fetchAddonPackageData는 패키지 백엔드의 데이터다(GET /api/addons/{id}). 결과가 없으면(204) null이다
+// (서버는 백엔드의 204를 200 null로 바꿔 주지만 응답 형태에 기대지 않는다).
+export async function fetchAddonPackageData(
+  id: string,
+  query: Record<string, string>,
+  opts: AddonPackageRequestOptions = {},
+): Promise<unknown> {
   const params = new URLSearchParams(query)
   const qs = params.size > 0 ? `?${params}` : ''
-  return getJSON(`${addonPath(id)}${qs}`, { signal })
+  const res = await request('GET', `${addonPath(id)}${qs}`, { signal: opts.signal, lang: opts.lang })
+  if (res.status === 204) return null
+  return res.json()
 }
 
 // addonPackageRPC는 패키지가 선언한 OMV 읽기 RPC를 부른다(POST /api/addons/{id}/rpc).
@@ -493,11 +532,15 @@ export async function runAddonPackageAction(
   name: string,
   target: string,
   input: unknown,
-  signal?: AbortSignal,
+  opts: AddonPackageRequestOptions = {},
 ): Promise<unknown> {
   const body: Record<string, unknown> = { target }
   if (input !== undefined) body.input = input
-  const res = await request('POST', addonPath(id, `/actions/${encodeURIComponent(name)}`), { body, signal })
+  const res = await request('POST', addonPath(id, `/actions/${encodeURIComponent(name)}`), {
+    body,
+    signal: opts.signal,
+    lang: opts.lang,
+  })
   if (res.status === 204) return null
   return res.json()
 }

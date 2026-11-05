@@ -90,42 +90,45 @@ func main() {
 	helper := connectHelper(o.helperSocket)
 
 	builtins := builtin.New(deps)
-	packages := newPackages(builtins, o.stateDir, plugins)
+	addonHost := devAddonBackends(o.stateDir)
+	packages := newPackages(builtins, o.stateDir, plugins, addonHost != nil)
 
-	srv := &http.Server{
-		Handler: server.New(server.Config{
-			System:       deps.System,
-			Static:       web.Handler(),
-			OMV:          omv.NewClient(o.omvURL, userAgent),
-			Addons:       builtins,
-			Packages:     packages,
-			AddonSDK:     addonSDK(),
-			Plugins:      plugins,
-			Prefs:        store,
-			Site:         store,
-			Images:       store,
-			CookiePath:   o.cookiePath,
-			WorkbenchURL: o.workbenchURL,
-			// 설정의 서버 페이지에서 덮어쓴 SMART 기준 시각을 실행 중인 캐시에 반영한다.
-			SmartRefreshAt:    o.smartAt,
-			SetSmartRefreshAt: deps.Smart.SetRefreshAt,
-			Runtime:           runtime,
-			Helper:            helper,
-			Terminal: terminal.NewManager(&terminal.Dialer{
-				Addr:     o.sshAddr,
-				HostKeys: o.sshHostKeys,
-				Logf:     log.Printf,
-			}),
-			TerminalEnabled: o.terminalEnabled,
-			Mounts:          mounts,
-			FilesSrvDir:     filesSrv,
-			Upgrade:         upgrades,
-			Notify:          notices,
-			Jobs:            jobManager,
-			Security:        store,
-			RP:              rp,
-			Hostname:        hostname,
+	handler := server.NewServer(server.Config{
+		System:       deps.System,
+		Static:       web.Handler(),
+		OMV:          omv.NewClient(o.omvURL, userAgent),
+		Addons:       builtins,
+		Packages:     packages,
+		AddonHost:    addonHost,
+		AddonSDK:     addonSDK(),
+		Plugins:      plugins,
+		Prefs:        store,
+		Site:         store,
+		Images:       store,
+		CookiePath:   o.cookiePath,
+		WorkbenchURL: o.workbenchURL,
+		// 설정의 서버 페이지에서 덮어쓴 SMART 기준 시각을 실행 중인 캐시에 반영한다.
+		SmartRefreshAt:    o.smartAt,
+		SetSmartRefreshAt: deps.Smart.SetRefreshAt,
+		Runtime:           runtime,
+		Helper:            helper,
+		Terminal: terminal.NewManager(&terminal.Dialer{
+			Addr:     o.sshAddr,
+			HostKeys: o.sshHostKeys,
+			Logf:     log.Printf,
 		}),
+		TerminalEnabled: o.terminalEnabled,
+		Mounts:          mounts,
+		FilesSrvDir:     filesSrv,
+		Upgrade:         upgrades,
+		Notify:          notices,
+		Jobs:            jobManager,
+		Security:        store,
+		RP:              rp,
+		Hostname:        hostname,
+	})
+	srv := &http.Server{
+		Handler:           handler,
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 
@@ -135,6 +138,8 @@ func main() {
 		<-ctx.Done()
 		// 작업 감시를 멈추고 진행 기록을 남긴다. OMV 쪽 작업은 계속 돌고, 다시 시작하면 이어 지켜본다.
 		jobManager.Close()
+		// 애드온 호스트 소켓을 닫는다(소켓 파일도 지워진다). Shutdown을 부르면 Serve가 바로 돌아와 main이 끝나므로 먼저 닫는다.
+		handler.Close()
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		srv.Shutdown(shutdownCtx)

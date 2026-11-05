@@ -721,7 +721,7 @@ export interface AddonPendingInstall {
   installed?: AddonPackageStatus;
   diff?: AddonPermissionsDiff;
   /**
-   * Warnings는 author_changed, downgrade, reinstall, same_digest다.
+   * Warnings는 author_changed, downgrade, reinstall, same_digest, backends_disabled다.
    */
   warnings: string[];
 }
@@ -860,6 +860,10 @@ export const ReasonPluginMissing = "plugin_missing";
  */
 export const ReasonAdminRequired = "admin_required";
 /**
+ * ReasonBackendUnavailable은 애드온 패키지의 백엔드를 쓸 수 없다는 뜻이다(이 설치에서 백엔드가 꺼져 있음).
+ */
+export const ReasonBackendUnavailable = "backend_unavailable";
+/**
  * CapabilitiesResponse는 GET /api/capabilities의 응답이다. 플러그인 설치 상태와
  * 로그인한 사용자의 역할로 계산한다.
  */
@@ -899,7 +903,7 @@ export interface AddonCapability {
   /**
    * Reason은 쓸 수 없는 이유다. Available이면 없다.
    */
-  reason?: 'plugin_missing' | 'admin_required';
+  reason?: 'plugin_missing' | 'admin_required' | 'backend_unavailable';
   /**
    * Sources는 쓸 수 있는 provider 이름이다(우선순위 순서).
    */
@@ -925,6 +929,11 @@ export interface ActionRequest {
    * Target은 조작 대상이다(컨테이너 이름, 서비스 이름 등). 형식은 애드온이 검사한다.
    */
   target: string;
+  /**
+   * Input은 애드온 패키지 조작의 입력이다(JSON 객체 또는 null, 8KiB까지). 패키지 백엔드에 그대로 넘긴다.
+   * 내장 애드온 조작은 받지 않는다(있으면 400).
+   */
+  input?: unknown;
 }
 /**
  * AddonSources는 애드온 데이터 응답(GET /api/addons/{id})에 공통으로 담는 출처 정보다.
@@ -1301,6 +1310,23 @@ export const ErrAddonReadOnly = "addon_readonly";
  */
 export const ErrAddonNoBackend = "addon_no_backend";
 /**
+ * ErrAddonError는 패키지 백엔드가 오류로 답했다는 뜻이다. 백엔드가 준 코드는 ErrorResponse.AddonCode다
+ * (백엔드의 상태·코드를 그대로 넘기지 않는다, .claude/docs/addon-packages.md의 "maru ↔ 백엔드").
+ */
+export const ErrAddonError = "addon_error";
+/**
+ * ErrAddonBackendUnavailable은 패키지 백엔드에 연결하지 못했거나 시간 안에 답하지 않았다는 뜻이다.
+ */
+export const ErrAddonBackendUnavailable = "addon_backend_unavailable";
+/**
+ * ErrAddonBackendDisabled는 이 설치에서 패키지 백엔드가 꺼져 있다는 뜻이다(설치기 설정).
+ */
+export const ErrAddonBackendDisabled = "addon_backend_disabled";
+/**
+ * ErrBackendUnavailable은 capability 이유(ReasonBackendUnavailable)가 오류 코드로 쓰일 때다(패키지 RPC·프레임).
+ */
+export const ErrBackendUnavailable = ReasonBackendUnavailable;
+/**
  * ErrorResponse는 2xx가 아닌 상태 코드와 함께 반환된다.
  */
 export interface ErrorResponse {
@@ -1308,7 +1334,7 @@ export interface ErrorResponse {
   /**
    * Code는 화면에서 분기할 때 쓰는 오류 종류다. 없을 수 있다.
    */
-  code?: 'invalid_credentials' | 'rate_limited' | 'challenge_failed' | 'challenge_expired' | 'omv_unavailable' | 'unauthorized' | 'bad_request' | 'rpc_forbidden' | 'admin_required' | 'plugin_missing' | 'omv_error' | 'action_busy' | 'action_failed' | 'action_timeout' | 'config_dirty' | 'image_too_large' | 'unsupported_image' | 'profile_readonly' | 'helper_unavailable' | 'helper_reauth' | 'elevation_failed' | 'elevation_not_allowed' | 'elevation_required' | 'terminal_disabled' | 'security_required' | 'factor_failed' | 'manage_required' | 'passkey_unavailable' | 'passkey_uv_unsupported' | 'security_unavailable' | 'passkey_login_unknown' | 'passkey_login_expired' | 'passkey_login_stale' | 'upgrade_disabled' | 'upgrade_busy' | 'upgrade_outdated' | 'not_found' | 'permission_denied' | 'outside_roots' | 'file_exists' | 'not_dir' | 'is_dir' | 'not_regular' | 'no_space' | 'read_only' | 'helper_busy' | 'transfer_timeout' | 'listing_expired' | 'sort_pending' | 'not_empty' | 'cross_device' | 'root_folder' | 'no_trash' | 'share_read_only' | 'job_busy' | 'apt_locked' | 'no_changelog' | 'download_failed' | 'smart_unsupported' | 'addon_invalid' | 'addon_too_large' | 'addons_unavailable' | 'upload_expired' | 'addon_readonly' | 'addon_no_backend';
+  code?: 'invalid_credentials' | 'rate_limited' | 'challenge_failed' | 'challenge_expired' | 'omv_unavailable' | 'unauthorized' | 'bad_request' | 'rpc_forbidden' | 'admin_required' | 'plugin_missing' | 'omv_error' | 'action_busy' | 'action_failed' | 'action_timeout' | 'config_dirty' | 'image_too_large' | 'unsupported_image' | 'profile_readonly' | 'helper_unavailable' | 'helper_reauth' | 'elevation_failed' | 'elevation_not_allowed' | 'elevation_required' | 'terminal_disabled' | 'security_required' | 'factor_failed' | 'manage_required' | 'passkey_unavailable' | 'passkey_uv_unsupported' | 'security_unavailable' | 'passkey_login_unknown' | 'passkey_login_expired' | 'passkey_login_stale' | 'upgrade_disabled' | 'upgrade_busy' | 'upgrade_outdated' | 'not_found' | 'permission_denied' | 'outside_roots' | 'file_exists' | 'not_dir' | 'is_dir' | 'not_regular' | 'no_space' | 'read_only' | 'helper_busy' | 'transfer_timeout' | 'listing_expired' | 'sort_pending' | 'not_empty' | 'cross_device' | 'root_folder' | 'no_trash' | 'share_read_only' | 'job_busy' | 'apt_locked' | 'no_changelog' | 'download_failed' | 'smart_unsupported' | 'addon_invalid' | 'addon_too_large' | 'addons_unavailable' | 'upload_expired' | 'addon_readonly' | 'addon_no_backend' | 'addon_error' | 'addon_backend_unavailable' | 'addon_backend_disabled' | 'backend_unavailable';
   /**
    * RetryAfterSeconds는 rate_limited일 때 다시 시도할 수 있기까지 남은 초다.
    */
@@ -1325,6 +1351,10 @@ export interface ErrorResponse {
    * Detail은 addon_invalid일 때의 영어 설명이다(관리자 화면).
    */
   detail?: string;
+  /**
+   * AddonCode는 addon_error일 때 패키지 백엔드가 준 오류 코드다(^[a-z][a-z0-9_]{0,31}$일 때만).
+   */
+  addonCode?: string;
 }
 
 //////////

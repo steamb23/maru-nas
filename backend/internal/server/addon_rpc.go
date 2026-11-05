@@ -33,7 +33,7 @@ func (h *handler) addonRPC(w http.ResponseWriter, r *http.Request, s auth.Sessio
 		writeError(w, http.StatusBadRequest, api.ErrBadRequest, "invalid request body")
 		return
 	}
-	if c := addons.Capability(a, h.Plugins.Plugins(), s.Admin); !c.Available {
+	if c := h.packageCapability(a, s.Admin); !c.Available {
 		writeError(w, http.StatusForbidden, c.Reason, "addon is not available")
 		return
 	}

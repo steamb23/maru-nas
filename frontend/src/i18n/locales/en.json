@@ -714,13 +714,15 @@
     "adminRequired": "Only administrators can use this app.",
     "requiredPlugins": "Required plugins: {{plugins}}",
     "helperMissing": "This app can't be used because the privileged helper isn't set up.",
-    "helperMissingDetail": "This app works with files using the signed-in user's permissions through the privileged helper. It becomes available once an administrator installs the privileged helper with the install script."
+    "helperMissingDetail": "This app works with files using the signed-in user's permissions through the privileged helper. It becomes available once an administrator installs the privileged helper with the install script.",
+    "backendUnavailable": "This app can't be used because addon backends are turned off on this installation."
   },
   "widgets": {
     "label": "Widgets",
     "disconnected": "Disconnected",
     "pluginMissing": "Plugin required",
     "adminRequired": "Administrators only",
+    "backendUnavailable": "Backend turned off",
     "open": "Open",
     "remove": "Remove widget",
     "add": "Add widget",
@@ -1093,7 +1095,8 @@
       "omv_error": "Could not reach OpenMediaVault.",
       "unknown": "The request failed.",
       "job_busy": "A task is already running.",
-      "apt_locked": "Another package task is running. Try again in a moment."
+      "apt_locked": "Another package task is running. Try again in a moment.",
+      "backend_unavailable": "This can't run because addon backends are turned off on this installation."
     }
   },
   "sidebar": {
@@ -1596,7 +1599,6 @@
         "incompatible": "This package cannot be used with this dashboard version. Update the dashboard or use a package made for this version.",
         "arch_missing": "The package has no backend for this server's architecture.",
         "backend_invalid": "The package's backend executable is not valid.",
-        "backend_unsupported": "This dashboard does not support packages with a backend yet.",
         "conflict_builtin": "Its id is the same as a built-in addon's.",
         "conflict_package": "Its id is the same as another addon package installed earlier.",
         "rpc_denied": "It declares an OMV method that addon packages are not allowed to use.",
@@ -1617,7 +1619,8 @@
         "author_changed": "The author is different from the installed version.",
         "downgrade": "This version is older than the installed one.",
         "reinstall": "It has the same version number as the installed one, but different contents.",
-        "same_digest": "It is the same file as the installed package."
+        "same_digest": "It is the same file as the installed package.",
+        "backends_disabled": "Addon backends are turned off on this installation. You can install it, but it can't be used until backends are turned on."
       },
       "review": {
         "title": "Review addon installation",

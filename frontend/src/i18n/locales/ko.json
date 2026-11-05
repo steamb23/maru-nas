@@ -714,13 +714,15 @@
     "adminRequired": "관리자만 사용할 수 있습니다.",
     "requiredPlugins": "필요한 플러그인: {{plugins}}",
     "helperMissing": "권한 도우미가 설정되어 있지 않아 이 앱을 쓸 수 없습니다.",
-    "helperMissingDetail": "이 앱은 권한 도우미를 거쳐 로그인한 사용자의 권한으로 파일을 다룹니다. 관리자가 설치 스크립트로 권한 도우미를 설치하면 쓸 수 있습니다."
+    "helperMissingDetail": "이 앱은 권한 도우미를 거쳐 로그인한 사용자의 권한으로 파일을 다룹니다. 관리자가 설치 스크립트로 권한 도우미를 설치하면 쓸 수 있습니다.",
+    "backendUnavailable": "이 설치에서는 애드온 백엔드가 꺼져 있어 이 앱을 쓸 수 없습니다."
   },
   "widgets": {
     "label": "위젯",
     "disconnected": "연결 끊김",
     "pluginMissing": "플러그인이 필요합니다",
     "adminRequired": "관리자 전용",
+    "backendUnavailable": "백엔드가 꺼져 있습니다",
     "open": "열기",
     "remove": "위젯 제거",
     "add": "위젯 추가",
@@ -1093,7 +1095,8 @@
       "omv_error": "OpenMediaVault에 연결할 수 없습니다.",
       "unknown": "요청이 실패했습니다.",
       "job_busy": "이미 진행 중인 작업이 있습니다.",
-      "apt_locked": "다른 패키지 작업이 진행 중입니다. 잠시 뒤 다시 시도하세요."
+      "apt_locked": "다른 패키지 작업이 진행 중입니다. 잠시 뒤 다시 시도하세요.",
+      "backend_unavailable": "이 설치에서는 애드온 백엔드가 꺼져 있어 실행할 수 없습니다."
     }
   },
   "sidebar": {
@@ -1596,7 +1599,6 @@
         "incompatible": "이 대시보드 버전에서 쓸 수 없는 패키지입니다. 대시보드를 업데이트하거나 이 버전에 맞는 패키지를 쓰세요.",
         "arch_missing": "이 서버의 아키텍처용 백엔드가 패키지에 없습니다.",
         "backend_invalid": "패키지의 백엔드 실행 파일이 올바르지 않습니다.",
-        "backend_unsupported": "이 대시보드는 아직 백엔드가 있는 패키지를 지원하지 않습니다.",
         "conflict_builtin": "내장 애드온과 id가 같습니다.",
         "conflict_package": "먼저 설치한 다른 애드온 패키지와 id가 같습니다.",
         "rpc_denied": "애드온 패키지에 허용하지 않는 OMV 메서드를 선언했습니다.",
@@ -1617,7 +1619,8 @@
         "author_changed": "설치된 버전과 작성자가 다릅니다.",
         "downgrade": "설치된 버전보다 낮은 버전입니다.",
         "reinstall": "설치된 버전과 버전 번호가 같지만 파일 내용이 다릅니다.",
-        "same_digest": "설치된 패키지와 같은 파일입니다."
+        "same_digest": "설치된 패키지와 같은 파일입니다.",
+        "backends_disabled": "이 설치에서는 애드온 백엔드가 꺼져 있습니다. 설치할 수는 있지만 백엔드가 켜지기 전에는 쓸 수 없습니다."
       },
       "review": {
         "title": "애드온 설치 검토",

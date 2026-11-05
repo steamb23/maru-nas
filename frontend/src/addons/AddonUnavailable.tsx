@@ -15,6 +15,7 @@ export function AddonUnavailable({ reason, plugins, compact = false }: Props) {
   let message: string
   if (reason === 'admin_required') message = compact ? t('widgets.adminRequired') : t('addons.adminRequired')
   else if (reason === 'helper_missing') message = t('addons.helperMissing')
+  else if (reason === 'backend_unavailable') message = compact ? t('widgets.backendUnavailable') : t('addons.backendUnavailable')
   else message = compact ? t('widgets.pluginMissing') : t('addons.pluginMissing')
   return (
     <div className={compact ? 'placeholder compact' : 'placeholder'}>

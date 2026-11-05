@@ -8,6 +8,7 @@ import {
   discardPasskeyLogin,
   enrollPasskeyLogin,
   fetchAddon,
+  fetchAddonPackageData,
   fetchCapabilities,
   fetchNotifications,
   fetchPackageChangelog,
@@ -28,6 +29,7 @@ import {
   passkeyLoginOptions,
   passkeyLoginUnlock,
   runAddonAction,
+  runAddonPackageAction,
   saveDrawer,
   saveNotificationPrefs,
   saveShortcuts,
@@ -202,6 +204,10 @@ describe('isCapabilitiesResponse', () => {
   it('정상 응답을 받는다', () => {
     expect(isCapabilitiesResponse(ok)).toBe(true)
     expect(isCapabilitiesResponse({ addons: [], plugins: [] })).toBe(true)
+    // 백엔드가 꺼진 설치의 백엔드 패키지
+    expect(
+      isCapabilitiesResponse({ addons: [{ id: 'probe', available: false, reason: 'backend_unavailable', sources: [] }], plugins: [] }),
+    ).toBe(true)
   })
 
   it.each([
@@ -369,6 +375,55 @@ describe('runAddonAction', () => {
   it('실패하면 오류 코드를 담은 ApiError를 던진다', async () => {
     stubFetch(Response.json({ error: 'pending changes', code: 'config_dirty' }, { status: 409 }))
     await expect(runAddonAction('services', 'disable', 'ssh')).rejects.toMatchObject({ status: 409, code: 'config_dirty' })
+  })
+})
+
+describe('애드온 패키지 백엔드', () => {
+  it('데이터 요청에 화면 언어를 X-Maru-Lang으로 보낸다', async () => {
+    const fn = stubFetch(Response.json({ count: 1 }))
+    await expect(fetchAddonPackageData('probe', { a: '1' }, { lang: 'ko' })).resolves.toEqual({ count: 1 })
+    const [url, init] = fn.mock.calls[0]
+    expect(url).toMatch(/\/api\/addons\/probe\?a=1$/)
+    expect(init?.headers).toEqual({ 'X-Maru-Lang': 'ko' })
+  })
+
+  it('결과가 없는 데이터(204)는 null이다', async () => {
+    stubFetch(new Response(null, { status: 204 }))
+    await expect(fetchAddonPackageData('probe', {})).resolves.toBeNull()
+  })
+
+  it('조작은 대상·입력과 화면 언어를 보내고, 204면 null이다', async () => {
+    const fn = stubFetch(new Response(null, { status: 204 }))
+    await expect(runAddonPackageAction('probe', 'run', 'web', { n: 1 }, { lang: 'en' })).resolves.toBeNull()
+    const [url, init] = fn.mock.calls[0]
+    expect(url).toMatch(/\/api\/addons\/probe\/actions\/run$/)
+    expect(init?.headers).toEqual({ 'Content-Type': 'application/json', 'X-Maru-Lang': 'en' })
+    expect(JSON.parse(String(init?.body))).toEqual({ target: 'web', input: { n: 1 } })
+  })
+
+  it('백엔드 오류는 addon_error와 검사한 addonCode다', async () => {
+    stubFetch(Response.json({ error: 'busy', code: 'addon_error', addonCode: 'already_on' }, { status: 409 }))
+    await expect(runAddonPackageAction('probe', 'run', '', undefined)).rejects.toMatchObject({
+      status: 409,
+      code: 'addon_error',
+      addonCode: 'already_on',
+    })
+    stubFetch(Response.json({ error: 'off', code: 'addon_backend_disabled' }, { status: 503 }))
+    await expect(fetchAddonPackageData('probe', {})).rejects.toMatchObject({ status: 503, code: 'addon_backend_disabled' })
+  })
+
+  it('백엔드 오류 문구는 addon_error일 때만 addonMessage로 둔다', async () => {
+    stubFetch(Response.json({ error: 'it is on', code: 'addon_error', addonCode: 'already_on' }, { status: 409 }))
+    await expect(runAddonPackageAction('probe', 'run', '', undefined)).rejects.toMatchObject({ addonMessage: 'it is on' })
+    // 300글자까지 자른다(서로게이트 쌍을 나누지 않는다).
+    stubFetch(Response.json({ error: '𝔸'.repeat(400), code: 'addon_error' }, { status: 422 }))
+    const err = await fetchAddonPackageData('probe', {}).catch((e: unknown) => e)
+    expect(err).toBeInstanceOf(ApiError)
+    expect(Array.from((err as ApiError).addonMessage ?? '')).toHaveLength(300)
+    // 다른 코드의 문구는 두지 않는다.
+    stubFetch(Response.json({ error: 'off', code: 'addon_backend_disabled' }, { status: 503 }))
+    const off = await fetchAddonPackageData('probe', {}).catch((e: unknown) => e)
+    expect((off as ApiError).addonMessage).toBeUndefined()
   })
 })
 

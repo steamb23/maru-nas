@@ -122,13 +122,22 @@ const (
 	ErrAddonReadOnly = "addon_readonly"
 	// ErrAddonNoBackend는 백엔드가 없는 패키지에 데이터·조작을 요청했다는 뜻이다.
 	ErrAddonNoBackend = "addon_no_backend"
+	// ErrAddonError는 패키지 백엔드가 오류로 답했다는 뜻이다. 백엔드가 준 코드는 ErrorResponse.AddonCode다
+	// (백엔드의 상태·코드를 그대로 넘기지 않는다, .claude/docs/addon-packages.md의 "maru ↔ 백엔드").
+	ErrAddonError = "addon_error"
+	// ErrAddonBackendUnavailable은 패키지 백엔드에 연결하지 못했거나 시간 안에 답하지 않았다는 뜻이다.
+	ErrAddonBackendUnavailable = "addon_backend_unavailable"
+	// ErrAddonBackendDisabled는 이 설치에서 패키지 백엔드가 꺼져 있다는 뜻이다(설치기 설정).
+	ErrAddonBackendDisabled = "addon_backend_disabled"
+	// ErrBackendUnavailable은 capability 이유(ReasonBackendUnavailable)가 오류 코드로 쓰일 때다(패키지 RPC·프레임).
+	ErrBackendUnavailable = ReasonBackendUnavailable
 )
 
 // ErrorResponse는 2xx가 아닌 상태 코드와 함께 반환된다.
 type ErrorResponse struct {
 	Error string `json:"error"`
 	// Code는 화면에서 분기할 때 쓰는 오류 종류다. 없을 수 있다.
-	Code string `json:"code,omitempty" tstype:"'invalid_credentials' | 'rate_limited' | 'challenge_failed' | 'challenge_expired' | 'omv_unavailable' | 'unauthorized' | 'bad_request' | 'rpc_forbidden' | 'admin_required' | 'plugin_missing' | 'omv_error' | 'action_busy' | 'action_failed' | 'action_timeout' | 'config_dirty' | 'image_too_large' | 'unsupported_image' | 'profile_readonly' | 'helper_unavailable' | 'helper_reauth' | 'elevation_failed' | 'elevation_not_allowed' | 'elevation_required' | 'terminal_disabled' | 'security_required' | 'factor_failed' | 'manage_required' | 'passkey_unavailable' | 'passkey_uv_unsupported' | 'security_unavailable' | 'passkey_login_unknown' | 'passkey_login_expired' | 'passkey_login_stale' | 'upgrade_disabled' | 'upgrade_busy' | 'upgrade_outdated' | 'not_found' | 'permission_denied' | 'outside_roots' | 'file_exists' | 'not_dir' | 'is_dir' | 'not_regular' | 'no_space' | 'read_only' | 'helper_busy' | 'transfer_timeout' | 'listing_expired' | 'sort_pending' | 'not_empty' | 'cross_device' | 'root_folder' | 'no_trash' | 'share_read_only' | 'job_busy' | 'apt_locked' | 'no_changelog' | 'download_failed' | 'smart_unsupported' | 'addon_invalid' | 'addon_too_large' | 'addons_unavailable' | 'upload_expired' | 'addon_readonly' | 'addon_no_backend'"`
+	Code string `json:"code,omitempty" tstype:"'invalid_credentials' | 'rate_limited' | 'challenge_failed' | 'challenge_expired' | 'omv_unavailable' | 'unauthorized' | 'bad_request' | 'rpc_forbidden' | 'admin_required' | 'plugin_missing' | 'omv_error' | 'action_busy' | 'action_failed' | 'action_timeout' | 'config_dirty' | 'image_too_large' | 'unsupported_image' | 'profile_readonly' | 'helper_unavailable' | 'helper_reauth' | 'elevation_failed' | 'elevation_not_allowed' | 'elevation_required' | 'terminal_disabled' | 'security_required' | 'factor_failed' | 'manage_required' | 'passkey_unavailable' | 'passkey_uv_unsupported' | 'security_unavailable' | 'passkey_login_unknown' | 'passkey_login_expired' | 'passkey_login_stale' | 'upgrade_disabled' | 'upgrade_busy' | 'upgrade_outdated' | 'not_found' | 'permission_denied' | 'outside_roots' | 'file_exists' | 'not_dir' | 'is_dir' | 'not_regular' | 'no_space' | 'read_only' | 'helper_busy' | 'transfer_timeout' | 'listing_expired' | 'sort_pending' | 'not_empty' | 'cross_device' | 'root_folder' | 'no_trash' | 'share_read_only' | 'job_busy' | 'apt_locked' | 'no_changelog' | 'download_failed' | 'smart_unsupported' | 'addon_invalid' | 'addon_too_large' | 'addons_unavailable' | 'upload_expired' | 'addon_readonly' | 'addon_no_backend' | 'addon_error' | 'addon_backend_unavailable' | 'addon_backend_disabled' | 'backend_unavailable'"`
 	// RetryAfterSeconds는 rate_limited일 때 다시 시도할 수 있기까지 남은 초다.
 	RetryAfterSeconds int `json:"retryAfterSeconds,omitempty"`
 	// Required는 security_required일 때 거쳐야 하는 단계다.
@@ -137,4 +146,6 @@ type ErrorResponse struct {
 	Reason string `json:"reason,omitempty"`
 	// Detail은 addon_invalid일 때의 영어 설명이다(관리자 화면).
 	Detail string `json:"detail,omitempty"`
+	// AddonCode는 addon_error일 때 패키지 백엔드가 준 오류 코드다(^[a-z][a-z0-9_]{0,31}$일 때만).
+	AddonCode string `json:"addonCode,omitempty"`
 }

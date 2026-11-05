@@ -90,6 +90,13 @@ func (c *rpcCaller) Call(ctx context.Context, service, method string, params any
 		log.Printf("addon %s: rpc forbidden: %s", c.addon, name)
 		return nil, fmt.Errorf("rpc %s: %w", name, addons.ErrRPCNotAllowed)
 	}
+	return c.omvCall(ctx, service, method, params)
+}
+
+// omvCall은 허용 목록을 보지 않고 이 세션으로 OMV를 부른다. 실패하면 unauthorized·failed를 표시한다. 허용 목록을 따로
+// 정한 호출기(호스트 소켓의 rpc-bg·apply가 그 처리기 안에서만 만드는 보조 호출기, addon_host.go)만 쓴다.
+func (c *rpcCaller) omvCall(ctx context.Context, service, method string, params any) (json.RawMessage, error) {
+	name := service + "." + method
 	res, err := c.h.OMV.Call(ctx, omv.Request{
 		SessionID: c.s.OMVSessionID,
 		Service:   service,

@@ -38,6 +38,11 @@ func (h *handler) addonAction(w http.ResponseWriter, r *http.Request, s auth.Ses
 	if !decodeJSONLimit(w, r, &req, maxActionBodyBytes) {
 		return
 	}
+	// input은 애드온 패키지 조작만 받는다. 내장 조작은 대상만 받고 OMV 파라미터를 스스로 만든다.
+	if req.Input != nil {
+		writeError(w, http.StatusBadRequest, api.ErrBadRequest, "built-in actions take no input")
+		return
+	}
 	if c := addons.Capability(a, h.Plugins.Plugins(), s.Admin); !c.Available {
 		writeError(w, http.StatusForbidden, c.Reason, "addon is not available")
 		return
