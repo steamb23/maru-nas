@@ -417,12 +417,12 @@ HTTP/1.1, 유닉스 소켓. 요청의 Host는 `maru`다.
 
 ## 시험
 
-브라우저(dev-fake)와 VM(desk-test)에서 확인한 범위와 날짜, 확인하다 바뀐 결정을 적는다.
+브라우저(dev-fake)와 테스트 VM에서 확인한 범위와 날짜, 확인하다 바뀐 결정을 적는다.
 
 - 자동 시험(개발 백엔드): 예제 백엔드는 `sdk/go/examples/*`의 Go 시험이 SDK의 `ServeContext`와 가짜 호스트 소켓(임시 유닉스 소켓)으로 본다(네트워크·실제 경로 없음, `probe`는 경로·연결 함수를 바꿔 끼운다). 서버 쪽은 `TestAddonSDKExamples`(실행 파일 없이 개발 디렉터리로 불러옴)와 `TestAddonSDKBackendExample`(`hello-backend`의 manifest 선언으로 가짜 백엔드가 `System.getInformation`·`PerfStats.get`·`/v1/apply`의 `PerfStats.set`을 omvfake까지 부름, 일반 사용자·단계 없음 거절), `addonpkg`의 `TestReadDirBackendWithoutExecutable`(실행 파일 없는 백엔드 패키지와 `dev/`), CLI 시험(`init --backend`, `dev/` 건너뛰기)이다
 - 2026-11-05, 크롬(Playwright, dev-fake, `FAKEADDONS=examples`의 `hello-backend`와 그 개발 백엔드): 관리자에게 백엔드 데이터(호스트 이름, OMV 버전, 요청 수, 성능 통계)가 보인다. 조작은 호스트 확인 → 비밀번호 재확인(`security_required` → 단계 확인 창 → 다시 보냄) → 적용 → 데이터 다시 읽기 순이고, 같은 세션의 다음 조작은 확인만 묻는다. 단계 확인을 취소하면 아무것도 바꾸지 않는다(예제는 이 경우를 취소로 보고 문구를 띄우지 않는다). 가짜 OMV에 적용 대기가 있으면 `addonCode` `config_dirty` 문구가 보이고 설정은 그대로다. 백엔드를 멈추면 `addon_backend_unavailable` 문구가 보인다. 일반 사용자에게는 버전·성능 통계 칸이 없고 조작 API는 403 `admin_required`다. 서버 로그에는 조작마다 감사 로그 한 줄이 남고 토큰은 남지 않는다
 - 자동 시험(설치본 백엔드): 설치기는 가짜 루트로 설정·유닛·명령·기록·잠금(`addon_backends_test.go`의 `TestAddonBackendUnitsNotLooserThanMaru`·`TestAddonHostDirOwnedByRoot`·`TestAddonBackendsSetting`·`TestAddonBackendsReinstallRestarts`·`TestAddonBackendsRemoved`·`TestAddonBackendsRemovedRequestNotFile`·`TestAddonBackendsUninstall`·`TestInstallerCopyShared`·`TestAddonSyncRecord`·`TestAddonSyncLock`, 골든 `helper-addon-backends`)과 동기화(`addon_sync_test.go`: 켜기·업데이트·네트워크·다시 설치·제거·purge·링크 맞추기·멈추지 못한 인스턴스·죽은 소켓·실패·고정 계정·잘못된 원하는 상태와 요청·잠금·차례·`data` 상한)를 본다. maru는 `addonpkg`의 `TestSync*`(원하는 상태, 요청, 강제 요청, purge와 상한, 결과 오류, 설치 인스턴스, 결과 대기, 넣지 못한 항목)·`TestManagerBackendLimit`·`TestManagerUninstallKeepsGoing`, `cmd/maru`의 `TestInstalledAddonBackends`·`TestAddonBackendsDevFirst`·`TestInstalledHostPeer`, 서버의 `TestAddonBackendSync*`·`TestHostSocketPeer*`·`TestHostSocketDirectory*`가 본다. 실제 systemd가 정하는 동작은 테스트 VM에서 본다
-- 2026-11-05, 테스트 VM(desk-test, 순정 OMV 8.3.1, systemd 257, 이 브랜치를 `--service-install --upgrade --addon-backends`로 설치, 관리자 `bob`이 API로 `probe`·`hello-backend`를 설치)
+- 2026-11-05, 테스트 VM(순정 OMV 8.3.1, systemd 257, 이 브랜치를 `--service-install --upgrade --addon-backends`로 설치, 관리자 `bob`이 API로 `probe`·`hello-backend`를 설치)
     - 설치: 유닛 파일 10개, 경로 유닛 `enabled`·`active`, 첫 동기화 결과의 digest가 원하는 상태 파일의 sha256과 같다. 첫 시도에서 maru가 시작하지 못했다(`226/NAMESPACE`): systemd는 `+` 명령에도 마운트 이름공간을 먼저 만든다. `ReadWritePaths=-`로 바꿨다(위 "호스트 소켓 디렉터리")
     - 동기화 유닛 안(`ProtectSystem=strict`, `PrivateNetwork`)에서 `enable --now`·`disable`·`stop`·`clean`·`try-restart`·`reset-failed`·`start`가 된다(D-Bus로 PID 1이 처리한다). 한 번도 올라오지 않은 인스턴스를 포함한 8개 `stop`은 0이다. 결과에 `Read-only file system`이 없다
     - 소켓 `/run/maru-addon/<id>.sock`은 maru 0600, `/run/maru-addon-host`는 root 0755, `<id>/`는 maru 0755, `host.sock`은 0666이다. maru는 레지스트리가 바뀐 순간에는 `<id>/`가 아직 없어 열지 못하고(로그 한 번), 소켓 유닛이 만든 뒤 레지스트리 변경이나 첫 요청(`ensure`) 때 연다
@@ -437,7 +437,6 @@ HTTP/1.1, 유닉스 소켓. 요청의 Host는 `maru`다.
     - `adm` 그룹 계정이 `journalctl -u maru-addon@<id>.service`를 읽는다
     - `--no-addon-backends`: 유닛·동기화·소켓 디렉터리·설치기 복사본(웹 업그레이드가 꺼진 설치)이 지워지고 데이터만 남는다. 관리자 목록은 `enabled: false`, 데이터 요청은 503 `addon_backend_disabled`다. 다시 켜면 패키지마다 데이터를 지운 뒤 켠다. `--uninstall`(질문에 모두 예)은 데이터까지 지운다
     - HTTPS(Secure 세션 쿠키)에서 `hello-backend` 창이 백엔드 데이터를 그리고, 설정 앱에 백엔드 섹션(마지막 동기화, 다시 동기화)과 항목별 상태가 보인다
-    - 확인 뒤 VM 디스크는 시험 전 스냅숏(`pre-addon-m3-20261105`)으로 되돌렸다
 - 아직 하지 않음: 실제 OMV에서 `PerfStats.set` 적용(사용자 확인), arm64 백엔드, 사파리, 받고 있는 추상 유닉스 소켓이 있는 호스트에서 네트워크 단계의 그 행
 
 - 2026-11-05, 크롬(Playwright, dev-fake, 개발 패키지 `sdk/testdata/dev-min`)
