@@ -208,7 +208,7 @@ func TestAddonHostDirOwnedByRoot(t *testing.T) {
 		wantPre, wantRW := []string(nil), []string(nil)
 		if on {
 			wantPre = []string{"+/usr/bin/install -d -o root -g root -m 0755 " + config.AddonHostDir}
-			wantRW = []string{config.AddonHostDir}
+			wantRW = []string{"-" + config.AddonHostDir}
 		}
 		if !slices.Equal(got["ExecStartPre"], wantPre) || !slices.Equal(got["ReadWritePaths"], wantRW) {
 			t.Errorf("on=%v: ExecStartPre %v ReadWritePaths %v", on, got["ExecStartPre"], got["ReadWritePaths"])
@@ -594,7 +594,7 @@ func TestAddonBackendsDryRun(t *testing.T) {
 		"[dry-run] run: install -o root -g root -m 0755 /repo/bin/maru-install /usr/local/lib/maru/maru-install",
 		"[dry-run] run: systemctl enable maru-addons.path",
 		"    + ExecStartPre=+/usr/bin/install -d -o root -g root -m 0755 /run/maru-addon-host",
-		"    + ReadWritePaths=/run/maru-addon-host",
+		"    + ReadWritePaths=-/run/maru-addon-host",
 	} {
 		if !strings.Contains(out.String(), want) {
 			t.Errorf("output misses %q:\n%s", want, out.String())
