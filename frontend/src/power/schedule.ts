@@ -24,13 +24,7 @@ export const LAST_OFFSET = Math.ceil(MAX_AHEAD_MS / DAY_MS)
 // DEFAULT_TIME은 처음 보이는 시각이다. 사람이 쓰지 않을 새벽 시간이다.
 export const DEFAULT_TIME = '03:00'
 
-// clockSkew는 서버 시계에서 이 브라우저 시계를 뺀 값(ms)이다. 서버 시각을 읽지 못하면 0이다.
-export function clockSkew(serverNow: string, clientNow: number): number {
-  const ms = Date.parse(serverNow)
-  return Number.isNaN(ms) ? 0 : ms - clientNow
-}
-
-// serverNow는 서버 시계로 보정한 지금 시각(ms)이다.
+// serverNow는 서버 시계로 보정한 지금 시각(ms)이다. skew는 notifications/clock.ts의 clockSkew다.
 export function serverNow(skew: number): number {
   return Date.now() + skew
 }

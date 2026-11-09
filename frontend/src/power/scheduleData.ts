@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { fetchHelperStatus, fetchPowerSchedule } from '../api/client'
 import type { HelperStatus, PowerSchedule, PowerScheduleResponse } from '../api/types.gen'
-import { clockSkew } from './schedule'
+import { clockSkew } from '../notifications/clock'
 
 // ScheduleData는 모달을 열 때 받은 예약 상태와 도우미 상태다. 타일의 "예약됨"과 예약 화면이 함께 쓴다.
 export interface ScheduleData {

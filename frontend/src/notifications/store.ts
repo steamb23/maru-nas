@@ -7,7 +7,7 @@ import { create } from 'zustand'
 import * as client from '../api/client'
 import { createSaveQueue } from '../api/saveQueue'
 import type { Job, Notice, NotificationsResponse } from '../api/types.gen'
-import { clockSkew } from '../power/schedule'
+import { clockSkew } from './clock'
 import {
   type ClientEvent,
   type ItemRef,

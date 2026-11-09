@@ -8,7 +8,6 @@ import {
   MAX_AHEAD_MS,
   MIN_AHEAD_MS,
   checkTarget,
-  clockSkew,
   dayStart,
   initialForm,
   leftText,
@@ -30,17 +29,6 @@ describe('ranges', () => {
     expect(MIN_AHEAD_MS).toBe(60_000)
     expect(MAX_AHEAD_MS).toBe(7 * 24 * 3600_000)
     expect(LAST_OFFSET).toBe(7)
-  })
-})
-
-describe('clockSkew', () => {
-  it('is the server clock minus the browser clock', () => {
-    expect(clockSkew('2026-11-09T12:00:05Z', Date.parse('2026-11-09T12:00:00Z'))).toBe(5000)
-    expect(clockSkew('2026-11-09T21:00:00+09:00', Date.parse('2026-11-09T12:00:30Z'))).toBe(-30_000)
-  })
-
-  it('is zero when the server time is missing', () => {
-    expect(clockSkew('', NOW)).toBe(0)
   })
 })
 
