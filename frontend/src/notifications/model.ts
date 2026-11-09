@@ -17,6 +17,8 @@ export type ClientEventCode =
   | 'filesCopyFailed'
   | 'filesUploadFailed'
   | 'addonMessage'
+  | 'rebootSoon'
+  | 'shutdownSoon'
 
 // NotifyInput은 notify()로 넣는 클라이언트 알림이다. 문구 대신 코드와 치환값을 둔다(언어를 바꾸면 다시 그린다).
 export interface NotifyInput {

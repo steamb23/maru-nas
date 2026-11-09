@@ -30,7 +30,7 @@ func (s Source) Collect(context.Context) ([]api.Notice, error) {
 		Level:    api.NoticeWarning,
 		Revision: notify.Revision("power", strconv.FormatInt(sc.USEC, 10), "mode="+sc.Mode, "by="+sc.By),
 		At:       sc.At.UTC().Format(time.RFC3339),
-		Action:   &api.NoticeAction{Kind: api.NoticeActionPower},
+		Action:   &api.NoticeAction{Kind: api.NoticeActionPower, Page: api.NoticePowerSchedule},
 	}
 	if sc.Mode == ModeReboot {
 		n.Code = api.NoticeRebootScheduled

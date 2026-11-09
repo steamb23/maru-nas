@@ -1,16 +1,12 @@
 // 전원 모달에서 다시 시작의 "시간 정해서" 화면: 지금 예약, 날짜·시각 고르기, 예약·취소.
-// 예약·취소는 권한 도우미의 root 연산이므로 상승하지 않았으면 비밀번호를 묻고 다시 보낸다. 계산은 schedule.ts다.
+// 예약·취소는 권한 도우미의 root 연산이므로 상승하지 않았으면 비밀번호를 묻고 다시 보낸다(scheduleActions.ts).
+// 계산은 schedule.ts다.
 import { type FormEvent, type RefObject, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ApiError, cancelPowerSchedule, schedulePowerRestart } from '../api/client'
-import type { PowerScheduleResponse } from '../api/types.gen'
 import { useLanguage } from '../i18n'
 import { IconImage } from '../icons/IconImage'
 import { noticeTimeText } from '../notifications/messages'
-import { refreshNotifications } from '../notifications/useNotifications'
-import { requestElevation } from '../shell/elevationDialog'
 import type { PowerDialogStore } from './dialogStore'
-import type { ScheduleState } from './scheduleData'
 import {
   LAST_OFFSET,
   MAX_AHEAD_MS,
@@ -27,6 +23,11 @@ import {
   serverNow,
   targetTime,
 } from './schedule'
+import { cancelSchedule, scheduleRestart } from './scheduleActions'
+import type { ScheduleState } from './scheduleData'
+
+// 전원 모달은 데스크톱 범위 대화상자다. 권한 상승도 그 위에 연다.
+const DESKTOP = { kind: 'desktop' } as const
 
 // TICK_MS마다 남은 시간과 시각 검사를 다시 계산한다(분 단위 문구라 자주 그릴 필요가 없다).
 const TICK_MS = 15_000
@@ -104,19 +105,6 @@ export function ScheduleView({ store, state, backRef, onScheduled }: ViewProps) 
       break
   }
 
-  // run은 root 연산 요청을 보낸다. 상승하지 않았으면 비밀번호를 묻고 한 번 더 보낸다. 묻기를 취소하면 null이다.
-  const run = async (req: () => Promise<PowerScheduleResponse>): Promise<PowerScheduleResponse | null> => {
-    try {
-      return await req()
-    } catch (err) {
-      if (!(err instanceof ApiError && err.code === 'elevation_required')) throw err
-      const helper = await requestElevation({ kind: 'desktop' })
-      if (!helper) return null
-      setHelper(helper)
-      return await req()
-    }
-  }
-
   const begin = (action: 'schedule' | 'cancel'): boolean => {
     if (store.getState().sending) return false
     lastAction.current = action
@@ -135,10 +123,9 @@ export function ScheduleView({ store, state, backRef, onScheduled }: ViewProps) 
     if (target === null || checkTarget(target, serverNow(data.skew)) !== 'ok' || block) return
     if (!begin('schedule')) return
     try {
-      const res = await run(() => schedulePowerRestart(new Date(target).toISOString()))
+      const res = await scheduleRestart(DESKTOP, target, setHelper)
       if (!res) return
       update(res)
-      refreshNotifications()
       onScheduled()
     } catch (err) {
       store.setState({ error: scheduleError(err, 'power.schedule.error.failed') })
@@ -150,10 +137,9 @@ export function ScheduleView({ store, state, backRef, onScheduled }: ViewProps) 
   const cancel = async () => {
     if (!begin('cancel')) return
     try {
-      const res = await run(cancelPowerSchedule)
+      const res = await cancelSchedule(DESKTOP, setHelper)
       if (!res) return
       update(res)
-      refreshNotifications()
     } catch (err) {
       store.setState({ error: scheduleError(err, 'power.schedule.error.cancelFailed') })
     } finally {

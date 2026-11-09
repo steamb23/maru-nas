@@ -151,7 +151,7 @@ func TestValidation(t *testing.T) {
 	app := notice("app", api.NoticeInfo)
 	app.Action = &api.NoticeAction{Kind: api.NoticeActionApp, App: "settings", Page: "update"}
 	power := notice("power", api.NoticeWarning)
-	power.Action = &api.NoticeAction{Kind: api.NoticeActionPower}
+	power.Action = &api.NoticeAction{Kind: api.NoticeActionPower, Page: api.NoticePowerSchedule}
 	power.At = "2026-11-10T03:00:00+09:00"
 
 	bad := func(id string, edit func(*api.Notice)) api.Notice {
@@ -179,6 +179,9 @@ func TestValidation(t *testing.T) {
 		}),
 		bad("action-power-extra", func(n *api.Notice) {
 			n.Action = &api.NoticeAction{Kind: api.NoticeActionPower, Route: "x"}
+		}),
+		bad("action-power-page", func(n *api.Notice) {
+			n.Action = &api.NoticeAction{Kind: api.NoticeActionPower, Page: "update"}
 		}),
 		notice("good", api.NoticeError), // 같은 출처 안에서 겹치는 id
 	}}

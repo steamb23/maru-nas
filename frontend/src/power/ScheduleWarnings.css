@@ -1,0 +1,88 @@
+/* 예약된 다시 시작·종료 1분 전의 카운트다운(ScheduleWarnings.tsx, 시안 E_Warnings). 데스크톱 수준에서 토스트 다음에
+   그리며 화면 위쪽 가운데에 뜬다. 창·작업표시줄 위, 컨텍스트 메뉴·데스크톱 모달 아래다. 단추는 .addon-button,
+   진행 표시는 PowerOptions.css의 .power-spinner를 쓴다. */
+.schedule-banner {
+  position: absolute;
+  top: var(--float-gap);
+  left: 50%;
+  z-index: 1;
+  overflow: hidden;
+  width: min(760px, calc(100% - 2 * var(--float-gap)));
+  translate: -50% 0;
+  border: 1px solid var(--window-border);
+  border-radius: 10px;
+  background: light-dark(#fff4e0, #47381c);
+  box-shadow: 0 8px 28px rgb(0 0 0 / 0.3);
+  color: var(--text);
+}
+
+.schedule-banner-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  padding: 12px 14px;
+}
+
+.schedule-banner-main > .symbolic-icon {
+  flex: none;
+  color: light-dark(#b35c00, #ffb04a);
+}
+
+.schedule-banner-text {
+  display: flex;
+  flex: 1 1 260px;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text-muted);
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.schedule-banner-text > strong {
+  font-size: 14px;
+  font-weight: 600;
+  color: light-dark(#8a5300, #ffd8a0);
+}
+
+/* 좁은 화면에서 줄이 바뀌면 오른쪽 끝에 붙는다. */
+.schedule-banner-clock {
+  flex: none;
+  min-width: 3.2em;
+  margin-left: auto;
+  font-size: 22px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: light-dark(#8a5300, #ffd8a0);
+}
+
+.schedule-banner-buttons {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.schedule-banner-error {
+  margin: 0;
+  padding: 0 14px 10px;
+  font-size: 12px;
+  color: light-dark(#b42318, #ffb4ab);
+}
+
+/* 남은 시간 막대. 1초마다 줄어드는 폭을 부드럽게 잇는다(애니메이션을 끄면 base.css가 전환을 끈다). */
+.schedule-banner-bar {
+  height: 4px;
+  background: light-dark(rgb(0 0 0 / 0.08), rgb(255 255 255 / 0.1));
+}
+
+.schedule-banner-bar > div {
+  height: 100%;
+  background: light-dark(#d97706, #f5b54a);
+  transition: width 1s linear;
+}

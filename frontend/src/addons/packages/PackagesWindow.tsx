@@ -1,11 +1,18 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import type { ParseKeys } from 'i18next'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Job, PackageUpdate, PackagesResponse } from '../../api/types.gen'
 import { useLanguage } from '../../i18n'
 import { IconImage } from '../../icons/IconImage'
+import { noticeTimeText } from '../../notifications/messages'
+import { useNotificationStore } from '../../notifications/store'
 import { refreshNotifications } from '../../notifications/useNotifications'
+import { scheduledShutdown } from '../../power/countdown'
 import { openPowerDialog } from '../../power/powerDialog'
+import { leftText, scheduleError } from '../../power/schedule'
+import { cancelSchedule } from '../../power/scheduleActions'
 import { Modal } from '../../shell/Modal'
+import { useDialogs } from '../../shell/dialogPresets'
 import { openWorkbenchRoute } from '../../shell/launchApp'
 import { useCapabilitiesStore } from '../capabilities'
 import { type ActionErrorCode, isBusy } from '../common/actionState'
@@ -280,7 +287,7 @@ function ListView(p: ListProps) {
           </button>
         </div>
       )}
-      {data?.reboot.required && !current && <RebootNotice packages={data.reboot.packages} />}
+      {data && !current && <RebootNotice required={data.reboot.required} packages={data.reboot.packages} />}
       {data && !data.indexed && (
         <div className="pkg-empty">
           <IconImage name="software-update-available-symbolic" size={32} />
@@ -356,20 +363,100 @@ function PackageRow({ pkg, onDetail }: { pkg: PackageUpdate; onDetail: (pkg: Pac
   )
 }
 
-function RebootNotice({ packages }: { packages?: readonly string[] }) {
+// RebootNotice는 다시 시작해야 업데이트가 모두 적용된다는 안내다(required). 다시 시작이 예약되어 있으면 required와
+// 관계없이 그 시각과 남은 시간, 바꾸기·취소 단추를 보인다(시안 E_Scheduled). 예약은 알림 저장소의 서버 알림으로 안다.
+function RebootNotice({ required, packages }: { required: boolean; packages?: readonly string[] }) {
   const { t } = useTranslation()
+  const lang = useLanguage()
+  const dialogs = useDialogs()
+  const notices = useNotificationStore((s) => s.notices)
+  const skew = useNotificationStore((s) => s.skew)
+  const sched = useMemo(() => scheduledShutdown(notices), [notices])
+  // 종료가 예약되어 있으면 다시 시작 예약으로 보이지 않는다(전원 대화상자가 바꿀지 묻는다).
+  const scheduled = sched?.reboot ? sched : null
+  const now = useNow(scheduled !== null)
+  const [cancelling, setCancelling] = useState(false)
+  const [error, setError] = useState<ParseKeys | null>(null)
+  if (!required && !scheduled) return null
+
+  const cancel = async () => {
+    if (cancelling) return
+    setCancelling(true)
+    setError(null)
+    try {
+      await cancelSchedule(dialogs.scope)
+    } catch (err) {
+      setError(scheduleError(err, 'power.schedule.error.cancelFailed'))
+    } finally {
+      setCancelling(false)
+    }
+  }
+
+  const affected = required && packages && packages.length > 0 && (
+    <span className="pkg-ellipsis">
+      {t('packages.reboot.packages')} <code>{packages.join(', ')}</code>
+    </span>
+  )
+
+  if (scheduled) {
+    const left = leftText(scheduled.at - (now + skew), lang)
+    return (
+      <>
+        <div className="pkg-notice warn" role="status">
+          <IconImage name="system-reboot-symbolic" size={16} />
+          <div className="pkg-notice-text">
+            <strong>{t('power.schedule.rebootAt', { at: noticeTimeText(scheduled.at, lang) })}</strong>
+            <span className="pkg-nums">
+              {scheduled.by
+                ? t('power.schedule.remainingBy', { left, by: scheduled.by })
+                : t('power.schedule.remainingElsewhere', { left })}
+            </span>
+            {affected}
+          </div>
+          <button
+            type="button"
+            className="addon-button pkg-small"
+            disabled={cancelling}
+            onClick={() => openPowerDialog({ step: 'reboot', when: 'later' })}
+          >
+            {t('packages.reboot.change')}
+          </button>
+          <button type="button" className="addon-button pkg-small" disabled={cancelling} onClick={() => void cancel()}>
+            {cancelling ? (
+              <>
+                <span className="power-spinner" aria-hidden="true" />
+                {t('power.schedule.cancelling')}
+              </>
+            ) : (
+              t('power.schedule.cancel')
+            )}
+          </button>
+        </div>
+        {error && (
+          <div className="pkg-notice error" role="alert">
+            <IconImage name="dialog-error-symbolic" size={16} />
+            <span className="pkg-notice-text">{t(error)}</span>
+          </div>
+        )}
+      </>
+    )
+  }
+
   return (
     <div className="pkg-notice warn" role="status">
       <IconImage name="system-reboot-symbolic" size={16} />
       <div className="pkg-notice-text">
         <strong>{t('packages.reboot.title')}</strong>
-        {packages && packages.length > 0 && (
-          <span className="pkg-ellipsis">
-            {t('packages.reboot.packages')} <code>{packages.join(', ')}</code>
-          </span>
-        )}
+        {affected}
       </div>
-      <button type="button" className="addon-button pkg-small" onClick={() => openPowerDialog()}>
+      <button
+        type="button"
+        className="addon-button pkg-small"
+        onClick={() => openPowerDialog({ step: 'reboot', when: 'later' })}
+      >
+        {t('packages.reboot.schedule')}
+      </button>
+      <button type="button" className="addon-button pkg-small" onClick={() => openPowerDialog({ step: 'reboot' })}>
         {t('packages.reboot.action')}
       </button>
     </div>
@@ -463,7 +550,7 @@ function JobView({ job, output, waiting, reboot, onBack, onCheck }: JobProps) {
         </div>
       )}
       {job.state === 'succeeded' && job.kind === 'apt-upgrade' && reboot?.required && (
-        <RebootNotice packages={reboot.packages} />
+        <RebootNotice required packages={reboot.packages} />
       )}
       <OutputView output={output} running={running} incomplete={job.outputIncomplete === true} />
       {running && <p className="pkg-hint">{t('packages.job.background')}</p>}

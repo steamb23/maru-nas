@@ -139,7 +139,7 @@ func TestSource(t *testing.T) {
 	}
 	n := got[0]
 	if n.ID != NoticeID || n.Code != api.NoticeRebootScheduled || n.At != "2026-11-10T02:48:00Z" || len(n.Items) != 0 ||
-		n.Action == nil || n.Action.Kind != api.NoticeActionPower {
+		n.Action == nil || n.Action.Kind != api.NoticeActionPower || n.Action.Page != api.NoticePowerSchedule {
 		t.Fatalf("notice %+v", n)
 	}
 	// 예약한 사람이 정해지면 내용이 바뀐 것이다.

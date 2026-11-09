@@ -104,6 +104,7 @@
       "open": "Open",
       "workbench": "View in OMV",
       "power": "Power…",
+      "schedule": "View schedule",
       "details": "View details",
       "output": "View output",
       "updates": "View updates"
@@ -204,6 +205,16 @@
       "addonMessage": {
         "title": "Addon {{name}}",
         "body": "{{text}}"
+      },
+      "rebootSoon": {
+        "title_one": "The NAS restarts in {{count}} minute",
+        "title_other": "The NAS restarts in {{count}} minutes",
+        "body": "A restart is scheduled for {{at}}. Save your work."
+      },
+      "shutdownSoon": {
+        "title_one": "The NAS shuts down in {{count}} minute",
+        "title_other": "The NAS shuts down in {{count}} minutes",
+        "body": "A shutdown is scheduled for {{at}}. Save your work."
       }
     },
     "tasks": {
@@ -292,6 +303,17 @@
         "cancelFailed": "Couldn't cancel the schedule. Please try again.",
         "load": "Couldn't check the current schedule. A new schedule replaces any existing one."
       }
+    },
+    "warning": {
+      "label": "Scheduled restart or shutdown",
+      "rebootTitle": "The NAS restarts soon",
+      "shutdownTitle": "The NAS shuts down soon",
+      "body": "All signed-in users will lose their sessions, and file transfers in progress will stop.",
+      "by": "Scheduled by {{by}}",
+      "elsewhere": "Scheduled outside the dashboard (for example, over SSH).",
+      "adminOnly": "Only administrators can cancel it.",
+      "remaining": "Time left",
+      "restartNow": "Restart now"
     },
     "screen": {
       "rebootTitle": "Restarting the NAS",
@@ -1960,7 +1982,9 @@
     "reboot": {
       "title": "Restart to finish applying updates",
       "packages": "Requested by:",
-      "action": "Restart…"
+      "action": "Restart…",
+      "schedule": "Schedule…",
+      "change": "Change schedule…"
     },
     "during": {
       "update": "Checking for updates",

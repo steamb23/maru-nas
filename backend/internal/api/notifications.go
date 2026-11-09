@@ -32,16 +32,19 @@ const (
 	NoticeActionApp = "app"
 	// NoticeActionWorkbench는 OMV 워크벤치의 Route 화면을 워크벤치 탭으로 연다.
 	NoticeActionWorkbench = "workbench"
-	// NoticeActionPower는 전원 대화상자를 연다.
+	// NoticeActionPower는 전원 대화상자를 연다. Page가 NoticePowerSchedule이면 다시 시작 예약 화면으로 연다.
 	NoticeActionPower = "power"
 )
+
+// NoticePowerSchedule은 전원 동작의 Page로, 전원 대화상자를 다시 시작 예약 화면("시간 정해서")으로 연다.
+const NoticePowerSchedule = "schedule"
 
 // NoticeAction은 알림을 눌렀을 때 할 일이다.
 type NoticeAction struct {
 	Kind string `json:"kind" tstype:"'app' | 'workbench' | 'power'"`
 	// App은 Kind가 app일 때 프론트 앱 id다. 프론트가 모르는 id면 동작을 보이지 않는다.
 	App string `json:"app,omitempty"`
-	// Page는 App이 설정일 때 열 페이지 id다.
+	// Page는 App이 설정일 때 열 페이지 id다. Kind가 power면 비거나 NoticePowerSchedule이다.
 	Page string `json:"page,omitempty"`
 	// Route는 Kind가 workbench일 때 OMV 워크벤치 라우트다(앞 슬래시 없이, 예: system/updatemgmt/updates).
 	Route string `json:"route,omitempty"`

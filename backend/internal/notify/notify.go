@@ -221,7 +221,7 @@ func Check(n api.Notice) string {
 				return "bad workbench action"
 			}
 		case api.NoticeActionPower:
-			if a.App != "" || a.Page != "" || a.Route != "" {
+			if a.App != "" || (a.Page != "" && a.Page != api.NoticePowerSchedule) || a.Route != "" {
 				return "bad power action"
 			}
 		default:

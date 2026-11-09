@@ -1,7 +1,7 @@
 // 알림 문구 고르기. 저장소에는 코드와 치환값만 두고 문구 키는 여기서 정한다(언어를 바꾸면 그려진 알림도 바뀐다).
 // DOM에 의존하지 않아 node 환경에서 테스트한다.
 import type { ParseKeys } from 'i18next'
-import type { Notice, NoticeAction } from '../api/types.gen'
+import { type Notice, type NoticeAction, NoticePowerSchedule } from '../api/types.gen'
 import type { IconName } from '../icons/resolver'
 import type { ClientEvent, ClientEventCode, NoticeLevel } from './model'
 
@@ -150,8 +150,11 @@ export function serverText(n: Notice): NoticeText {
   return SERVER_TEXT[n.code](n)
 }
 
-// 클라이언트 알림의 문구. 수가 없으면(작업 전체가 멈춤) stopped 문구다.
-const CLIENT_TEXT: Record<ClientEventCode, { title: ParseKeys; body: ParseKeys; stopped?: ParseKeys }> = {
+// 클라이언트 알림의 문구. 수가 없으면(작업 전체가 멈춤) stopped 문구다. times는 시각(Unix ms)인 치환값 이름이다.
+const CLIENT_TEXT: Record<
+  ClientEventCode,
+  { title: ParseKeys; body: ParseKeys; stopped?: ParseKeys; times?: readonly string[] }
+> = {
   filesCopied: { title: 'notifications.client.filesCopied.title', body: 'notifications.client.filesCopied.body' },
   filesUploaded: { title: 'notifications.client.filesUploaded.title', body: 'notifications.client.filesUploaded.body' },
   filesDone: { title: 'notifications.client.filesDone.title', body: 'notifications.client.filesDone.body' },
@@ -166,13 +169,26 @@ const CLIENT_TEXT: Record<ClientEventCode, { title: ParseKeys; body: ParseKeys; 
     stopped: 'notifications.client.filesUploadFailed.bodyStopped',
   },
   addonMessage: { title: 'notifications.client.addonMessage.title', body: 'notifications.client.addonMessage.body' },
+  // 예약된 다시 시작·종료가 10분 안으로 다가왔다(count: 남은 분, at: 예약 시각).
+  rebootSoon: { title: 'notifications.client.rebootSoon.title', body: 'notifications.client.rebootSoon.body', times: ['at'] },
+  shutdownSoon: {
+    title: 'notifications.client.shutdownSoon.title',
+    body: 'notifications.client.shutdownSoon.body',
+    times: ['at'],
+  },
 }
 
 export function clientText(e: ClientEvent): NoticeText {
   const text = CLIENT_TEXT[e.code]
   const params = e.params ?? {}
   const body = params.count === undefined && text.stopped ? text.stopped : text.body
-  return { title: text.title, body, params }
+  if (!text.times) return { title: text.title, body, params }
+  const times: Record<string, number> = {}
+  for (const name of text.times) {
+    const v = params[name]
+    if (typeof v === 'number') times[name] = v
+  }
+  return { title: text.title, body, params, times }
 }
 
 // actionLabel은 동작 단추의 문구다. 파일 작업 창처럼 결과를 자세히 보이는 앱은 "자세히 보기", 시스템 업데이트는
@@ -185,6 +201,6 @@ export function actionLabel(action: NoticeAction, job = false): ParseKeys {
     case 'workbench':
       return 'notifications.action.workbench'
     case 'power':
-      return 'notifications.action.power'
+      return action.page === NoticePowerSchedule ? 'notifications.action.schedule' : 'notifications.action.power'
   }
 }

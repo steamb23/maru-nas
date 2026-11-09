@@ -7,6 +7,7 @@ import { create } from 'zustand'
 import * as client from '../api/client'
 import { createSaveQueue } from '../api/saveQueue'
 import type { Job, Notice, NotificationsResponse } from '../api/types.gen'
+import { clockSkew } from '../power/schedule'
 import {
   type ClientEvent,
   type ItemRef,
@@ -46,6 +47,9 @@ export interface NotificationData {
   fresh: ReadonlySet<string>
   // tasks는 진행 중인 서버 백그라운드 작업이다(관리자에게만 온다).
   tasks: readonly Job[]
+  // skew는 마지막 응답의 서버 시각에서 이 브라우저 시각을 뺀 값(ms)이다. 알림의 at(예약된 다시 시작)까지 남은 시간을
+  // 서버 시계로 계산하는 데 쓴다. 서버 시각을 받지 못했으면 0이다.
+  skew: number
 }
 
 export interface NotificationActions {
@@ -97,6 +101,7 @@ export const initialNotificationData: NotificationData = {
   centerOpen: false,
   fresh: EMPTY_FRESH,
   tasks: [],
+  skew: 0,
 }
 
 export function createNotificationStore(api: NotificationApi) {
@@ -155,7 +160,15 @@ export function createNotificationStore(api: NotificationApi) {
         } else {
           for (const n of news) toasts = pushToast(toasts, newToast({ kind: 'server', id: n.id }, n.level))
         }
-        set({ status: 'ready', notices: resp.notices, seen, toasts, fresh, tasks: resp.tasks ?? [] })
+        set({
+          status: 'ready',
+          notices: resp.notices,
+          seen,
+          toasts,
+          fresh,
+          tasks: resp.tasks ?? [],
+          skew: clockSkew(resp.now, api.now()),
+        })
         // 센터가 열린 동안 들어온 알림은 사용자가 보고 있으므로 읽음이다.
         if (centerOpen && news.length > 0) saveSeen(news.map((n) => n.id))
       },

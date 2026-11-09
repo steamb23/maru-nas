@@ -90,7 +90,7 @@ func TestPowerSchedule(t *testing.T) {
 	// 예약은 모든 사용자에게 알린다(그 시각에 모든 세션이 끊긴다).
 	n, _ := powerNotice(t, user)
 	if n == nil || n.Code != api.NoticeRebootScheduled || n.At != want.At || !slices.Equal(n.Items, []string{"totp"}) ||
-		n.Action == nil || n.Action.Kind != api.NoticeActionPower || n.Level != api.NoticeWarning {
+		n.Action == nil || n.Action.Kind != api.NoticeActionPower || n.Action.Page != api.NoticePowerSchedule || n.Level != api.NoticeWarning {
 		t.Fatalf("notice = %+v", n)
 	}
 	rev := n.Revision

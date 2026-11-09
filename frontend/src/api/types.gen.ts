@@ -2192,9 +2192,13 @@ export const NoticeActionApp = "app";
  */
 export const NoticeActionWorkbench = "workbench";
 /**
- * NoticeActionPower는 전원 대화상자를 연다.
+ * NoticeActionPower는 전원 대화상자를 연다. Page가 NoticePowerSchedule이면 다시 시작 예약 화면으로 연다.
  */
 export const NoticeActionPower = "power";
+/**
+ * NoticePowerSchedule은 전원 동작의 Page로, 전원 대화상자를 다시 시작 예약 화면("시간 정해서")으로 연다.
+ */
+export const NoticePowerSchedule = "schedule";
 /**
  * NoticeAction은 알림을 눌렀을 때 할 일이다.
  */
@@ -2205,7 +2209,7 @@ export interface NoticeAction {
    */
   app?: string;
   /**
-   * Page는 App이 설정일 때 열 페이지 id다.
+   * Page는 App이 설정일 때 열 페이지 id다. Kind가 power면 비거나 NoticePowerSchedule이다.
    */
   page?: string;
   /**

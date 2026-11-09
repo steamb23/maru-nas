@@ -18,6 +18,7 @@ import { ContextMenu } from './ContextMenu'
 import type { ContextMenuItem } from './contextMenu'
 import { DialogOutlet } from './DialogOutlet'
 import { NotificationCenter } from './NotificationCenter'
+import { ScheduleWarnings } from '../power/ScheduleWarnings'
 import { ToastLayer } from './ToastLayer'
 import { runNoticeAction } from './noticeAction'
 import { type DesktopShortcutsHandle, DesktopShortcuts } from './DesktopShortcuts'
@@ -155,6 +156,7 @@ export function Desktop() {
         <NotificationCenter onAction={runNotice} />
         <Taskbar inert={blocked} onOpenSettings={openSettings} onNewWindow={(appId) => launchApp(appId, bounds)} />
         <ToastLayer inert={blocked} onAction={runNotice} />
+        <ScheduleWarnings inert={blocked} />
         <ContextMenu />
         <div className="modal-host modal-host-desktop" ref={setModalHost} />
         <DialogOutlet scope={DESKTOP_SCOPE} />

@@ -54,6 +54,18 @@ describe('서버 알림', () => {
     ])
   })
 
+  it('서버 시계와 이 브라우저 시계의 차이를 둔다', () => {
+    const { store } = setup()
+    // 이 브라우저의 지금은 1000ms(setup)다.
+    store.getState().received({ ...resp([]), now: '1970-01-01T00:00:06Z' })
+    expect(store.getState().skew).toBe(5000)
+    store.getState().received(resp([]))
+    expect(store.getState().skew).toBe(0)
+    store.getState().received({ ...resp([]), now: '1970-01-01T00:00:06Z' })
+    store.getState().clear()
+    expect(store.getState().skew).toBe(0)
+  })
+
   it('사라진 알림의 토스트는 내린다', () => {
     const { store } = setup()
     store.getState().received(resp([]))

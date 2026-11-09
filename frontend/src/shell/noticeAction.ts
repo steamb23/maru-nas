@@ -1,5 +1,5 @@
 // 알림의 동작(앱 열기, 워크벤치 화면 열기, 전원 대화상자)을 실행한다. 알림 센터와 토스트가 함께 쓴다.
-import type { NoticeAction } from '../api/types.gen'
+import { type NoticeAction, NoticePowerSchedule } from '../api/types.gen'
 import { useCapabilitiesStore } from '../addons/capabilities'
 import { usePackagesNav } from '../addons/packages/nav'
 import { useAuthStore } from '../auth/store'
@@ -30,7 +30,8 @@ export function runNoticeAction(action: NoticeAction, deps: NoticeActionDeps, jo
       openWorkbenchRoute(action.route ?? '')
       return
     case 'power':
-      openPowerDialog()
+      // 예약 알림은 다시 시작의 "시간 정해서"로 연다(지금 예약과 취소 단추가 있다).
+      openPowerDialog(action.page === NoticePowerSchedule ? { step: 'reboot', when: 'later' } : {})
   }
 }
 
