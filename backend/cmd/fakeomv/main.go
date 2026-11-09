@@ -16,6 +16,8 @@
 // FAKESSH_HOST_KEY 경로에 쓰고, FAKESSH_AUTH로 받을 인증 방법을 고른다(예: publickey면 공개 키만 받는 sshd).
 //
 // 가짜 도우미가 있으면 파일 탐색기용 합성 파일과 공유 폴더를 만든다(files.go, FAKEFILES_LARGE로 큰 폴더).
+// 다시 시작 예약(power.schedule)은 실제로 다시 시작하지 않고 MARU_DEV_NOTIFY_ROOT 아래 run/systemd/shutdown/scheduled에
+// logind 형식의 예약 파일만 쓴다(없으면 가짜 도우미 루트 아래).
 //
 // 가짜 도우미가 있고 MARU_DEV_UPGRADE_ROOT·MARU_STATE_DIR가 있으면 대시보드에서 업그레이드의 가짜 업그레이드
 // 서비스(internal/upgrade/upgradefake)도 띄운다. maru가 그 상태 디렉터리에 남긴 확인 요청과 가짜 도우미가 쓴
@@ -90,7 +92,12 @@ func main() {
 	var helper *helperfake.Server
 	if sock := os.Getenv("FAKEHELPER_SOCKET"); sock != "" {
 		root := cmp.Or(os.Getenv("FAKEHELPER_ROOT"), filepath.Join(filepath.Dir(sock), "helper-root"))
-		h, err := helperfake.Start(sock, root, helperfake.DefaultUsers(), helperfake.Options{})
+		opts := helperfake.Options{}
+		// 다시 시작 예약: 가짜 logind가 maru가 읽는 가짜 루트(MARU_DEV_NOTIFY_ROOT) 아래에 예약 파일을 쓴다.
+		if notifyRoot := os.Getenv("MARU_DEV_NOTIFY_ROOT"); notifyRoot != "" {
+			opts.ShutdownFile = filepath.Join(notifyRoot, "run", "systemd", "shutdown", "scheduled")
+		}
+		h, err := helperfake.Start(sock, root, helperfake.DefaultUsers(), opts)
 		if err != nil {
 			log.Fatalf("fake helper: %v", err)
 		}

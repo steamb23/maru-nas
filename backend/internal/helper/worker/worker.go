@@ -49,11 +49,14 @@ type Config struct {
 	MountInfo func() (io.ReadCloser, error)
 	// IdleTimeout은 연결에서 이만큼 진행이 없으면 끊는 시간이다. 기본 60초.
 	IdleTimeout time.Duration
-	// Now는 현재 시각이다(ssh.authorize의 키 줄 만료 시각, upgrade.apply의 요청 시각). 기본 time.Now.
+	// Now는 현재 시각이다(ssh.authorize의 키 줄 만료 시각, upgrade.apply의 요청 시각, power.schedule의 시각 검사).
+	// 기본 time.Now.
 	Now func() time.Time
 	// UpgradeDir은 upgrade.apply가 적용 요청을 쓰는 디렉터리다. 기본 config.UpgradeRequestDir(도우미 유닛의
 	// RuntimeDirectory=, 대시보드에서 업그레이드를 켰을 때만 있다).
 	UpgradeDir string
+	// Logind는 power.schedule·power.cancel이 부르는 systemd-logind다. 기본 BusctlLogind.
+	Logind Logind
 }
 
 func (c Config) withDefaults() Config {
@@ -71,6 +74,9 @@ func (c Config) withDefaults() Config {
 	}
 	if c.UpgradeDir == "" {
 		c.UpgradeDir = config.UpgradeRequestDir
+	}
+	if c.Logind == nil {
+		c.Logind = BusctlLogind{}
 	}
 	return c
 }
@@ -211,6 +217,10 @@ func Serve(job Job, conn net.Conn, cfg Config) error {
 		err = reply(c, func() (any, error) { return nil, trashEmpty(job, cfg) })
 	case proto.ActionTrashPrepare:
 		err = reply(c, func() (any, error) { return nil, trashPrepare(job, cfg) })
+	case proto.ActionPowerSchedule:
+		err = reply(c, func() (any, error) { return nil, powerSchedule(job, cfg) })
+	case proto.ActionPowerCancel:
+		err = reply(c, func() (any, error) { return nil, powerCancel(cfg) })
 	}
 	return err
 }

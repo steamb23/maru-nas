@@ -49,6 +49,9 @@ type Helper interface {
 	TrashPurge(ctx context.Context, ticket, trash, name string) error
 	TrashEmpty(ctx context.Context, ticket string) error
 	TrashPrepare(ctx context.Context, ticket, disk string) error
+	// PowerSchedule, PowerCancel은 systemd-logind의 예약된 다시 시작을 정하고 취소한다(root 연산, 상승한 티켓).
+	PowerSchedule(ctx context.Context, ticket string, at time.Time) error
+	PowerCancel(ctx context.Context, ticket string) error
 }
 
 const (

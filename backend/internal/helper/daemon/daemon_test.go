@@ -505,6 +505,47 @@ func TestRunTrashPrepare(t *testing.T) {
 	e.logs.wait(t, `run: user="bob" scope=root action=trash.prepare disk="`+disk+`" result=ok`)
 }
 
+// power.schedule·power.cancel은 상승한 티켓으로만 logind를 부르고 감사 로그에 시각을 남긴다.
+func TestRunPowerSchedule(t *testing.T) {
+	e := newEnv(t, nil)
+	lg := &fakeLogind{}
+	e.spawner.cfg.Logind = lg
+	at := time.Now().Add(time.Hour).Truncate(time.Second)
+	bob := e.open("bob", false)
+	params, _ := json.Marshal(proto.PowerScheduleParams{At: at.Unix()})
+	schedule := proto.Request{Op: proto.OpRun, Ticket: bob.Ticket, Scope: proto.ScopeRoot, Action: proto.ActionPowerSchedule, Params: params}
+	cancel := proto.Request{Op: proto.OpRun, Ticket: bob.Ticket, Scope: proto.ScopeRoot, Action: proto.ActionPowerCancel}
+	e.expect(proto.CodeElevationRequired, schedule)
+	e.expect(proto.CodeElevationRequired, cancel)
+	if len(lg.scheduled) != 0 || lg.cancels != 0 {
+		t.Fatal("logind called without elevation")
+	}
+	e.expect("", proto.Request{Op: proto.OpElevate, Ticket: bob.Ticket, Password: "bob-pw"})
+	e.expect("", schedule)
+	e.expect("", cancel)
+	if len(lg.scheduled) != 1 || !lg.scheduled[0].Equal(at) || lg.cancels != 1 {
+		t.Fatalf("logind calls %v %d", lg.scheduled, lg.cancels)
+	}
+	e.logs.wait(t, `run: user="bob" scope=root action=power.schedule at=`+at.UTC().Format(time.RFC3339)+` result=ok`)
+	e.logs.wait(t, `run: user="bob" scope=root action=power.cancel result=ok`)
+}
+
+// fakeLogind는 받은 예약·취소를 기록한다.
+type fakeLogind struct {
+	scheduled []time.Time
+	cancels   int
+}
+
+func (l *fakeLogind) ScheduleReboot(at time.Time) error {
+	l.scheduled = append(l.scheduled, at)
+	return nil
+}
+
+func (l *fakeLogind) CancelShutdown() error {
+	l.cancels++
+	return nil
+}
+
 func TestElevationNotAllowed(t *testing.T) {
 	e := newEnv(t, nil)
 	for _, user := range []string{"alice", "carol", "admin"} {

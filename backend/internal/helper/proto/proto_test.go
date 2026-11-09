@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestRequestRoundTrip(t *testing.T) {
@@ -107,14 +108,16 @@ func TestAllowed(t *testing.T) {
 	if !Allowed(ScopeUser, ActionWrite) || !Allowed(ScopeRoot, ActionID) {
 		t.Fatal("allowed action rejected")
 	}
-	// root 범위에는 신원 확인, 업그레이드 요청, 디스크 휴지통 만들기만 있다. 파일 연산이 root로 열리면 안 된다.
+	// root 범위에는 신원 확인, 업그레이드 요청, 디스크 휴지통 만들기, 다시 시작 예약·취소만 있다. 파일 연산이 root로
+	// 열리면 안 된다.
 	for _, a := range Actions[ScopeUser] {
 		if a != ActionID && Allowed(ScopeRoot, a) {
 			t.Errorf("%s allowed in root scope", a)
 		}
 	}
-	if !slices.Equal(Actions[ScopeRoot], []string{ActionID, ActionUpgradeApply, ActionTrashPrepare}) ||
-		Allowed(ScopeUser, ActionUpgradeApply) || Allowed(ScopeUser, ActionTrashPrepare) {
+	if !slices.Equal(Actions[ScopeRoot], []string{ActionID, ActionUpgradeApply, ActionTrashPrepare, ActionPowerSchedule, ActionPowerCancel}) ||
+		Allowed(ScopeUser, ActionUpgradeApply) || Allowed(ScopeUser, ActionTrashPrepare) ||
+		Allowed(ScopeUser, ActionPowerSchedule) || Allowed(ScopeUser, ActionPowerCancel) {
 		t.Errorf("root actions %q", Actions[ScopeRoot])
 	}
 	if !Allowed(ScopeUser, ActionSSHAuthorize) || !Allowed(ScopeUser, ActionSSHRevoke) {
@@ -135,5 +138,23 @@ func TestDecodeParams(t *testing.T) {
 	}
 	if err := DecodeParams(nil, &p); err != nil {
 		t.Fatalf("empty params: %v", err)
+	}
+}
+
+func TestValidPowerSchedule(t *testing.T) {
+	now := time.Date(2026, 11, 9, 20, 48, 0, 0, time.UTC)
+	for _, c := range []struct {
+		at   time.Time
+		want bool
+	}{
+		{now.Add(time.Second), true},
+		{now.Add(MaxPowerScheduleAhead), true},
+		{now, false},
+		{now.Add(-time.Minute), false},
+		{now.Add(MaxPowerScheduleAhead + time.Second), false},
+	} {
+		if got := ValidPowerSchedule(c.at, now); got != c.want {
+			t.Errorf("ValidPowerSchedule(%v) = %v, want %v", c.at.Sub(now), got, c.want)
+		}
 	}
 }

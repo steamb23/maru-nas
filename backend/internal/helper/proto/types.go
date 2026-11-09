@@ -1,5 +1,7 @@
 package proto
 
+import "time"
+
 // OpenResult는 OpOpen의 결과다.
 type OpenResult struct {
 	// Ticket은 이후 요청에 쓰는 비밀 값이다. 로그·응답에 넣지 않는다.
@@ -230,6 +232,22 @@ type UpgradeApplyParams struct {
 	Target string `json:"target"`
 	// Settings는 업그레이드 계획이 물은 설정의 이름과 값이다.
 	Settings map[string]string `json:"settings,omitempty"`
+}
+
+// PowerScheduleParams는 power.schedule의 인자다.
+type PowerScheduleParams struct {
+	// At은 다시 시작할 시각(Unix 초)이다. ValidPowerSchedule을 만족해야 한다.
+	At int64 `json:"at"`
+}
+
+// MaxPowerScheduleAhead는 다시 시작을 예약할 수 있는 가장 먼 시각까지의 시간이다.
+const MaxPowerScheduleAhead = 7 * 24 * time.Hour
+
+// ValidPowerSchedule은 at이 now 뒤이고 MaxPowerScheduleAhead 안인지다. 지난 시각을 logind에 넘기면 바로 다시
+// 시작하므로 도우미가 다시 확인한다. 화면의 더 엄격한 하한(1분 뒤부터)은 maru가 본다.
+func ValidPowerSchedule(at, now time.Time) bool {
+	d := at.Sub(now)
+	return d > 0 && d <= MaxPowerScheduleAhead
 }
 
 // SSHKeyParams는 ssh.authorize·ssh.revoke의 인자다.

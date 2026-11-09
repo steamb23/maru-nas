@@ -536,6 +536,8 @@ func (s *Server) audit(user string, req proto.Request, code string) {
 			// fs.copy: 원본 폴더와 이름 수(이름은 남기지 않는다), 대상 폴더(To)
 			Dir   string   `json:"dir"`
 			Names []string `json:"names"`
+			// power.schedule: 다시 시작할 시각(Unix 초)
+			At int64 `json:"at"`
 		}
 		if json.Unmarshal(req.Params, &p) == nil {
 			switch {
@@ -555,6 +557,8 @@ func (s *Server) audit(user string, req proto.Request, code string) {
 			case p.Target != "":
 				names := slices.Sorted(maps.Keys(p.Settings))
 				detail = fmt.Sprintf(" target=%q settings=%q", p.Target, strings.Join(names, ","))
+			case p.At != 0:
+				detail = " at=" + time.Unix(p.At, 0).UTC().Format(time.RFC3339)
 			}
 			if p.Recursive {
 				detail += " recursive"

@@ -305,6 +305,17 @@ func (c *Client) UpgradeApply(ctx context.Context, ticket, target string, settin
 	return c.run(ctx, ticket, proto.ScopeRoot, proto.ActionUpgradeApply, proto.UpgradeApplyParams{Target: target, Settings: settings}, nil)
 }
 
+// PowerSchedule은 at에 시스템을 다시 시작하도록 systemd-logind에 예약한다(root 권한, 상승한 티켓). 이미 있는
+// 예약은 바뀐다.
+func (c *Client) PowerSchedule(ctx context.Context, ticket string, at time.Time) error {
+	return c.run(ctx, ticket, proto.ScopeRoot, proto.ActionPowerSchedule, proto.PowerScheduleParams{At: at.Unix()}, nil)
+}
+
+// PowerCancel은 systemd-logind에 예약된 종료를 취소한다(root 권한, 상승한 티켓). 예약이 없어도 성공이다.
+func (c *Client) PowerCancel(ctx context.Context, ticket string) error {
+	return c.run(ctx, ticket, proto.ScopeRoot, proto.ActionPowerCancel, nil, nil)
+}
+
 // Body는 도우미가 보내는 파일 내용이다. 다 읽었거나 그만 읽을 때 Close한다.
 // 도우미가 Size보다 적게 보내고 끊으면 io.ErrUnexpectedEOF다.
 type Body struct {

@@ -98,6 +98,11 @@ const (
 	// ActionSearch는 폴더와 그 아래 모든 폴더에서 이름에 찾기어가 든 항목을 찾는다(파일 탐색기의 하위 폴더 검색).
 	// 찾은 항목은 Partial 응답으로 보내고, 마지막 응답에 결과를 담는다.
 	ActionSearch = "fs.search"
+	// ActionPowerSchedule은 정한 시각에 시스템을 다시 시작하도록 systemd-logind에 예약한다(root 범위). 시각만 받는다.
+	// 이미 예약된 종료(다른 곳에서 예약한 시스템 종료 포함)는 이 예약으로 바뀐다.
+	ActionPowerSchedule = "power.schedule"
+	// ActionPowerCancel은 systemd-logind에 예약된 종료(다시 시작, 시스템 종료)를 취소한다(root 범위). 예약이 없어도 성공이다.
+	ActionPowerCancel = "power.cancel"
 )
 
 // Actions는 범위마다 실행할 수 있는 연산이다. root 연산은 여기에 타입 있는 함수로만 더한다.
@@ -106,7 +111,7 @@ var Actions = map[string][]string{
 		ActionNames, ActionStatMany, ActionInfo, ActionSSHAuthorize, ActionSSHRevoke,
 		ActionTrash, ActionTrashDirs, ActionTrashList, ActionTrashRestore, ActionTrashPurge, ActionTrashEmpty, ActionCopy,
 		ActionSearch},
-	ScopeRoot: {ActionID, ActionUpgradeApply, ActionTrashPrepare},
+	ScopeRoot: {ActionID, ActionUpgradeApply, ActionTrashPrepare, ActionPowerSchedule, ActionPowerCancel},
 }
 
 // Allowed는 scope에서 action을 실행할 수 있는지다.

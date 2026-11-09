@@ -56,6 +56,9 @@ type Options struct {
 	FailDelay  time.Duration
 	ElevateTTL time.Duration
 	Logf       func(format string, args ...any)
+	// ShutdownFile은 가짜 logind가 예약된 종료를 쓰는 파일이다(systemd-logind의 /run/systemd/shutdown/scheduled와
+	// 같은 형식). 비우면 Root 아래 run/systemd/shutdown/scheduled다. 개발 서버는 maru가 읽는 가짜 루트 아래로 정한다.
+	ShutdownFile string
 }
 
 // Server는 실행 중인 가짜 도우미다.
@@ -63,6 +66,8 @@ type Server struct {
 	// Socket은 수신 소켓 경로, Root는 가짜 홈·디스크의 루트 디렉터리다.
 	Socket string
 	Root   string
+	// ShutdownFile은 가짜 logind가 예약을 쓰는 파일이다(Options.ShutdownFile).
+	ShutdownFile string
 
 	accounts *accounts
 	l        *net.UnixListener
@@ -99,11 +104,16 @@ func Start(socket, root string, users []User, opts Options) (*Server, error) {
 	if err := os.MkdirAll(upgradeDir, 0o700); err != nil {
 		return nil, err
 	}
+	shutdownFile := opts.ShutdownFile
+	if shutdownFile == "" {
+		shutdownFile = filepath.Join(root, "run", "systemd", "shutdown", "scheduled")
+	}
 	mountinfo := fmt.Sprintf("1 0 8:1 / / rw - ext4 /dev/fake rw\n2 1 8:17 / %s rw - ext4 /dev/fake1 rw\n", escape(disk))
 	sp := &spawner{acc: acc, cfg: worker.Config{
 		SrvDir:     srvDir,
 		MountInfo:  func() (io.ReadCloser, error) { return io.NopCloser(strings.NewReader(mountinfo)), nil },
 		UpgradeDir: upgradeDir,
+		Logind:     fakeLogind{file: shutdownFile},
 	}}
 	srv, err := daemon.New(daemon.Config{
 		ClientUID:  os.Getuid(),
@@ -122,7 +132,7 @@ func Start(socket, root string, users []User, opts Options) (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	s := &Server{Socket: socket, Root: root, accounts: acc, l: l, done: make(chan struct{})}
+	s := &Server{Socket: socket, Root: root, ShutdownFile: shutdownFile, accounts: acc, l: l, done: make(chan struct{})}
 	go func() {
 		srv.Serve(l)
 		close(s.done)
