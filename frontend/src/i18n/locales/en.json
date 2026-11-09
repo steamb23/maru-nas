@@ -251,6 +251,48 @@
       "busy": "Another power action is already in progress.",
       "omv": "OMV could not process the request. Try again in a moment."
     },
+    "schedule": {
+      "tile": "Now or later",
+      "tileScheduled": "Scheduled",
+      "title": "When should the NAS restart?",
+      "when": "When to restart",
+      "now": "Now",
+      "later": "At a set time",
+      "date": "Date",
+      "time": "Time",
+      "today": "Today · {{date}}",
+      "tomorrow": "Tomorrow · {{date}}",
+      "result": "{{at}} · in {{left}}",
+      "nasTime": "On the NAS clock, this is {{at}}. The NAS and this browser are in different time zones.",
+      "notice": "At that time, all signed-in users will lose their sessions, and file transfers in progress will stop. Open tabs are warned 10 minutes and 1 minute before.",
+      "submit": "Schedule",
+      "change": "Change schedule",
+      "cancel": "Cancel schedule",
+      "scheduling": "Scheduling…",
+      "cancelling": "Cancelling…",
+      "loading": "Checking the current schedule…",
+      "rebootAt": "Restarts on {{at}}",
+      "shutdownAt": "A shutdown is scheduled for {{at}}",
+      "remainingBy": "{{left}} left · Scheduled by {{by}}",
+      "remainingElsewhere": "{{left}} left · Scheduled outside the dashboard (for example, over SSH)",
+      "replaceElsewhere": "The dashboard can't see this schedule's message or who made it. Changing it removes this schedule and makes a new one.",
+      "replaceShutdown": "A new schedule restarts the NAS instead of this shutdown.",
+      "blocked": {
+        "elevate": "This account can't use root rights, so it can't schedule a restart.",
+        "helper": "The privileged helper isn't available, so a restart can't be scheduled.",
+        "relogin": "This session can't use the privileged helper. Sign out and sign in again to schedule a restart."
+      },
+      "error": {
+        "empty": "Enter a time.",
+        "past": "That time has passed. Choose a time after now ({{now}}).",
+        "tooSoon": "You can schedule from 1 minute ahead.",
+        "tooFar": "You can only schedule within 7 days, up to {{limit}}.",
+        "time": "That time can't be scheduled. Choose another time.",
+        "failed": "Couldn't schedule the restart. Please try again.",
+        "cancelFailed": "Couldn't cancel the schedule. Please try again.",
+        "load": "Couldn't check the current schedule. A new schedule replaces any existing one."
+      }
+    },
     "screen": {
       "rebootTitle": "Restarting the NAS",
       "rebootMessage": "When the NAS is back, you return to the sign-in screen.",

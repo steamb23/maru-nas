@@ -86,7 +86,7 @@ export function ProfileMenu({ onOpenSettings }: { onOpenSettings: (page: Setting
   const actions: Record<ProfileMenuActionId, () => void> = {
     // 팝업 차단을 피하려고 클릭 처리 안에서 바로 연다.
     workbench: () => openLink('workbench'),
-    power: openPowerDialog,
+    power: () => openPowerDialog(),
     // 로그아웃하면 열린 창이 모두 닫히므로 데스크톱 범위 모달로 한 번 묻는다.
     logout: async () => {
       const ok = await dialogs.confirm({

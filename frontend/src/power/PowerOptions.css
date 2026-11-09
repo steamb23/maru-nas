@@ -126,16 +126,202 @@
   margin-right: auto;
 }
 
-.addon-button.danger .power-spinner {
+.addon-button .power-spinner {
   display: inline-block;
   width: 12px;
   height: 12px;
   margin-right: 6px;
   vertical-align: -1px;
-  border: 2px solid rgb(255 255 255 / 0.4);
-  border-top-color: #fff;
+  border: 2px solid color-mix(in srgb, currentColor 40%, transparent);
+  border-top-color: currentColor;
   border-radius: 50%;
   animation: power-spin 0.9s linear infinite;
+}
+
+/* 다시 시작의 "지금"·"시간 정해서". 시스템 업데이트 창의 탭(.pkg-tabs)과 같은 모양이다. */
+.power-when {
+  display: flex;
+  gap: 2px;
+  margin-bottom: 12px;
+  padding: 2px;
+  border-radius: 8px;
+  background: var(--hover-bg);
+}
+
+.power-when-option {
+  flex: 1;
+  padding: 5px 12px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.power-when-option[aria-checked='true'] {
+  background: light-dark(#ffffff, #3a3f47);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.18);
+}
+
+.power-when-option[aria-disabled='true'] {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.power-when-option:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* 예약할 수 없는 이유는 고르기 바로 아래에 둔다. */
+.power-when + .power-reason {
+  margin: -4px 0 12px;
+}
+
+/* "시간 정해서" 화면(PowerSchedule.tsx) */
+.power-schedule {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.power-schedule .power-reason,
+.power-schedule .power-error {
+  margin: 0;
+}
+
+.power-schedule .modal-buttons {
+  margin-top: 4px;
+}
+
+.power-loading {
+  color: var(--text-muted);
+}
+
+/* 지금 예약: 아이콘, 시각과 남은 시간, 취소 단추. 메모는 아래 줄 전체 */
+.power-current {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+.power-current > .symbolic-icon {
+  color: var(--accent);
+}
+
+/* 다시 시작이 아닌 종료 예약은 경고 색이다(새로 예약하면 다시 시작으로 바뀐다). */
+.power-current.shutdown {
+  background: light-dark(#fff4e0, #47381c);
+}
+
+.power-current.shutdown > .symbolic-icon {
+  color: light-dark(#b35c00, #ffb04a);
+}
+
+.power-current-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  line-height: 1.4;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.power-current-title {
+  font-weight: 600;
+}
+
+.power-current-detail {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.power-current-note {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-muted);
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.power-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 128px;
+  gap: 10px;
+}
+
+.power-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.power-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 5px 8px;
+  border: 1px solid var(--window-border);
+  border-radius: 6px;
+  background: var(--window-bg);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  color: inherit;
+}
+
+.power-input:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  outline-offset: 1px;
+}
+
+/* 고른 시각과 남은 시간, 또는 고를 수 없는 이유 */
+.power-result {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.45;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.power-result.invalid {
+  background: light-dark(rgb(217 48 37 / 0.08), rgb(197 53 43 / 0.2));
+  color: light-dark(#b3261e, #ffb4ab);
+}
+
+.power-result .symbolic-icon {
+  flex: none;
+  margin-top: 1px;
+}
+
+.power-notes {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-muted);
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.power-notes p {
+  margin: 0;
 }
 
 @keyframes power-spin {

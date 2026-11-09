@@ -62,6 +62,9 @@ import type {
   LoginResponse,
   Notice,
   NoticeAction,
+  PowerSchedule,
+  PowerScheduleRequest,
+  PowerScheduleResponse,
   NoticeJob,
   NotificationPrefs,
   NotificationPrefsRequest,
@@ -1447,6 +1450,42 @@ export function setUpgradeChannel(channel: SetUpgradeChannelRequest['channel']):
 export function applyUpgrade(target: string, settings: Record<string, string>): Promise<UpgradeInfo> {
   const body: StartUpgradeRequest = { target, settings }
   return upgradeInfo('/upgrade/apply', postJSON('/upgrade/apply', { body }))
+}
+
+// 다시 시작 예약(GET·PUT·DELETE /api/power/schedule, 관리자). 예약·취소는 root 연산이라 상승하지 않았으면
+// elevation_required다.
+
+const POWER_MODES = ['reboot', 'poweroff', 'other'] as const satisfies readonly PowerSchedule['mode'][]
+true satisfies AllOf<PowerSchedule['mode'], typeof POWER_MODES>
+
+function isPowerSchedule(v: unknown): v is PowerSchedule {
+  return isObj(v) && isStr(v.at) && isOneOf(v.mode, POWER_MODES) && isOptional(v.by, isStr)
+}
+
+export function isPowerScheduleResponse(v: unknown): v is PowerScheduleResponse {
+  return isObj(v) && isNullable(v.schedule, isPowerSchedule) && isStr(v.now) && isOptional(v.timeZone, isStr)
+}
+
+async function powerSchedule(path: string, res: Promise<unknown>): Promise<PowerScheduleResponse> {
+  const data = await res
+  if (!isPowerScheduleResponse(data)) throw new Error(`${path}: unexpected response shape`)
+  return { ...data, schedule: data.schedule ?? undefined }
+}
+
+// fetchPowerSchedule은 systemd-logind에 지금 예약된 종료다(대시보드 밖에서 한 예약 포함).
+export function fetchPowerSchedule(signal?: AbortSignal): Promise<PowerScheduleResponse> {
+  return powerSchedule('/power/schedule', getJSON('/power/schedule', { signal }))
+}
+
+// schedulePowerRestart는 at(RFC 3339)에 다시 시작하도록 예약한다. 이미 있는 예약은 바뀐다.
+export function schedulePowerRestart(at: string): Promise<PowerScheduleResponse> {
+  const body: PowerScheduleRequest = { at }
+  return powerSchedule('/power/schedule', request('PUT', '/power/schedule', { body }).then((r) => r.json()))
+}
+
+// cancelPowerSchedule은 예약된 종료를 취소한다. 예약이 없어도 성공이다.
+export function cancelPowerSchedule(): Promise<PowerScheduleResponse> {
+  return powerSchedule('/power/schedule', request('DELETE', '/power/schedule').then((r) => r.json()))
 }
 
 // fetchHealth는 백엔드가 응답하는지 본다(로그인 필요 없음). 업그레이드로 다시 시작하기를 기다릴 때 쓴다.

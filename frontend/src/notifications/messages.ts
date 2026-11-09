@@ -14,9 +14,17 @@ export interface NoticeText {
   times?: Readonly<Record<string, number>>
 }
 
-// noticeTimeText는 알림이 가리키는 시각의 문구다(예: 11월 10일 (화) 오전 3:00). 이 브라우저의 시간대로 보인다.
-export function noticeTimeText(ms: number, lang: string): string {
-  return new Intl.DateTimeFormat(lang, { weekday: 'short', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(ms)
+// noticeTimeText는 알림이 가리키는 시각의 문구다(예: 11월 10일 (화) 오전 3:00). timeZone이 없으면 이 브라우저의
+// 시간대로 보인다. 이 브라우저가 모르는 시간대 이름이면 RangeError를 던진다.
+export function noticeTimeText(ms: number, lang: string, timeZone?: string): string {
+  return new Intl.DateTimeFormat(lang, {
+    weekday: 'short',
+    month: 'long',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZone,
+  }).format(ms)
 }
 
 // textParams는 t()에 넘길 치환값이다. times를 화면 언어의 시각 문구로 바꿔 params와 합친다.
