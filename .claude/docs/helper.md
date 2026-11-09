@@ -13,6 +13,7 @@
 - 대시보드에서 업그레이드(`upgrade.apply`, 아래 "대시보드에서 업그레이드")를 켜면 상승한 티켓으로 할 수 있는 일이 `id`에서 "설치된 저장소로 업그레이드"로 넓어진다. 업그레이드는 저장소에서 빌드한 코드를 root로 실행하므로 저장소 소유자 계정은 업그레이드로 root 코드를 실행할 수 있다(sudo로 `./install.sh`를 실행할 때와 같다). OMV 관리자는 원래 root와 같은 일을 할 수 있으므로 관리자에게 새로운 권한은 아니며, 끌 수 있는 선택 설정(`--no-web-upgrade`)이다
 - 애드온 백엔드(설치기 `--addon-backends`)의 root 동기화(`maru-addons.service`, 설치기 복사본의 `--addon-sync`)는 도우미 밖의 별도 root 서비스다. maru가 쓴 원하는 상태를 믿지 않고 다시 검사하며, 고정 템플릿 인스턴스를 id로 켜고 끄고 그 백엔드 데이터를 지우는 일만 한다(패키지 파일을 읽거나 실행하지 않는다). 뚫린 maru가 이 경로로 할 수 있는 일은 상태 디렉터리에 둔 코드를 패키지 샌드박스(동적 uid, `maru.service`보다 엄격)에서 실행하는 것까지이고, 도우미 티켓과 root에는 닿지 않는다. 도우미 프로토콜·유닛은 바뀌지 않는다
 - 디스크 휴지통 만들기(`trash.prepare`, 아래 "휴지통")는 상승한 티켓으로 `/srv` 아래 마운트 지점 맨 위에 1777(sticky) `.Trash` 폴더 하나만 만든다(경로는 받지 않고 디스크만 받는다). 그 디스크에서 모든 사용자가 자기 휴지통(`.Trash/<uid>`)을 만들 수 있게 되는 것뿐이고, sticky 비트 때문에 남의 휴지통 폴더는 지우거나 옮길 수 없다. OMV 관리자는 원래 root와 같은 일을 할 수 있으므로 새 권한은 아니다
+- 다시 시작 예약(`power.schedule`·`power.cancel`, 아래 "다시 시작 예약")은 상승한 티켓으로 systemd-logind에 다시 시작을 예약하거나 예약된 종료를 취소하는 것뿐이다. 시각만 받고 종류는 늘 reboot이다. OMV 관리자는 원래 OMV RPC(`System.reboot`, `System.shutdown`)로 바로 끄고 켤 수 있으므로 새 권한은 아니다
 - 웹 터미널의 임시 SSH 키(`ssh.authorize`)는 새 권한이 아니다. 티켓을 가진 쪽은 원래 `fs.write`로 사용자 홈의 `~/.ssh/authorized_keys`를 쓸 수 있다. 그래도 키 줄은 worker가 직접 만들고(옵션을 maru가 정할 수 없다) ed25519 공개 키만 받는다
 - OMV 관리자는 원래 OMV RPC로 root와 같은 일을 할 수 있으므로 "OMV 관리자 + 상승 그룹 + 비밀번호 재확인"은 새 권한이 아니라 더 보수적인 겹침이다
 - 2차 인증은 도우미가 직접 확인하지 않는다. maru가 인증을 마친 뒤에만 대기 티켓을 활성화한다(maru가 정상일 때 2차 인증을 건너뛸 수 없다)
@@ -29,7 +30,7 @@
 |---|---|
 | `internal/helper/proto` | 프레임 프로토콜, 요청·응답·결과 타입, 오류 코드, 범위별 연산 목록(`Actions`) |
 | `internal/helper/daemon` | root 부모: 소켓 활성화, 상대 uid 확인, 티켓, 실패 제한, 계정·상승 정책, worker 실행, 감사 로그, 유휴 종료 |
-| `internal/helper/worker` | 자식 프로세스의 연산 구현(`id`, `fs.*`, `ssh.*`, `upgrade.apply`, `trash.prepare`). 연결을 fd 3으로 받아 응답·본문을 직접 주고받는다 |
+| `internal/helper/worker` | 자식 프로세스의 연산 구현(`id`, `fs.*`, `ssh.*`, `upgrade.apply`, `trash.prepare`, `power.*`). 연결을 fd 3으로 받아 응답·본문을 직접 주고받는다 |
 | `internal/helper/client` | maru 쪽 클라이언트 |
 | `internal/helper/helperfake` | 테스트·`make dev-fake`용 가짜 도우미(진짜 데몬 + 가짜 계정·비밀번호 + 프로세스 없는 worker) |
 | `cmd/maru-helper` | 실행 파일(`CGO_ENABLED=0`). maru 웹 코드는 링크되지 않는다 |
@@ -42,7 +43,7 @@
 - 티켓 관리: `session.open`(사용자, 비밀번호, pending), `session.activate`, `session.close`, `session.reset`, `session.status`, `session.elevate`(비밀번호), `session.drop`
 - 연산: `run`(티켓, 범위 `user`|`root`, 연산, 인자, `size`). 연산 목록은 `proto.Actions`
   - 사용자 범위: `id`(티켓 사용자의 홈 `home`도 준다), `fs.list`, `fs.stat`, `fs.read`(offset·length, 응답 뒤 스트림), `fs.write`(요청 뒤 스트림, 같은 폴더 임시 파일에 받은 뒤 이름 바꾸기), `fs.mkdir`, `fs.rename`, `fs.remove`(`recursive`), 파일 탐색기의 `fs.names`·`fs.statmany`·`fs.info`(아래 "파일 탐색기 연산"), `ssh.authorize`·`ssh.revoke`(웹 터미널의 임시 SSH 키, 아래 "임시 SSH 키"), 휴지통의 `fs.trash`·`fs.trashdirs`·`fs.trashlist`·`fs.trashrestore`·`fs.trashpurge`·`fs.trashempty`(아래 "휴지통"), 복사의 `fs.copy`(아래 "복사"), 하위 폴더 검색의 `fs.search`(아래 "하위 폴더 검색")
-  - root 범위: `id`, `upgrade.apply`(대시보드에서 업그레이드의 적용 요청, 아래 "대시보드에서 업그레이드"), `trash.prepare`(디스크 맨 위의 공유 휴지통 `.Trash` 만들기, 아래 "휴지통")
+  - root 범위: `id`, `upgrade.apply`(대시보드에서 업그레이드의 적용 요청, 아래 "대시보드에서 업그레이드"), `trash.prepare`(디스크 맨 위의 공유 휴지통 `.Trash` 만들기, 아래 "휴지통"), `power.schedule`·`power.cancel`(다시 시작 예약·취소, 아래 "다시 시작 예약")
 - 오류는 코드만 준다(`proto.Code*`). 경로·사용자 이름 같은 세부는 도우미 로그에만 남긴다. maru는 코드를 HTTP 오류 코드(`api.Err*`)로 바꾼다
 
 ## 티켓과 상승
@@ -59,7 +60,7 @@
 - 부모(root)는 머리를 읽고 티켓·범위·연산 허용·상승을 확인한 뒤, `/proc/self/exe worker`를 `SysProcAttr{Credential, Setsid, Pdeathsig: SIGKILL}`, 빈 환경 변수, cwd `/`로 실행한다. 작업(`worker.Job`: 범위, 연산, 인자, 본문 크기, 사용자 이름·홈)은 stdin, 연결은 `ExtraFiles`(fd 3)로 넘긴다. 부모는 사용자 데이터를 읽거나 쓰지 않는다
 - 사용자 범위는 사용자 uid·기본 gid·보조 그룹(`os/user`, 로컬 파일)으로 강등한다. root 범위도 도우미의 보조 그룹은 넘기지 않는다. worker는 시작할 때 범위와 실제 uid가 맞는지 다시 확인한다(사용자 범위가 root로 돌면 거절)
 - 결과 코드는 종료 코드(0 성공, 2 연산 실패 + stderr `code=<코드>`, 그 밖은 실행 오류)로 부모에 알려 감사 로그에 쓴다
-- 감사 로그(journal)는 비밀번호 확인 결과, 모든 root 연산, 쓰기 연산의 경로, 내려받기(`fs.read`)의 연산·결과를 남긴다. 정보 읽기 연산(`fs.list`, `fs.stat`, `fs.names`, `fs.statmany`, `fs.info`, `fs.trashdirs`, `fs.trashlist`, `fs.search`, `daemon.quietActions`)은 파일 탐색기가 폴더를 열고 스크롤하고 찾을 때마다 부르므로 남기지 않는다. 미리보기 창의 내용도 `fs.read`라 남는다(동영상은 탐색할 때마다 범위 요청 하나씩). 휴지통 쓰기 연산은 휴지통 디렉터리와 이름(`trash=`, `name=`, 되돌리기는 `to=`)을, `trash.prepare`는 디스크(`disk=`)를, `fs.copy`는 원본 폴더·이름 수·대상 폴더(`dir=`, `names=`, `to=`, 이름은 남기지 않는다)를 남긴다
+- 감사 로그(journal)는 비밀번호 확인 결과, 모든 root 연산, 쓰기 연산의 경로, 내려받기(`fs.read`)의 연산·결과를 남긴다. 정보 읽기 연산(`fs.list`, `fs.stat`, `fs.names`, `fs.statmany`, `fs.info`, `fs.trashdirs`, `fs.trashlist`, `fs.search`, `daemon.quietActions`)은 파일 탐색기가 폴더를 열고 스크롤하고 찾을 때마다 부르므로 남기지 않는다. 미리보기 창의 내용도 `fs.read`라 남는다(동영상은 탐색할 때마다 범위 요청 하나씩). 휴지통 쓰기 연산은 휴지통 디렉터리와 이름(`trash=`, `name=`, 되돌리기는 `to=`)을, `trash.prepare`는 디스크(`disk=`)를, `power.schedule`은 시각(`at=`, UTC)을, `fs.copy`는 원본 폴더·이름 수·대상 폴더(`dir=`, `names=`, `to=`, 이름은 남기지 않는다)를 남긴다
 - 시간 제한: 목록·정보 30초(부모), 삭제(`fs.remove`, `fs.trashpurge`, `fs.trashempty`) 10분(큰 폴더를 통째로 지우면 30초를 넘을 수 있다. 넘으면 worker를 끝내므로 일부만 지운 채 남고, 다시 지우면 이어서 지운다), 스트림과 복사(`fs.copy`) 6시간(부모) + 60초 무진행(worker의 연결 마감 시각), 하위 폴더 검색(`fs.search`) 30분. 클라이언트는 각각 조금 더 기다린다(복사·검색은 진행 응답 사이 2분)
 - 동시 실행: 전체 16개, 사용자당 4개. 연결은 동시 64개
 
@@ -151,6 +152,14 @@ FreeDesktop 휴지통 규격을 trash-cli의 `trash-put`과 같은 곳·형식�
 - 감사 로그에는 대상 커밋과 설정 이름만 남긴다(값은 남기지 않는다)
 - maru는 `client.Client.UpgradeApply`로 부른다(`POST /api/upgrade/apply`가 꼴을 먼저 검사한다). `upgrade_disabled`는 409, `bad_request`는 400으로 바꾼다
 - 테스트와 가짜 도우미는 `worker.Config.UpgradeDir`로 디렉터리를 바꾼다(가짜 도우미는 Root 아래 `run/maru-upgrade`. `make dev-fake`의 가짜 업그레이드 서비스가 이 디렉터리의 요청을 처리한다)
+
+## 다시 시작 예약(power.schedule, power.cancel)
+
+- 정한 시각에 다시 시작하도록 systemd-logind에 예약하고(`ScheduleShutdown("reboot", usec)`), 예약된 종료를 취소한다(`CancelScheduledShutdown`). maru 쪽은 `.claude/rules/backend.md`의 "다시 시작 예약"
+- 인자(`proto.PowerScheduleParams`)는 시각(Unix 초)뿐이다. worker가 `proto.ValidPowerSchedule`(지금 뒤, 7일 안)로 다시 검사한다. maru는 1분 뒤부터 받는다(`api.PowerScheduleMinAheadSeconds`). 종류는 받지 않고 늘 reboot이다(시스템 종료 예약은 만들지 않는다). 취소는 인자가 없고, 예약이 없어도 성공이다
+- worker는 `/usr/bin/busctl call org.freedesktop.login1 … ScheduleShutdown st reboot <usec>`을 셸 없이 직접 만든 인자로 실행한다(`BusctlLogind`, 20초 제한). 테스트와 가짜 도우미는 `worker.Config.Logind`를 바꾼다(가짜 도우미는 Root 아래 `run/systemd/shutdown/scheduled` 파일만 쓰고 지운다)
+- 호출자가 logind와 같은 uid 0이라 polkit 없이 허용된다(polkitd가 없는 순정 OMV 8.3.1 VM에서 확인). 유닛 하드닝(`CapabilityBoundingSet`에 `CAP_SYS_BOOT` 없음, `PrivateNetwork=yes`, `RestrictAddressFamilies=AF_UNIX`)에서도 시스템 버스 소켓에 닿으므로 유닛은 바꾸지 않았다
+- logind는 예약 파일(`/run/systemd/shutdown/scheduled`, 0644)을 쓰고, 시각 5분 전부터 `/run/nologin`을 만들어 root가 아닌 사용자의 새 로그인(sshd의 `pam_nologin`, 웹 터미널 포함)을 막는다. OMV 웹 UI의 PAM(`openmediavault-webgui`)과 도우미의 `unix_chkpwd`는 `pam_nologin`을 거치지 않으므로 대시보드 로그인은 막히지 않는다
 
 ## systemd
 

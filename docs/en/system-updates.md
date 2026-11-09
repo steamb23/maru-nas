@@ -35,7 +35,22 @@
 - While a task is running and the window is visible (not minimized, and the browser tab isn't hidden), your session doesn't expire.
 - When the window is closed, the running task appears under "Background tasks" at the top of the notification center.
 - Result notifications (succeeded, failed, result unknown) are only shown to the administrator who started the task, and you can dismiss them once you've read them. "Clear all" in the notification center dismisses every result notification at once and keeps notices about the current state, such as "Updates available". A task that finished while you were signed out shows up as a notification the next time you sign in. Each user keeps the 10 most recent results for 30 days.
-- When a package that needs a restart (such as a kernel) is installed, a "Restart required" notice appears. "Restart…" on the notice or in the window opens the power dialog.
+- When a package that needs a restart (such as a kernel) is installed, a "Restart required" notice appears. "Restart…" on the notice or in the window opens the power dialog to restart right away, and "Schedule…" in the window sets a time for the restart ([Scheduling a restart](#scheduling-a-restart)).
+
+## Scheduling a restart
+
+Instead of restarting now, you can schedule the restart for a set time. To restart in the early morning when the NAS is lightly used, schedule it after installing the updates.
+
+- Select "Schedule…" on the "Restart to finish applying updates" notice in the window, or choose "At a set time" under "Power" → "Restart" in the profile menu on the taskbar. Only administrators can schedule and cancel.
+- Pick a time from 1 minute to 7 days ahead. The date and time are picked and shown in this browser's time zone. If the NAS is in a different time zone, the time on the NAS clock is shown as well.
+- Scheduling and cancelling are root operations of the [privileged helper](helper.md), so you need to enter your password again to elevate to root. Accounts that can't elevate and installs without the helper can only use "Now".
+- The schedule is kept by systemd-logind on the NAS. It stays if you close the browser, sign out, or the dashboard restarts.
+- There can only be one schedule. Scheduling again replaces the previous one, and a shutdown scheduled outside the dashboard also becomes a restart.
+- While a schedule exists, every user sees a "Restart scheduled" notice in the notification center. Schedules made outside the dashboard (such as `shutdown -r 03:00` over SSH) and scheduled shutdowns show up too, and administrators can cancel them from the dashboard. For a schedule made outside the dashboard, there is no way to tell who made it.
+- After scheduling, the notice in the window changes to the scheduled time and the time left, with "Change schedule…" and "Cancel schedule".
+- 10 minutes before the time, every open tab shows a warning notification, and from 1 minute before, a countdown appears at the top of the screen. Administrators can cancel the schedule from the countdown, or restart right away if it's a restart. At the time, the screen changes to "Restarting the NAS". Scheduled shutdowns show the same warnings.
+- From 5 minutes before the time, systemd-logind blocks new logins by users other than root (`/run/nologin`), so new SSH and [web terminal](terminal.md) connections fail. Signing in to the dashboard isn't blocked.
+- If the schedule is changed or cancelled in another tab or over SSH, open tabs pick it up within 1 minute 30 seconds at most. The countdown checks the schedule again 1 minute and 5 seconds before the time. A hidden browser tab can't check again, so it may switch to the restart screen at the time of a cancelled schedule. If the NAS hasn't gone down after 2 minutes, "Back to the dashboard" appears.
 
 ## Limitations
 

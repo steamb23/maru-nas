@@ -48,12 +48,12 @@ paths:
 화면 쪽은 `.claude/rules/frontend-shell.md`의 "알림", 작업 결과 알림은 아래 "서버 백그라운드 작업".
 
 - 서버 알림은 `internal/notify`가 출처(`Source`: `Name`, `Admin`, `Collect`)를 모아 만든다. `Center`는 결과를 모든 세션이 함께 쓰도록 30초 보관하고, 지난 뒤 처음 묻는 요청에서 다시 읽는다(`addons.Detector`와 같은 지연 캐시이며 고루틴이 없다. 서버 백그라운드 작업이 아니다). 읽지 못한 출처는 직전 결과를 유지한다. 수집은 요청이 끊겨도 끝까지 하고(`context.WithoutCancel`) 출처마다 5초 제한이다
-  - 출처가 준 알림은 형식을 검사해 맞지 않으면 버린다: id(`ValidID`), 리비전(`ValidRevision`), 수준, 코드(`knownCodes`, `api.Notice.Code`의 tstype과 같아야 한다. `TestCodesMatchTSType`), RFC 3339 `since`, 동작(`app`은 앱·페이지 id 형식, `workbench`는 앞 슬래시 없는 라우트, `power`는 값 없음). 다른 출처와 겹치는 id는 앞 출처의 것을 남기고, 출처마다 20개·`items` 20개까지 둔다
+  - 출처가 준 알림은 형식을 검사해 맞지 않으면 버린다: id(`ValidID`), 리비전(`ValidRevision`), 수준, 코드(`knownCodes`, `api.Notice.Code`의 tstype과 같아야 한다. `TestCodesMatchTSType`), RFC 3339 `since`, 동작(`app`은 앱·페이지 id 형식, `workbench`는 앞 슬래시 없는 라우트, `power`는 값 없음 또는 `page`가 `schedule`(`api.NoticePowerSchedule`, 전원 대화상자의 예약 화면)). 다른 출처와 겹치는 id는 앞 출처의 것을 남기고, 출처마다 20개·`items` 20개까지 둔다
   - 리비전은 내용이 바뀔 때만 달라져야 한다(`Revision`: 정렬한 조각의 해시). 파일 수정 시각을 쓰지 않는다(내용이 같아도 매일 다시 쓰는 파일이 있다)
-  - 운영 출처는 APT 업데이트(`aptUpdates`)와 재부팅 권장(`rebootRequired`)이다(관리자 전용, `internal/aptindex`가 `upgradeindex.json`·`/run/reboot-required(.pkgs)`를 직접 읽음, `main.go`에 등록). 출처를 더할 때는 문구 키(프론트 `notifications/messages.ts`)와 코드 유니온(프론트 `api/client.ts`의 `NOTICE_CODES`도, 빠지면 tsc가 잡는다)을 함께 더한다. 직접 읽는 출처는 `/proc`·`/sys`처럼 파서와 `fs.FS` 읽기를 나눈다
+  - 운영 출처는 APT 업데이트(`aptUpdates`)와 재부팅 권장(`rebootRequired`)(관리자 전용, `internal/aptindex`가 `upgradeindex.json`·`/run/reboot-required(.pkgs)`를 직접 읽음), 예약된 종료(`rebootScheduled`·`shutdownScheduled`, 모든 사용자, 아래 "다시 시작 예약")다. 모두 `main.go`에 등록한다. 출처를 더할 때는 문구 키(프론트 `notifications/messages.ts`)와 코드 유니온(프론트 `api/client.ts`의 `NOTICE_CODES`도, 빠지면 tsc가 잡는다)을 함께 더한다. 직접 읽는 출처는 `/proc`·`/sys`처럼 파서와 `fs.FS` 읽기를 나눈다
   - 출처는 지울 수 있는 알림(`dismissible`)을 줄 수 없다(`Center.accept`가 버린다). 지울 수 있는 것은 사용자별 작업 결과뿐이고 핸들러가 합친다(아래 "서버 백그라운드 작업")
 - `GET /api/notifications`(`requireSession`)는 이 세션이 볼 알림(관리자 전용 출처는 관리자에게만, 서버가 거른다)과 이 사용자의 작업 결과 알림, 그중 읽은 것(`seen`, 지금 알림의 id만), 진행 중인 작업(`tasks`, 관리자만)을 준다. 관리자 요청은 기다리는 작업 감시자를 깨운다(`Jobs.Offer`). `DELETE /api/notifications/{id}`는 이 사용자의 작업 결과 알림만 지운다(아니면 404). `DELETE /api/notifications?through=<id>`(알림 센터의 "모두 지우기", `Jobs.DismissThrough`)는 그 작업 결과와 그보다 먼저 끝난 이 사용자의 결과를 모두 지운다. 보이지 않던 오래된 결과(최신 5개 밖)도 지워 다음 응답에 다시 나오지 않게 하고, 기준보다 나중에 끝난 결과(브라우저가 아직 받지 못했을 수 있음)는 남긴다. 기준이 이 사용자의 결과가 아니면 404, 없으면 400이다. `PUT /api/preferences/notifications`는 읽음 상태(id → 리비전, 128개까지, 형식 검사) 전체를 바꾼다. 프론트는 지금 목록에 있는 id만 보내므로 저장 크기가 묶인다. 빈 목록이면 `seen`은 `{}`다
-- 개발 서버: `MARU_DEV_NOTIFY_ROOT`(개발 전용 환경 변수, 플래그·가동 설정 목록·설치기 레지스트리에 넣지 않음)가 있으면 APT 목록·재부팅 파일을 그 가짜 루트에서 읽는다. `make dev-fake`가 상태 디렉터리의 `notify-root`로 정하고 가짜 OMV 프로세스가 합성 목록을 쓴다(`FAKEAPT_SCENARIO`, 아래 "서버 백그라운드 작업"). `MARU_DEV_NOTICES`(개발 전용 환경 변수, 플래그·가동 설정 목록·설치기 레지스트리에 넣지 않음)가 있으면 그 파일(`{admin: [...], everyone: [...]}`)을 읽는 출처 둘을 두고 보관 시간을 2초로 줄인다(`cmd/maru/devnotices.go`, 리비전이 비면 내용으로 채움). `make dev-fake`가 상태 디렉터리의 `dev-notices.json`으로 정하고, 가짜 OMV 프로세스가 `FAKENOTICES`(sample, none, many, rotate) 시나리오대로 쓴다. rotate는 `FAKENOTICES_STEP`(기본 30s)마다 개수를 바꿔 토스트를 확인하게 한다
+- 개발 서버: `MARU_DEV_NOTIFY_ROOT`(개발 전용 환경 변수, 플래그·가동 설정 목록·설치기 레지스트리에 넣지 않음)가 있으면 APT 목록·재부팅 파일·logind 예약 파일을 그 가짜 루트에서 읽는다(가짜 도우미의 `power.schedule`도 같은 루트의 `run/systemd/shutdown/scheduled`를 쓴다). `make dev-fake`가 상태 디렉터리의 `notify-root`로 정하고 가짜 OMV 프로세스가 합성 목록을 쓴다(`FAKEAPT_SCENARIO`, 아래 "서버 백그라운드 작업"). `MARU_DEV_NOTICES`(개발 전용 환경 변수, 플래그·가동 설정 목록·설치기 레지스트리에 넣지 않음)가 있으면 그 파일(`{admin: [...], everyone: [...]}`)을 읽는 출처 둘을 두고 보관 시간을 2초로 줄인다(`cmd/maru/devnotices.go`, 리비전이 비면 내용으로 채움). `make dev-fake`가 상태 디렉터리의 `dev-notices.json`으로 정하고, 가짜 OMV 프로세스가 `FAKENOTICES`(sample, none, many, rotate) 시나리오대로 쓴다. rotate는 `FAKENOTICES_STEP`(기본 30s)마다 개수를 바꿔 토스트를 확인하게 한다
 
 ## 서버 백그라운드 작업
 
@@ -96,6 +96,17 @@ paths:
   - 로그에는 사용자·대상·설정 이름만 남기고 설정 값은 남기지 않는다
 - `Config.Upgrade`가 nil이면 빈 경로라 꺼짐(`not-enabled`)이다(테스트가 실제 `/etc/default/maru-upgrade`를 읽지 않게). 서버 테스트는 `envOptions{upgrade: true}`가 임시 디렉터리를 쓴다
 - 개발 서버: `MARU_DEV_UPGRADE_ROOT`(개발 전용 환경 변수, 플래그·가동 설정 목록·설치기 레지스트리에 넣지 않음)가 있으면 설정·상태 파일 경로 앞에 붙이고 상태 디렉터리 검사를 건너뛴다. `make dev-fake`가 상태 디렉터리의 `upgrade-root`로 정하고, 가짜 OMV 프로세스의 가짜 업그레이드 서비스(`internal/upgrade/upgradefake`, 운영 바이너리에서 import하지 않음)가 그 아래에 쓴다. 가짜 저장소는 `stable` 브랜치에서 시작해 채널을 따라 옮긴다. 시나리오는 `FAKEUPGRADE_SCENARIO`(web, manual, latest, check-fail, apply-fail, disabled), 단계 지연은 `FAKEUPGRADE_STEP`(기본 1.5s)이며 maru를 다시 시작하지 않는다
+
+## 다시 시작 예약
+
+화면은 `.claude/rules/frontend-shell.md`의 "작업표시줄 트레이와 프로필 메뉴"(전원), 도우미 연산은 `.claude/docs/helper.md`의 "다시 시작 예약".
+
+- 예약·취소는 도우미 root 연산(`power.schedule`, `power.cancel`)이 systemd-logind에 한다. OMV `System.reboot`의 `delay`는 엔진이 띄운 프로세스가 잠들 뿐이라 조회·취소할 수 없고 엔진이 다시 시작하면 사라지므로 쓰지 않는다
+- 읽기는 `internal/power`가 logind의 예약 파일(`/run/systemd/shutdown/scheduled`, 0644)을 직접 읽는다(`ParseScheduled`, `fs.FS` 주입). 대시보드 밖(SSH의 `shutdown` 등)에서 한 예약과 시스템 종료도 보인다. 지난 시각, dry-run, 파일 없음은 예약 없음이다
+  - logind는 예약한 사람을 남기지 않으므로 대시보드가 예약할 때 기록(`power.Record`: USEC·종류·사용자, 상태 디렉터리의 `power.json`, 상태 디렉터리가 없으면 메모리)을 남기고, 예약 파일과 USEC·종류가 모두 같을 때만 예약한 사람으로 쓴다. 예약이 없으면 남은 기록을 지운다
+- 라우트(모두 `requireAdmin`): `GET /api/power/schedule`(예약 파일을 매번 새로 읽는다), `PUT /api/power/schedule {at}`(RFC 3339, 1분 뒤~7일 안이 아니면 `power_time_invalid`. 이미 있는 예약은 바뀐다), `DELETE /api/power/schedule`(대시보드 밖의 예약도 취소한다, 멱등). 응답은 `api.PowerScheduleResponse`(예약, NAS 시각 `now`(오프셋 포함), 시간대 이름 `timeZone`)다. 상승하지 않았으면 도우미의 `elevation_required`를 그대로 준다. 도우미 호출은 요청이 끊겨도 30초까지 기다려 logind와 기록이 어긋나지 않게 하고, 끝나면 알림 `Center`를 `Invalidate`한다
+- 알림 출처 `power.Source`(id `power-schedule`, 모든 사용자): 시각(`at`), 예약한 사람(`items[0]`, 없으면 대시보드 밖), 동작 `{kind: power, page: schedule}`. 리비전은 USEC·종류·예약한 사람이다
+- 시간대 이름은 `TZ`, `/etc/localtime` 링크, `/etc/timezone` 순으로 읽는다(`zone.go`). 화면은 브라우저 시간대로 고르고, NAS 시간대가 다르면 NAS 시계의 시각을 함께 보인다
 
 ## 테스트
 
