@@ -764,11 +764,14 @@ describe('알림', () => {
     expect(isNotice({ ...notice, action: { kind: 'shell' } })).toBe(false)
     expect(isNotice({ ...notice, count: '3' })).toBe(false)
     expect(isNotice({ ...notice, revision: undefined })).toBe(false)
+    expect(isNotice({ ...notice, code: 'rebootScheduled', at: '2026-11-10T03:00:00Z', items: ['bob'] })).toBe(true)
+    expect(isNotice({ ...notice, at: 1 })).toBe(false)
   })
 
   it('fetchNotifications는 모르는 알림만 빼고 돌려준다', async () => {
     stubFetch(Response.json({ notices: [notice, { ...notice, id: 'new', code: 'later' }], seen: { 'sample-a': 'r1' } }))
-    await expect(fetchNotifications()).resolves.toEqual({ notices: [notice], seen: { 'sample-a': 'r1' }, tasks: [] })
+    // now가 없으면(옛 백엔드) 빈 문자열이다.
+    await expect(fetchNotifications()).resolves.toEqual({ notices: [notice], seen: { 'sample-a': 'r1' }, tasks: [], now: '' })
   })
 
   it('fetchNotifications는 작업 결과 알림과 진행 중 작업을 읽고 모르는 작업은 뺀다', async () => {
@@ -795,9 +798,10 @@ describe('알림', () => {
         notices: [result, { ...result, id: 'job-x', job: { ...result.job, kind: 'later' } }],
         seen: {},
         tasks: [task, { ...task, state: 'paused' }],
+        now: '2026-10-24T11:20:00Z',
       }),
     )
-    await expect(fetchNotifications()).resolves.toEqual({ notices: [result], seen: {}, tasks: [task] })
+    await expect(fetchNotifications()).resolves.toEqual({ notices: [result], seen: {}, tasks: [task], now: '2026-10-24T11:20:00Z' })
   })
 
   it('fetchNotifications는 형식이 다르면 던진다', async () => {

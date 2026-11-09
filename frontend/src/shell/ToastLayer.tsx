@@ -5,9 +5,10 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { NoticeAction } from '../api/types.gen'
+import { useLanguage } from '../i18n'
 import { IconImage } from '../icons/IconImage'
 import { type Item, TOAST_VISIBLE, resolveItem, toastDuration, visibleToasts } from '../notifications/items'
-import { LEVEL_ICONS, actionLabel } from '../notifications/messages'
+import { LEVEL_ICONS, actionLabel, textParams } from '../notifications/messages'
 import { type ActionContext, type Toast, actionAvailable } from '../notifications/model'
 import { useNotificationStore } from '../notifications/store'
 import { TOAST_ENTER_FROM, TOAST_ENTER_MS, TOAST_SHOWN } from './notificationAnim'
@@ -96,9 +97,10 @@ interface CardProps {
 
 function ToastCard({ toast, item, ctx, onAction }: CardProps) {
   const { t } = useTranslation()
+  const lang = useLanguage()
   const ref = useRef<HTMLLIElement>(null)
   const { text, action } = item
-  const params = { ...text.params }
+  const params = textParams(text, lang)
   const duration = toastDuration(toast.level)
 
   // 처음 그릴 때 작업표시줄 쪽에서 떠오른다.

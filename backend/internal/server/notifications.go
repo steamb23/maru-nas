@@ -4,6 +4,7 @@ import (
 	"log"
 	"maps"
 	"net/http"
+	"time"
 
 	"maru/backend/internal/api"
 	"maru/backend/internal/auth"
@@ -37,7 +38,8 @@ func (h *handler) notifications(w http.ResponseWriter, r *http.Request, s auth.S
 	if p.Notifications != nil {
 		seen = p.Notifications.Seen
 	}
-	writeJSON(w, http.StatusOK, api.NotificationsResponse{Notices: notices, Seen: notify.SeenFor(seen, notices), Tasks: tasks})
+	writeJSON(w, http.StatusOK, api.NotificationsResponse{Notices: notices, Seen: notify.SeenFor(seen, notices), Tasks: tasks,
+		Now: h.Now().Format(time.RFC3339)})
 }
 
 // setNotificationPrefs는 알림 읽음 상태 전체를 바꾼다. 다른 설정은 그대로 둔다.

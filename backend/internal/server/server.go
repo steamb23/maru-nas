@@ -21,6 +21,7 @@ import (
 	"maru/backend/internal/jobs/omvjob"
 	"maru/backend/internal/notify"
 	"maru/backend/internal/omv"
+	"maru/backend/internal/power"
 	"maru/backend/internal/prefs"
 	"maru/backend/internal/security"
 	"maru/backend/internal/terminal"
@@ -122,6 +123,11 @@ type Config struct {
 	Upgrade *upgrade.Manager
 	// Notify는 서버 알림을 모은다. nil이면 알림 출처가 없다.
 	Notify *notify.Center
+	// Power는 systemd-logind에 예약된 종료(다시 시작 예약)를 읽고 예약한 사람을 기록한다. nil이면 예약을 읽지 않고
+	// (GET은 예약 없음) 예약·취소는 503이다. New가 Now를 이 Config의 Now로 맞춘다.
+	Power *power.Schedules
+	// TimeZone은 NAS 시간대의 IANA 이름이다(다시 시작 예약 화면). 비우면 power.SystemZone()이다.
+	TimeZone string
 	// Jobs는 서버 백그라운드 작업(시스템 업데이트)이다. nil이면 메모리에만 기록한다. New가 OMV 세션 감시자를
 	// 등록하고 남은 작업을 이어 지켜본다(Resume). 서비스를 끝낼 때 부르는 쪽이 Close한다.
 	Jobs *jobs.Manager
@@ -265,6 +271,12 @@ func NewServer(cfg Config) *Server {
 	}
 	if cfg.Jobs == nil {
 		cfg.Jobs = jobs.New(jobs.Config{Now: cfg.Now})
+	}
+	if cfg.Power != nil {
+		cfg.Power.Now = cfg.Now
+	}
+	if cfg.TimeZone == "" {
+		cfg.TimeZone = power.SystemZone()
 	}
 	h := &handler{
 		Config:          cfg,

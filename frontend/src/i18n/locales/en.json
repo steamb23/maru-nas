@@ -124,6 +124,16 @@
         "title": "Restart required",
         "body": "Restart the system to finish installing updates."
       },
+      "rebootScheduled": {
+        "title": "Restart scheduled",
+        "body": "The NAS restarts on {{at}}. Scheduled by {{by}}.",
+        "bodyElsewhere": "The NAS restarts on {{at}}. It was scheduled outside the dashboard (for example, over SSH)."
+      },
+      "shutdownScheduled": {
+        "title": "Shutdown scheduled",
+        "body": "The NAS shuts down on {{at}}. Scheduled by {{by}}.",
+        "bodyElsewhere": "The NAS shuts down on {{at}}. It was scheduled outside the dashboard (for example, over SSH)."
+      },
       "jobs": {
         "aptUpdate": {
           "succeeded": {

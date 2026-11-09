@@ -152,6 +152,7 @@ func TestValidation(t *testing.T) {
 	app.Action = &api.NoticeAction{Kind: api.NoticeActionApp, App: "settings", Page: "update"}
 	power := notice("power", api.NoticeWarning)
 	power.Action = &api.NoticeAction{Kind: api.NoticeActionPower}
+	power.At = "2026-11-10T03:00:00+09:00"
 
 	bad := func(id string, edit func(*api.Notice)) api.Notice {
 		n := notice(id, api.NoticeInfo)
@@ -166,6 +167,7 @@ func TestValidation(t *testing.T) {
 		bad("revision", func(n *api.Notice) { n.Revision = "" }),
 		bad("revision-chars", func(n *api.Notice) { n.Revision = "a b" }),
 		bad("since", func(n *api.Notice) { n.Since = "yesterday" }),
+		bad("at", func(n *api.Notice) { n.At = "03:00" }),
 		bad("count", func(n *api.Notice) { n.Count = &neg }),
 		bad("action-kind", func(n *api.Notice) { n.Action = &api.NoticeAction{Kind: "shell"} }),
 		bad("action-app", func(n *api.Notice) { n.Action = &api.NoticeAction{Kind: api.NoticeActionApp, App: "../x"} }),

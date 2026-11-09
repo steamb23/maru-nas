@@ -207,6 +207,7 @@ const ERROR_CODES: readonly ErrorCode[] = [
   'addon_backend_disabled',
   'addon_purge_full',
   'backend_unavailable',
+  'power_time_invalid',
 ]
 
 export type RequiredLevel = NonNullable<ErrorResponse['required']>
@@ -843,6 +844,8 @@ const NOTICE_CODES = [
   'jobSucceeded',
   'jobFailed',
   'jobUnknown',
+  'rebootScheduled',
+  'shutdownScheduled',
 ] as const satisfies readonly Notice['code'][]
 const NOTICE_ACTION_KINDS = ['app', 'workbench', 'power'] as const satisfies readonly NoticeAction['kind'][]
 const JOB_KINDS = ['apt-update', 'apt-upgrade'] as const satisfies readonly Job['kind'][]
@@ -911,6 +914,7 @@ export function isNotice(v: unknown): v is Notice {
     isOneOf(v.level, NOTICE_LEVELS) &&
     isStr(v.revision) &&
     isOptional(v.since, isStr) &&
+    isOptional(v.at, isStr) &&
     isOptional(v.count, isNum) &&
     isOptional(v.items, (x) => isArrayOf(x, isStr)) &&
     isOptional(v.action, isNoticeAction) &&
@@ -927,7 +931,8 @@ export async function fetchNotifications(signal?: AbortSignal): Promise<Notifica
     throw new Error('/notifications: unexpected response shape')
   }
   const tasks = Array.isArray(data.tasks) ? data.tasks.filter(isJob) : []
-  return { notices: data.notices.filter(isNotice), seen: data.seen, tasks }
+  const now = isStr(data.now) ? data.now : ''
+  return { notices: data.notices.filter(isNotice), seen: data.seen, tasks, now }
 }
 
 // dismissNotice는 사용자가 지울 수 있는 서버 알림(작업 결과) 하나를 지운다.

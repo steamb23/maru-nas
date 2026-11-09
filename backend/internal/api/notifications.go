@@ -20,6 +20,10 @@ const (
 	NoticeJobSucceeded = "jobSucceeded"
 	NoticeJobFailed    = "jobFailed"
 	NoticeJobUnknown   = "jobUnknown"
+	// NoticeRebootScheduled는 다시 시작이 예약되어 있다는 알림이다(At: 예약 시각, Items: 대시보드에서 예약했으면 예약한
+	// 사용자 이름 하나). NoticeShutdownScheduled는 다시 시작이 아닌 종료(시스템 종료 등)가 예약되어 있다는 알림이다.
+	NoticeRebootScheduled   = "rebootScheduled"
+	NoticeShutdownScheduled = "shutdownScheduled"
 )
 
 // 알림 동작 종류. NoticeAction.Kind에 들어간다.
@@ -48,13 +52,15 @@ type NoticeAction struct {
 type Notice struct {
 	// ID는 알림의 고정 이름이다. 읽음 상태(NotificationPrefs.Seen)의 키다.
 	ID   string `json:"id"`
-	Code string `json:"code" tstype:"'sample' | 'aptUpdates' | 'rebootRequired' | 'jobSucceeded' | 'jobFailed' | 'jobUnknown'"`
+	Code string `json:"code" tstype:"'sample' | 'aptUpdates' | 'rebootRequired' | 'jobSucceeded' | 'jobFailed' | 'jobUnknown' | 'rebootScheduled' | 'shutdownScheduled'"`
 	// Level은 Notice* 수준 중 하나다.
 	Level string `json:"level" tstype:"'info' | 'success' | 'warning' | 'error'"`
 	// Revision은 내용이 바뀔 때만 달라지는 값이다(내용 해시). 바뀌면 다시 읽지 않은 알림이 된다.
 	Revision string `json:"revision"`
 	// Since는 조건이 생긴 시각(RFC 3339)이다. 출처가 모르면 없다.
 	Since string `json:"since,omitempty"`
+	// At은 알림이 가리키는 앞으로의 시각(RFC 3339)이다. 예약된 다시 시작의 시각이다.
+	At string `json:"at,omitempty"`
 	// Count는 개수(업데이트할 패키지 수 등)다. 문구의 복수형에 쓴다.
 	Count *int `json:"count,omitempty"`
 	// Items는 이름 목록(패키지 이름 등)이다. 앞쪽 일부만 담는다.
@@ -82,6 +88,8 @@ type NotificationsResponse struct {
 	Seen map[string]string `json:"seen"`
 	// Tasks는 진행 중인 서버 백그라운드 작업이다(관리자에게만, 아니면 빈 목록).
 	Tasks []Job `json:"tasks"`
+	// Now는 서버의 지금 시각(RFC 3339)이다. 브라우저는 알림의 At까지 남은 시간을 이 값과 자기 시계의 차이로 보정한다.
+	Now string `json:"now"`
 }
 
 // NotificationPrefs는 사용자의 알림 읽음 상태다.

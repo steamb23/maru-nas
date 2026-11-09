@@ -46,6 +46,8 @@ type FileStore struct {
 	jobMu sync.Mutex
 	// addonMu는 애드온 패키지의 사용자별 저장값(addondata.go)을 지킨다.
 	addonMu sync.Mutex
+	// powerMu는 다시 시작 예약의 기록(power.go)을 지킨다.
+	powerMu sync.Mutex
 }
 
 // NewFileStore는 dir 아래에 설정을 저장하는 FileStore를 만든다. users 디렉터리가 없으면 만든다.

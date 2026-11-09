@@ -22,6 +22,7 @@ import (
 	"maru/backend/internal/jobs"
 	"maru/backend/internal/notify"
 	"maru/backend/internal/omv"
+	"maru/backend/internal/power"
 	"maru/backend/internal/prefs"
 	"maru/backend/internal/security"
 	"maru/backend/internal/server"
@@ -82,7 +83,8 @@ func main() {
 		mounts = devDisks{}
 	}
 
-	apt, notices := newNotices()
+	schedules := newSchedules(store)
+	apt, notices := newNotices(schedules)
 	deps.Apt = apt
 	// 작업이 끝나면 APT·재부팅 알림이 새 목록을 바로 다시 읽게 한다.
 	jobManager := jobs.New(jobs.Config{Store: jobStore, Index: apt, OnFinish: notices.Invalidate})
@@ -123,6 +125,7 @@ func main() {
 		FilesSrvDir:     filesSrv,
 		Upgrade:         upgrades,
 		Notify:          notices,
+		Power:           schedules,
 		Jobs:            jobManager,
 		Security:        store,
 		RP:              rp,
@@ -205,15 +208,27 @@ func detectPlugins() *addons.Detector {
 	return plugins
 }
 
-// newNotices는 APT 업데이트 목록과 재부팅 권장 파일을 읽는 Reader와, 그것을 출처로 쓰는 서버 알림이다.
+// newSchedules는 systemd-logind의 예약 파일을 읽는 다시 시작 예약이다. 예약한 사람의 기록은 상태 디렉터리가 있으면
+// 그 안에(power.json), 없으면 메모리에 둔다. 개발 서버는 가짜 도우미의 가짜 logind가 쓰는 가짜 루트를 읽는다.
+func newSchedules(store stateStore) *power.Schedules {
+	ps, _ := store.(power.Store)
+	if root := os.Getenv(envDevNotifyRoot); root != "" {
+		log.Printf("power: dev root %s (%s)", root, envDevNotifyRoot)
+		return power.New(os.DirFS(root), ps)
+	}
+	return power.New(os.DirFS("/"), ps)
+}
+
+// newNotices는 APT 업데이트 목록과 재부팅 권장 파일을 읽는 Reader와, 그것과 다시 시작 예약을 출처로 쓰는 서버 알림이다.
 // 개발 서버는 가짜 OMV가 쓰는 가짜 루트를 읽고, 개발용 알림 파일이 있으면 그 출처도 더한다.
-func newNotices() (*aptindex.Reader, *notify.Center) {
+func newNotices(schedules *power.Schedules) (*aptindex.Reader, *notify.Center) {
 	apt := aptindex.NewReader()
 	if root := os.Getenv(envDevNotifyRoot); root != "" {
 		log.Printf("apt index: dev root %s (%s)", root, envDevNotifyRoot)
 		apt = aptindex.NewReaderFS(os.DirFS(root))
 	}
-	sources := []notify.Source{aptindex.UpdatesSource{Reader: apt}, aptindex.RebootSource{Reader: apt}}
+	sources := []notify.Source{aptindex.UpdatesSource{Reader: apt}, aptindex.RebootSource{Reader: apt},
+		power.Source{Schedules: schedules}}
 	notices := notify.New(sources...)
 	if path := os.Getenv(envDevNotices); path != "" {
 		log.Printf("notifications: dev fixture %s (%s)", path, envDevNotices)

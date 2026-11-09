@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Notice } from '../api/types.gen'
 import { ageText, buildCenter, resolveItem, toastDuration, visibleToasts } from './items'
-import { actionLabel, clientText, serverText } from './messages'
+import { actionLabel, clientText, noticeTimeText, serverText, textParams } from './messages'
 import { type ClientEvent, type Toast, unreadError } from './model'
 
 // 시각은 이 브라우저(테스트 환경)의 시간대 달력으로 만든다.
@@ -100,6 +100,32 @@ describe('문구', () => {
       body: 'notifications.server.sample.bodyCount',
       params: { count: 3 },
     })
+  })
+
+  it('예약된 종료는 시각을 화면 언어로 바꾸고 예약한 사람을 넣는다', () => {
+    const when = '2026-11-09T18:00:00Z'
+    const ms = Date.parse(when)
+    const mine = serverText(notice('power-schedule', { code: 'rebootScheduled', at: when, items: ['bob'] }))
+    expect(mine).toEqual({
+      title: 'notifications.server.rebootScheduled.title',
+      body: 'notifications.server.rebootScheduled.body',
+      params: { by: 'bob' },
+      times: { at: ms },
+    })
+    expect(textParams(mine, 'ko')).toEqual({ by: 'bob', at: noticeTimeText(ms, 'ko') })
+    expect(noticeTimeText(ms, 'ko')).toBe(
+      new Intl.DateTimeFormat('ko', { weekday: 'short', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(ms),
+    )
+    expect(serverText(notice('power-schedule', { code: 'shutdownScheduled', at: when })).body).toBe(
+      'notifications.server.shutdownScheduled.bodyElsewhere',
+    )
+    // 시각을 읽을 수 없으면 본문 없이 제목만 둔다.
+    expect(serverText(notice('power-schedule', { code: 'rebootScheduled', at: 'soon' }))).toEqual({
+      title: 'notifications.server.rebootScheduled.title',
+      body: null,
+      params: {},
+    })
+    expect(textParams(serverText(notice('a', { count: 3 })), 'en')).toEqual({ count: 3 })
   })
 
   it('파일 작업 창은 "자세히 보기"다', () => {

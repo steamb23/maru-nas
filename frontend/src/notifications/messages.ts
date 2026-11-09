@@ -10,6 +10,20 @@ export interface NoticeText {
   // body는 없을 수 있다. params는 title·body·동작 단추 문구에 함께 넘긴다.
   body: ParseKeys | null
   params: Readonly<Record<string, string | number>>
+  // times는 시각 치환값(Unix ms)이다. 그리는 쪽이 textParams로 화면 언어의 날짜·시각 문구로 바꿔 params에 더한다.
+  times?: Readonly<Record<string, number>>
+}
+
+// noticeTimeText는 알림이 가리키는 시각의 문구다(예: 11월 10일 (화) 오전 3:00). 이 브라우저의 시간대로 보인다.
+export function noticeTimeText(ms: number, lang: string): string {
+  return new Intl.DateTimeFormat(lang, { weekday: 'short', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(ms)
+}
+
+// textParams는 t()에 넘길 치환값이다. times를 화면 언어의 시각 문구로 바꿔 params와 합친다.
+export function textParams(text: NoticeText, lang: string): Record<string, string | number> {
+  const out: Record<string, string | number> = { ...text.params }
+  for (const [key, ms] of Object.entries(text.times ?? {})) out[key] = noticeTimeText(ms, lang)
+  return out
 }
 
 // LEVEL_ICONS는 수준마다의 아이콘이다. 색은 CSS(.notice-level-*)가 입힌다.
@@ -39,6 +53,36 @@ const SERVER_TEXT: Record<Notice['code'], (n: Notice) => NoticeText> = {
   jobSucceeded: (n) => jobText(n),
   jobFailed: (n) => jobText(n),
   jobUnknown: (n) => jobText(n),
+  rebootScheduled: (n) => scheduleText(n, SCHEDULE_TEXT.reboot),
+  shutdownScheduled: (n) => scheduleText(n, SCHEDULE_TEXT.shutdown),
+}
+
+interface ScheduleKeys {
+  title: ParseKeys
+  body: ParseKeys
+  bodyElsewhere: ParseKeys
+}
+
+// SCHEDULE_TEXT는 예약된 종료의 문구다. 예약한 사람(items[0])은 대시보드에서 예약했을 때만 온다.
+const SCHEDULE_TEXT: Record<'reboot' | 'shutdown', ScheduleKeys> = {
+  reboot: {
+    title: 'notifications.server.rebootScheduled.title',
+    body: 'notifications.server.rebootScheduled.body',
+    bodyElsewhere: 'notifications.server.rebootScheduled.bodyElsewhere',
+  },
+  shutdown: {
+    title: 'notifications.server.shutdownScheduled.title',
+    body: 'notifications.server.shutdownScheduled.body',
+    bodyElsewhere: 'notifications.server.shutdownScheduled.bodyElsewhere',
+  },
+}
+
+function scheduleText(n: Notice, keys: ScheduleKeys): NoticeText {
+  const at = n.at ? Date.parse(n.at) : NaN
+  if (Number.isNaN(at)) return { title: keys.title, body: null, params: {} }
+  const by = n.items?.[0]
+  if (by) return { title: keys.title, body: keys.body, params: { by }, times: { at } }
+  return { title: keys.title, body: keys.bodyElsewhere, params: {}, times: { at } }
 }
 
 type JobKind = NonNullable<Notice['job']>['kind']

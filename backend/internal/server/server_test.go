@@ -26,6 +26,7 @@ import (
 	"maru/backend/internal/notify"
 	"maru/backend/internal/omv"
 	"maru/backend/internal/omv/omvfake"
+	"maru/backend/internal/power"
 	"maru/backend/internal/prefs"
 	"maru/backend/internal/security"
 	"maru/backend/internal/terminal"
@@ -111,9 +112,14 @@ type env struct {
 	srv *Server
 	// stateDir는 envOptions.packages일 때 패키지 저장소(<stateDir>/addons)를 둔 임시 상태 디렉터리다.
 	stateDir string
+	// power는 가짜 도우미가 있을 때 그 가짜 logind의 예약 파일을 읽는 다시 시작 예약이다(기록은 메모리).
+	power *power.Schedules
 }
 
 type envOptions struct {
+	// clockStart는 시험 시계의 시작 시각이다. 비우면 2026-01-01이다. 가짜 도우미의 worker는 실제 시계로 시각을
+	// 확인하므로(다시 시작 예약) 그 연산을 시험할 때는 지금 시각으로 둔다.
+	clockStart time.Time
 	system     SystemSource
 	omvTimeout time.Duration
 	failDelay  time.Duration
@@ -153,8 +159,10 @@ type envOptions struct {
 	mounts   MountSource
 	filesSrv string
 	files    bool
-	// notify는 Config.Notify다. 시계는 env의 시계로 바꾼다.
-	notify *notify.Center
+	// notify는 Config.Notify다. 시계는 env의 시계로 바꾼다. powerNotices면 다시 시작 예약 출처 하나만 둔 알림을 쓴다
+	// (helper가 필요하다).
+	notify       *notify.Center
+	powerNotices bool
 	// jobs는 Config.Jobs다. 작업 감시자는 OMV 작업 출력을 5ms마다 읽는다.
 	jobs *jobs.Manager
 	// packages면 임시 상태 디렉터리에 애드온 패키지를 설치할 수 있게 한다(env.packages). devAddons는 개발 패키지 디렉터리다.
@@ -170,6 +178,9 @@ type envOptions struct {
 func newEnv(t *testing.T, o envOptions) *env {
 	t.Helper()
 	clk := &clock{t: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)}
+	if !o.clockStart.IsZero() {
+		clk.t = o.clockStart
+	}
 	if o.omvTimeout == 0 && !o.omvTimeoutOff {
 		o.omvTimeout = 5 * time.Minute
 	}
@@ -259,6 +270,13 @@ func newEnv(t *testing.T, o envOptions) *env {
 		upgrades = upgrade.New(upgrade.NewPaths(upgradeRoot, upgradeState), clk.Now)
 	}
 
+	var schedules *power.Schedules
+	if fakeHelper != nil {
+		schedules = power.New(os.DirFS(fakeHelper.Root), nil)
+		if o.powerNotices {
+			o.notify = notify.New(power.Source{Schedules: schedules})
+		}
+	}
 	if o.notify != nil {
 		o.notify.Now = clk.Now
 	}
@@ -302,6 +320,8 @@ func newEnv(t *testing.T, o envOptions) *env {
 		TerminalEnabled:   o.terminal && !o.terminalOff,
 		Upgrade:           upgrades,
 		Notify:            o.notify,
+		Power:             schedules,
+		TimeZone:          "Asia/Seoul",
 		Jobs:              o.jobs,
 		JobInterval:       5 * time.Millisecond,
 		Mounts:            o.mounts,
@@ -315,7 +335,7 @@ func newEnv(t *testing.T, o envOptions) *env {
 	t.Cleanup(srv.Close)
 	return &env{t: t, h: srv, fake: fake, omvTS: ts, clk: clk, store: store, logs: logs, helper: fakeHelper,
 		sshd: sshd, terminal: manager, upgradeRoot: upgradeRoot, upgradeState: upgradeState, security: o.security,
-		packages: packages, srv: srv, stateDir: stateDir}
+		packages: packages, srv: srv, stateDir: stateDir, power: schedules}
 }
 
 // browser는 쿠키를 보관하는 간이 브라우저다.

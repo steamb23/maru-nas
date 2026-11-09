@@ -1390,6 +1390,10 @@ export const ErrAddonPurgeFull = "addon_purge_full";
  */
 export const ErrBackendUnavailable = ReasonBackendUnavailable;
 /**
+ * ErrPowerTimeInvalid는 다시 시작 예약의 시각이 범위 밖이라는 뜻이다(지금부터 1분 뒤 이상, 7일 뒤 이하).
+ */
+export const ErrPowerTimeInvalid = "power_time_invalid";
+/**
  * ErrorResponse는 2xx가 아닌 상태 코드와 함께 반환된다.
  */
 export interface ErrorResponse {
@@ -1397,7 +1401,7 @@ export interface ErrorResponse {
   /**
    * Code는 화면에서 분기할 때 쓰는 오류 종류다. 없을 수 있다.
    */
-  code?: 'invalid_credentials' | 'rate_limited' | 'challenge_failed' | 'challenge_expired' | 'omv_unavailable' | 'unauthorized' | 'bad_request' | 'rpc_forbidden' | 'admin_required' | 'plugin_missing' | 'omv_error' | 'action_busy' | 'action_failed' | 'action_timeout' | 'config_dirty' | 'image_too_large' | 'unsupported_image' | 'profile_readonly' | 'helper_unavailable' | 'helper_reauth' | 'elevation_failed' | 'elevation_not_allowed' | 'elevation_required' | 'terminal_disabled' | 'security_required' | 'factor_failed' | 'manage_required' | 'passkey_unavailable' | 'passkey_uv_unsupported' | 'security_unavailable' | 'passkey_login_unknown' | 'passkey_login_expired' | 'passkey_login_stale' | 'upgrade_disabled' | 'upgrade_busy' | 'upgrade_outdated' | 'not_found' | 'permission_denied' | 'outside_roots' | 'file_exists' | 'not_dir' | 'is_dir' | 'not_regular' | 'no_space' | 'read_only' | 'helper_busy' | 'transfer_timeout' | 'listing_expired' | 'sort_pending' | 'not_empty' | 'cross_device' | 'root_folder' | 'no_trash' | 'share_read_only' | 'job_busy' | 'apt_locked' | 'no_changelog' | 'download_failed' | 'smart_unsupported' | 'addon_invalid' | 'addon_too_large' | 'addons_unavailable' | 'upload_expired' | 'addon_readonly' | 'addon_no_backend' | 'addon_error' | 'addon_backend_unavailable' | 'addon_backend_disabled' | 'addon_purge_full' | 'backend_unavailable';
+  code?: 'invalid_credentials' | 'rate_limited' | 'challenge_failed' | 'challenge_expired' | 'omv_unavailable' | 'unauthorized' | 'bad_request' | 'rpc_forbidden' | 'admin_required' | 'plugin_missing' | 'omv_error' | 'action_busy' | 'action_failed' | 'action_timeout' | 'config_dirty' | 'image_too_large' | 'unsupported_image' | 'profile_readonly' | 'helper_unavailable' | 'helper_reauth' | 'elevation_failed' | 'elevation_not_allowed' | 'elevation_required' | 'terminal_disabled' | 'security_required' | 'factor_failed' | 'manage_required' | 'passkey_unavailable' | 'passkey_uv_unsupported' | 'security_unavailable' | 'passkey_login_unknown' | 'passkey_login_expired' | 'passkey_login_stale' | 'upgrade_disabled' | 'upgrade_busy' | 'upgrade_outdated' | 'not_found' | 'permission_denied' | 'outside_roots' | 'file_exists' | 'not_dir' | 'is_dir' | 'not_regular' | 'no_space' | 'read_only' | 'helper_busy' | 'transfer_timeout' | 'listing_expired' | 'sort_pending' | 'not_empty' | 'cross_device' | 'root_folder' | 'no_trash' | 'share_read_only' | 'job_busy' | 'apt_locked' | 'no_changelog' | 'download_failed' | 'smart_unsupported' | 'addon_invalid' | 'addon_too_large' | 'addons_unavailable' | 'upload_expired' | 'addon_readonly' | 'addon_no_backend' | 'addon_error' | 'addon_backend_unavailable' | 'addon_backend_disabled' | 'addon_purge_full' | 'backend_unavailable' | 'power_time_invalid';
   /**
    * RetryAfterSeconds는 rate_limited일 때 다시 시도할 수 있기까지 남은 초다.
    */
@@ -2171,6 +2175,15 @@ export const NoticeJobFailed = "jobFailed";
  */
 export const NoticeJobUnknown = "jobUnknown";
 /**
+ * NoticeRebootScheduled는 다시 시작이 예약되어 있다는 알림이다(At: 예약 시각, Items: 대시보드에서 예약했으면 예약한
+ * 사용자 이름 하나). NoticeShutdownScheduled는 다시 시작이 아닌 종료(시스템 종료 등)가 예약되어 있다는 알림이다.
+ */
+export const NoticeRebootScheduled = "rebootScheduled";
+/**
+ * 서버 알림 코드. Notice.Code에 들어가며 프론트가 코드로 문구를 고른다.
+ */
+export const NoticeShutdownScheduled = "shutdownScheduled";
+/**
  * NoticeActionApp은 대시보드 앱을 연다. 앱이 설정이면 Page의 페이지로 연다.
  */
 export const NoticeActionApp = "app";
@@ -2209,7 +2222,7 @@ export interface Notice {
    * ID는 알림의 고정 이름이다. 읽음 상태(NotificationPrefs.Seen)의 키다.
    */
   id: string;
-  code: 'sample' | 'aptUpdates' | 'rebootRequired' | 'jobSucceeded' | 'jobFailed' | 'jobUnknown';
+  code: 'sample' | 'aptUpdates' | 'rebootRequired' | 'jobSucceeded' | 'jobFailed' | 'jobUnknown' | 'rebootScheduled' | 'shutdownScheduled';
   /**
    * Level은 Notice* 수준 중 하나다.
    */
@@ -2222,6 +2235,10 @@ export interface Notice {
    * Since는 조건이 생긴 시각(RFC 3339)이다. 출처가 모르면 없다.
    */
   since?: string;
+  /**
+   * At은 알림이 가리키는 앞으로의 시각(RFC 3339)이다. 예약된 다시 시작의 시각이다.
+   */
+  at?: string;
   /**
    * Count는 개수(업데이트할 패키지 수 등)다. 문구의 복수형에 쓴다.
    */
@@ -2265,6 +2282,10 @@ export interface NotificationsResponse {
    * Tasks는 진행 중인 서버 백그라운드 작업이다(관리자에게만, 아니면 빈 목록).
    */
   tasks: Job[];
+  /**
+   * Now는 서버의 지금 시각(RFC 3339)이다. 브라우저는 알림의 At까지 남은 시간을 이 값과 자기 시계의 차이로 보정한다.
+   */
+  now: string;
 }
 /**
  * NotificationPrefs는 사용자의 알림 읽음 상태다.
@@ -2280,6 +2301,64 @@ export interface NotificationPrefs {
  */
 export interface NotificationPrefsRequest {
   notifications?: NotificationPrefs;
+}
+
+//////////
+// source: power.go
+
+/**
+ * 다시 시작 예약의 시각 범위. 지금부터 PowerScheduleMinAheadSeconds 뒤 이상, PowerScheduleMaxAheadSeconds 뒤 이하만
+ * 예약한다(권한 도우미도 7일 상한을 다시 확인한다).
+ */
+export const PowerScheduleMinAheadSeconds = 60;
+/**
+ * 다시 시작 예약의 시각 범위. 지금부터 PowerScheduleMinAheadSeconds 뒤 이상, PowerScheduleMaxAheadSeconds 뒤 이하만
+ * 예약한다(권한 도우미도 7일 상한을 다시 확인한다).
+ */
+export const PowerScheduleMaxAheadSeconds = 7 * 24 * 60 * 60;
+/**
+ * PowerSchedule은 systemd-logind에 예약된 종료다. 대시보드 밖(SSH의 shutdown 등)에서 한 예약도 보인다.
+ */
+export interface PowerSchedule {
+  /**
+   * At은 예약 시각(RFC 3339, UTC)이다.
+   */
+  at: string;
+  /**
+   * Mode는 종료 종류다. reboot(다시 시작), poweroff(시스템 종료), other(그 밖의 종료)다.
+   */
+  mode: 'reboot' | 'poweroff' | 'other';
+  /**
+   * By는 대시보드에서 예약한 사용자 이름이다. 대시보드 밖에서 예약했으면 없다.
+   */
+  by?: string;
+}
+/**
+ * PowerScheduleResponse는 GET·PUT·DELETE /api/power/schedule의 응답이다.
+ */
+export interface PowerScheduleResponse {
+  /**
+   * Schedule은 지금 예약이다. 없으면 null이다.
+   */
+  schedule?: PowerSchedule;
+  /**
+   * Now는 NAS의 지금 시각(RFC 3339, NAS 시간대의 오프셋)이다. 브라우저 시계와의 차이를 잴 때와 TimeZone을 모를 때
+   * NAS 시각을 보일 때 쓴다.
+   */
+  now: string;
+  /**
+   * TimeZone은 NAS 시간대의 IANA 이름이다(예: Asia/Seoul). 알 수 없으면 없다.
+   */
+  timeZone?: string;
+}
+/**
+ * PowerScheduleRequest는 PUT /api/power/schedule의 요청 본문이다. 다시 시작을 예약한다(이미 있는 예약은 바뀐다).
+ */
+export interface PowerScheduleRequest {
+  /**
+   * At은 다시 시작할 시각(RFC 3339)이다. 초 아래는 버린다.
+   */
+  at: string;
 }
 
 //////////

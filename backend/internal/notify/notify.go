@@ -163,6 +163,7 @@ var levelRank = map[string]int{api.NoticeError: 0, api.NoticeWarning: 1, api.Not
 var knownCodes = map[string]bool{
 	api.NoticeSample: true, api.NoticeAptUpdates: true, api.NoticeRebootRequired: true,
 	api.NoticeJobSucceeded: true, api.NoticeJobFailed: true, api.NoticeJobUnknown: true,
+	api.NoticeRebootScheduled: true, api.NoticeShutdownScheduled: true,
 }
 
 var (
@@ -196,6 +197,11 @@ func Check(n api.Notice) string {
 	if n.Since != "" {
 		if _, err := time.Parse(time.RFC3339, n.Since); err != nil {
 			return "bad since"
+		}
+	}
+	if n.At != "" {
+		if _, err := time.Parse(time.RFC3339, n.At); err != nil {
+			return "bad at"
 		}
 	}
 	if n.Count != nil && *n.Count < 0 {

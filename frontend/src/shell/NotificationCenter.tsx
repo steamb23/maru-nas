@@ -9,7 +9,7 @@ import { elapsedSeconds, jobHeading } from '../addons/packages/packages'
 import { useLanguage } from '../i18n'
 import { IconImage } from '../icons/IconImage'
 import { type Item, ageText, buildCenter } from '../notifications/items'
-import { LEVEL_ICONS, actionLabel } from '../notifications/messages'
+import { LEVEL_ICONS, actionLabel, textParams } from '../notifications/messages'
 import { type ActionContext, type ClientEvent, actionAvailable } from '../notifications/model'
 import { useNotificationStore } from '../notifications/store'
 import { useWindowStore } from '../windows/store'
@@ -210,7 +210,7 @@ function NoticeCard({ item, fresh, now, ctx, onAction }: CardProps) {
   const { t } = useTranslation()
   const lang = useLanguage()
   const { text, action } = item
-  const params = { ...text.params }
+  const params = textParams(text, lang)
   // 지울 수 있는 것은 클라이언트 알림과 서버의 작업 결과 알림이다.
   const { ref } = item
   const dismiss = !item.dismissible
